@@ -24,6 +24,7 @@ import CreateProduct from "./pages/CreateProduct";
 import CreateProductLine from "./pages/CreateProductLine";
 import Campaigns from "./pages/Campaigns";
 import Schedule from "./pages/Schedule";
+import GenerateCampaignIdeas from "./pages/GenerateCampaignIdeas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
           <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
           <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
           <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />
+          <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
