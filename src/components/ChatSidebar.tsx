@@ -117,7 +117,7 @@ const ChatSidebar = () => {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-1/2 -translate-y-1/2 z-50 h-12 w-12 rounded-full bg-primary shadow-lg hover:bg-primary/90"
+        className="fixed left-4 bottom-4 z-50 h-12 w-12 rounded-full bg-primary shadow-lg hover:bg-primary/90"
         size="icon"
       >
         <MessageSquare className="h-5 w-5" />
