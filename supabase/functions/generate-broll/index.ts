@@ -6,22 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Background task to generate B-roll
+async function generateBrollTask(segmentId: string, prompt: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const runwayKey = Deno.env.get("RUNWAY_API_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { segmentId, prompt } = await req.json();
-    console.log("Generating B-roll for segment:", segmentId);
-    console.log("Prompt:", prompt);
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const runwayKey = Deno.env.get("RUNWAY_API_KEY")!;
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Get segment to determine duration
     const { data: segment, error: segmentError } = await supabase
       .from("segments")
@@ -30,7 +23,9 @@ serve(async (req) => {
       .single();
 
     if (segmentError || !segment) {
-      throw new Error("Segment not found");
+      console.error("Segment not found:", segmentId);
+      await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
+      return;
     }
 
     const segmentDuration = Math.ceil(segment.end_seconds - segment.start_seconds);
@@ -39,14 +34,8 @@ serve(async (req) => {
     if (segmentDuration >= 7) duration = 8;
     else if (segmentDuration >= 5) duration = 6;
 
-    // Update status to generating
-    await supabase
-      .from("segments")
-      .update({ broll_status: "generating" })
-      .eq("id", segmentId);
-
     // Call Runway text-to-video API with veo3.1
-    console.log("Calling Runway text-to-video API with veo3.1, duration:", duration);
+    console.log("Calling Runway API for segment:", segmentId, "duration:", duration);
     
     const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
@@ -59,21 +48,16 @@ serve(async (req) => {
         model: "veo3.1",
         promptText: prompt,
         duration: duration,
-        ratio: "720:1280", // Vertical 9:16
-        audio: false, // No audio needed, we use original
+        ratio: "720:1280",
+        audio: false,
       }),
     });
 
     if (!runwayResponse.ok) {
       const errorText = await runwayResponse.text();
       console.error("Runway API error:", runwayResponse.status, errorText);
-      
-      await supabase
-        .from("segments")
-        .update({ broll_status: "failed" })
-        .eq("id", segmentId);
-      
-      throw new Error(`Runway API error: ${runwayResponse.status} - ${errorText}`);
+      await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
+      return;
     }
 
     const runwayData = await runwayResponse.json();
@@ -83,7 +67,7 @@ serve(async (req) => {
     const taskId = runwayData.id;
     let videoUrl = null;
     let attempts = 0;
-    const maxAttempts = 120; // 10 minutes max
+    const maxAttempts = 180; // 15 minutes max (180 * 5 seconds)
 
     while (attempts < maxAttempts) {
       const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
@@ -100,8 +84,11 @@ serve(async (req) => {
         videoUrl = statusData.output?.[0];
         break;
       } else if (statusData.status === "FAILED") {
-        throw new Error(`Video generation failed: ${statusData.failure || statusData.failureCode || "Unknown error"}`);
+        console.error("Video generation failed:", statusData.failure || statusData.failureCode);
+        await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
+        return;
       }
+      // THROTTLED and RUNNING are normal states - keep polling
 
       // Wait 5 seconds before polling again
       await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -109,7 +96,9 @@ serve(async (req) => {
     }
 
     if (!videoUrl) {
-      throw new Error("Video generation timed out");
+      console.error("Video generation timed out for segment:", segmentId);
+      await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
+      return;
     }
 
     // Update segment with generated video
@@ -122,34 +111,56 @@ serve(async (req) => {
       .eq("id", segmentId);
 
     if (updateError) {
-      throw new Error("Failed to update segment");
+      console.error("Failed to update segment:", updateError);
+      return;
     }
 
-    console.log("B-roll generated successfully:", videoUrl);
+    console.log("B-roll generated successfully for segment:", segmentId, videoUrl);
+  } catch (error) {
+    console.error("Generate B-roll error:", error);
+    await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
+  }
+}
 
-    return new Response(JSON.stringify({ videoUrl }), {
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { segmentId, prompt } = await req.json();
+    console.log("Generating B-roll for segment:", segmentId);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Update status to generating immediately
+    await supabase
+      .from("segments")
+      .update({ broll_status: "generating" })
+      .eq("id", segmentId);
+
+    // Start background task - don't await it
+    // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(generateBrollTask(segmentId, prompt));
+    } else {
+      // Fallback for environments without waitUntil
+      generateBrollTask(segmentId, prompt);
+    }
+
+    // Return immediately - the task runs in background
+    return new Response(JSON.stringify({ 
+      message: "Generation started",
+      segmentId 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
     console.error("Generate B-roll error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-
-    // Try to update status to failed
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const body = await req.clone().json().catch(() => ({}));
-      if (body.segmentId) {
-        await supabase
-          .from("segments")
-          .update({ broll_status: "failed" })
-          .eq("id", body.segmentId);
-      }
-    } catch (e) {
-      console.error("Failed to update segment status:", e);
-    }
 
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
