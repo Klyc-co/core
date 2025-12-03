@@ -6,6 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface WordTiming {
+  text: string;
+  start: number;
+  end: number;
+}
+
 interface Segment {
   id: string;
   index: number;
@@ -14,6 +20,7 @@ interface Segment {
   use_broll: boolean;
   broll_status: string;
   broll_video_url: string | null;
+  words_json: WordTiming[] | null;
 }
 
 interface Project {
@@ -149,6 +156,36 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
   // Calculate total duration from segments
   const totalDuration = segments.reduce((max, s) => Math.max(max, s.end_seconds), 0);
   
+  // Collect all word timings from all segments for captions
+  const allWords: WordTiming[] = [];
+  for (const segment of segments) {
+    if (segment.words_json && Array.isArray(segment.words_json)) {
+      allWords.push(...segment.words_json);
+    }
+  }
+  
+  console.log(`Total words for captions: ${allWords.length}`);
+  
+  // Build caption clips - each word appears for its duration
+  // Using Shotstack's HTML asset for stylish captions
+  const captionClips = allWords.map((word) => {
+    const duration = Math.max(word.end - word.start, 0.1); // Minimum 0.1s
+    return {
+      asset: {
+        type: "html",
+        html: `<p style="font-family: 'Montserrat', sans-serif; font-size: 72px; font-weight: 900; color: white; text-transform: uppercase; text-shadow: 4px 4px 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5); letter-spacing: 2px;">${escapeHtml(word.text)}</p>`,
+        width: 900,
+        height: 200,
+        position: "bottom",
+        offset: {
+          y: 0.12,
+        },
+      },
+      start: word.start,
+      length: duration,
+    };
+  });
+
   // Build B-roll overlay clips (only for segments that use B-roll)
   const brollClips = segments
     .filter((segment) => segment.use_broll && segment.broll_video_url)
@@ -179,10 +216,15 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
     fit: "crop", // Fill 9:16 frame while keeping aspect ratio (crops sides)
   };
 
-  // Tracks: B-roll overlay on top, base video on bottom
+  // Tracks order (top to bottom): captions > B-roll > base video
   const tracks = [];
   
-  // Only add B-roll track if there are B-roll clips
+  // Caption track (on top of everything)
+  if (captionClips.length > 0) {
+    tracks.push({ clips: captionClips });
+  }
+  
+  // B-roll track (overlays base video where needed)
   if (brollClips.length > 0) {
     tracks.push({ clips: brollClips });
   }
@@ -194,6 +236,11 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
     timeline: {
       background: "#000000",
       tracks,
+      fonts: [
+        {
+          src: "https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap",
+        },
+      ],
     },
     output: {
       format: "mp4",
@@ -202,6 +249,16 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
       fps: 30,
     },
   };
+}
+
+// Helper to escape HTML special characters
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 async function pollForCompletion(renderId: string, apiKey: string): Promise<string> {

@@ -63,6 +63,7 @@ export type Database = {
           transcript_snippet: string | null
           use_broll: boolean
           visual_prompt: string | null
+          words_json: Json | null
         }
         Insert: {
           broll_status?: string
@@ -76,6 +77,7 @@ export type Database = {
           transcript_snippet?: string | null
           use_broll?: boolean
           visual_prompt?: string | null
+          words_json?: Json | null
         }
         Update: {
           broll_status?: string
@@ -89,6 +91,7 @@ export type Database = {
           transcript_snippet?: string | null
           use_broll?: boolean
           visual_prompt?: string | null
+          words_json?: Json | null
         }
         Relationships: [
           {
