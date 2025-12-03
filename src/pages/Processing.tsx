@@ -134,10 +134,10 @@ const Processing = () => {
         <Button
           variant="ghost"
           className="mt-8"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/projects")}
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          Back to Projects
         </Button>
       </div>
     </div>
