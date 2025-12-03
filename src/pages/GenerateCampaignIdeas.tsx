@@ -135,10 +135,10 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
-          {/* Custom Prompt */}
+          {/* Prompt */}
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Add Custom Prompt (Optional)</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Prompt</h2>
               <Textarea
                 placeholder="Add any specific details or requirements for your campaign idea..."
                 value={customPrompt}
@@ -146,9 +146,6 @@ const GenerateCampaignIdeas = () => {
                 rows={3}
                 className="resize-none"
               />
-              <p className="text-sm text-muted-foreground mt-2">
-                Optional. Provide additional details to customize the generated idea.
-              </p>
             </CardContent>
           </Card>
 
