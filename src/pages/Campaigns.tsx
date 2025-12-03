@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Clock, Zap, History } from "lucide-react";
+import { Plus, Clock, Zap, History, Sparkles } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Campaigns = () => {
@@ -36,6 +36,13 @@ const Campaigns = () => {
             >
               <Plus className="w-4 h-4" />
               New Campaign
+            </Button>
+            <Button 
+              className="gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90"
+              onClick={() => navigate("/campaigns/generate")}
+            >
+              <Sparkles className="w-4 h-4" />
+              Generate Campaign Ideas
             </Button>
             <Button 
               variant="outline"
