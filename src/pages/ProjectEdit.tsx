@@ -52,6 +52,43 @@ const ProjectEdit = () => {
     fetchSegments();
   }, [id]);
 
+  // Poll for segment status when any are generating
+  useEffect(() => {
+    const hasGenerating = segments.some(s => s.broll_status === "generating");
+    if (!hasGenerating) return;
+
+    const interval = setInterval(async () => {
+      const { data, error } = await supabase
+        .from("segments")
+        .select("*")
+        .eq("project_id", id)
+        .order("index");
+
+      if (!error && data) {
+        const prevGenerating = segments.filter(s => s.broll_status === "generating").map(s => s.id);
+        const nowComplete = data.filter(s => 
+          prevGenerating.includes(s.id) && 
+          (s.broll_status === "generated" || s.broll_status === "failed")
+        );
+        
+        if (nowComplete.length > 0) {
+          const successCount = nowComplete.filter(s => s.broll_status === "generated").length;
+          const failCount = nowComplete.filter(s => s.broll_status === "failed").length;
+          if (successCount > 0) {
+            toast({ title: `${successCount} B-roll video(s) generated!` });
+          }
+          if (failCount > 0) {
+            toast({ title: `${failCount} B-roll generation(s) failed`, variant: "destructive" });
+          }
+        }
+        
+        setSegments(data);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [segments, id]);
+
   const fetchProject = async () => {
     const { data, error } = await supabase
       .from("projects")
@@ -103,29 +140,38 @@ const ProjectEdit = () => {
 
     setGeneratingAll(true);
 
-    for (const segment of toGenerate) {
-      handleSegmentUpdate({ ...segment, broll_status: "generating" });
-
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-broll", {
+    // Start all generations in parallel - they run as background tasks
+    const results = await Promise.allSettled(
+      toGenerate.map(async (segment) => {
+        handleSegmentUpdate({ ...segment, broll_status: "generating" });
+        
+        const { error } = await supabase.functions.invoke("generate-broll", {
           body: { segmentId: segment.id, prompt: segment.visual_prompt },
         });
 
-        if (error) throw error;
+        if (error) {
+          handleSegmentUpdate({ ...segment, broll_status: "failed" });
+          throw error;
+        }
+      })
+    );
 
-        handleSegmentUpdate({
-          ...segment,
-          broll_status: "generated",
-          broll_video_url: data.videoUrl,
-        });
-      } catch (error: any) {
-        handleSegmentUpdate({ ...segment, broll_status: "failed" });
-      }
-    }
-
+    const failures = results.filter(r => r.status === "rejected").length;
+    
     setGeneratingAll(false);
-    toast({ title: "Generation complete!", description: "B-roll videos have been generated" });
-    fetchSegments();
+    
+    if (failures > 0) {
+      toast({ 
+        title: "Some generations failed to start", 
+        description: `${failures} of ${toGenerate.length} failed to start`,
+        variant: "destructive" 
+      });
+    } else {
+      toast({ 
+        title: "Generation started!", 
+        description: `${toGenerate.length} B-roll videos are being generated` 
+      });
+    }
   };
 
   const handleRender = async () => {

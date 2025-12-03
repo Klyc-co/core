@@ -96,18 +96,15 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
     onUpdate({ ...segment, broll_status: "generating" });
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-broll", {
+      const { error } = await supabase.functions.invoke("generate-broll", {
         body: { segmentId: segment.id, prompt: prompt },
       });
 
       if (error) throw error;
 
-      onUpdate({
-        ...segment,
-        broll_status: "generated",
-        broll_video_url: data.videoUrl,
-      });
-      toast({ title: "B-roll generated!" });
+      // Don't update to "generated" here - the background task will do it
+      // The parent component should poll for status updates
+      toast({ title: "Generation started", description: "This may take a few minutes" });
     } catch (error: any) {
       onUpdate({ ...segment, broll_status: "failed" });
       toast({ title: "Error", description: error.message, variant: "destructive" });
