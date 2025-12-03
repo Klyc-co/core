@@ -149,64 +149,57 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
   // Calculate total duration from segments
   const totalDuration = segments.reduce((max, s) => Math.max(max, s.end_seconds), 0);
   
-  // Build video clips track
-  const videoClips = segments.map((segment) => {
-    const duration = segment.end_seconds - segment.start_seconds;
-    
-    if (segment.use_broll && segment.broll_video_url) {
-      // Use B-roll video
+  // Build B-roll overlay clips (only for segments that use B-roll)
+  const brollClips = segments
+    .filter((segment) => segment.use_broll && segment.broll_video_url)
+    .map((segment) => {
+      const duration = segment.end_seconds - segment.start_seconds;
       return {
         asset: {
           type: "video",
           src: segment.broll_video_url,
-          trim: 0, // Start from beginning of B-roll
-        },
-        start: segment.start_seconds,
-        length: duration,
-        fit: "cover",
-        scale: 1,
-      };
-    } else {
-      // Use original video segment, cropped to vertical (9:16)
-      // For 16:9 to 9:16, we need to crop ~34% from each side to center on subject
-      return {
-        asset: {
-          type: "video",
-          src: project.original_video_url,
-          trim: segment.start_seconds, // Trim to segment start
-          volume: 0, // Mute video track (we'll use separate audio)
-          crop: {
-            top: 0,
-            bottom: 0,
-            left: 0.34, // Crop 34% from left
-            right: 0.34, // Crop 34% from right
-          },
+          trim: 0,
+          volume: 0, // Mute B-roll audio
         },
         start: segment.start_seconds,
         length: duration,
         fit: "cover",
       };
-    }
-  });
+    });
 
-  // Audio track - full original video audio
-  const audioClip = {
+  // Base track - full original video cropped to vertical with audio
+  const baseClip = {
     asset: {
       type: "video",
       src: project.original_video_url,
-      volume: 1,
+      volume: 1, // Keep original audio
+      crop: {
+        top: 0,
+        bottom: 0,
+        left: 0.34, // Crop 34% from left for vertical
+        right: 0.34, // Crop 34% from right for vertical
+      },
     },
     start: 0,
     length: totalDuration,
+    fit: "cover",
   };
+
+  // Tracks: B-roll overlay on top, base video on bottom
+  const tracks = [];
+  
+  // Only add B-roll track if there are B-roll clips
+  if (brollClips.length > 0) {
+    tracks.push({ clips: brollClips });
+  }
+  
+  // Base video track (always present)
+  tracks.push({ clips: [baseClip] });
 
   return {
     timeline: {
       background: "#000000",
-      tracks: [
-        { clips: videoClips }, // Video track (on top)
-        { clips: [audioClip] }, // Audio track (below)
-      ],
+      tracks,
     },
     output: {
       format: "mp4",
