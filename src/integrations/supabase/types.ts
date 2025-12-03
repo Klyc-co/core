@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_drafts: {
+        Row: {
+          article_outline: string | null
+          campaign_goals: string | null
+          campaign_idea: string | null
+          campaign_objective: string | null
+          content_type: string | null
+          created_at: string
+          id: string
+          image_prompt: string | null
+          post_caption: string | null
+          prompt: string | null
+          scene_prompts: string | null
+          tags: string[] | null
+          target_audience: string | null
+          target_audience_description: string | null
+          updated_at: string
+          user_id: string
+          video_script: string | null
+        }
+        Insert: {
+          article_outline?: string | null
+          campaign_goals?: string | null
+          campaign_idea?: string | null
+          campaign_objective?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          image_prompt?: string | null
+          post_caption?: string | null
+          prompt?: string | null
+          scene_prompts?: string | null
+          tags?: string[] | null
+          target_audience?: string | null
+          target_audience_description?: string | null
+          updated_at?: string
+          user_id: string
+          video_script?: string | null
+        }
+        Update: {
+          article_outline?: string | null
+          campaign_goals?: string | null
+          campaign_idea?: string | null
+          campaign_objective?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          image_prompt?: string | null
+          post_caption?: string | null
+          prompt?: string | null
+          scene_prompts?: string | null
+          tags?: string[] | null
+          target_audience?: string | null
+          target_audience_description?: string | null
+          updated_at?: string
+          user_id?: string
+          video_script?: string | null
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string
