@@ -11,7 +11,7 @@ const Index = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/home");
       }
     });
   }, [navigate]);

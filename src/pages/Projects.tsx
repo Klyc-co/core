@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, LogOut, Video, Clock, Loader2 } from "lucide-react";
+import { Plus, Video, Clock, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import Logo from "@/components/Logo";
+import AppHeader from "@/components/AppHeader";
 
 interface Project {
   id: string;
@@ -23,7 +23,7 @@ const statusLabels: Record<string, { label: string; class: string }> = {
   complete: { label: "Complete", class: "status-badge--ready" },
 };
 
-const Dashboard = () => {
+const Projects = () => {
   const [user, setUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,11 +66,6 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
@@ -86,18 +81,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Logo />
-
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader user={user} />
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
@@ -176,4 +160,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Projects;

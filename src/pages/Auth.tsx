@@ -19,15 +19,15 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session) {
-          navigate("/dashboard");
+      if (session) {
+          navigate("/home");
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/home");
       }
     });
 
@@ -51,7 +51,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/home`,
           },
         });
         if (error) throw error;
