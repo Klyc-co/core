@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -13,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 
 interface SocialPlatform {
@@ -35,6 +43,13 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
 ];
 
+const timeSlots = [
+  "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+  "18:00", "19:00", "20:00", "21:00", "22:00", "23:00",
+];
+
 const NewCampaign = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +61,8 @@ const NewCampaign = () => {
   const [newTag, setNewTag] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [scheduledTime, setScheduledTime] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
 
   useEffect(() => {
@@ -143,18 +160,57 @@ const NewCampaign = () => {
       return;
     }
 
+    if (!scheduledDate) {
+      toast({
+        title: "Select date",
+        description: "Please select a date for your campaign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!scheduledTime) {
+      toast({
+        title: "Select time",
+        description: "Please select a time for your campaign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) return;
+
     setIsLaunching(true);
     
-    // Simulate launch - in real implementation, this would post to selected platforms
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const { error } = await supabase.from("scheduled_campaigns").insert({
+      user_id: user.id,
+      campaign_name: campaignName.trim(),
+      product: selectedProduct || null,
+      links: links,
+      tags: tags,
+      platforms: selectedPlatforms,
+      scheduled_date: format(scheduledDate, "yyyy-MM-dd"),
+      scheduled_time: scheduledTime,
+      status: "scheduled",
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to schedule campaign. Please try again.",
+        variant: "destructive",
+      });
+      setIsLaunching(false);
+      return;
+    }
     
     toast({
-      title: "Campaign Launched! 🚀",
-      description: `Your campaign "${campaignName}" has been launched to ${selectedPlatforms.length} platform(s)`,
+      title: "Campaign Scheduled! 🚀",
+      description: `Your campaign "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
     });
     
     setIsLaunching(false);
-    navigate("/campaigns");
+    navigate("/campaigns/schedule");
   };
 
   return (
@@ -347,6 +403,62 @@ const NewCampaign = () => {
             )}
           </div>
 
+          {/* Schedule Date & Time */}
+          <div className="space-y-4">
+            <Label>Schedule Campaign</Label>
+            <p className="text-sm text-muted-foreground">Choose when to launch your campaign</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Date Picker */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !scheduledDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduledDate ? format(scheduledDate, "PPP") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduledDate}
+                      onSelect={setScheduledDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Time Picker */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Time</Label>
+                <Select value={scheduledTime} onValueChange={setScheduledTime}>
+                  <SelectTrigger>
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Select time" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           {/* Launch Button */}
           <div className="pt-4">
             <Button
@@ -356,7 +468,7 @@ const NewCampaign = () => {
               disabled={isLaunching}
             >
               {isLaunching ? (
-                <>Launching Campaign...</>
+                <>Scheduling Campaign...</>
               ) : (
                 <>
                   <Rocket className="mr-2 h-5 w-5" />
