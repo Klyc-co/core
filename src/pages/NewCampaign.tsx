@@ -25,14 +25,14 @@ interface SocialPlatform {
 }
 
 const socialPlatforms: SocialPlatform[] = [
-  { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/E4405F", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
-  { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/1877F2", color: "bg-[#1877F2]" },
-  { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/000000", color: "bg-foreground" },
-  { id: "linkedin", name: "LinkedIn", icon: "https://cdn.simpleicons.org/linkedin/0A66C2", color: "bg-[#0A66C2]" },
-  { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/000000", color: "bg-foreground" },
-  { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FF0000", color: "bg-[#FF0000]" },
-  { id: "pinterest", name: "Pinterest", icon: "https://cdn.simpleicons.org/pinterest/E60023", color: "bg-[#E60023]" },
-  { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/000000", color: "bg-foreground" },
+  { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/FFFFFF", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
+  { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
+  { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
+  { id: "linkedin", name: "LinkedIn", icon: "https://cdn.simpleicons.org/linkedin/FFFFFF", color: "bg-[#0A66C2]" },
+  { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
+  { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
+  { id: "pinterest", name: "Pinterest", icon: "https://cdn.simpleicons.org/pinterest/FFFFFF", color: "bg-[#E60023]" },
+  { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
 ];
 
 const NewCampaign = () => {
@@ -329,7 +329,7 @@ const NewCampaign = () => {
                       <img 
                         src={platform.icon} 
                         alt={platform.name}
-                        className="w-full h-full object-contain brightness-0 invert"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <span className="text-sm font-medium text-center">{platform.name}</span>
