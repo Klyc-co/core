@@ -167,18 +167,24 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
         scale: 1,
       };
     } else {
-      // Use original video segment, cropped to vertical with center focus
+      // Use original video segment, cropped to vertical (9:16)
+      // For 16:9 to 9:16, we need to crop ~34% from each side to center on subject
       return {
         asset: {
           type: "video",
           src: project.original_video_url,
           trim: segment.start_seconds, // Trim to segment start
           volume: 0, // Mute video track (we'll use separate audio)
+          crop: {
+            top: 0,
+            bottom: 0,
+            left: 0.34, // Crop 34% from left
+            right: 0.34, // Crop 34% from right
+          },
         },
         start: segment.start_seconds,
         length: duration,
-        fit: "crop", // Use crop to fill the frame completely
-        position: "center", // Center the crop on the subject
+        fit: "cover",
       };
     }
   });
