@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { Building2, Users, Lightbulb, Pencil } from "lucide-react";
+import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -68,7 +68,7 @@ const Profile = () => {
           <p className="text-muted-foreground">Build your company profile to personalize your content generation</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <ProfileCard
             icon={<Building2 className="w-6 h-6 text-primary" />}
             iconBg="bg-primary/10"
@@ -95,6 +95,27 @@ const Profile = () => {
             status="not_filled"
             onClick={() => navigate("/profile/value")}
             buttonColor="text-orange-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ProfileCard
+            icon={<Globe className="w-6 h-6 text-blue-500" />}
+            iconBg="bg-blue-500/10"
+            title="Import Brand Sources"
+            description="Website & social media assets"
+            status="not_filled"
+            onClick={() => navigate("/profile/import")}
+            buttonColor="text-blue-500"
+          />
+          <ProfileCard
+            icon={<FolderOpen className="w-6 h-6 text-purple-500" />}
+            iconBg="bg-purple-500/10"
+            title="Brand Library"
+            description="All your imported assets"
+            status="not_filled"
+            onClick={() => navigate("/profile/library")}
+            buttonColor="text-purple-500"
           />
         </div>
       </main>

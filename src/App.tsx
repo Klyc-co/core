@@ -15,6 +15,8 @@ import Profile from "./pages/Profile";
 import CompanyInfo from "./pages/CompanyInfo";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
+import ImportBrandSources from "./pages/ImportBrandSources";
+import Library from "./pages/Library";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
           <Route path="/profile/company" element={<CompanyInfo />} />
           <Route path="/profile/audience" element={<TargetAudience />} />
           <Route path="/profile/value" element={<ValueProposition />} />
+          <Route path="/profile/import" element={<ImportBrandSources />} />
+          <Route path="/profile/library" element={<Library />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
