@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
@@ -13,7 +15,7 @@ const Logo = ({ className = "", size = "md" }: LogoProps) => {
   const { height, text } = sizes[size];
 
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
+    <Link to="/dashboard" className={`flex items-center gap-1.5 ${className}`}>
       {/* Colorful orbs */}
       <svg
         height={height}
@@ -49,7 +51,7 @@ const Logo = ({ className = "", size = "md" }: LogoProps) => {
       <span className={`font-bold text-foreground ${text}`}>
         Klyc
       </span>
-    </div>
+    </Link>
   );
 };
 
