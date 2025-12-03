@@ -167,7 +167,7 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
         scale: 1,
       };
     } else {
-      // Use original video segment, cropped to vertical
+      // Use original video segment, cropped to vertical with center focus
       return {
         asset: {
           type: "video",
@@ -177,8 +177,8 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
         },
         start: segment.start_seconds,
         length: duration,
-        fit: "cover",
-        scale: 1,
+        fit: "crop", // Use crop to fill the frame completely
+        position: "center", // Center the crop on the subject
       };
     }
   });
