@@ -163,11 +163,11 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
         },
         start: segment.start_seconds,
         length: duration,
-        fit: "cover",
+        fit: "crop", // Fill frame while keeping aspect ratio
       };
     });
 
-  // Base track - full original video with audio, let fit:cover handle cropping
+  // Base track - full original video with audio
   const baseClip = {
     asset: {
       type: "video",
@@ -176,7 +176,7 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
     },
     start: 0,
     length: totalDuration,
-    fit: "cover", // Auto-scale and crop to fill 9:16 frame
+    fit: "crop", // Fill 9:16 frame while keeping aspect ratio (crops sides)
   };
 
   // Tracks: B-roll overlay on top, base video on bottom
