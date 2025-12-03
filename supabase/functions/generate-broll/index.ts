@@ -42,8 +42,10 @@ serve(async (req) => {
       .eq("id", segmentId);
 
     // Call Runway API to generate video
-    // Runway Gen-3 Alpha Turbo endpoint
-    const runwayResponse = await fetch("https://api.runwayml.com/v1/text-to-video", {
+    // Runway Gen-3 Alpha Turbo endpoint (official API)
+    console.log("Calling Runway API with key prefix:", runwayKey?.substring(0, 10) + "...");
+    
+    const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${runwayKey}`,
@@ -85,7 +87,7 @@ serve(async (req) => {
     const maxAttempts = 120; // 10 minutes max
 
     while (attempts < maxAttempts) {
-      const statusResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
+      const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
           "Authorization": `Bearer ${runwayKey}`,
           "X-Runway-Version": "2024-11-06",
