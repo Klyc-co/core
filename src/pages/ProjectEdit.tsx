@@ -230,70 +230,83 @@ const ProjectEdit = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-[400px_1fr] gap-8">
-          {/* Original Video Preview */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
-            <div className="video-player">
-              {project.original_video_url ? (
-                <video
-                  src={project.original_video_url}
-                  controls
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  No video
-                </div>
-              )}
+      <main className="flex flex-col h-[calc(100vh-4rem)]">
+        {/* Videos Section - Top */}
+        <div className="flex-1 px-6 py-6 overflow-auto">
+          <div className="max-w-5xl mx-auto flex gap-8 justify-center">
+            {/* Original Video */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
+              <div className="video-player aspect-[9/16] w-[280px]">
+                {project.original_video_url ? (
+                  <video
+                    src={project.original_video_url}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No video
+                  </div>
+                )}
+              </div>
             </div>
 
-            {project.status === "complete" && project.final_video_url && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
-                <div className="video-player aspect-[9/16] max-w-[280px]">
+            {/* Final Video */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
+              <div className="video-player aspect-[9/16] w-[280px]">
+                {project.status === "complete" && project.final_video_url ? (
                   <video
                     src={project.final_video_url}
                     controls
                     className="w-full h-full object-contain"
                   />
-                </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    {project.status === "rendering" ? "Rendering..." : "Not rendered yet"}
+                  </div>
+                )}
+              </div>
+              {project.status === "complete" && project.final_video_url && (
                 <Button asChild variant="success" className="w-full">
                   <a href={project.final_video_url} download>
                     <Download className="w-4 h-4" />
                     Download MP4
                   </a>
                 </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Segments Storyboard */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
-                Storyboard ({segments.length} segments)
-              </h2>
-              {brollCount > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  {generatedCount}/{brollCount} B-roll generated
-                </span>
               )}
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-4">
+        {/* Storyboard - Bottom Horizontal Scroll */}
+        <div className="border-t border-border bg-card/50 backdrop-blur-sm">
+          <div className="px-6 py-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              Storyboard ({segments.length} segments)
+            </h2>
+            {brollCount > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {generatedCount}/{brollCount} B-roll generated
+              </span>
+            )}
+          </div>
+          
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4 px-6 min-w-max">
               {segments.map((segment, index) => (
-                <SegmentCard
-                  key={segment.id}
-                  segment={segment}
-                  onUpdate={handleSegmentUpdate}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                />
+                <div key={segment.id} className="w-[320px] flex-shrink-0">
+                  <SegmentCard
+                    segment={segment}
+                    onUpdate={handleSegmentUpdate}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  />
+                </div>
               ))}
 
               {segments.length === 0 && (
-                <div className="glass rounded-xl p-8 text-center">
+                <div className="glass rounded-xl p-8 text-center w-full">
                   <p className="text-muted-foreground">
                     No segments yet. Processing may still be in progress.
                   </p>
