@@ -110,6 +110,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_campaigns: {
+        Row: {
+          campaign_name: string
+          created_at: string
+          id: string
+          links: string[] | null
+          platforms: string[]
+          product: string | null
+          scheduled_date: string
+          scheduled_time: string
+          status: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_name: string
+          created_at?: string
+          id?: string
+          links?: string[] | null
+          platforms?: string[]
+          product?: string | null
+          scheduled_date: string
+          scheduled_time: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_name?: string
+          created_at?: string
+          id?: string
+          links?: string[] | null
+          platforms?: string[]
+          product?: string | null
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       segments: {
         Row: {
           broll_status: string
