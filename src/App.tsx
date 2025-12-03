@@ -23,6 +23,7 @@ import Products from "./pages/Products";
 import CreateProduct from "./pages/CreateProduct";
 import CreateProductLine from "./pages/CreateProductLine";
 import Campaigns from "./pages/Campaigns";
+import NewCampaign from "./pages/NewCampaign";
 import Schedule from "./pages/Schedule";
 import GenerateCampaignIdeas from "./pages/GenerateCampaignIdeas";
 import CampaignDrafts from "./pages/CampaignDrafts";
@@ -65,6 +66,7 @@ const App = () => (
           <Route path="/profile/products/create" element={<WithSidebar><CreateProduct /></WithSidebar>} />
           <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
           <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
+          <Route path="/campaigns/new" element={<WithSidebar><NewCampaign /></WithSidebar>} />
           <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />
           <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
           <Route path="/campaigns/drafts" element={<WithSidebar><CampaignDrafts /></WithSidebar>} />
