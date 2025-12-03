@@ -39,7 +39,7 @@ const GenerateCampaignIdeas = () => {
   }, [navigate]);
 
   const handleGenerate = () => {
-    if (selectedContentType === "social-video") {
+    if (selectedContentType === "social-video" || selectedContentType === "visual-post") {
       setShowResults(true);
     }
     console.log({ selectedContentType, targetAudience, customPrompt });
@@ -231,65 +231,92 @@ const GenerateCampaignIdeas = () => {
                 </CardContent>
               </Card>
 
-              {/* Campaign Strategy */}
+              <CampaignStrategy 
+                tags={tags} 
+                removeTag={removeTag} 
+                newTag={newTag} 
+                setNewTag={setNewTag} 
+                addTag={addTag} 
+              />
+
+              {/* Save Button */}
+              <Button 
+                className="w-full gap-2 py-6 text-lg"
+                onClick={() => console.log("Save to drafts")}
+              >
+                <FileStack className="w-5 h-5" />
+                Save to Campaign Drafts
+              </Button>
+            </div>
+          )}
+
+          {/* Visual Post Results */}
+          {showResults && selectedContentType === "visual-post" && (
+            <div className="space-y-6 mt-8">
+              {/* Campaign Idea */}
               <Card>
                 <CardContent className="p-6">
-                  <div className="border-l-4 border-primary pl-4 mb-6">
-                    <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
-                      <div className="space-y-2">
-                        {["Increase engagement and viral potential", "Drive product awareness and discovery", "Boost brand credibility and social proof", "Generate user-generated content"].map((goal, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                              <Check className="w-3 h-3 text-primary" />
-                            </div>
-                            <span className="text-foreground">{goal}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
-                      <div className="bg-muted/50 rounded-lg p-4">
-                        <p className="text-foreground">Young adults aged 18-35, trend-conscious, active on social media platforms like TikTok and Instagram, interested in innovative products</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
-                      <div className="bg-muted/50 rounded-lg p-4">
-                        <p className="text-foreground">Create shareable, entertaining content that drives viral reach and brand awareness through authentic storytelling and social trends</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-3">Tags & Keywords</h4>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {tags.map((tag) => (
-                          <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                            {tag}
-                            <button onClick={() => removeTag(tag)} className="hover:text-primary/70">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <Input
-                        placeholder="Add a new tag (e.g., #viral, #trending)"
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && addTag()}
-                        className="max-w-sm"
-                      />
-                    </div>
-                  </div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
                 </CardContent>
               </Card>
+
+              {/* Post Caption */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">Post Caption (Text Above Image)</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleCopy('', 'caption')}
+                      className="gap-2"
+                    >
+                      {copiedField === 'caption' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      Copy
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Your AI-generated caption will appear here..."
+                    rows={5}
+                    className="resize-none bg-muted/50"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Image Generation Prompt */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-foreground">Image Generation Prompt</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleCopy('', 'image-prompt')}
+                      className="gap-2"
+                    >
+                      {copiedField === 'image-prompt' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Use this prompt with an AI image generator like DALL-E, Midjourney, or Stable Diffusion:
+                  </p>
+                  <Textarea
+                    placeholder="Your AI-generated image prompt will appear here..."
+                    rows={5}
+                    className="resize-none bg-muted/50"
+                  />
+                </CardContent>
+              </Card>
+
+              <CampaignStrategy 
+                tags={tags} 
+                removeTag={removeTag} 
+                newTag={newTag} 
+                setNewTag={setNewTag} 
+                addTag={addTag} 
+              />
 
               {/* Save Button */}
               <Button 
@@ -306,5 +333,79 @@ const GenerateCampaignIdeas = () => {
     </div>
   );
 };
+
+// Campaign Strategy Component (shared between content types)
+const CampaignStrategy = ({ 
+  tags, 
+  removeTag, 
+  newTag, 
+  setNewTag, 
+  addTag 
+}: {
+  tags: string[];
+  removeTag: (tag: string) => void;
+  newTag: string;
+  setNewTag: (value: string) => void;
+  addTag: () => void;
+}) => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="border-l-4 border-primary pl-4 mb-6">
+        <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
+          <div className="space-y-2">
+            {["Increase engagement and viral potential", "Drive product awareness and discovery", "Boost brand credibility and social proof", "Generate user-generated content"].map((goal, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Check className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-foreground">{goal}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <p className="text-foreground">Young adults aged 18-35, trend-conscious, active on social media platforms like TikTok and Instagram, interested in innovative products</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <p className="text-foreground">Create shareable, entertaining content that drives viral reach and brand awareness through authentic storytelling and social trends</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-3">Tags & Keywords</h4>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
+                {tag}
+                <button onClick={() => removeTag(tag)} className="hover:text-primary/70">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <Input
+            placeholder="Add a new tag (e.g., #viral, #trending)"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addTag()}
+            className="max-w-sm"
+          />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default GenerateCampaignIdeas;
