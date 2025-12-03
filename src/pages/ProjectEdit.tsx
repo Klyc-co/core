@@ -57,10 +57,13 @@ const ProjectEdit = () => {
       .from("projects")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      navigate("/dashboard");
+    } else if (!data) {
+      toast({ title: "Not found", description: "Project not found", variant: "destructive" });
       navigate("/dashboard");
     } else {
       setProject(data);
