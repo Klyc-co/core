@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sparkles } from "lucide-react";
+import { LogOut, Sparkles, Settings } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User } from "@supabase/supabase-js";
 
@@ -34,6 +34,9 @@ const AppHeader = ({ user }: AppHeaderProps) => {
 
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
+            <Settings className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={handleLogout}>
             <LogOut className="w-4 h-4" />
           </Button>
