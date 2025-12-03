@@ -11,6 +11,10 @@ import NewProject from "./pages/NewProject";
 import Processing from "./pages/Processing";
 import ProjectEdit from "./pages/ProjectEdit";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
+import CompanyInfo from "./pages/CompanyInfo";
+import TargetAudience from "./pages/TargetAudience";
+import ValueProposition from "./pages/ValueProposition";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +34,10 @@ const App = () => (
           <Route path="/projects/:id/processing" element={<Processing />} />
           <Route path="/projects/:id/edit" element={<ProjectEdit />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/company" element={<CompanyInfo />} />
+          <Route path="/profile/audience" element={<TargetAudience />} />
+          <Route path="/profile/value" element={<ValueProposition />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
