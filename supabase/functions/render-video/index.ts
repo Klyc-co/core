@@ -176,13 +176,13 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
         html: `<p style="font-family: 'Montserrat', sans-serif; font-size: 72px; font-weight: 900; color: white; text-transform: uppercase; text-shadow: 4px 4px 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5); letter-spacing: 2px;">${escapeHtml(word.text)}</p>`,
         width: 900,
         height: 200,
-        position: "bottom",
-        offset: {
-          y: 0.12,
-        },
       },
       start: word.start,
       length: duration,
+      position: "bottom",
+      offset: {
+        y: 0.12,
+      },
     };
   });
 
