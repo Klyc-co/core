@@ -29,6 +29,7 @@ const GenerateCampaignIdeas = () => {
   const [newTag, setNewTag] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Generated content state
   const [campaignIdea, setCampaignIdea] = useState("");
@@ -130,6 +131,38 @@ const GenerateCampaignIdeas = () => {
       const formattedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
       setTags([...tags, formattedTag]);
       setNewTag("");
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from("campaign_drafts" as any).insert({
+        user_id: user.id,
+        campaign_idea: campaignIdea,
+        content_type: selectedContentType,
+        target_audience: targetAudience,
+        prompt: customPrompt,
+        video_script: videoScript,
+        scene_prompts: JSON.stringify(scenePrompts),
+        post_caption: postCaption,
+        image_prompt: imagePrompt,
+        article_outline: articleOutline,
+        campaign_goals: campaignGoals,
+        target_audience_description: targetAudienceDescription,
+        campaign_objective: campaignObjective,
+        tags,
+      });
+
+      if (error) throw error;
+      navigate("/campaigns/drafts");
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      alert("Failed to save draft");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -363,10 +396,11 @@ const GenerateCampaignIdeas = () => {
               {/* Save Button */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
-                onClick={() => console.log("Save to drafts")}
+                onClick={handleSaveDraft}
+                disabled={isSaving}
               >
-                <FileStack className="w-5 h-5" />
-                Save to Campaign Drafts
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
               </Button>
             </div>
           )}
@@ -458,10 +492,11 @@ const GenerateCampaignIdeas = () => {
               {/* Save Button */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
-                onClick={() => console.log("Save to drafts")}
+                onClick={handleSaveDraft}
+                disabled={isSaving}
               >
-                <FileStack className="w-5 h-5" />
-                Save to Campaign Drafts
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
               </Button>
             </div>
           )}
@@ -525,10 +560,11 @@ const GenerateCampaignIdeas = () => {
               {/* Save Button */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
-                onClick={() => console.log("Save to drafts")}
+                onClick={handleSaveDraft}
+                disabled={isSaving}
               >
-                <FileStack className="w-5 h-5" />
-                Save to Campaign Drafts
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
               </Button>
             </div>
           )}
@@ -631,10 +667,11 @@ const GenerateCampaignIdeas = () => {
               {/* Save Button */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
-                onClick={() => console.log("Save to drafts")}
+                onClick={handleSaveDraft}
+                disabled={isSaving}
               >
-                <FileStack className="w-5 h-5" />
-                Save to Campaign Drafts
+                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
               </Button>
             </div>
           )}
