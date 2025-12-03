@@ -1,0 +1,13 @@
+project_id = "yfhuhcopgddbuecsrbje"
+
+[functions.process-video]
+verify_jwt = false
+
+[functions.regenerate-prompt]
+verify_jwt = false
+
+[functions.generate-broll]
+verify_jwt = false
+
+[functions.render-video]
+verify_jwt = false
