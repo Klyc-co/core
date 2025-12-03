@@ -17,6 +17,7 @@ import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
 import Library from "./pages/Library";
+import SocialMediaAssets from "./pages/SocialMediaAssets";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/profile/value" element={<ValueProposition />} />
           <Route path="/profile/import" element={<ImportBrandSources />} />
           <Route path="/profile/library" element={<Library />} />
+          <Route path="/profile/social" element={<SocialMediaAssets />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

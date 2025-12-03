@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen } from "lucide-react";
+import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -98,7 +98,7 @@ const Profile = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <ProfileCard
             icon={<Globe className="w-6 h-6 text-blue-500" />}
             iconBg="bg-blue-500/10"
@@ -116,6 +116,15 @@ const Profile = () => {
             status="not_filled"
             onClick={() => navigate("/profile/library")}
             buttonColor="text-purple-500"
+          />
+          <ProfileCard
+            icon={<Share2 className="w-6 h-6 text-pink-500" />}
+            iconBg="bg-pink-500/10"
+            title="Social Media Assets"
+            description="Posts, images & analytics"
+            status="not_filled"
+            onClick={() => navigate("/profile/social")}
+            buttonColor="text-pink-500"
           />
         </div>
       </main>
