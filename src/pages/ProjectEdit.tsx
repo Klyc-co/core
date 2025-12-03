@@ -229,6 +229,9 @@ const ProjectEdit = () => {
   const generatedCount = segments.filter(
     (s) => s.use_broll && s.broll_status === "generated"
   ).length;
+  const generatingCount = segments.filter(
+    (s) => s.broll_status === "generating"
+  ).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -330,11 +333,19 @@ const ProjectEdit = () => {
             <h2 className="text-lg font-semibold text-foreground">
               Storyboard ({segments.length} segments)
             </h2>
-            {brollCount > 0 && (
-              <span className="text-sm text-muted-foreground">
-                {generatedCount}/{brollCount} B-roll generated
-              </span>
-            )}
+            <div className="flex items-center gap-4">
+              {generatingCount > 0 && (
+                <span className="flex items-center gap-2 text-sm text-primary">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {generatingCount} generating...
+                </span>
+              )}
+              {brollCount > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {generatedCount}/{brollCount} B-roll generated
+                </span>
+              )}
+            </div>
           </div>
           
           <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
