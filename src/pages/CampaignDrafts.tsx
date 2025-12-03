@@ -91,7 +91,7 @@ const CampaignDrafts = () => {
               <Card 
                 key={draft.id} 
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate("/campaigns/generate")}
+                onClick={() => navigate(`/campaigns/drafts/${draft.id}`)}
               >
                 <CardContent className="p-4">
                   <p className="font-medium text-foreground">
