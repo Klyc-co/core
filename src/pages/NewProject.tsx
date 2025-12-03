@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Zap, ArrowLeft, Film, Loader2, X } from "lucide-react";
+import { Upload, ArrowLeft, Film, Loader2, X } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const NewProject = () => {
   const [title, setTitle] = useState("");
@@ -113,12 +114,7 @@ const NewProject = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-xl font-bold gradient-text">Klyc</span>
-          </div>
+          <Logo />
         </div>
       </header>
 

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -73,11 +74,8 @@ const Auth = () => {
       
       <div className="w-full max-w-md relative animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-2xl font-bold gradient-text">Klyc</span>
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" />
           </div>
           <h1 className="text-2xl font-semibold text-foreground mb-2">
             {isLogin ? "Welcome back" : "Create your account"}

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/Logo";
 
 const steps = [
   { id: "transcribe", label: "Transcribing audio" },
@@ -71,11 +72,8 @@ const Processing = () => {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(185_75%_55%/0.1),transparent_60%)]" />
 
       <div className="text-center relative animate-fade-in">
-        <div className="inline-flex items-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-primary" />
-          </div>
-          <span className="text-2xl font-bold gradient-text">Klyc</span>
+        <div className="flex justify-center mb-8">
+          <Logo size="lg" />
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-3">

@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Zap, Play, Sparkles, Film, ArrowRight } from "lucide-react";
+import { Play, Sparkles, Film, ArrowRight, Zap } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -26,12 +27,7 @@ const Index = () => {
       {/* Header */}
       <header className="relative z-10 px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-2xl font-bold gradient-text">Klyc</span>
-          </div>
+          <Logo size="lg" />
           <Button onClick={() => navigate("/auth")} variant="outline">
             Sign in
           </Button>

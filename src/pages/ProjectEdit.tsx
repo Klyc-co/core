@@ -3,8 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, ArrowLeft, Play, Download, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Download, Loader2, Sparkles } from "lucide-react";
 import SegmentCard from "@/components/SegmentCard";
+import Logo from "@/components/Logo";
 
 interface Project {
   id: string;
@@ -182,12 +183,7 @@ const ProjectEdit = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-xl font-bold gradient-text">Klyc</span>
-            </div>
+            <Logo />
             <span className="text-muted-foreground">|</span>
             <h1 className="font-medium text-foreground">{project.title}</h1>
             <div className={`status-badge ${statusLabels[project.status]?.class}`}>
