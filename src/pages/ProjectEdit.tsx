@@ -140,21 +140,27 @@ const ProjectEdit = () => {
     }
 
     setRendering(true);
+    setProject((prev) => prev ? { ...prev, status: "rendering" } : null);
 
     try {
-      const { error } = await supabase.functions.invoke("render-video", {
+      const { data, error } = await supabase.functions.invoke("render-video", {
         body: { projectId: id },
       });
 
       if (error) throw error;
 
-      toast({ title: "Rendering started!", description: "Your video is being rendered" });
+      // Render completed - update with final video URL
+      setProject((prev) => prev ? { 
+        ...prev, 
+        status: "complete",
+        final_video_url: data.videoUrl 
+      } : null);
       
-      // Update local state
-      await supabase.from("projects").update({ status: "rendering" }).eq("id", id);
-      setProject((prev) => prev ? { ...prev, status: "rendering" } : null);
+      toast({ title: "Video rendered!", description: "Your final video is ready" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      // Refetch project to get actual status
+      fetchProject();
     } finally {
       setRendering(false);
     }
