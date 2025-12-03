@@ -230,14 +230,14 @@ const ProjectEdit = () => {
         </div>
       </header>
 
-      <main className="flex flex-col h-[calc(100vh-4rem)]">
+      <main className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
         {/* Videos Section - Top */}
-        <div className="flex-1 px-6 py-6 overflow-auto">
-          <div className="max-w-5xl mx-auto flex gap-8 justify-center">
+        <div className="flex-1 min-h-0 px-6 py-6 overflow-auto">
+          <div className="flex gap-8 justify-center">
             {/* Original Video */}
             <div className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
-              <div className="video-player aspect-[9/16] w-[280px]">
+              <div className="video-player aspect-[9/16] w-[240px]">
                 {project.original_video_url ? (
                   <video
                     src={project.original_video_url}
@@ -255,7 +255,7 @@ const ProjectEdit = () => {
             {/* Final Video */}
             <div className="space-y-3">
               <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
-              <div className="video-player aspect-[9/16] w-[280px]">
+              <div className="video-player aspect-[9/16] w-[240px]">
                 {project.status === "complete" && project.final_video_url ? (
                   <video
                     src={project.final_video_url}
@@ -281,8 +281,8 @@ const ProjectEdit = () => {
         </div>
 
         {/* Storyboard - Bottom Horizontal Scroll */}
-        <div className="border-t border-border bg-card/50 backdrop-blur-sm">
-          <div className="px-6 py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 h-[280px] border-t border-border bg-card/50 backdrop-blur-sm flex flex-col">
+          <div className="px-6 py-2 flex items-center justify-between flex-shrink-0">
             <h2 className="text-lg font-semibold text-foreground">
               Storyboard ({segments.length} segments)
             </h2>
@@ -293,7 +293,7 @@ const ProjectEdit = () => {
             )}
           </div>
           
-          <div className="overflow-x-auto pb-4">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden pb-3">
             <div className="flex gap-4 px-6 min-w-max">
               {segments.map((segment, index) => (
                 <div key={segment.id} className="w-[320px] flex-shrink-0">
