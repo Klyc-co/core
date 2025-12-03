@@ -18,6 +18,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
+    const assemblyKey = Deno.env.get("ASSEMBLYAI_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -32,30 +33,150 @@ serve(async (req) => {
       throw new Error("Project not found");
     }
 
-    // Mock transcription - in production, call Whisper API
-    const mockTranscript = [
-      { start: 0, end: 5, text: "Welcome to today's episode where we discuss something truly fascinating." },
-      { start: 5, end: 10, text: "The key insight here is that innovation drives everything forward." },
-      { start: 10, end: 15, text: "When you think about it, the possibilities are truly endless." },
-      { start: 15, end: 20, text: "Let me share with you three strategies that have worked incredibly well." },
-      { start: 20, end: 25, text: "First, always focus on the customer's core needs and desires." },
-      { start: 25, end: 30, text: "Second, iterate quickly and learn from every single failure." },
-    ];
+    console.log("Transcribing video:", project.original_video_url);
 
-    // Estimate duration from transcript
-    const duration = mockTranscript[mockTranscript.length - 1]?.end || 30;
+    // Step 1: Upload video to AssemblyAI for transcription
+    const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+      method: "POST",
+      headers: {
+        "Authorization": assemblyKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        audio_url: project.original_video_url,
+        speaker_labels: false,
+      }),
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error("AssemblyAI upload error:", errorText);
+      throw new Error("Failed to start transcription");
+    }
+
+    const transcriptData = await uploadResponse.json();
+    const transcriptId = transcriptData.id;
+    console.log("Transcription started:", transcriptId);
+
+    // Step 2: Poll for transcription completion
+    let transcript = null;
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max
+
+    while (attempts < maxAttempts) {
+      const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+        headers: { "Authorization": assemblyKey },
+      });
+
+      const statusData = await statusResponse.json();
+      console.log("Transcription status:", statusData.status);
+
+      if (statusData.status === "completed") {
+        transcript = statusData;
+        break;
+      } else if (statusData.status === "error") {
+        throw new Error(`Transcription failed: ${statusData.error}`);
+      }
+
+      // Wait 5 seconds before polling again
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      attempts++;
+    }
+
+    if (!transcript) {
+      throw new Error("Transcription timed out");
+    }
+
+    console.log("Transcription complete, duration:", transcript.audio_duration);
 
     // Update project duration
+    const duration = transcript.audio_duration || 30;
     await supabase
       .from("projects")
       .update({ duration_seconds: duration })
       .eq("id", projectId);
 
-    // Generate visual prompts using AI
-    const segments = [];
+    // Step 3: Split transcript into ~5 second segments
+    const words = transcript.words || [];
+    const segmentDuration = 5; // seconds
+    const segments: Array<{
+      start_seconds: number;
+      end_seconds: number;
+      transcript_snippet: string;
+    }> = [];
 
-    for (let i = 0; i < mockTranscript.length; i++) {
-      const segment = mockTranscript[i];
+    let currentSegment = {
+      start_seconds: 0,
+      end_seconds: 0,
+      words: [] as string[],
+    };
+
+    for (const word of words) {
+      const wordStart = word.start / 1000; // Convert ms to seconds
+      const wordEnd = word.end / 1000;
+
+      if (currentSegment.words.length === 0) {
+        currentSegment.start_seconds = wordStart;
+      }
+
+      currentSegment.words.push(word.text);
+      currentSegment.end_seconds = wordEnd;
+
+      // Check if we've reached segment duration
+      if (wordEnd - currentSegment.start_seconds >= segmentDuration) {
+        segments.push({
+          start_seconds: currentSegment.start_seconds,
+          end_seconds: currentSegment.end_seconds,
+          transcript_snippet: currentSegment.words.join(" "),
+        });
+
+        currentSegment = {
+          start_seconds: 0,
+          end_seconds: 0,
+          words: [],
+        };
+      }
+    }
+
+    // Push remaining words as final segment
+    if (currentSegment.words.length > 0) {
+      segments.push({
+        start_seconds: currentSegment.start_seconds,
+        end_seconds: currentSegment.end_seconds,
+        transcript_snippet: currentSegment.words.join(" "),
+      });
+    }
+
+    // If no words detected, create segments from full transcript
+    if (segments.length === 0 && transcript.text) {
+      const sentences = transcript.text.split(/[.!?]+/).filter((s: string) => s.trim());
+      const segmentCount = Math.ceil(duration / segmentDuration);
+      const sentencesPerSegment = Math.ceil(sentences.length / segmentCount);
+
+      for (let i = 0; i < segmentCount; i++) {
+        const start = i * segmentDuration;
+        const end = Math.min((i + 1) * segmentDuration, duration);
+        const segmentSentences = sentences.slice(
+          i * sentencesPerSegment,
+          (i + 1) * sentencesPerSegment
+        );
+
+        segments.push({
+          start_seconds: start,
+          end_seconds: end,
+          transcript_snippet: segmentSentences.join(". ").trim() || "...",
+        });
+      }
+    }
+
+    console.log(`Created ${segments.length} segments`);
+
+    // Step 4: Generate visual prompts for each segment using Lovable AI
+    const dbSegments = [];
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      console.log(`Generating prompt for segment ${i + 1}/${segments.length}`);
 
       // Call Lovable AI to generate visual prompt
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -69,11 +190,22 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You are a creative director creating AI B-roll. Write a 1-2 sentence visual description that matches the spoken content and works as vertical 9:16 B-roll. No text overlays, no music, just visuals. Be cinematic and specific.",
+              content: `You are a creative director creating AI B-roll for vertical short-form videos. 
+Write a concise 1-2 sentence visual description that:
+- Matches the emotional tone and content of the transcript
+- Works as vertical 9:16 B-roll footage
+- Is cinematic and visually engaging
+- Contains NO text overlays, NO music references, just pure visuals
+- Describes specific scenes, lighting, camera movements, or subjects
+
+Examples of good prompts:
+- "Slow motion aerial shot of a city skyline at golden hour, with lens flares catching the setting sun."
+- "Close-up of hands typing on a laptop keyboard, shallow depth of field, warm office lighting."
+- "Time-lapse of clouds moving over mountains, dramatic shadows sweeping across valleys."`,
             },
             {
               role: "user",
-              content: `Create a visual prompt for this transcript: "${segment.text}"`,
+              content: `Create a visual B-roll prompt for this transcript: "${segment.transcript_snippet}"`,
             },
           ],
         }),
@@ -85,22 +217,23 @@ serve(async (req) => {
       }
 
       const aiData = await aiResponse.json();
-      const visualPrompt = aiData.choices?.[0]?.message?.content || "Abstract flowing visuals with soft lighting.";
+      const visualPrompt = aiData.choices?.[0]?.message?.content || 
+        "Smooth cinematic footage with soft lighting and gentle movement.";
 
-      segments.push({
+      dbSegments.push({
         project_id: projectId,
         index: i,
-        start_seconds: segment.start,
-        end_seconds: segment.end,
-        transcript_snippet: segment.text,
-        visual_prompt: visualPrompt,
+        start_seconds: segment.start_seconds,
+        end_seconds: segment.end_seconds,
+        transcript_snippet: segment.transcript_snippet,
+        visual_prompt: visualPrompt.replace(/^["']|["']$/g, "").trim(),
         use_broll: false,
         broll_status: "not_generated",
       });
     }
 
     // Insert all segments
-    const { error: segmentsError } = await supabase.from("segments").insert(segments);
+    const { error: segmentsError } = await supabase.from("segments").insert(dbSegments);
 
     if (segmentsError) {
       console.error("Segments insert error:", segmentsError);
@@ -115,7 +248,7 @@ serve(async (req) => {
 
     console.log("Project processed successfully:", projectId);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, segmentCount: dbSegments.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {
