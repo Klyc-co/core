@@ -19,6 +19,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const runwayKey = Deno.env.get("RUNWAY_API_KEY")!;
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -41,11 +42,49 @@ serve(async (req) => {
       .update({ broll_status: "generating" })
       .eq("id", segmentId);
 
-    // Call Runway API to generate video
-    // Runway Gen-3 Alpha Turbo endpoint (official API)
-    console.log("Calling Runway API with key prefix:", runwayKey?.substring(0, 10) + "...");
+    // Step 1: Generate an image from the prompt using Lovable AI (Gemini image gen)
+    console.log("Step 1: Generating image from prompt...");
     
-    const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
+    const imagePrompt = `${prompt}. Vertical 9:16 aspect ratio, cinematic, high quality, suitable for video B-roll.`;
+    
+    const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: imagePrompt,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!imageResponse.ok) {
+      const errorText = await imageResponse.text();
+      console.error("Image generation error:", imageResponse.status, errorText);
+      throw new Error(`Image generation failed: ${imageResponse.status}`);
+    }
+
+    const imageData = await imageResponse.json();
+    const generatedImageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!generatedImageUrl) {
+      console.error("No image URL in response:", JSON.stringify(imageData));
+      throw new Error("No image generated");
+    }
+
+    console.log("Image generated successfully, length:", generatedImageUrl.length);
+
+    // Step 2: Use Runway to animate the image
+    console.log("Step 2: Animating image with Runway...");
+    
+    const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${runwayKey}`,
@@ -54,10 +93,10 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gen3a_turbo",
+        promptImage: generatedImageUrl,
         promptText: prompt,
-        duration: Math.min(duration, 10), // Runway max is 10 seconds
-        ratio: "9:16", // Vertical format
-        watermark: false,
+        duration: Math.min(Math.max(duration, 5), 10), // Runway: 5-10 seconds
+        ratio: "720:1280", // Vertical 9:16
       }),
     });
 
@@ -65,22 +104,18 @@ serve(async (req) => {
       const errorText = await runwayResponse.text();
       console.error("Runway API error:", runwayResponse.status, errorText);
       
-      // If Runway fails, use a fallback approach
-      // Update with placeholder for now
       await supabase
         .from("segments")
-        .update({
-          broll_status: "failed",
-        })
+        .update({ broll_status: "failed" })
         .eq("id", segmentId);
       
-      throw new Error(`Runway API error: ${runwayResponse.status}`);
+      throw new Error(`Runway API error: ${runwayResponse.status} - ${errorText}`);
     }
 
     const runwayData = await runwayResponse.json();
-    console.log("Runway response:", runwayData);
+    console.log("Runway task created:", runwayData.id);
 
-    // Runway returns a task ID, we need to poll for completion
+    // Poll for completion
     const taskId = runwayData.id;
     let videoUrl = null;
     let attempts = 0;
@@ -101,7 +136,7 @@ serve(async (req) => {
         videoUrl = statusData.output?.[0];
         break;
       } else if (statusData.status === "FAILED") {
-        throw new Error(`Video generation failed: ${statusData.error || "Unknown error"}`);
+        throw new Error(`Video generation failed: ${statusData.failure || statusData.failureCode || "Unknown error"}`);
       }
 
       // Wait 5 seconds before polling again
@@ -126,7 +161,7 @@ serve(async (req) => {
       throw new Error("Failed to update segment");
     }
 
-    console.log("B-roll generated for segment:", segmentId);
+    console.log("B-roll generated successfully:", videoUrl);
 
     return new Response(JSON.stringify({ videoUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
