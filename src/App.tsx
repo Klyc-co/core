@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -22,6 +23,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Wrapper component for routes that should have the chat sidebar
+const WithSidebar = ({ children }: { children: React.ReactNode }) => (
+  <AppLayout showSidebar={true}>{children}</AppLayout>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -29,21 +35,25 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public routes without sidebar */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/new" element={<NewProject />} />
-          <Route path="/projects/:id/processing" element={<Processing />} />
-          <Route path="/projects/:id/edit" element={<ProjectEdit />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/company" element={<CompanyInfo />} />
-          <Route path="/profile/audience" element={<TargetAudience />} />
-          <Route path="/profile/value" element={<ValueProposition />} />
-          <Route path="/profile/import" element={<ImportBrandSources />} />
-          <Route path="/profile/library" element={<Library />} />
-          <Route path="/profile/social" element={<SocialMediaAssets />} />
+          
+          {/* Authenticated routes with persistent chat sidebar */}
+          <Route path="/home" element={<WithSidebar><Home /></WithSidebar>} />
+          <Route path="/projects" element={<WithSidebar><Projects /></WithSidebar>} />
+          <Route path="/projects/new" element={<WithSidebar><NewProject /></WithSidebar>} />
+          <Route path="/projects/:id/processing" element={<WithSidebar><Processing /></WithSidebar>} />
+          <Route path="/projects/:id/edit" element={<WithSidebar><ProjectEdit /></WithSidebar>} />
+          <Route path="/settings" element={<WithSidebar><Settings /></WithSidebar>} />
+          <Route path="/profile" element={<WithSidebar><Profile /></WithSidebar>} />
+          <Route path="/profile/company" element={<WithSidebar><CompanyInfo /></WithSidebar>} />
+          <Route path="/profile/audience" element={<WithSidebar><TargetAudience /></WithSidebar>} />
+          <Route path="/profile/value" element={<WithSidebar><ValueProposition /></WithSidebar>} />
+          <Route path="/profile/import" element={<WithSidebar><ImportBrandSources /></WithSidebar>} />
+          <Route path="/profile/library" element={<WithSidebar><Library /></WithSidebar>} />
+          <Route path="/profile/social" element={<WithSidebar><SocialMediaAssets /></WithSidebar>} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
