@@ -226,18 +226,26 @@ const ProjectEdit = () => {
               )}
               Render Final Video
             </Button>
+            {project.status === "complete" && project.final_video_url && (
+              <Button asChild variant="success">
+                <a href={project.final_video_url} download>
+                  <Download className="w-4 h-4" />
+                  Download MP4
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
-        {/* Videos Section - Top */}
-        <div className="flex-1 min-h-0 px-6 py-6 overflow-auto">
-          <div className="flex gap-8 justify-center">
-            {/* Original Video */}
-            <div className="space-y-3">
+        {/* Videos Section - Top with independent scroll */}
+        <div className="flex-1 min-h-0 px-6 py-6 overflow-auto border-b border-border">
+          <div className="flex gap-8 items-start">
+            {/* Original Video - Horizontal/Large */}
+            <div className="space-y-3 flex-1">
               <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
-              <div className="video-player aspect-[9/16] w-[240px]">
+              <div className="video-player aspect-video w-full max-w-2xl">
                 {project.original_video_url ? (
                   <video
                     src={project.original_video_url}
@@ -252,10 +260,10 @@ const ProjectEdit = () => {
               </div>
             </div>
 
-            {/* Final Video */}
-            <div className="space-y-3">
+            {/* Final Video - Vertical */}
+            <div className="space-y-3 flex-shrink-0">
               <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
-              <div className="video-player aspect-[9/16] w-[240px]">
+              <div className="video-player aspect-[9/16] w-[200px]">
                 {project.status === "complete" && project.final_video_url ? (
                   <video
                     src={project.final_video_url}
@@ -263,26 +271,18 @@ const ProjectEdit = () => {
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm text-center px-2">
                     {project.status === "rendering" ? "Rendering..." : "Not rendered yet"}
                   </div>
                 )}
               </div>
-              {project.status === "complete" && project.final_video_url && (
-                <Button asChild variant="success" className="w-full">
-                  <a href={project.final_video_url} download>
-                    <Download className="w-4 h-4" />
-                    Download MP4
-                  </a>
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Storyboard - Bottom Horizontal Scroll */}
-        <div className="flex-shrink-0 h-[280px] border-t border-border bg-card/50 backdrop-blur-sm flex flex-col">
-          <div className="px-6 py-2 flex items-center justify-between flex-shrink-0">
+        {/* Storyboard - Bottom with independent scroll (horizontal & vertical) */}
+        <div className="flex-shrink-0 h-[320px] bg-card/50 backdrop-blur-sm flex flex-col">
+          <div className="px-6 py-2 flex items-center justify-between flex-shrink-0 border-b border-border/50">
             <h2 className="text-lg font-semibold text-foreground">
               Storyboard ({segments.length} segments)
             </h2>
@@ -293,7 +293,7 @@ const ProjectEdit = () => {
             )}
           </div>
           
-          <div className="flex-1 overflow-x-auto overflow-y-hidden pb-3">
+          <div className="flex-1 overflow-auto p-4">
             <div className="flex gap-4 px-6 min-w-max">
               {segments.map((segment, index) => (
                 <div key={segment.id} className="w-[320px] flex-shrink-0">
