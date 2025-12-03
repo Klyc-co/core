@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sparkles, Settings } from "lucide-react";
+import { LogOut, Sparkles, Settings, User } from "lucide-react";
 import Logo from "@/components/Logo";
-import type { User } from "@supabase/supabase-js";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AppHeaderProps {
-  user: User | null;
+  user: SupabaseUser | null;
 }
 
 const AppHeader = ({ user }: AppHeaderProps) => {
@@ -22,6 +22,14 @@ const AppHeader = ({ user }: AppHeaderProps) => {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Logo />
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/profile")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <User className="w-4 h-4 mr-2" />
+            Profile
+          </Button>
           <Button
             variant="ghost"
             onClick={() => navigate("/projects")}
