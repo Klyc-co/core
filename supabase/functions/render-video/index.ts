@@ -167,22 +167,16 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
       };
     });
 
-  // Base track - full original video cropped to vertical with audio
+  // Base track - full original video with audio, let fit:cover handle cropping
   const baseClip = {
     asset: {
       type: "video",
       src: project.original_video_url,
       volume: 1, // Keep original audio
-      crop: {
-        top: 0,
-        bottom: 0,
-        left: 0.34, // Crop 34% from left for vertical
-        right: 0.34, // Crop 34% from right for vertical
-      },
     },
     start: 0,
     length: totalDuration,
-    fit: "cover",
+    fit: "cover", // Auto-scale and crop to fill 9:16 frame
   };
 
   // Tracks: B-roll overlay on top, base video on bottom
