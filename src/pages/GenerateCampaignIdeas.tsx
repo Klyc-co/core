@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Music, Image, FileText, Zap, Film, Sparkles, Copy, Check, X, FileStack } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const contentTypes = [
@@ -24,7 +24,7 @@ const GenerateCampaignIdeas = () => {
   const [customPrompt, setCustomPrompt] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [tags, setTags] = useState(["#viral", "#socialmedia", "#trending", "#productlaunch", "#reels", "#shorts", "#tiktok", "#engagement"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
   useEffect(() => {
@@ -168,7 +168,11 @@ const GenerateCampaignIdeas = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
-                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                  <Textarea
+                    placeholder="Your AI-generated campaign idea will appear here..."
+                    rows={2}
+                    className="resize-none bg-muted/50"
+                  />
                 </CardContent>
               </Card>
 
@@ -180,19 +184,18 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('Scene 1: Hook - "Wait for the ending"\nScene 2: Problem - Show common pain point\nScene 3: Solution - Introduce Social Media Marketing Blueprint\nScene 4: CTA - "Swipe up for 50% off"', 'script')}
+                      onClick={() => handleCopy('', 'script')}
                       className="gap-2"
                     >
                       {copiedField === 'script' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       Copy
                     </Button>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm text-foreground">
-                    <p>Scene 1: Hook - "Wait for the ending"</p>
-                    <p>Scene 2: Problem - Show common pain point</p>
-                    <p>Scene 3: Solution - Introduce Social Media Marketing Blueprint</p>
-                    <p>Scene 4: CTA - "Swipe up for 50% off"</p>
-                  </div>
+                  <Textarea
+                    placeholder="Your AI-generated video script will appear here..."
+                    rows={6}
+                    className="resize-none bg-muted/50"
+                  />
                 </CardContent>
               </Card>
 
@@ -202,10 +205,10 @@ const GenerateCampaignIdeas = () => {
                   <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
                   <div className="space-y-4">
                     {[
-                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening", prompt: "Dramatic, eye-catching opening shot, fast-paced movement, viral-worthy moment, trending audio compatible, bold visuals, TikTok/Reel aesthetic, short-form video format, 9:16 vertical video, high energy, stop-scroll worthy content" },
-                      { time: "[2-6s]", title: "Problem - Show common pain point", prompt: "Relatable problem scenario showing user frustration or challenge, realistic everyday situation, authentic emotion, fast cuts between shots, trending sound effects or dialogue overlay, trending TikTok/Instagram Reel style, before-state visualization" },
-                      { time: "[6-12s]", title: "Solution - Introduce ${selectedProduct?.name}", prompt: "Product reveal with Social Media Marketing Blueprint as the solution, product transition with effects, transformation moment, trending transitions, smooth cuts synchronized with audio, product benefit demonstration, after-state showing improvement" },
-                      { time: "[12-15s]", title: "CTA - Call to action with trending hook", prompt: "Compelling call-to-action overlay text, trending caption styles, swipe-up prompt or link text, urgency elements (limited offer, trending now), eye-catching colors, trending TikTok/Reel CTA format, brand consistency, audience engagement prompt" },
+                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening" },
+                      { time: "[2-6s]", title: "Problem - Show common pain point" },
+                      { time: "[6-12s]", title: "Solution - Introduce product" },
+                      { time: "[12-15s]", title: "CTA - Call to action with trending hook" },
                     ].map((scene, index) => (
                       <div key={index} className="border border-border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -213,14 +216,18 @@ const GenerateCampaignIdeas = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleCopy(scene.prompt, `scene-${index}`)}
+                            onClick={() => handleCopy('', `scene-${index}`)}
                             className="gap-2"
                           >
                             {copiedField === `scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             Copy
                           </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{scene.prompt}</p>
+                        <Textarea
+                          placeholder="AI-generated prompt will appear here..."
+                          rows={3}
+                          className="resize-none bg-muted/50"
+                        />
                       </div>
                     ))}
                   </div>
@@ -256,7 +263,11 @@ const GenerateCampaignIdeas = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
-                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                  <Textarea
+                    placeholder="Your AI-generated campaign idea will appear here..."
+                    rows={2}
+                    className="resize-none bg-muted/50"
+                  />
                 </CardContent>
               </Card>
 
@@ -335,7 +346,11 @@ const GenerateCampaignIdeas = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
-                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                  <Textarea
+                    placeholder="Your AI-generated campaign idea will appear here..."
+                    rows={2}
+                    className="resize-none bg-muted/50"
+                  />
                 </CardContent>
               </Card>
 
@@ -388,7 +403,11 @@ const GenerateCampaignIdeas = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
-                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                  <Textarea
+                    placeholder="Your AI-generated campaign idea will appear here..."
+                    rows={2}
+                    className="resize-none bg-muted/50"
+                  />
                 </CardContent>
               </Card>
 
@@ -421,10 +440,10 @@ const GenerateCampaignIdeas = () => {
                   <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
                   <div className="space-y-4">
                     {[
-                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening", prompt: "Dramatic, eye-catching opening shot, fast-paced movement, viral-worthy moment, trending audio compatible, bold visuals, TikTok/Reel aesthetic, short-form video format, 9:16 vertical video, high energy, stop-scroll worthy content" },
-                      { time: "[2-6s]", title: "Problem - Show common pain point", prompt: "Relatable problem scenario showing user frustration or challenge, realistic everyday situation, authentic emotion, fast cuts between shots, trending sound effects or dialogue overlay, trending TikTok/Instagram Reel style, before-state visualization" },
-                      { time: "[6-12s]", title: "Solution - Introduce ${selectedProduct?.name}", prompt: "Product reveal with Social Media Marketing Blueprint as the solution, product transition with effects, transformation moment, trending transitions, smooth cuts synchronized with audio, product benefit demonstration, after-state showing improvement" },
-                      { time: "[12-15s]", title: "CTA - Call to action with trending hook", prompt: "Compelling call-to-action overlay text, trending caption styles, swipe-up prompt or link text, urgency elements (limited offer, trending now), eye-catching colors, trending TikTok/Reel CTA format, brand consistency, audience engagement prompt" },
+                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening" },
+                      { time: "[2-6s]", title: "Problem - Show common pain point" },
+                      { time: "[6-12s]", title: "Solution - Introduce product" },
+                      { time: "[12-15s]", title: "CTA - Call to action with trending hook" },
                     ].map((scene, index) => (
                       <div key={index} className="border border-border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -432,14 +451,18 @@ const GenerateCampaignIdeas = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleCopy(scene.prompt, `video-ad-scene-${index}`)}
+                            onClick={() => handleCopy('', `video-ad-scene-${index}`)}
                             className="gap-2"
                           >
                             {copiedField === `video-ad-scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             Copy
                           </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground">{scene.prompt}</p>
+                        <Textarea
+                          placeholder="AI-generated prompt will appear here..."
+                          rows={3}
+                          className="resize-none bg-muted/50"
+                        />
                       </div>
                     ))}
                   </div>
@@ -496,30 +519,29 @@ const CampaignStrategy = ({
       <div className="space-y-6">
         <div>
           <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
-          <div className="space-y-2">
-            {["Increase engagement and viral potential", "Drive product awareness and discovery", "Boost brand credibility and social proof", "Generate user-generated content"].map((goal, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Check className="w-3 h-3 text-primary" />
-                </div>
-                <span className="text-foreground">{goal}</span>
-              </div>
-            ))}
-          </div>
+          <Textarea
+            placeholder="AI-generated campaign goals will appear here..."
+            rows={4}
+            className="resize-none bg-muted/50"
+          />
         </div>
 
         <div>
           <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-foreground">Young adults aged 18-35, trend-conscious, active on social media platforms like TikTok and Instagram, interested in innovative products</p>
-          </div>
+          <Textarea
+            placeholder="AI-generated target audience description will appear here..."
+            rows={3}
+            className="resize-none bg-muted/50"
+          />
         </div>
 
         <div>
           <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-foreground">Create shareable, entertaining content that drives viral reach and brand awareness through authentic storytelling and social trends</p>
-          </div>
+          <Textarea
+            placeholder="AI-generated campaign objective will appear here..."
+            rows={3}
+            className="resize-none bg-muted/50"
+          />
         </div>
 
         <div>
