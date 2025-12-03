@@ -13,7 +13,6 @@ const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
   { id: "visual-post", label: "Visual Post", icon: Image },
   { id: "written", label: "Written", icon: FileText },
-  { id: "audio", label: "Audio", icon: Zap },
   { id: "video-ad", label: "Video Ad", icon: Film },
 ];
 
@@ -39,7 +38,7 @@ const GenerateCampaignIdeas = () => {
   }, [navigate]);
 
   const handleGenerate = () => {
-    if (selectedContentType === "social-video" || selectedContentType === "visual-post" || selectedContentType === "written") {
+    if (selectedContentType === "social-video" || selectedContentType === "visual-post" || selectedContentType === "written" || selectedContentType === "video-ad") {
       setShowResults(true);
     }
     console.log({ selectedContentType, targetAudience, customPrompt });
@@ -360,6 +359,93 @@ const GenerateCampaignIdeas = () => {
                     rows={8}
                     className="resize-none bg-muted/50"
                   />
+                </CardContent>
+              </Card>
+
+              <CampaignStrategy 
+                tags={tags} 
+                removeTag={removeTag} 
+                newTag={newTag} 
+                setNewTag={setNewTag} 
+                addTag={addTag} 
+              />
+
+              {/* Save Button */}
+              <Button 
+                className="w-full gap-2 py-6 text-lg"
+                onClick={() => console.log("Save to drafts")}
+              >
+                <FileStack className="w-5 h-5" />
+                Save to Campaign Drafts
+              </Button>
+            </div>
+          )}
+
+          {/* Video Ad Results */}
+          {showResults && selectedContentType === "video-ad" && (
+            <div className="space-y-6 mt-8">
+              {/* Campaign Idea */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                </CardContent>
+              </Card>
+
+              {/* Video Script */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">Video Script</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleCopy('', 'video-ad-script')}
+                      className="gap-2"
+                    >
+                      {copiedField === 'video-ad-script' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      Copy
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Your AI-generated video script will appear here..."
+                    rows={6}
+                    className="resize-none bg-muted/50"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Video Generation Prompts */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
+                  <div className="space-y-4">
+                    {[
+                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening", prompt: "Dramatic, eye-catching opening shot, fast-paced movement, viral-worthy moment, trending audio compatible, bold visuals, TikTok/Reel aesthetic, short-form video format, 9:16 vertical video, high energy, stop-scroll worthy content" },
+                      { time: "[2-6s]", title: "Problem - Show common pain point", prompt: "Relatable problem scenario showing user frustration or challenge, realistic everyday situation, authentic emotion, fast cuts between shots, trending sound effects or dialogue overlay, trending TikTok/Instagram Reel style, before-state visualization" },
+                      { time: "[6-12s]", title: "Solution - Introduce ${selectedProduct?.name}", prompt: "Product reveal with Social Media Marketing Blueprint as the solution, product transition with effects, transformation moment, trending transitions, smooth cuts synchronized with audio, product benefit demonstration, after-state showing improvement" },
+                      { time: "[12-15s]", title: "CTA - Call to action with trending hook", prompt: "Compelling call-to-action overlay text, trending caption styles, swipe-up prompt or link text, urgency elements (limited offer, trending now), eye-catching colors, trending TikTok/Reel CTA format, brand consistency, audience engagement prompt" },
+                    ].map((scene, index) => (
+                      <div key={index} className="border border-border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-foreground">{scene.time} {scene.title}</h4>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleCopy(scene.prompt, `video-ad-scene-${index}`)}
+                            className="gap-2"
+                          >
+                            {copiedField === `video-ad-scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            Copy
+                          </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{scene.prompt}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Use these prompts with AI video generation tools like Runway, Synthesia, or comparable video generation services to create each scene.
+                  </p>
                 </CardContent>
               </Card>
 
