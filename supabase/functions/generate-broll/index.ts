@@ -19,7 +19,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const runwayKey = Deno.env.get("RUNWAY_API_KEY")!;
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -34,7 +33,11 @@ serve(async (req) => {
       throw new Error("Segment not found");
     }
 
-    const duration = Math.ceil(segment.end_seconds - segment.start_seconds);
+    const segmentDuration = Math.ceil(segment.end_seconds - segment.start_seconds);
+    // Runway veo3 only supports durations of 4, 6, or 8 seconds
+    let duration = 4;
+    if (segmentDuration >= 7) duration = 8;
+    else if (segmentDuration >= 5) duration = 6;
 
     // Update status to generating
     await supabase
@@ -42,49 +45,10 @@ serve(async (req) => {
       .update({ broll_status: "generating" })
       .eq("id", segmentId);
 
-    // Step 1: Generate an image from the prompt using Lovable AI (Gemini image gen)
-    console.log("Step 1: Generating image from prompt...");
+    // Call Runway text-to-video API with veo3
+    console.log("Calling Runway text-to-video API with veo3, duration:", duration);
     
-    const imagePrompt = `${prompt}. Vertical 9:16 aspect ratio, cinematic, high quality, suitable for video B-roll.`;
-    
-    const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: imagePrompt,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (!imageResponse.ok) {
-      const errorText = await imageResponse.text();
-      console.error("Image generation error:", imageResponse.status, errorText);
-      throw new Error(`Image generation failed: ${imageResponse.status}`);
-    }
-
-    const imageData = await imageResponse.json();
-    const generatedImageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!generatedImageUrl) {
-      console.error("No image URL in response:", JSON.stringify(imageData));
-      throw new Error("No image generated");
-    }
-
-    console.log("Image generated successfully, length:", generatedImageUrl.length);
-
-    // Step 2: Use Runway to animate the image
-    console.log("Step 2: Animating image with Runway...");
-    
-    const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/image_to_video", {
+    const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${runwayKey}`,
@@ -92,11 +56,11 @@ serve(async (req) => {
         "X-Runway-Version": "2024-11-06",
       },
       body: JSON.stringify({
-        model: "gen3a_turbo",
-        promptImage: generatedImageUrl,
+        model: "veo3",
         promptText: prompt,
-        duration: Math.min(Math.max(duration, 5), 10), // Runway: 5-10 seconds
+        duration: duration,
         ratio: "720:1280", // Vertical 9:16
+        audio: false, // No audio needed, we use original
       }),
     });
 
