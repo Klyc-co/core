@@ -111,7 +111,7 @@ const NewProject = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/projects")}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <Logo />
