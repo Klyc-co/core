@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface Word {
+  text: string;
+  start: number;
+  end: number;
+  confidence: number;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -88,6 +95,7 @@ serve(async (req) => {
     }
 
     console.log("Transcription complete, duration:", transcript.audio_duration);
+    console.log("Words count:", transcript.words?.length || 0);
 
     // Update project duration
     const duration = transcript.audio_duration || 30;
@@ -96,30 +104,37 @@ serve(async (req) => {
       .update({ duration_seconds: duration })
       .eq("id", projectId);
 
-    // Step 3: Split transcript into ~5 second segments
-    const words = transcript.words || [];
+    // Step 3: Split transcript into ~5 second segments, preserving word-level data
+    const words: Word[] = transcript.words || [];
     const segmentDuration = 5; // seconds
     const segments: Array<{
       start_seconds: number;
       end_seconds: number;
       transcript_snippet: string;
+      words_json: Array<{ text: string; start: number; end: number }>;
     }> = [];
 
     let currentSegment = {
       start_seconds: 0,
       end_seconds: 0,
-      words: [] as string[],
+      wordTexts: [] as string[],
+      words: [] as Array<{ text: string; start: number; end: number }>,
     };
 
     for (const word of words) {
       const wordStart = word.start / 1000; // Convert ms to seconds
       const wordEnd = word.end / 1000;
 
-      if (currentSegment.words.length === 0) {
+      if (currentSegment.wordTexts.length === 0) {
         currentSegment.start_seconds = wordStart;
       }
 
-      currentSegment.words.push(word.text);
+      currentSegment.wordTexts.push(word.text);
+      currentSegment.words.push({
+        text: word.text,
+        start: wordStart,
+        end: wordEnd,
+      });
       currentSegment.end_seconds = wordEnd;
 
       // Check if we've reached segment duration
@@ -127,23 +142,26 @@ serve(async (req) => {
         segments.push({
           start_seconds: currentSegment.start_seconds,
           end_seconds: currentSegment.end_seconds,
-          transcript_snippet: currentSegment.words.join(" "),
+          transcript_snippet: currentSegment.wordTexts.join(" "),
+          words_json: currentSegment.words,
         });
 
         currentSegment = {
           start_seconds: 0,
           end_seconds: 0,
+          wordTexts: [],
           words: [],
         };
       }
     }
 
     // Push remaining words as final segment
-    if (currentSegment.words.length > 0) {
+    if (currentSegment.wordTexts.length > 0) {
       segments.push({
         start_seconds: currentSegment.start_seconds,
         end_seconds: currentSegment.end_seconds,
-        transcript_snippet: currentSegment.words.join(" "),
+        transcript_snippet: currentSegment.wordTexts.join(" "),
+        words_json: currentSegment.words,
       });
     }
 
@@ -165,6 +183,7 @@ serve(async (req) => {
           start_seconds: start,
           end_seconds: end,
           transcript_snippet: segmentSentences.join(". ").trim() || "...",
+          words_json: [], // No word-level data available
         });
       }
     }
@@ -229,6 +248,7 @@ Examples of good prompts:
         visual_prompt: visualPrompt.replace(/^["']|["']$/g, "").trim(),
         use_broll: false,
         broll_status: "not_generated",
+        words_json: segment.words_json,
       });
     }
 
