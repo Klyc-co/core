@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2 } from "lucide-react";
+import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -125,6 +125,18 @@ const Profile = () => {
             status="not_filled"
             onClick={() => navigate("/profile/social")}
             buttonColor="text-pink-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <ProfileCard
+            icon={<Package className="w-6 h-6 text-teal-500" />}
+            iconBg="bg-teal-500/10"
+            title="Products"
+            description="Your products & product lines"
+            status="not_filled"
+            onClick={() => navigate("/profile/products")}
+            buttonColor="text-teal-500"
           />
         </div>
       </main>
