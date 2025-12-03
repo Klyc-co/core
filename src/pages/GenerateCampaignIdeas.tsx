@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const contentTypes = [
@@ -28,6 +28,23 @@ const GenerateCampaignIdeas = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Generated content state
+  const [campaignIdea, setCampaignIdea] = useState("");
+  const [videoScript, setVideoScript] = useState("");
+  const [scenePrompts, setScenePrompts] = useState<{ time: string; title: string; prompt: string }[]>([
+    { time: "[0-2s]", title: "Hook - Attention-grabbing opening", prompt: "" },
+    { time: "[2-6s]", title: "Problem - Show common pain point", prompt: "" },
+    { time: "[6-12s]", title: "Solution - Introduce product", prompt: "" },
+    { time: "[12-15s]", title: "CTA - Call to action with trending hook", prompt: "" },
+  ]);
+  const [postCaption, setPostCaption] = useState("");
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [articleOutline, setArticleOutline] = useState("");
+  const [campaignGoals, setCampaignGoals] = useState("");
+  const [targetAudienceDescription, setTargetAudienceDescription] = useState("");
+  const [campaignObjective, setCampaignObjective] = useState("");
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -42,11 +59,60 @@ const GenerateCampaignIdeas = () => {
     });
   }, [navigate]);
 
-  const handleGenerate = () => {
-    if (selectedContentType === "social-video" || selectedContentType === "visual-post" || selectedContentType === "written" || selectedContentType === "video-ad") {
+  const handleGenerate = async () => {
+    if (!selectedContentType) return;
+    
+    setIsLoading(true);
+    setShowResults(false);
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-campaign-idea`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          contentType: selectedContentType,
+          targetAudience,
+          prompt: customPrompt,
+          productInfo: selectedProduct || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate campaign idea");
+      }
+
+      const data = await response.json();
+      
+      // Populate the fields based on content type
+      setCampaignIdea(data.campaignIdea || "");
+      setTags(data.tags || []);
+      setCampaignGoals(data.campaignGoals || "");
+      setTargetAudienceDescription(data.targetAudienceDescription || "");
+      setCampaignObjective(data.campaignObjective || "");
+      
+      if (selectedContentType === "social-video" || selectedContentType === "video-ad") {
+        setVideoScript(data.videoScript || "");
+        if (data.scenePrompts) {
+          setScenePrompts(data.scenePrompts);
+        }
+      } else if (selectedContentType === "visual-post") {
+        setPostCaption(data.postCaption || "");
+        setImagePrompt(data.imagePrompt || "");
+      } else if (selectedContentType === "written") {
+        setArticleOutline(data.articleOutline || "");
+      }
+      
       setShowResults(true);
+    } catch (error) {
+      console.error("Error generating campaign idea:", error);
+      alert(error instanceof Error ? error.message : "Failed to generate campaign idea");
+    } finally {
+      setIsLoading(false);
     }
-    console.log({ selectedContentType, targetAudience, customPrompt });
   };
 
   const handleCopy = async (text: string, field: string) => {
@@ -182,11 +248,21 @@ const GenerateCampaignIdeas = () => {
 
           {/* Generate Button */}
           <Button 
-            className="w-full gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 py-6 text-lg"
+            className="w-full gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 py-6 text-lg disabled:opacity-50"
             onClick={handleGenerate}
+            disabled={!selectedContentType || isLoading}
           >
-            <Sparkles className="w-5 h-5" />
-            Generate Campaign Ideas
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Generate Campaign Ideas
+              </>
+            )}
           </Button>
 
           {/* Social Video Results */}
@@ -197,6 +273,8 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
                   <Textarea
+                    value={campaignIdea}
+                    onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated campaign idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
@@ -212,7 +290,7 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('', 'script')}
+                      onClick={() => handleCopy(videoScript, 'script')}
                       className="gap-2"
                     >
                       {copiedField === 'script' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -220,6 +298,8 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <Textarea
+                    value={videoScript}
+                    onChange={(e) => setVideoScript(e.target.value)}
                     placeholder="Your AI-generated video script will appear here..."
                     rows={6}
                     className="resize-none bg-muted/50"
@@ -232,19 +312,14 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
                   <div className="space-y-4">
-                    {[
-                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening" },
-                      { time: "[2-6s]", title: "Problem - Show common pain point" },
-                      { time: "[6-12s]", title: "Solution - Introduce product" },
-                      { time: "[12-15s]", title: "CTA - Call to action with trending hook" },
-                    ].map((scene, index) => (
+                    {scenePrompts.map((scene, index) => (
                       <div key={index} className="border border-border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-foreground">{scene.time} {scene.title}</h4>
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleCopy('', `scene-${index}`)}
+                            onClick={() => handleCopy(scene.prompt, `scene-${index}`)}
                             className="gap-2"
                           >
                             {copiedField === `scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -252,6 +327,12 @@ const GenerateCampaignIdeas = () => {
                           </Button>
                         </div>
                         <Textarea
+                          value={scene.prompt}
+                          onChange={(e) => {
+                            const newPrompts = [...scenePrompts];
+                            newPrompts[index] = { ...scene, prompt: e.target.value };
+                            setScenePrompts(newPrompts);
+                          }}
                           placeholder="AI-generated prompt will appear here..."
                           rows={3}
                           className="resize-none bg-muted/50"
@@ -270,7 +351,13 @@ const GenerateCampaignIdeas = () => {
                 removeTag={removeTag} 
                 newTag={newTag} 
                 setNewTag={setNewTag} 
-                addTag={addTag} 
+                addTag={addTag}
+                campaignGoals={campaignGoals}
+                setCampaignGoals={setCampaignGoals}
+                targetAudienceDescription={targetAudienceDescription}
+                setTargetAudienceDescription={setTargetAudienceDescription}
+                campaignObjective={campaignObjective}
+                setCampaignObjective={setCampaignObjective}
               />
 
               {/* Save Button */}
@@ -292,6 +379,8 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
                   <Textarea
+                    value={campaignIdea}
+                    onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated campaign idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
@@ -307,7 +396,7 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('', 'caption')}
+                      onClick={() => handleCopy(postCaption, 'caption')}
                       className="gap-2"
                     >
                       {copiedField === 'caption' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -315,6 +404,8 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <Textarea
+                    value={postCaption}
+                    onChange={(e) => setPostCaption(e.target.value)}
                     placeholder="Your AI-generated caption will appear here..."
                     rows={5}
                     className="resize-none bg-muted/50"
@@ -330,7 +421,7 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('', 'image-prompt')}
+                      onClick={() => handleCopy(imagePrompt, 'image-prompt')}
                       className="gap-2"
                     >
                       {copiedField === 'image-prompt' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -341,6 +432,8 @@ const GenerateCampaignIdeas = () => {
                     Use this prompt with an AI image generator like DALL-E, Midjourney, or Stable Diffusion:
                   </p>
                   <Textarea
+                    value={imagePrompt}
+                    onChange={(e) => setImagePrompt(e.target.value)}
                     placeholder="Your AI-generated image prompt will appear here..."
                     rows={5}
                     className="resize-none bg-muted/50"
@@ -353,7 +446,13 @@ const GenerateCampaignIdeas = () => {
                 removeTag={removeTag} 
                 newTag={newTag} 
                 setNewTag={setNewTag} 
-                addTag={addTag} 
+                addTag={addTag}
+                campaignGoals={campaignGoals}
+                setCampaignGoals={setCampaignGoals}
+                targetAudienceDescription={targetAudienceDescription}
+                setTargetAudienceDescription={setTargetAudienceDescription}
+                campaignObjective={campaignObjective}
+                setCampaignObjective={setCampaignObjective}
               />
 
               {/* Save Button */}
@@ -375,6 +474,8 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
                   <Textarea
+                    value={campaignIdea}
+                    onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated campaign idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
@@ -390,7 +491,7 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('', 'article-outline')}
+                      onClick={() => handleCopy(articleOutline, 'article-outline')}
                       className="gap-2"
                     >
                       {copiedField === 'article-outline' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -398,6 +499,8 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <Textarea
+                    value={articleOutline}
+                    onChange={(e) => setArticleOutline(e.target.value)}
                     placeholder="Your AI-generated article outline will appear here..."
                     rows={8}
                     className="resize-none bg-muted/50"
@@ -410,7 +513,13 @@ const GenerateCampaignIdeas = () => {
                 removeTag={removeTag} 
                 newTag={newTag} 
                 setNewTag={setNewTag} 
-                addTag={addTag} 
+                addTag={addTag}
+                campaignGoals={campaignGoals}
+                setCampaignGoals={setCampaignGoals}
+                targetAudienceDescription={targetAudienceDescription}
+                setTargetAudienceDescription={setTargetAudienceDescription}
+                campaignObjective={campaignObjective}
+                setCampaignObjective={setCampaignObjective}
               />
 
               {/* Save Button */}
@@ -432,6 +541,8 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
                   <Textarea
+                    value={campaignIdea}
+                    onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated campaign idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
@@ -447,7 +558,7 @@ const GenerateCampaignIdeas = () => {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleCopy('', 'video-ad-script')}
+                      onClick={() => handleCopy(videoScript, 'video-ad-script')}
                       className="gap-2"
                     >
                       {copiedField === 'video-ad-script' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -455,6 +566,8 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <Textarea
+                    value={videoScript}
+                    onChange={(e) => setVideoScript(e.target.value)}
                     placeholder="Your AI-generated video script will appear here..."
                     rows={6}
                     className="resize-none bg-muted/50"
@@ -467,19 +580,14 @@ const GenerateCampaignIdeas = () => {
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
                   <div className="space-y-4">
-                    {[
-                      { time: "[0-2s]", title: "Hook - Attention-grabbing opening" },
-                      { time: "[2-6s]", title: "Problem - Show common pain point" },
-                      { time: "[6-12s]", title: "Solution - Introduce product" },
-                      { time: "[12-15s]", title: "CTA - Call to action with trending hook" },
-                    ].map((scene, index) => (
+                    {scenePrompts.map((scene, index) => (
                       <div key={index} className="border border-border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-foreground">{scene.time} {scene.title}</h4>
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleCopy('', `video-ad-scene-${index}`)}
+                            onClick={() => handleCopy(scene.prompt, `video-ad-scene-${index}`)}
                             className="gap-2"
                           >
                             {copiedField === `video-ad-scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -487,6 +595,12 @@ const GenerateCampaignIdeas = () => {
                           </Button>
                         </div>
                         <Textarea
+                          value={scene.prompt}
+                          onChange={(e) => {
+                            const newPrompts = [...scenePrompts];
+                            newPrompts[index] = { ...scene, prompt: e.target.value };
+                            setScenePrompts(newPrompts);
+                          }}
                           placeholder="AI-generated prompt will appear here..."
                           rows={3}
                           className="resize-none bg-muted/50"
@@ -505,7 +619,13 @@ const GenerateCampaignIdeas = () => {
                 removeTag={removeTag} 
                 newTag={newTag} 
                 setNewTag={setNewTag} 
-                addTag={addTag} 
+                addTag={addTag}
+                campaignGoals={campaignGoals}
+                setCampaignGoals={setCampaignGoals}
+                targetAudienceDescription={targetAudienceDescription}
+                setTargetAudienceDescription={setTargetAudienceDescription}
+                campaignObjective={campaignObjective}
+                setCampaignObjective={setCampaignObjective}
               />
 
               {/* Save Button */}
@@ -530,13 +650,25 @@ const CampaignStrategy = ({
   removeTag, 
   newTag, 
   setNewTag, 
-  addTag 
+  addTag,
+  campaignGoals,
+  setCampaignGoals,
+  targetAudienceDescription,
+  setTargetAudienceDescription,
+  campaignObjective,
+  setCampaignObjective,
 }: {
   tags: string[];
   removeTag: (tag: string) => void;
   newTag: string;
   setNewTag: (value: string) => void;
   addTag: () => void;
+  campaignGoals: string;
+  setCampaignGoals: (value: string) => void;
+  targetAudienceDescription: string;
+  setTargetAudienceDescription: (value: string) => void;
+  campaignObjective: string;
+  setCampaignObjective: (value: string) => void;
 }) => (
   <Card>
     <CardContent className="p-6">
@@ -548,6 +680,8 @@ const CampaignStrategy = ({
         <div>
           <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
           <Textarea
+            value={campaignGoals}
+            onChange={(e) => setCampaignGoals(e.target.value)}
             placeholder="AI-generated campaign goals will appear here..."
             rows={4}
             className="resize-none bg-muted/50"
@@ -557,6 +691,8 @@ const CampaignStrategy = ({
         <div>
           <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
           <Textarea
+            value={targetAudienceDescription}
+            onChange={(e) => setTargetAudienceDescription(e.target.value)}
             placeholder="AI-generated target audience description will appear here..."
             rows={3}
             className="resize-none bg-muted/50"
@@ -566,6 +702,8 @@ const CampaignStrategy = ({
         <div>
           <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
           <Textarea
+            value={campaignObjective}
+            onChange={(e) => setCampaignObjective(e.target.value)}
             placeholder="AI-generated campaign objective will appear here..."
             rows={3}
             className="resize-none bg-muted/50"
