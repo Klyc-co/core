@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Zap, LogOut, Video, Clock, Loader2 } from "lucide-react";
+import { Plus, LogOut, Video, Clock, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import Logo from "@/components/Logo";
 
 interface Project {
   id: string;
@@ -87,12 +88,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-xl font-bold gradient-text">Klyc</span>
-          </div>
+          <Logo />
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
