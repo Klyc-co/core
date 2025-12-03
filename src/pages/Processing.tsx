@@ -20,7 +20,7 @@ const Processing = () => {
   useEffect(() => {
     if (!id) return;
 
-    // Check initial status
+    // Check status function
     const checkStatus = async () => {
       const { data } = await supabase
         .from("projects")
@@ -30,12 +30,21 @@ const Processing = () => {
 
       if (data?.status === "ready_for_edit") {
         navigate(`/projects/${id}/edit`);
+        return true;
       }
+      return false;
     };
 
+    // Check initial status
     checkStatus();
 
-    // Subscribe to changes
+    // Poll for status changes (fallback for realtime)
+    const pollInterval = setInterval(async () => {
+      const done = await checkStatus();
+      if (done) clearInterval(pollInterval);
+    }, 3000);
+
+    // Subscribe to changes (primary method)
     const channel = supabase
       .channel(`project-${id}`)
       .on(
@@ -57,13 +66,14 @@ const Processing = () => {
       .subscribe();
 
     // Animate through steps
-    const interval = setInterval(() => {
+    const stepInterval = setInterval(() => {
       setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
     }, 3000);
 
     return () => {
       channel.unsubscribe();
-      clearInterval(interval);
+      clearInterval(pollInterval);
+      clearInterval(stepInterval);
     };
   }, [id, navigate]);
 
