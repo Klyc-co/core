@@ -19,6 +19,9 @@ import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
 import Library from "./pages/Library";
 import SocialMediaAssets from "./pages/SocialMediaAssets";
+import Products from "./pages/Products";
+import CreateProduct from "./pages/CreateProduct";
+import CreateProductLine from "./pages/CreateProductLine";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +56,9 @@ const App = () => (
           <Route path="/profile/import" element={<WithSidebar><ImportBrandSources /></WithSidebar>} />
           <Route path="/profile/library" element={<WithSidebar><Library /></WithSidebar>} />
           <Route path="/profile/social" element={<WithSidebar><SocialMediaAssets /></WithSidebar>} />
+          <Route path="/profile/products" element={<WithSidebar><Products /></WithSidebar>} />
+          <Route path="/profile/products/create" element={<WithSidebar><CreateProduct /></WithSidebar>} />
+          <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
