@@ -39,7 +39,7 @@ const GenerateCampaignIdeas = () => {
   }, [navigate]);
 
   const handleGenerate = () => {
-    if (selectedContentType === "social-video" || selectedContentType === "visual-post") {
+    if (selectedContentType === "social-video" || selectedContentType === "visual-post" || selectedContentType === "written") {
       setShowResults(true);
     }
     console.log({ selectedContentType, targetAudience, customPrompt });
@@ -305,6 +305,59 @@ const GenerateCampaignIdeas = () => {
                   <Textarea
                     placeholder="Your AI-generated image prompt will appear here..."
                     rows={5}
+                    className="resize-none bg-muted/50"
+                  />
+                </CardContent>
+              </Card>
+
+              <CampaignStrategy 
+                tags={tags} 
+                removeTag={removeTag} 
+                newTag={newTag} 
+                setNewTag={setNewTag} 
+                addTag={addTag} 
+              />
+
+              {/* Save Button */}
+              <Button 
+                className="w-full gap-2 py-6 text-lg"
+                onClick={() => console.log("Save to drafts")}
+              >
+                <FileStack className="w-5 h-5" />
+                Save to Campaign Drafts
+              </Button>
+            </div>
+          )}
+
+          {/* Written Results */}
+          {showResults && selectedContentType === "written" && (
+            <div className="space-y-6 mt-8">
+              {/* Campaign Idea */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <p className="text-foreground font-medium">Viral Social Video for Social Media Marketing Blueprint</p>
+                </CardContent>
+              </Card>
+
+              {/* Article/Blog Content Outline */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-foreground">Article/Blog Content Outline</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleCopy('', 'article-outline')}
+                      className="gap-2"
+                    >
+                      {copiedField === 'article-outline' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      Copy
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Your AI-generated article outline will appear here..."
+                    rows={8}
                     className="resize-none bg-muted/50"
                   />
                 </CardContent>
