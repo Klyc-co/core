@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Sparkles, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
+import { RefreshCw, Sparkles, Loader2, CheckCircle, XCircle, Clock, Timer } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -32,14 +33,58 @@ const statusConfig: Record<string, { icon: React.ElementType; label: string; cla
   failed: { icon: XCircle, label: "Failed", class: "text-destructive" },
 };
 
+// Runway typically takes 2-4 minutes
+const ESTIMATED_GENERATION_TIME = 180; // 3 minutes in seconds
+
 const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
   const [prompt, setPrompt] = useState(segment.visual_prompt || "");
   const [regenerating, setRegenerating] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
   const { toast } = useToast();
+
+  // Track elapsed time when generating
+  useEffect(() => {
+    if (segment.broll_status === "generating") {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
+      
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      startTimeRef.current = null;
+      setElapsedTime(0);
+    }
+  }, [segment.broll_status]);
 
   const formatTime = (seconds: number) => {
     return `${Math.floor(seconds)}s`;
+  };
+
+  const formatElapsedTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getEstimatedRemaining = () => {
+    const remaining = Math.max(0, ESTIMATED_GENERATION_TIME - elapsedTime);
+    if (remaining === 0 && elapsedTime > ESTIMATED_GENERATION_TIME) {
+      return "Almost done...";
+    }
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    return `~${mins}:${secs.toString().padStart(2, '0')} remaining`;
+  };
+
+  const getProgress = () => {
+    return Math.min(95, (elapsedTime / ESTIMATED_GENERATION_TIME) * 100);
   };
 
   const handleToggleBroll = async (checked: boolean) => {
@@ -58,7 +103,6 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
   const handlePromptChange = async (value: string) => {
     setPrompt(value);
     
-    // Debounced save
     const { error } = await supabase
       .from("segments")
       .update({ visual_prompt: value })
@@ -93,6 +137,7 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
 
   const handleGenerateBroll = async () => {
     setGenerating(true);
+    startTimeRef.current = Date.now();
     onUpdate({ ...segment, broll_status: "generating" });
 
     try {
@@ -102,9 +147,7 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
 
       if (error) throw error;
 
-      // Don't update to "generated" here - the background task will do it
-      // The parent component should poll for status updates
-      toast({ title: "Generation started", description: "This may take a few minutes" });
+      toast({ title: "Generation started", description: "This may take 2-4 minutes" });
     } catch (error: any) {
       onUpdate({ ...segment, broll_status: "failed" });
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -129,13 +172,30 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 text-sm ${statusClass}`}>
-            <StatusIcon className={`w-4 h-4 ${segment.broll_status === "generating" ? "animate-spin" : ""}`} />
-            {statusLabel}
-          </div>
+        <div className={`flex items-center gap-1.5 text-sm ${statusClass}`}>
+          <StatusIcon className={`w-4 h-4 ${segment.broll_status === "generating" ? "animate-spin" : ""}`} />
+          {statusLabel}
         </div>
       </div>
+
+      {/* Generation Progress Indicator */}
+      {segment.broll_status === "generating" && (
+        <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <Timer className="w-4 h-4" />
+              <span>Elapsed: {formatElapsedTime(elapsedTime)}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {getEstimatedRemaining()}
+            </span>
+          </div>
+          <Progress value={getProgress()} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-2">
+            AI is generating your B-roll video...
+          </p>
+        </div>
+      )}
 
       {segment.transcript_snippet && (
         <div className="mb-4 p-3 rounded-lg bg-secondary/50 border border-border">
