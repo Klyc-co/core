@@ -45,8 +45,8 @@ serve(async (req) => {
       .update({ broll_status: "generating" })
       .eq("id", segmentId);
 
-    // Call Runway text-to-video API with veo3
-    console.log("Calling Runway text-to-video API with veo3, duration:", duration);
+    // Call Runway text-to-video API with veo3.1
+    console.log("Calling Runway text-to-video API with veo3.1, duration:", duration);
     
     const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
       method: "POST",
@@ -56,7 +56,7 @@ serve(async (req) => {
         "X-Runway-Version": "2024-11-06",
       },
       body: JSON.stringify({
-        model: "veo3",
+        model: "veo3.1",
         promptText: prompt,
         duration: duration,
         ratio: "720:1280", // Vertical 9:16
