@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -26,6 +27,10 @@ const GenerateCampaignIdeas = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+
+  // Placeholder for products - will be fetched from database when products table exists
+  const products: { id: string; name: string }[] = [];
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -146,6 +151,32 @@ const GenerateCampaignIdeas = () => {
                 rows={3}
                 className="resize-none"
               />
+            </CardContent>
+          </Card>
+
+          {/* Products */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Products</h2>
+              <Select value={selectedProduct || ""} onValueChange={setSelectedProduct}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a product (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.length === 0 ? (
+                    <SelectItem value="none" disabled>No products available</SelectItem>
+                  ) : (
+                    products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-2">
+                Add product details from your profile to enrich the campaign idea.
+              </p>
             </CardContent>
           </Card>
 
