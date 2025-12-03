@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Sparkles, Loader2, CheckCircle, XCircle, Clock, Timer } from "lucide-react";
+import { RefreshCw, Sparkles, Loader2, CheckCircle, XCircle, Clock, Timer, StopCircle } from "lucide-react";
 
 interface Segment {
   id: string;
@@ -156,6 +156,21 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
     }
   };
 
+  const handleStopGeneration = async () => {
+    // Update status to not_generated - the background task will check this
+    const { error } = await supabase
+      .from("segments")
+      .update({ broll_status: "not_generated", broll_video_url: null })
+      .eq("id", segment.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      onUpdate({ ...segment, broll_status: "not_generated", broll_video_url: null });
+      toast({ title: "Generation stopped", description: "You can restart generation anytime" });
+    }
+  };
+
   const StatusIcon = statusConfig[segment.broll_status]?.icon || Clock;
   const statusLabel = statusConfig[segment.broll_status]?.label || segment.broll_status;
   const statusClass = statusConfig[segment.broll_status]?.class || "";
@@ -191,9 +206,20 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
             </span>
           </div>
           <Progress value={getProgress()} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-2">
-            AI is generating your B-roll video...
-          </p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-muted-foreground">
+              AI is generating your B-roll video...
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStopGeneration}
+              className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <StopCircle className="w-3.5 h-3.5 mr-1" />
+              Stop
+            </Button>
+          </div>
         </div>
       )}
 

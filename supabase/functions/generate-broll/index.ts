@@ -101,6 +101,18 @@ async function generateBrollTask(segmentId: string, prompt: string) {
       return;
     }
 
+    // Check if generation was cancelled before saving
+    const { data: currentSegment } = await supabase
+      .from("segments")
+      .select("broll_status")
+      .eq("id", segmentId)
+      .single();
+
+    if (currentSegment?.broll_status !== "generating") {
+      console.log("Generation was cancelled for segment:", segmentId);
+      return; // User cancelled, don't update
+    }
+
     // Update segment with generated video
     const { error: updateError } = await supabase
       .from("segments")
