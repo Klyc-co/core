@@ -15,7 +15,7 @@ const Logo = ({ className = "", size = "md" }: LogoProps) => {
   const { height, text } = sizes[size];
 
   return (
-    <Link to="/dashboard" className={`flex items-center gap-1.5 ${className}`}>
+    <Link to="/home" className={`flex items-center gap-1.5 ${className}`}>
       {/* Colorful orbs */}
       <svg
         height={height}
