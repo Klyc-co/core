@@ -22,6 +22,7 @@ import SocialMediaAssets from "./pages/SocialMediaAssets";
 import Products from "./pages/Products";
 import CreateProduct from "./pages/CreateProduct";
 import CreateProductLine from "./pages/CreateProductLine";
+import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/profile/products" element={<WithSidebar><Products /></WithSidebar>} />
           <Route path="/profile/products/create" element={<WithSidebar><CreateProduct /></WithSidebar>} />
           <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
+          <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
