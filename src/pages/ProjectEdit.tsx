@@ -238,51 +238,49 @@ const ProjectEdit = () => {
         </div>
       </header>
 
-      <main className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
-        {/* Videos Section - Top with independent scroll */}
-        <div className="flex-1 min-h-0 px-6 py-6 overflow-auto border-b border-border">
-          <div className="flex gap-8 items-start">
-            {/* Original Video - Horizontal/Large */}
-            <div className="space-y-3 flex-1">
-              <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
-              <div className="video-player aspect-video w-full max-w-2xl">
-                {project.original_video_url ? (
-                  <video
-                    src={project.original_video_url}
-                    controls
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    No video
-                  </div>
-                )}
-              </div>
+      <main className="flex" style={{ height: 'calc(100vh - 4rem)' }}>
+        {/* Left Side - Videos stacked vertically */}
+        <div className="w-[480px] flex-shrink-0 p-6 overflow-auto border-r border-border">
+          {/* Original Video */}
+          <div className="space-y-3 mb-6">
+            <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
+            <div className="video-player aspect-video w-full">
+              {project.original_video_url ? (
+                <video
+                  src={project.original_video_url}
+                  controls
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  No video
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Final Video - Vertical */}
-            <div className="space-y-3 flex-shrink-0">
-              <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
-              <div className="video-player aspect-[9/16] w-[200px]">
-                {project.status === "complete" && project.final_video_url ? (
-                  <video
-                    src={project.final_video_url}
-                    controls
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm text-center px-2">
-                    {project.status === "rendering" ? "Rendering..." : "Not rendered yet"}
-                  </div>
-                )}
-              </div>
+          {/* Final Video */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
+            <div className="video-player aspect-[9/16] w-[200px]">
+              {project.status === "complete" && project.final_video_url ? (
+                <video
+                  src={project.final_video_url}
+                  controls
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm text-center px-2">
+                  {project.status === "rendering" ? "Rendering..." : "Not rendered yet"}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Storyboard - Bottom with independent scroll (horizontal & vertical) */}
-        <div className="flex-shrink-0 h-[320px] bg-card/50 backdrop-blur-sm flex flex-col">
-          <div className="px-6 py-2 flex items-center justify-between flex-shrink-0 border-b border-border/50">
+        {/* Right Side - Storyboard with horizontal scroll */}
+        <div className="flex-1 flex flex-col min-w-0 bg-card/30">
+          <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-border/50">
             <h2 className="text-lg font-semibold text-foreground">
               Storyboard ({segments.length} segments)
             </h2>
@@ -293,8 +291,8 @@ const ProjectEdit = () => {
             )}
           </div>
           
-          <div className="flex-1 overflow-auto p-4">
-            <div className="flex gap-4 px-6 min-w-max">
+          <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
+            <div className="flex gap-4 min-w-max h-full items-start">
               {segments.map((segment, index) => (
                 <div key={segment.id} className="w-[320px] flex-shrink-0">
                   <SegmentCard
