@@ -74,6 +74,66 @@ export type Database = {
         }
         Relationships: []
       }
+      competitor_analyses: {
+        Row: {
+          analyzed_at: string
+          company_description: string | null
+          competitor_name: string
+          competitor_url: string | null
+          created_at: string
+          id: string
+          key_products: string | null
+          marketing_channels: string | null
+          opportunities: string | null
+          pricing_strategy: string | null
+          raw_data: Json | null
+          strengths: string | null
+          target_audience: string | null
+          threats: string | null
+          user_id: string
+          value_proposition: string | null
+          weaknesses: string | null
+        }
+        Insert: {
+          analyzed_at?: string
+          company_description?: string | null
+          competitor_name: string
+          competitor_url?: string | null
+          created_at?: string
+          id?: string
+          key_products?: string | null
+          marketing_channels?: string | null
+          opportunities?: string | null
+          pricing_strategy?: string | null
+          raw_data?: Json | null
+          strengths?: string | null
+          target_audience?: string | null
+          threats?: string | null
+          user_id: string
+          value_proposition?: string | null
+          weaknesses?: string | null
+        }
+        Update: {
+          analyzed_at?: string
+          company_description?: string | null
+          competitor_name?: string
+          competitor_url?: string | null
+          created_at?: string
+          id?: string
+          key_products?: string | null
+          marketing_channels?: string | null
+          opportunities?: string | null
+          pricing_strategy?: string | null
+          raw_data?: Json | null
+          strengths?: string | null
+          target_audience?: string | null
+          threats?: string | null
+          user_id?: string
+          value_proposition?: string | null
+          weaknesses?: string | null
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string

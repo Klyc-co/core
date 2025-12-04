@@ -15,7 +15,8 @@ import {
   Play,
   TrendingUp,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Users
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -484,6 +485,16 @@ const BrandStrategy = () => {
                 <div className="text-left">
                   <div className="text-sm font-medium">Run Report</div>
                   <div className="text-xs text-muted-foreground">Schedule and run web reports</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => navigate("/competitor-analysis")}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+              >
+                <Users className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Competitor Analysis</div>
+                  <div className="text-xs text-muted-foreground">Analyze competitors</div>
                 </div>
               </button>
               <button 
