@@ -110,6 +110,65 @@ export type Database = {
         }
         Relationships: []
       }
+      report_results: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          mentions: number | null
+          negative_percent: number | null
+          neutral_percent: number | null
+          positive_percent: number | null
+          raw_results: Json | null
+          scheduled_report_id: string | null
+          search_term: string
+          sentiment: string | null
+          sources: number | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          mentions?: number | null
+          negative_percent?: number | null
+          neutral_percent?: number | null
+          positive_percent?: number | null
+          raw_results?: Json | null
+          scheduled_report_id?: string | null
+          search_term: string
+          sentiment?: string | null
+          sources?: number | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          mentions?: number | null
+          negative_percent?: number | null
+          neutral_percent?: number | null
+          positive_percent?: number | null
+          raw_results?: Json | null
+          scheduled_report_id?: string | null
+          search_term?: string
+          sentiment?: string | null
+          sources?: number | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_results_scheduled_report_id_fkey"
+            columns: ["scheduled_report_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_campaigns: {
         Row: {
           campaign_name: string
@@ -150,6 +209,45 @@ export type Database = {
           scheduled_time?: string
           status?: string
           tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_reports: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          next_run_at: string | null
+          schedule_frequency: string
+          schedule_time: string
+          search_term: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string | null
+          schedule_frequency?: string
+          schedule_time: string
+          search_term: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string | null
+          schedule_frequency?: string
+          schedule_time?: string
+          search_term?: string
           updated_at?: string
           user_id?: string
         }

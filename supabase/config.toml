@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-campaign-idea]
 verify_jwt = false
+
+[functions.run-report]
+verify_jwt = false
