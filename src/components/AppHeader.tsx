@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sparkles, Settings, User, Megaphone, Target } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -28,7 +28,6 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
             onClick={() => navigate("/campaigns")}
             className="text-muted-foreground hover:text-foreground"
           >
-            <Megaphone className="w-4 h-4 mr-2" />
             Campaigns
           </Button>
           <Button
@@ -36,7 +35,6 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
             onClick={() => navigate("/projects")}
             className="text-muted-foreground hover:text-foreground"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
             Content Generation
           </Button>
           <Button
@@ -44,7 +42,6 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
             onClick={() => navigate("/brand-strategy")}
             className="text-muted-foreground hover:text-foreground"
           >
-            <Target className="w-4 h-4 mr-2" />
             Brand Strategy
           </Button>
         </div>
