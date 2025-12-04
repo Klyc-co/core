@@ -386,7 +386,7 @@ const NewCampaign = () => {
                       <img 
                         src={platform.icon} 
                         alt={platform.name}
-                        className={platform.id === "linkedin" ? "w-10 h-10 rounded-lg object-contain" : "w-full h-full object-contain"}
+                        className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
                       />
                     </div>
                     <span className="text-sm font-medium text-center">{platform.name}</span>
