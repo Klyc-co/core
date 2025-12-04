@@ -382,11 +382,11 @@ const NewCampaign = () => {
                   onClick={() => togglePlatform(platform.id)}
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center p-2.5`}>
+                    <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
                       <img 
                         src={platform.icon} 
                         alt={platform.name}
-                        className="w-full h-full object-contain"
+                        className={platform.id === "linkedin" ? "w-10 h-10 rounded-lg object-contain" : "w-full h-full object-contain"}
                       />
                     </div>
                     <span className="text-sm font-medium text-center">{platform.name}</span>
