@@ -6,23 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  ArrowLeft, 
   Globe, 
-  Calendar, 
   Clock, 
   FileText, 
   Download, 
   BarChart3,
-  Zap,
   Loader2,
   Play,
   TrendingUp
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import AppHeader from "@/components/AppHeader";
 import type { User } from "@supabase/supabase-js";
 
 interface ScheduledReport {
@@ -301,16 +297,11 @@ const BrandStrategy = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+      <AppHeader user={user} />
+      
+      {/* Page Header */}
+      <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <button
-            onClick={() => navigate("/home")}
-            className="flex items-center gap-2 text-primary hover:text-primary/80 text-sm mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </button>
           <h1 className="text-2xl font-bold text-foreground">Brand Strategy</h1>
           <p className="text-muted-foreground mt-1">
             AI-powered brand and market intelligence for creative, audience, and SEO strategy.
@@ -517,7 +508,7 @@ const BrandStrategy = () => {
               {/* Quick Schedule Templates */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-                  <Zap className="w-5 h-5" />
+                  <Clock className="w-5 h-5" />
                   Quick Schedule Templates
                 </h3>
                 <div className="grid grid-cols-3 gap-4">
