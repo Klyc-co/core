@@ -49,17 +49,12 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
           </Button>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {businessName && (
-            <span className="text-sm text-muted-foreground">{businessName}</span>
+            <span className="text-sm text-muted-foreground mr-2">{businessName}</span>
           )}
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/profile")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <User className="w-4 h-4 mr-2" />
-            Profile
+          <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <User className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
             <Settings className="w-4 h-4" />
