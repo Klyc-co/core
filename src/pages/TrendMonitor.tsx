@@ -17,6 +17,7 @@ import {
   Search,
   MessageCircle
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfDay, isSameDay } from "date-fns";
 import AppHeader from "@/components/AppHeader";
 import type { User } from "@supabase/supabase-js";
@@ -360,30 +361,74 @@ export default function TrendMonitor() {
 
 function TrendCard({ trend }: { trend: TrendItem }) {
   const config = platformConfig[trend.platform];
+  const [open, setOpen] = useState(false);
+  
+  const handleClick = () => {
+    if (trend.trend_url) {
+      window.open(trend.trend_url, '_blank');
+    } else {
+      setOpen(true);
+    }
+  };
   
   return (
-    <div className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-      <div className="flex items-start gap-2">
-        <Badge 
-          variant="secondary" 
-          className={`text-xs ${config?.color || 'bg-gray-500'} text-white`}
-        >
-          #{trend.trend_rank}
-        </Badge>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{trend.trend_name}</p>
-          {trend.trend_category && (
-            <p className="text-xs text-muted-foreground capitalize">
-              {trend.trend_category}
-            </p>
-          )}
+    <>
+      <div 
+        onClick={handleClick}
+        className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-start gap-2">
+          <Badge 
+            variant="secondary" 
+            className={`text-xs ${config?.color || 'bg-gray-500'} text-white`}
+          >
+            #{trend.trend_rank}
+          </Badge>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{trend.trend_name}</p>
+            {trend.trend_category && (
+              <p className="text-xs text-muted-foreground capitalize">
+                {trend.trend_category}
+              </p>
+            )}
+          </div>
         </div>
+        {trend.trend_volume && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {trend.trend_volume} mentions
+          </p>
+        )}
       </div>
-      {trend.trend_volume && (
-        <p className="text-xs text-muted-foreground mt-1">
-          {trend.trend_volume} mentions
-        </p>
-      )}
-    </div>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${config?.color || 'bg-gray-500'}`} />
+              {trend.trend_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">#{trend.trend_rank}</Badge>
+              <Badge variant="secondary">{config?.label || trend.platform}</Badge>
+            </div>
+            {trend.trend_category && (
+              <p className="text-sm">
+                <span className="text-muted-foreground">Category:</span> {trend.trend_category}
+              </p>
+            )}
+            {trend.trend_volume && (
+              <p className="text-sm">
+                <span className="text-muted-foreground">Volume:</span> {trend.trend_volume} mentions
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
