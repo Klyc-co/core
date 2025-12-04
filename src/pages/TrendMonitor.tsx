@@ -186,6 +186,51 @@ export default function TrendMonitor() {
     return acc;
   }, {} as Record<string, TrendItem[]>);
 
+  // Find cross-platform trends (similar trend names across multiple platforms)
+  const crossPlatformTrends = (() => {
+    const trendMap = new Map<string, { name: string; platforms: string[]; trends: TrendItem[] }>();
+    
+    trends.forEach(trend => {
+      // Normalize trend name for comparison (lowercase, remove special chars)
+      const normalizedName = trend.trend_name.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(' ')
+        .filter(word => word.length > 3)
+        .slice(0, 3)
+        .join(' ');
+      
+      if (normalizedName.length < 4) return;
+      
+      // Check if any existing trend has similar keywords
+      let matched = false;
+      trendMap.forEach((value, key) => {
+        const keyWords = key.split(' ');
+        const nameWords = normalizedName.split(' ');
+        const commonWords = keyWords.filter(w => nameWords.includes(w));
+        
+        if (commonWords.length >= 1 && !value.platforms.includes(trend.platform)) {
+          value.platforms.push(trend.platform);
+          value.trends.push(trend);
+          matched = true;
+        }
+      });
+      
+      if (!matched) {
+        trendMap.set(normalizedName, {
+          name: trend.trend_name,
+          platforms: [trend.platform],
+          trends: [trend]
+        });
+      }
+    });
+    
+    // Return only trends that appear on 2+ platforms
+    return Array.from(trendMap.values())
+      .filter(t => t.platforms.length >= 2)
+      .sort((a, b) => b.platforms.length - a.platforms.length)
+      .slice(0, 10);
+  })();
+
   const platforms = Object.keys(platformConfig);
 
   return (
@@ -362,6 +407,60 @@ export default function TrendMonitor() {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Cross-Platform Trends Section */}
+            {crossPlatformTrends.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Hash className="w-5 h-5 text-primary" />
+                    Cross-Platform Trends
+                    <Badge variant="secondary" className="ml-2">
+                      {crossPlatformTrends.length} found
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Trends appearing across multiple platforms
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3">
+                    {crossPlatformTrends.map((crossTrend, index) => (
+                      <div 
+                        key={index}
+                        className="p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-base">{crossTrend.name}</h4>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {crossTrend.platforms.map(platform => {
+                                const config = platformConfig[platform];
+                                return (
+                                  <Badge 
+                                    key={platform}
+                                    variant="outline" 
+                                    className={`text-xs ${config?.color || 'bg-gray-500'} text-white border-none`}
+                                  >
+                                    {config?.label || platform}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="secondary" className="text-lg font-bold">
+                              {crossTrend.platforms.length}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">platforms</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
