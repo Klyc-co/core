@@ -141,7 +141,7 @@ export default function TrendMonitor() {
       const response = await supabase.functions.invoke('fetch-trends', {
         body: { 
           userId,
-          platforms: ['tiktok', 'instagram', 'linkedin', 'facebook', 'google', 'twitter']
+          platforms: ['tiktok', 'instagram', 'linkedin', 'facebook', 'google', 'twitter', 'snapchat']
         }
       });
 
