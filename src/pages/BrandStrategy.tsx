@@ -15,7 +15,8 @@ import {
   BarChart3,
   Zap,
   Loader2,
-  Play
+  Play,
+  TrendingUp
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -328,6 +329,16 @@ const BrandStrategy = () => {
                 <div className="text-left">
                   <div className="text-sm font-medium">Run Report</div>
                   <div className="text-xs text-muted-foreground">Schedule and run web reports</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => navigate("/trend-monitor")}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Trend Monitor</div>
+                  <div className="text-xs text-muted-foreground">Track social media trends</div>
                 </div>
               </button>
             </nav>

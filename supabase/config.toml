@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.run-report]
 verify_jwt = false
+
+[functions.fetch-trends]
+verify_jwt = false
