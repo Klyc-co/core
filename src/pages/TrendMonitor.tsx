@@ -15,7 +15,8 @@ import {
   Hash,
   Newspaper,
   Search,
-  MessageCircle
+  MessageCircle,
+  ExternalLink
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfDay, isSameDay } from "date-fns";
@@ -363,18 +364,10 @@ function TrendCard({ trend }: { trend: TrendItem }) {
   const config = platformConfig[trend.platform];
   const [open, setOpen] = useState(false);
   
-  const handleClick = () => {
-    if (trend.trend_url) {
-      window.open(trend.trend_url, '_blank');
-    } else {
-      setOpen(true);
-    }
-  };
-  
   return (
     <>
       <div 
-        onClick={handleClick}
+        onClick={() => setOpen(true)}
         className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
       >
         <div className="flex items-start gap-2">
@@ -408,7 +401,7 @@ function TrendCard({ trend }: { trend: TrendItem }) {
               {trend.trend_name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Badge variant="outline">#{trend.trend_rank}</Badge>
               <Badge variant="secondary">{config?.label || trend.platform}</Badge>
@@ -426,6 +419,15 @@ function TrendCard({ trend }: { trend: TrendItem }) {
             <p className="text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
+            {trend.trend_url && (
+              <Button 
+                onClick={() => window.open(trend.trend_url!, '_blank')}
+                className="w-full gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Link
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
