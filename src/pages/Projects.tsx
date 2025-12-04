@@ -3,9 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Video, Clock, Loader2 } from "lucide-react";
+import { Plus, Video, Clock, Loader2, Trash2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AppHeader from "@/components/AppHeader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Project {
   id: string;
@@ -27,6 +38,7 @@ const Projects = () => {
   const [user, setUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,6 +76,25 @@ const Projects = () => {
       setProjects(data || []);
     }
     setLoading(false);
+  };
+
+  const handleDeleteProject = async (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(projectId);
+    
+    // First delete related segments
+    await supabase.from("segments").delete().eq("project_id", projectId);
+    
+    // Then delete the project
+    const { error } = await supabase.from("projects").delete().eq("id", projectId);
+    
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete project", variant: "destructive" });
+    } else {
+      setProjects(projects.filter(p => p.id !== projectId));
+      toast({ title: "Project deleted", description: "The project has been removed" });
+    }
+    setDeletingId(null);
   };
 
   const formatDate = (date: string) => {
@@ -145,10 +176,45 @@ const Projects = () => {
                       </div>
                     </div>
                   </div>
-                  <div
-                    className={`status-badge ${statusLabels[project.status]?.class || ""}`}
-                  >
-                    {statusLabels[project.status]?.label || project.status}
+                  <div className="flex items-center gap-3">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {deletingId === project.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{project.title}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => handleDeleteProject(project.id, e)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <div
+                      className={`status-badge ${statusLabels[project.status]?.class || ""}`}
+                    >
+                      {statusLabels[project.status]?.label || project.status}
+                    </div>
                   </div>
                 </div>
               </div>
