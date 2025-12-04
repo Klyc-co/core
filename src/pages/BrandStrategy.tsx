@@ -13,9 +13,13 @@ import {
   BarChart3,
   Loader2,
   Play,
-  TrendingUp
+  TrendingUp,
+  Eye,
+  ExternalLink
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import AppHeader from "@/components/AppHeader";
@@ -42,6 +46,12 @@ interface ReportResult {
   neutral_percent: number;
   negative_percent: number;
   summary: string | null;
+  raw_results: Array<{
+    title?: string;
+    url?: string;
+    description?: string;
+    markdown?: string;
+  }> | null;
 }
 
 const timeSlots = [
@@ -108,6 +118,7 @@ const BrandStrategy = () => {
   const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([]);
   const [reportResults, setReportResults] = useState<ReportResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingReport, setViewingReport] = useState<ReportResult | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -141,7 +152,10 @@ const BrandStrategy = () => {
       .limit(10);
     
     setScheduledReports(scheduled || []);
-    setReportResults(results || []);
+    setReportResults((results || []).map(r => ({
+      ...r,
+      raw_results: r.raw_results as ReportResult['raw_results']
+    })));
     setLoading(false);
   };
 
@@ -288,8 +302,9 @@ const BrandStrategy = () => {
   };
 
   const handleDownloadCSV = (report: ReportResult) => {
-    const csvContent = [
-      ['Field', 'Value'],
+    // Header rows
+    const headerRows = [
+      ['REPORT SUMMARY'],
       ['Search Term', report.search_term],
       ['Generated At', format(new Date(report.generated_at), "PPpp")],
       ['Sentiment', report.sentiment],
@@ -299,8 +314,22 @@ const BrandStrategy = () => {
       ['Neutral %', report.neutral_percent.toString()],
       ['Negative %', report.negative_percent.toString()],
       ['Summary', report.summary || 'N/A'],
-    ]
-      .map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+      [''],
+      ['SOURCES'],
+      ['#', 'Title', 'URL', 'Description'],
+    ];
+
+    // Source rows
+    const sourceRows = (report.raw_results || []).map((source, index) => [
+      (index + 1).toString(),
+      source.title || 'N/A',
+      source.url || 'N/A',
+      (source.description || '').substring(0, 500),
+    ]);
+
+    const allRows = [...headerRows, ...sourceRows];
+    const csvContent = allRows
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -313,19 +342,31 @@ const BrandStrategy = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast({ title: "CSV Downloaded", description: "Report exported successfully" });
+    toast({ title: "CSV Downloaded", description: `Report with ${report.raw_results?.length || 0} sources exported` });
   };
 
   const handleDownloadPDF = (report: ReportResult) => {
+    const sourcesHTML = (report.raw_results || []).map((source, index) => `
+      <div class="source">
+        <div class="source-header">
+          <span class="source-num">${index + 1}</span>
+          <h4>${source.title || 'Untitled'}</h4>
+        </div>
+        ${source.url ? `<a href="${source.url}" class="source-url">${source.url}</a>` : ''}
+        ${source.description ? `<p class="source-desc">${source.description}</p>` : ''}
+      </div>
+    `).join('');
+
     const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>Report: ${report.search_term}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; }
           h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-          .meta { color: #666; margin-bottom: 20px; }
+          h2 { color: #444; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+          .meta { color: #666; margin-bottom: 10px; }
           .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
           .stat { text-align: center; padding: 15px; background: #f5f5f5; border-radius: 8px; }
           .stat-value { font-size: 24px; font-weight: bold; color: #333; }
@@ -338,6 +379,14 @@ const BrandStrategy = () => {
           .badge-positive { background: #dcfce7; color: #166534; }
           .badge-mixed { background: #fef9c3; color: #854d0e; }
           .badge-negative { background: #fee2e2; color: #991b1b; }
+          .sources-section { margin-top: 30px; }
+          .source { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; }
+          .source-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+          .source-num { background: #007bff; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+          .source h4 { margin: 0; color: #333; font-size: 14px; }
+          .source-url { color: #007bff; font-size: 12px; word-break: break-all; display: block; margin-bottom: 8px; }
+          .source-desc { color: #666; font-size: 13px; margin: 0; }
+          @media print { .source { break-inside: avoid; } }
         </style>
       </head>
       <body>
@@ -375,10 +424,15 @@ const BrandStrategy = () => {
 
         ${report.summary ? `
         <div class="summary">
-          <h3>Summary</h3>
+          <h3>AI Summary</h3>
           <p>${report.summary}</p>
         </div>
         ` : ''}
+
+        <div class="sources-section">
+          <h2>All Sources (${report.raw_results?.length || 0})</h2>
+          ${sourcesHTML || '<p>No sources available</p>'}
+        </div>
         
         <p style="margin-top: 40px; color: #999; font-size: 12px;">Generated by Klyc Brand Intelligence</p>
       </body>
@@ -394,7 +448,7 @@ const BrandStrategy = () => {
       };
     }
     
-    toast({ title: "PDF Ready", description: "Print dialog opened - save as PDF" });
+    toast({ title: "PDF Ready", description: `Report with ${report.raw_results?.length || 0} sources - save as PDF` });
   };
 
   if (loading) {
@@ -603,6 +657,15 @@ const BrandStrategy = () => {
                               variant="outline" 
                               size="sm" 
                               className="flex-1"
+                              onClick={() => setViewingReport(report)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View ({report.raw_results?.length || 0})
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex-1"
                               onClick={() => handleDownloadPDF(report)}
                             >
                               <Download className="w-4 h-4 mr-2" />
@@ -689,6 +752,113 @@ const BrandStrategy = () => {
           </div>
         </div>
       </div>
+
+      {/* View Sources Dialog */}
+      <Dialog open={!!viewingReport} onOpenChange={() => setViewingReport(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Report Sources: {viewingReport?.search_term}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingReport && (
+            <div className="space-y-4">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{viewingReport.mentions.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Mentions</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{viewingReport.sources}</p>
+                  <p className="text-xs text-muted-foreground">Sources</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-500">{viewingReport.positive_percent}%</p>
+                  <p className="text-xs text-muted-foreground">Positive</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-500">{viewingReport.negative_percent}%</p>
+                  <p className="text-xs text-muted-foreground">Negative</p>
+                </div>
+              </div>
+
+              {viewingReport.summary && (
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <p className="text-sm font-medium mb-1">AI Summary</p>
+                  <p className="text-sm text-muted-foreground">{viewingReport.summary}</p>
+                </div>
+              )}
+
+              {/* Sources List */}
+              <div>
+                <p className="text-sm font-medium mb-2">
+                  All Sources ({viewingReport.raw_results?.length || 0})
+                </p>
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-3">
+                    {(viewingReport.raw_results || []).map((source, index) => (
+                      <div 
+                        key={index}
+                        className="p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Badge variant="outline" className="shrink-0">
+                            {index + 1}
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm line-clamp-2">
+                              {source.title || 'Untitled'}
+                            </h4>
+                            {source.url && (
+                              <a 
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                {source.url.length > 60 ? source.url.substring(0, 60) + '...' : source.url}
+                              </a>
+                            )}
+                            {source.description && (
+                              <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                                {source.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Download Actions */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => handleDownloadPDF(viewingReport)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => handleDownloadCSV(viewingReport)}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download CSV
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
