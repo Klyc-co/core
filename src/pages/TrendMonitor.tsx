@@ -7,19 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   RefreshCw, 
   TrendingUp, 
   Calendar as CalendarIcon,
-  ArrowLeft,
   Hash,
   Newspaper,
   Search,
   MessageCircle
 } from "lucide-react";
 import { format, startOfDay, isSameDay } from "date-fns";
+import AppHeader from "@/components/AppHeader";
+import type { User } from "@supabase/supabase-js";
 
 // Platform icons/colors
 const platformConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
@@ -46,6 +46,7 @@ interface TrendItem {
 export default function TrendMonitor() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -72,6 +73,7 @@ export default function TrendMonitor() {
       navigate("/auth");
       return;
     }
+    setUser(user);
     setUserId(user.id);
   };
 
@@ -184,15 +186,13 @@ export default function TrendMonitor() {
   const platforms = Object.keys(platformConfig);
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/brand-strategy")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Strategy
-            </Button>
+    <div className="min-h-screen bg-background">
+      <AppHeader user={user} />
+      
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <TrendingUp className="w-8 h-8 text-primary" />
@@ -202,29 +202,28 @@ export default function TrendMonitor() {
                 Track what's trending across social media platforms
               </p>
             </div>
+
+            <div className="flex items-center gap-3">
+              {lastUpdated && (
+                <span className="text-sm text-muted-foreground">
+                  Last updated: {format(lastUpdated, "MMM d, h:mm a")}
+                </span>
+              )}
+              <Button 
+                onClick={handleRefreshTrends} 
+                disabled={isFetching}
+                className="gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+                {isFetching ? "Fetching..." : "Refresh Trends"}
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {lastUpdated && (
-              <span className="text-sm text-muted-foreground">
-                Last updated: {format(lastUpdated, "MMM d, h:mm a")}
-              </span>
-            )}
-            <Button 
-              onClick={handleRefreshTrends} 
-              disabled={isFetching}
-              className="gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-              {isFetching ? "Fetching..." : "Refresh Trends"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-12 gap-6">
-          {/* Calendar Sidebar */}
-          <div className="col-span-3">
-            <Card>
+          <div className="grid grid-cols-12 gap-6">
+            {/* Calendar Sidebar */}
+            <div className="col-span-3">
+              <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CalendarIcon className="w-5 h-5" />
@@ -353,6 +352,7 @@ export default function TrendMonitor() {
             </Card>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
