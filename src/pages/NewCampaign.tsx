@@ -40,7 +40,7 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
   { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
   { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
-  { id: "pinterest", name: "Pinterest", icon: "https://cdn.simpleicons.org/pinterest/FFFFFF", color: "bg-[#E60023]" },
+  { id: "snapchat", name: "Snapchat", icon: "https://cdn.simpleicons.org/snapchat/FFFFFF", color: "bg-[#FFFC00]" },
   { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
 ];
 
