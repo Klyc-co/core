@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import linkedinLogo from "@/assets/linkedin-logo.png";
+import snapchatLogo from "@/assets/snapchat-logo.png";
 
 interface SocialPlatform {
   id: string;
@@ -40,7 +41,7 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
   { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
   { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
-  { id: "snapchat", name: "Snapchat", icon: "https://cdn.simpleicons.org/snapchat/FFFFFF", color: "bg-[#FFFC00]" },
+  { id: "snapchat", name: "Snapchat", icon: snapchatLogo, color: "bg-transparent" },
   { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
 ];
 
@@ -382,11 +383,11 @@ const NewCampaign = () => {
                   onClick={() => togglePlatform(platform.id)}
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
+                    <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "p-0" : "p-2.5"}`}>
                       <img 
                         src={platform.icon} 
                         alt={platform.name}
-                        className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
+                        className={["linkedin", "snapchat"].includes(platform.id) ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
                       />
                     </div>
                     <span className="text-sm font-medium text-center">{platform.name}</span>
