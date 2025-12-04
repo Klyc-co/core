@@ -30,6 +30,7 @@ import CampaignDrafts from "./pages/CampaignDrafts";
 import CampaignDraftView from "./pages/CampaignDraftView";
 import BrandStrategy from "./pages/BrandStrategy";
 import TrendMonitor from "./pages/TrendMonitor";
+import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App = () => (
           <Route path="/campaigns/drafts/:id" element={<WithSidebar><CampaignDraftView /></WithSidebar>} />
           <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
           <Route path="/trend-monitor" element={<WithSidebar><TrendMonitor /></WithSidebar>} />
+          <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
