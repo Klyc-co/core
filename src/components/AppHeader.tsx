@@ -35,14 +35,14 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
             onClick={() => navigate("/projects")}
             className="text-muted-foreground hover:text-foreground"
           >
-            Content Generation
+            Content
           </Button>
           <Button
             variant="ghost"
             onClick={() => navigate("/brand-strategy")}
             className="text-muted-foreground hover:text-foreground"
           >
-            Brand Strategy
+            Strategy
           </Button>
         </div>
 
