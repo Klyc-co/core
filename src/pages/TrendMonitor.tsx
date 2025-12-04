@@ -23,11 +23,11 @@ import type { User } from "@supabase/supabase-js";
 
 // Platform icons/colors
 const platformConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+  google: { color: "bg-green-500", icon: <Search className="w-4 h-4" />, label: "Google Trends" },
   tiktok: { color: "bg-pink-500", icon: <Hash className="w-4 h-4" />, label: "TikTok" },
   instagram: { color: "bg-gradient-to-r from-purple-500 to-pink-500", icon: <Hash className="w-4 h-4" />, label: "Instagram" },
   linkedin: { color: "bg-blue-600", icon: <Newspaper className="w-4 h-4" />, label: "LinkedIn" },
   facebook: { color: "bg-blue-500", icon: <MessageCircle className="w-4 h-4" />, label: "Facebook" },
-  google: { color: "bg-green-500", icon: <Search className="w-4 h-4" />, label: "Google Trends" },
   twitter: { color: "bg-sky-500", icon: <Hash className="w-4 h-4" />, label: "Twitter/X" },
   snapchat: { color: "bg-yellow-400", icon: <MessageCircle className="w-4 h-4" />, label: "Snapchat" },
 };

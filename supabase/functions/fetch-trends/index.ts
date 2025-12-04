@@ -21,173 +21,177 @@ interface TrendItem {
   trend_url?: string;
 }
 
-// Scrape trends using Firecrawl
-async function scrapeWithFirecrawl(url: string): Promise<string | null> {
+// Use Firecrawl search to find trending topics
+async function searchTrendingTopics(platform: string, query: string): Promise<TrendItem[]> {
   if (!FIRECRAWL_API_KEY) {
-    console.error('FIRECRAWL_API_KEY not configured');
-    return null;
+    console.log('FIRECRAWL_API_KEY not configured, using fallback for', platform);
+    return [];
   }
 
   try {
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url,
-        formats: ['markdown'],
-        onlyMainContent: true,
+        query,
+        limit: 15,
+        tbs: 'qdr:d', // Last 24 hours
       }),
     });
 
     if (!response.ok) {
-      console.error(`Firecrawl error for ${url}:`, response.status);
-      return null;
+      console.error(`Firecrawl search error for ${platform}:`, response.status);
+      return [];
     }
 
     const data = await response.json();
-    return data.data?.markdown || null;
+    const trends: TrendItem[] = [];
+    
+    if (data.data && Array.isArray(data.data)) {
+      data.data.forEach((result: any, index: number) => {
+        if (result.title) {
+          trends.push({
+            platform,
+            trend_name: result.title.substring(0, 100),
+            trend_rank: index + 1,
+            trend_category: 'trending',
+            trend_url: result.url,
+          });
+        }
+      });
+    }
+    
+    return trends;
   } catch (error) {
-    console.error(`Error scraping ${url}:`, error);
-    return null;
+    console.error(`Error searching trends for ${platform}:`, error);
+    return [];
   }
 }
 
-// Parse TikTok trending content
-function parseTikTokTrends(markdown: string): TrendItem[] {
-  const trends: TrendItem[] = [];
-  const lines = markdown.split('\n').filter(l => l.trim());
-  
-  let rank = 1;
-  for (const line of lines) {
-    // Look for hashtag patterns or trending sounds
-    const hashtagMatch = line.match(/#(\w+)/g);
-    if (hashtagMatch) {
-      for (const tag of hashtagMatch.slice(0, 10)) {
+// Fetch Google Trends using RSS feed
+async function fetchGoogleTrends(): Promise<TrendItem[]> {
+  try {
+    // Use Google Trends RSS feed for daily trends
+    const response = await fetch('https://trends.google.com/trending/rss?geo=US');
+    
+    if (!response.ok) {
+      console.error('Google Trends RSS error:', response.status);
+      // Fallback to search
+      return searchTrendingTopics('google', 'trending topics today United States');
+    }
+
+    const xml = await response.text();
+    const trends: TrendItem[] = [];
+    
+    // Parse RSS XML to extract trending topics
+    const itemRegex = /<item>[\s\S]*?<title>([^<]+)<\/title>[\s\S]*?<ht:approx_traffic>([^<]*)<\/ht:approx_traffic>[\s\S]*?<\/item>/g;
+    let match;
+    let rank = 1;
+    
+    while ((match = itemRegex.exec(xml)) !== null && rank <= 20) {
+      const title = match[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+      const traffic = match[2] || '';
+      
+      if (title && title.length > 2) {
         trends.push({
-          platform: 'tiktok',
-          trend_name: tag,
+          platform: 'google',
+          trend_name: title,
           trend_rank: rank++,
-          trend_category: 'hashtag',
+          trend_category: 'search',
+          trend_volume: traffic,
         });
       }
     }
+    
+    // If RSS parsing didn't work well, try simple title extraction
+    if (trends.length === 0) {
+      const simpleTitleRegex = /<title>([^<]+)<\/title>/g;
+      let simpleMatch;
+      rank = 1;
+      
+      while ((simpleMatch = simpleTitleRegex.exec(xml)) !== null && rank <= 20) {
+        const title = simpleMatch[1].replace(/&amp;/g, '&').trim();
+        if (title && title.length > 2 && !title.includes('Daily Search Trends') && !title.includes('Google Trends')) {
+          trends.push({
+            platform: 'google',
+            trend_name: title,
+            trend_rank: rank++,
+            trend_category: 'search',
+          });
+        }
+      }
+    }
+    
+    console.log(`Fetched ${trends.length} Google Trends`);
+    return trends;
+  } catch (error) {
+    console.error('Error fetching Google Trends:', error);
+    return searchTrendingTopics('google', 'trending topics today United States');
   }
-  
-  return trends.slice(0, 20);
 }
 
-// Parse Instagram trending
-function parseInstagramTrends(markdown: string): TrendItem[] {
-  const trends: TrendItem[] = [];
-  const lines = markdown.split('\n').filter(l => l.trim());
+// Fetch TikTok trending via search
+async function fetchTikTokTrends(): Promise<TrendItem[]> {
+  // Use search to find what's trending on TikTok
+  const trends = await searchTrendingTopics('tiktok', 'TikTok trending hashtags sounds today site:tiktok.com OR site:newsweek.com OR site:today.com');
   
-  let rank = 1;
-  for (const line of lines) {
-    const hashtagMatch = line.match(/#(\w+)/g);
-    if (hashtagMatch) {
-      for (const tag of hashtagMatch.slice(0, 10)) {
-        trends.push({
-          platform: 'instagram',
-          trend_name: tag,
-          trend_rank: rank++,
-          trend_category: 'hashtag',
-        });
-      }
+  // Also try to get general TikTok trending news
+  const newsTrends = await searchTrendingTopics('tiktok', 'viral TikTok trends this week');
+  
+  const combined = [...trends];
+  newsTrends.forEach((t, i) => {
+    if (!combined.find(c => c.trend_name.toLowerCase() === t.trend_name.toLowerCase())) {
+      combined.push({ ...t, trend_rank: combined.length + 1 });
     }
-  }
+  });
   
-  return trends.slice(0, 20);
+  return combined.slice(0, 15);
 }
 
-// Parse LinkedIn trending
-function parseLinkedInTrends(markdown: string): TrendItem[] {
-  const trends: TrendItem[] = [];
-  const lines = markdown.split('\n').filter(l => l.trim());
-  
-  let rank = 1;
-  // Look for news headlines or trending topics
-  for (const line of lines) {
-    if (line.length > 20 && line.length < 200 && !line.startsWith('http')) {
-      const cleanLine = line.replace(/[#\[\]]/g, '').trim();
-      if (cleanLine && !cleanLine.includes('Sign in') && !cleanLine.includes('Join now')) {
-        trends.push({
-          platform: 'linkedin',
-          trend_name: cleanLine.substring(0, 100),
-          trend_rank: rank++,
-          trend_category: 'news',
-        });
-      }
-    }
-  }
-  
+// Fetch Instagram trending via search
+async function fetchInstagramTrends(): Promise<TrendItem[]> {
+  const trends = await searchTrendingTopics('instagram', 'Instagram trending hashtags reels today site:later.com OR site:hootsuite.com OR site:sproutsocial.com');
   return trends.slice(0, 15);
 }
 
-// Parse Facebook trending (limited)
-function parseFacebookTrends(markdown: string): TrendItem[] {
-  const trends: TrendItem[] = [];
-  const lines = markdown.split('\n').filter(l => l.trim());
-  
-  let rank = 1;
-  for (const line of lines) {
-    if (line.length > 15 && line.length < 150) {
-      const cleanLine = line.replace(/[#\[\]]/g, '').trim();
-      if (cleanLine && !cleanLine.includes('Log in') && !cleanLine.includes('Sign up')) {
-        trends.push({
-          platform: 'facebook',
-          trend_name: cleanLine.substring(0, 100),
-          trend_rank: rank++,
-          trend_category: 'topic',
-        });
-      }
-    }
-  }
-  
+// Fetch LinkedIn trending via search
+async function fetchLinkedInTrends(): Promise<TrendItem[]> {
+  const trends = await searchTrendingTopics('linkedin', 'LinkedIn trending topics news today site:linkedin.com/pulse OR site:socialmediatoday.com');
+  return trends.slice(0, 15);
+}
+
+// Fetch Facebook trending via search
+async function fetchFacebookTrends(): Promise<TrendItem[]> {
+  const trends = await searchTrendingTopics('facebook', 'Facebook trending topics viral posts today');
+  return trends.slice(0, 15);
+}
+
+// Fetch Snapchat trending via search
+async function fetchSnapchatTrends(): Promise<TrendItem[]> {
+  const trends = await searchTrendingTopics('snapchat', 'Snapchat trending lenses filters spotlight today');
   return trends.slice(0, 10);
 }
 
-// Fetch Google Trends
-async function fetchGoogleTrends(): Promise<TrendItem[]> {
-  const markdown = await scrapeWithFirecrawl('https://trends.google.com/trending?geo=US');
-  if (!markdown) return [];
-  
-  const trends: TrendItem[] = [];
-  const lines = markdown.split('\n').filter(l => l.trim());
-  
-  let rank = 1;
-  for (const line of lines) {
-    // Look for trend names (usually formatted with search volume)
-    if (line.length > 3 && line.length < 100 && !line.includes('http') && !line.startsWith('#')) {
-      const cleanLine = line.replace(/[*_\[\]]/g, '').trim();
-      if (cleanLine && /^[A-Za-z0-9\s]+$/.test(cleanLine)) {
-        trends.push({
-          platform: 'google',
-          trend_name: cleanLine,
-          trend_rank: rank++,
-          trend_category: 'search',
-        });
-      }
-    }
-  }
-  
-  return trends.slice(0, 20);
-}
-
-// Fetch Twitter trends (requires API keys)
+// Fetch Twitter/X trends (requires API keys or fallback to search)
 async function fetchTwitterTrends(): Promise<TrendItem[]> {
   if (!TWITTER_CONSUMER_KEY || !TWITTER_CONSUMER_SECRET || !TWITTER_ACCESS_TOKEN || !TWITTER_ACCESS_TOKEN_SECRET) {
-    console.log('Twitter API keys not configured, skipping Twitter trends');
-    return [];
+    console.log('Twitter API keys not configured, using search fallback');
+    const trends = await searchTrendingTopics('twitter', 'Twitter X trending topics hashtags today');
+    return trends.slice(0, 15);
   }
 
   try {
-    // For now, return empty - will implement OAuth 1.0a signing when keys are provided
-    // This is placeholder for when user provides Twitter API keys
-    console.log('Twitter API integration ready - keys detected');
-    return [];
+    // OAuth 1.0a implementation for Twitter API
+    const oauthTimestamp = Math.floor(Date.now() / 1000).toString();
+    const oauthNonce = crypto.randomUUID().replace(/-/g, '');
+    
+    // For now, use search fallback until full OAuth implementation
+    console.log('Twitter API keys detected - using search until OAuth fully implemented');
+    const trends = await searchTrendingTopics('twitter', 'Twitter X trending topics hashtags today');
+    return trends.slice(0, 15);
   } catch (error) {
     console.error('Error fetching Twitter trends:', error);
     return [];
@@ -215,60 +219,51 @@ serve(async (req) => {
     );
 
     const allTrends: TrendItem[] = [];
-    const requestedPlatforms = platforms || ['tiktok', 'instagram', 'linkedin', 'facebook', 'google', 'twitter'];
+    const requestedPlatforms = platforms || ['tiktok', 'instagram', 'linkedin', 'facebook', 'google', 'twitter', 'snapchat'];
 
     console.log(`Fetching trends for platforms: ${requestedPlatforms.join(', ')}`);
 
     // Fetch trends from each platform in parallel
-    const promises: Promise<TrendItem[]>[] = [];
+    const promises: { platform: string; promise: Promise<TrendItem[]> }[] = [];
+
+    if (requestedPlatforms.includes('google')) {
+      promises.push({ platform: 'google', promise: fetchGoogleTrends() });
+    }
 
     if (requestedPlatforms.includes('tiktok')) {
-      promises.push(
-        scrapeWithFirecrawl('https://www.tiktok.com/discover').then(md => 
-          md ? parseTikTokTrends(md) : []
-        )
-      );
+      promises.push({ platform: 'tiktok', promise: fetchTikTokTrends() });
     }
 
     if (requestedPlatforms.includes('instagram')) {
-      promises.push(
-        scrapeWithFirecrawl('https://www.instagram.com/explore/tags/trending/').then(md =>
-          md ? parseInstagramTrends(md) : []
-        )
-      );
+      promises.push({ platform: 'instagram', promise: fetchInstagramTrends() });
     }
 
     if (requestedPlatforms.includes('linkedin')) {
-      promises.push(
-        scrapeWithFirecrawl('https://www.linkedin.com/news/').then(md =>
-          md ? parseLinkedInTrends(md) : []
-        )
-      );
+      promises.push({ platform: 'linkedin', promise: fetchLinkedInTrends() });
     }
 
     if (requestedPlatforms.includes('facebook')) {
-      promises.push(
-        scrapeWithFirecrawl('https://www.facebook.com/').then(md =>
-          md ? parseFacebookTrends(md) : []
-        )
-      );
-    }
-
-    if (requestedPlatforms.includes('google')) {
-      promises.push(fetchGoogleTrends());
+      promises.push({ platform: 'facebook', promise: fetchFacebookTrends() });
     }
 
     if (requestedPlatforms.includes('twitter')) {
-      promises.push(fetchTwitterTrends());
+      promises.push({ platform: 'twitter', promise: fetchTwitterTrends() });
     }
 
-    const results = await Promise.allSettled(promises);
-    
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        allTrends.push(...result.value);
-      }
+    if (requestedPlatforms.includes('snapchat')) {
+      promises.push({ platform: 'snapchat', promise: fetchSnapchatTrends() });
     }
+
+    const results = await Promise.allSettled(promises.map(p => p.promise));
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        console.log(`${promises[index].platform}: ${result.value.length} trends found`);
+        allTrends.push(...result.value);
+      } else {
+        console.error(`${promises[index].platform}: failed -`, result.reason);
+      }
+    });
 
     console.log(`Found ${allTrends.length} total trends`);
 
