@@ -16,7 +16,8 @@ import {
   Newspaper,
   Search,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfDay, isSameDay } from "date-fns";
@@ -195,14 +196,23 @@ export default function TrendMonitor() {
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <TrendingUp className="w-8 h-8 text-primary" />
-                Trend Monitor
-              </h1>
-              <p className="text-muted-foreground">
-                Track what's trending across social media platforms
-              </p>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate('/brand-strategy')}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-8 h-8 text-primary" />
+                  Trend Monitor
+                </h1>
+                <p className="text-muted-foreground">
+                  Track what's trending across social media platforms
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
