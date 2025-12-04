@@ -24,6 +24,7 @@ import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock } from "lucide-
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
+import linkedinLogo from "@/assets/linkedin-logo.png";
 
 interface SocialPlatform {
   id: string;
@@ -36,7 +37,7 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/FFFFFF", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
   { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
   { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
-  { id: "linkedin", name: "LinkedIn", icon: "https://cdn.simpleicons.org/linkedin/FFFFFF", color: "bg-[#0A66C2]" },
+  { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
   { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
   { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
   { id: "pinterest", name: "Pinterest", icon: "https://cdn.simpleicons.org/pinterest/FFFFFF", color: "bg-[#E60023]" },
