@@ -104,7 +104,6 @@ Return ONLY valid JSON, no markdown or explanation.`
   const content = data.choices?.[0]?.message?.content || '';
   
   try {
-    // Try to parse JSON from the response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -129,21 +128,61 @@ Return ONLY valid JSON, no markdown or explanation.`
   };
 }
 
+async function runSingleReport(
+  supabase: any,
+  searchTerm: string,
+  userId: string,
+  scheduledReportId?: string
+): Promise<{ report: any; resultsCount: number }> {
+  console.log(`Running report for: ${searchTerm}`);
+  
+  const searchResults = await searchWithFirecrawl(searchTerm);
+  const analysis = await analyzeSentiment(searchTerm, searchResults);
+  
+  const reportData = {
+    scheduled_report_id: scheduledReportId || null,
+    user_id: userId,
+    search_term: searchTerm,
+    sentiment: analysis.sentiment,
+    mentions: searchResults.length * 100 + Math.floor(Math.random() * 500),
+    sources: searchResults.length,
+    positive_percent: analysis.positive_percent,
+    neutral_percent: analysis.neutral_percent,
+    negative_percent: analysis.negative_percent,
+    summary: analysis.summary,
+    raw_results: searchResults
+  };
+
+  const { data: savedReport, error: saveError } = await supabase
+    .from('report_results')
+    .insert(reportData)
+    .select()
+    .single();
+
+  if (saveError) {
+    console.error('Error saving report:', saveError);
+    throw new Error('Failed to save report');
+  }
+
+  if (scheduledReportId) {
+    await supabase
+      .from('scheduled_reports')
+      .update({ last_run_at: new Date().toISOString() })
+      .eq('id', scheduledReportId);
+  }
+
+  return { report: savedReport, resultsCount: searchResults.length };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { searchTerm, userId, scheduledReportId } = await req.json();
+    const body = await req.json();
+    const { searchTerm, userId, scheduledReportId, scheduled } = body;
     
-    if (!searchTerm) {
-      return new Response(
-        JSON.stringify({ error: 'Search term is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     if (!FIRECRAWL_API_KEY) {
       console.error('FIRECRAWL_API_KEY not configured');
       return new Response(
@@ -152,62 +191,70 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Running report for search term: ${searchTerm}`);
-
-    // Search with Firecrawl
-    const searchResults = await searchWithFirecrawl(searchTerm);
-    
-    // Analyze sentiment
-    const analysis = await analyzeSentiment(searchTerm, searchResults);
-    
-    // Create Supabase client with service role to bypass RLS
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    // Store the report result
-    const reportData = {
-      scheduled_report_id: scheduledReportId || null,
-      user_id: userId,
-      search_term: searchTerm,
-      sentiment: analysis.sentiment,
-      mentions: searchResults.length * 100 + Math.floor(Math.random() * 500), // Simulated mention count
-      sources: searchResults.length,
-      positive_percent: analysis.positive_percent,
-      neutral_percent: analysis.neutral_percent,
-      negative_percent: analysis.negative_percent,
-      summary: analysis.summary,
-      raw_results: searchResults
-    };
-
-    const { data: savedReport, error: saveError } = await supabase
-      .from('report_results')
-      .insert(reportData)
-      .select()
-      .single();
-
-    if (saveError) {
-      console.error('Error saving report:', saveError);
+    // Scheduled cron run - process all due reports
+    if (scheduled === true) {
+      console.log('Processing scheduled reports...');
+      
+      const now = new Date();
+      const currentHour = now.getUTCHours().toString().padStart(2, '0');
+      const currentTime = `${currentHour}:00:00`;
+      
+      console.log(`Looking for reports scheduled at: ${currentTime}`);
+      
+      const { data: dueReports, error: fetchError } = await supabase
+        .from('scheduled_reports')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (fetchError) {
+        console.error('Error fetching scheduled reports:', fetchError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch scheduled reports' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Filter reports that match the current hour
+      const matchingReports = (dueReports || []).filter(r => {
+        const reportHour = r.schedule_time.split(':')[0];
+        return reportHour === currentHour;
+      });
+      
+      console.log(`Found ${matchingReports.length} reports due this hour`);
+      
+      let processed = 0;
+      for (const report of matchingReports) {
+        try {
+          await runSingleReport(supabase, report.search_term, report.user_id, report.id);
+          processed++;
+          console.log(`Processed: ${report.search_term}`);
+        } catch (e) {
+          console.error(`Error processing report ${report.id}:`, e);
+        }
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to save report', details: saveError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, processed }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Manual run
+    if (!searchTerm || !userId) {
+      return new Response(
+        JSON.stringify({ error: 'Search term and userId are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update scheduled report last_run_at if applicable
-    if (scheduledReportId) {
-      await supabase
-        .from('scheduled_reports')
-        .update({ last_run_at: new Date().toISOString() })
-        .eq('id', scheduledReportId);
-    }
-
-    console.log('Report generated successfully:', savedReport.id);
+    const result = await runSingleReport(supabase, searchTerm, userId, scheduledReportId);
+    
+    console.log('Report generated successfully:', result.report.id);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        report: savedReport,
-        resultsCount: searchResults.length
-      }),
+      JSON.stringify({ success: true, ...result }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
