@@ -24,23 +24,23 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
         <div className="flex items-center gap-6">
           <Logo />
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => navigate("/campaigns")}
-            className="text-muted-foreground hover:text-foreground"
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
             Campaigns
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => navigate("/projects")}
-            className="text-muted-foreground hover:text-foreground"
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
             Content
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => navigate("/brand-strategy")}
-            className="text-muted-foreground hover:text-foreground"
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
             Strategy
           </Button>
