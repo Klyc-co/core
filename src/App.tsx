@@ -28,6 +28,7 @@ import Schedule from "./pages/Schedule";
 import GenerateCampaignIdeas from "./pages/GenerateCampaignIdeas";
 import CampaignDrafts from "./pages/CampaignDrafts";
 import CampaignDraftView from "./pages/CampaignDraftView";
+import BrandStrategy from "./pages/BrandStrategy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
           <Route path="/campaigns/drafts" element={<WithSidebar><CampaignDrafts /></WithSidebar>} />
           <Route path="/campaigns/drafts/:id" element={<WithSidebar><CampaignDraftView /></WithSidebar>} />
+          <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
