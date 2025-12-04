@@ -48,8 +48,30 @@ interface ReportResult {
 }
 
 const timeSlots = [
-  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", 
-  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
+  { value: "06:00", label: "6:00 AM" },
+  { value: "07:00", label: "7:00 AM" },
+  { value: "08:00", label: "8:00 AM" },
+  { value: "09:00", label: "9:00 AM" },
+  { value: "10:00", label: "10:00 AM" },
+  { value: "11:00", label: "11:00 AM" },
+  { value: "12:00", label: "12:00 PM" },
+  { value: "13:00", label: "1:00 PM" },
+  { value: "14:00", label: "2:00 PM" },
+  { value: "15:00", label: "3:00 PM" },
+  { value: "16:00", label: "4:00 PM" },
+  { value: "17:00", label: "5:00 PM" },
+  { value: "18:00", label: "6:00 PM" },
+  { value: "19:00", label: "7:00 PM" },
+  { value: "20:00", label: "8:00 PM" },
+  { value: "21:00", label: "9:00 PM" },
+  { value: "22:00", label: "10:00 PM" },
+  { value: "23:00", label: "11:00 PM" },
+  { value: "00:00", label: "12:00 AM" },
+  { value: "01:00", label: "1:00 AM" },
+  { value: "02:00", label: "2:00 AM" },
+  { value: "03:00", label: "3:00 AM" },
+  { value: "04:00", label: "4:00 AM" },
+  { value: "05:00", label: "5:00 AM" },
 ];
 
 const quickTemplates = [
@@ -171,7 +193,7 @@ const BrandStrategy = () => {
       
       if (error) throw error;
       
-      toast({ title: "Search scheduled!", description: `"${searchTerm}" will run daily at ${scheduledTime}` });
+      toast({ title: "Search scheduled!", description: `"${searchTerm}" will run daily at ${formatTime12Hour(scheduledTime)}` });
       setSearchTerm("");
       fetchData(user.id);
     } catch (error) {
@@ -212,6 +234,17 @@ const BrandStrategy = () => {
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "M/d/yyyy");
+  };
+
+  const formatTime12Hour = (time24: string) => {
+    const slot = timeSlots.find(t => t.value === time24);
+    if (slot) return slot.label;
+    // Fallback for times not in our list
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
   };
 
   if (loading) {
@@ -293,8 +326,8 @@ const BrandStrategy = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {timeSlots.map((time) => (
-                            <SelectItem key={time} value={time}>
-                              {time}
+                            <SelectItem key={time.value} value={time.value}>
+                              {time.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -463,7 +496,7 @@ const BrandStrategy = () => {
                             <p className="font-medium text-foreground">{report.search_term}</p>
                             <p className="text-sm text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              Daily at {report.schedule_time}
+                              Daily at {formatTime12Hour(report.schedule_time)}
                               {report.last_run_at && ` • Last run: ${formatDate(report.last_run_at)}`}
                             </p>
                           </div>
