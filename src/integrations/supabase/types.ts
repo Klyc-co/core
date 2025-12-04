@@ -306,6 +306,45 @@ export type Database = {
           },
         ]
       }
+      social_trends: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          scraped_at: string
+          trend_category: string | null
+          trend_name: string
+          trend_rank: number | null
+          trend_url: string | null
+          trend_volume: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          scraped_at?: string
+          trend_category?: string | null
+          trend_name: string
+          trend_rank?: number | null
+          trend_url?: string | null
+          trend_volume?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          scraped_at?: string
+          trend_category?: string | null
+          trend_name?: string
+          trend_rank?: number | null
+          trend_url?: string | null
+          trend_volume?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
