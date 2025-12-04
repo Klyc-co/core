@@ -1,16 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { MessageSquare, Send, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useSidebarContext } from "@/contexts/SidebarContext";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 
 const ChatSidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const { isOpen, setIsOpen } = useSidebarContext();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" }
   ]);
@@ -126,7 +127,7 @@ const ChatSidebar = () => {
   }
 
   return (
-    <div className="w-80 h-screen bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
+    <div className="fixed left-0 top-0 w-80 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-40">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-2">
