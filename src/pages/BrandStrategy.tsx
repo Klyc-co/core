@@ -103,6 +103,8 @@ const BrandStrategy = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState("08:00");
+  const [timeDisplay, setTimeDisplay] = useState("8:00");
+  const [amPm, setAmPm] = useState<"AM" | "PM">("AM");
   const [isScheduling, setIsScheduling] = useState(false);
   const [isRunningNow, setIsRunningNow] = useState(false);
   
@@ -221,6 +223,47 @@ const BrandStrategy = () => {
   const handleAddTemplate = (template: typeof quickTemplates[0]) => {
     setSearchTerm(template.term);
     setScheduledTime("08:00");
+    setTimeDisplay("8:00");
+    setAmPm("AM");
+  };
+
+  const handleTimeInputChange = (value: string) => {
+    setTimeDisplay(value);
+    // Parse the time and update scheduledTime in 24-hour format
+    const timeMatch = value.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? timeMatch[2].padEnd(2, '0') : '00';
+      
+      if (hours >= 1 && hours <= 12) {
+        // Convert to 24-hour format based on AM/PM
+        if (amPm === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (amPm === "AM" && hours === 12) {
+          hours = 0;
+        }
+        setScheduledTime(`${hours.toString().padStart(2, '0')}:${minutes}`);
+      }
+    }
+  };
+
+  const handleAmPmChange = (value: "AM" | "PM") => {
+    setAmPm(value);
+    // Recalculate 24-hour time with new AM/PM
+    const timeMatch = timeDisplay.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? timeMatch[2].padEnd(2, '0') : '00';
+      
+      if (hours >= 1 && hours <= 12) {
+        if (value === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (value === "AM" && hours === 12) {
+          hours = 0;
+        }
+        setScheduledTime(`${hours.toString().padStart(2, '0')}:${minutes}`);
+      }
+    }
   };
 
   const getSentimentColor = (sentiment: string) => {
@@ -320,18 +363,24 @@ const BrandStrategy = () => {
                         <Clock className="w-4 h-4" />
                         Schedule Time (Daily)
                       </label>
-                      <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select time" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeSlots.map((time) => (
-                            <SelectItem key={time.value} value={time.value}>
-                              {time.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="8:00"
+                          value={timeDisplay}
+                          onChange={(e) => handleTimeInputChange(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Select value={amPm} onValueChange={handleAmPmChange}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AM">AM</SelectItem>
+                            <SelectItem value="PM">PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="flex items-end">
                       <Button 
