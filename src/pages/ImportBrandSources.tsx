@@ -2,19 +2,69 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
-const socialPlatforms = [
-  { name: "Facebook", icon: Facebook, color: "bg-blue-600", textColor: "text-blue-600" },
-  { name: "Instagram", icon: Instagram, color: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400", textColor: "text-pink-500" },
-  { name: "LinkedIn", icon: Linkedin, color: "bg-blue-700", textColor: "text-blue-700" },
-  { name: "Twitter/X", icon: Twitter, color: "bg-gray-800", textColor: "text-gray-800 dark:text-gray-200" },
-  { name: "YouTube", icon: Youtube, color: "bg-red-600", textColor: "text-red-600" },
-  { name: "TikTok", icon: Music, color: "bg-black", textColor: "text-black dark:text-white" },
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+
+interface SocialPlatform {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  textColor: string;
+  provider?: 'google' | 'facebook' | 'twitter' | 'linkedin_oidc';
+  scopes?: string[];
+  comingSoon?: boolean;
+}
+
+const socialPlatforms: SocialPlatform[] = [
+  { 
+    name: "YouTube", 
+    icon: Youtube, 
+    color: "bg-red-600", 
+    textColor: "text-red-600",
+    provider: 'google',
+    scopes: ['https://www.googleapis.com/auth/youtube.readonly']
+  },
+  { 
+    name: "Facebook", 
+    icon: Facebook, 
+    color: "bg-blue-600", 
+    textColor: "text-blue-600",
+    comingSoon: true
+  },
+  { 
+    name: "Instagram", 
+    icon: Instagram, 
+    color: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400", 
+    textColor: "text-pink-500",
+    comingSoon: true
+  },
+  { 
+    name: "LinkedIn", 
+    icon: Linkedin, 
+    color: "bg-blue-700", 
+    textColor: "text-blue-700",
+    comingSoon: true
+  },
+  { 
+    name: "Twitter/X", 
+    icon: Twitter, 
+    color: "bg-gray-800", 
+    textColor: "text-gray-800 dark:text-gray-200",
+    comingSoon: true
+  },
+  { 
+    name: "TikTok", 
+    icon: Music, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    comingSoon: true
+  },
 ];
 
 const ImportBrandSources = () => {
@@ -22,6 +72,7 @@ const ImportBrandSources = () => {
   const [user, setUser] = useState<User | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -29,15 +80,106 @@ const ImportBrandSources = () => {
         navigate("/auth");
       } else {
         setUser(user);
+        // Check for connected identities
+        checkConnectedAccounts(user);
       }
     });
   }, [navigate]);
+
+  const checkConnectedAccounts = (user: User) => {
+    const identities = user.identities || [];
+    const newStatus: Record<string, ConnectionStatus> = {};
+    
+    identities.forEach(identity => {
+      if (identity.provider === 'google') {
+        // Check if YouTube scopes are present
+        newStatus['YouTube'] = 'connected';
+      }
+      if (identity.provider === 'facebook') {
+        newStatus['Facebook'] = 'connected';
+        newStatus['Instagram'] = 'connected';
+      }
+      if (identity.provider === 'twitter') {
+        newStatus['Twitter/X'] = 'connected';
+      }
+      if (identity.provider === 'linkedin_oidc') {
+        newStatus['LinkedIn'] = 'connected';
+      }
+    });
+    
+    setConnectionStatus(newStatus);
+  };
 
   const handleScanWebsite = async () => {
     if (!websiteUrl) return;
     setIsScanning(true);
     // TODO: Implement website scraping with Firecrawl
     setTimeout(() => setIsScanning(false), 2000);
+  };
+
+  const handleConnectPlatform = async (platform: SocialPlatform) => {
+    if (platform.comingSoon) {
+      toast.info(`${platform.name} integration coming soon!`);
+      return;
+    }
+
+    if (!platform.provider) {
+      toast.error(`${platform.name} connection not configured`);
+      return;
+    }
+
+    setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: platform.provider,
+        options: {
+          redirectTo: `${window.location.origin}/import-brand-sources`,
+          scopes: platform.scopes?.join(' '),
+          queryParams: platform.provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent',
+          } : undefined,
+        },
+      });
+
+      if (error) {
+        console.error('OAuth error:', error);
+        toast.error(`Failed to connect ${platform.name}: ${error.message}`);
+        setConnectionStatus(prev => ({ ...prev, [platform.name]: 'disconnected' }));
+      }
+    } catch (err) {
+      console.error('Connection error:', err);
+      toast.error(`Failed to connect ${platform.name}`);
+      setConnectionStatus(prev => ({ ...prev, [platform.name]: 'disconnected' }));
+    }
+  };
+
+  const getButtonContent = (platform: SocialPlatform) => {
+    const status = connectionStatus[platform.name] || 'disconnected';
+    
+    if (platform.comingSoon) {
+      return 'Coming Soon';
+    }
+    
+    switch (status) {
+      case 'connecting':
+        return (
+          <>
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Connecting...
+          </>
+        );
+      case 'connected':
+        return (
+          <>
+            <Check className="w-3 h-3" />
+            Connected
+          </>
+        );
+      default:
+        return 'Connect Account';
+    }
   };
 
   return (
@@ -114,19 +256,34 @@ const ImportBrandSources = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {socialPlatforms.map((platform) => (
-                <div key={platform.name} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg ${platform.color} flex items-center justify-center`}>
-                      <platform.icon className="w-4 h-4 text-white" />
+              {socialPlatforms.map((platform) => {
+                const status = connectionStatus[platform.name] || 'disconnected';
+                const isConnected = status === 'connected';
+                const isConnecting = status === 'connecting';
+                
+                return (
+                  <div key={platform.name} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg ${platform.color} flex items-center justify-center`}>
+                        <platform.icon className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{platform.name}</span>
+                      {isConnected && (
+                        <Check className="w-4 h-4 text-green-500" />
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-foreground">{platform.name}</span>
+                    <Button 
+                      variant={isConnected ? "outline" : "secondary"} 
+                      size="sm" 
+                      className={`w-full ${isConnected ? 'border-green-500/50 text-green-600 dark:text-green-400' : ''} ${platform.comingSoon ? 'opacity-50' : ''}`}
+                      onClick={() => handleConnectPlatform(platform)}
+                      disabled={isConnecting || platform.comingSoon}
+                    >
+                      {getButtonContent(platform)}
+                    </Button>
                   </div>
-                  <Button variant="secondary" size="sm" className="w-full">
-                    Connect Account
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         </div>
