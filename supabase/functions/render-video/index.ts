@@ -27,6 +27,7 @@ interface Project {
   id: string;
   original_video_url: string;
   duration_seconds: number;
+  owner_id: string;
 }
 
 serve(async (req) => {
@@ -42,15 +43,41 @@ serve(async (req) => {
   let projectId: string | undefined;
 
   try {
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await req.json();
     projectId = body.projectId;
-    console.log("Rendering video for project:", projectId);
+    console.log("Rendering video for project:", projectId, "User:", user.id);
 
     if (!shotstackApiKey) {
       throw new Error("SHOTSTACK_API_KEY is not configured");
     }
 
-    // Get project
+    // Get project and verify ownership
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("*")
@@ -59,6 +86,13 @@ serve(async (req) => {
 
     if (projectError || !project) {
       throw new Error("Project not found");
+    }
+
+    if (project.owner_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Get segments
@@ -111,7 +145,7 @@ serve(async (req) => {
     const renderId = renderData.response.id;
     console.log("Shotstack render started:", renderId);
 
-    // Poll for completion (max 5 minutes)
+    // Poll for completion
     const finalVideoUrl = await pollForCompletion(renderId, shotstackApiKey);
     console.log("Final video URL:", finalVideoUrl);
 
@@ -137,7 +171,6 @@ serve(async (req) => {
     console.error("Render video error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    // Update status to ready_for_edit on failure
     if (projectId) {
       await supabase
         .from("projects")
@@ -153,10 +186,8 @@ serve(async (req) => {
 });
 
 function buildShotstackTimeline(project: Project, segments: Segment[]) {
-  // Calculate total duration from segments
   const totalDuration = segments.reduce((max, s) => Math.max(max, s.end_seconds), 0);
   
-  // Collect all word timings from all segments for captions
   const allWords: WordTiming[] = [];
   for (const segment of segments) {
     if (segment.words_json && Array.isArray(segment.words_json)) {
@@ -166,10 +197,8 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
   
   console.log(`Total words for captions: ${allWords.length}`);
   
-  // Build caption clips - each word appears for its duration
-  // Using Shotstack's HTML asset for stylish captions
   const captionClips = allWords.map((word) => {
-    const duration = Math.max(word.end - word.start, 0.1); // Minimum 0.1s
+    const duration = Math.max(word.end - word.start, 0.1);
     return {
       asset: {
         type: "html",
@@ -186,7 +215,6 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
     };
   });
 
-  // Build B-roll overlay clips (only for segments that use B-roll)
   const brollClips = segments
     .filter((segment) => segment.use_broll && segment.broll_video_url)
     .map((segment) => {
@@ -196,40 +224,35 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
           type: "video",
           src: segment.broll_video_url,
           trim: 0,
-          volume: 0, // Mute B-roll audio
+          volume: 0,
         },
         start: segment.start_seconds,
         length: duration,
-        fit: "crop", // Fill frame while keeping aspect ratio
+        fit: "crop",
       };
     });
 
-  // Base track - full original video with audio
   const baseClip = {
     asset: {
       type: "video",
       src: project.original_video_url,
-      volume: 1, // Keep original audio
+      volume: 1,
     },
     start: 0,
     length: totalDuration,
-    fit: "crop", // Fill 9:16 frame while keeping aspect ratio (crops sides)
+    fit: "crop",
   };
 
-  // Tracks order (top to bottom): captions > B-roll > base video
   const tracks = [];
   
-  // Caption track (on top of everything)
   if (captionClips.length > 0) {
     tracks.push({ clips: captionClips });
   }
   
-  // B-roll track (overlays base video where needed)
   if (brollClips.length > 0) {
     tracks.push({ clips: brollClips });
   }
   
-  // Base video track (always present)
   tracks.push({ clips: [baseClip] });
 
   return {
@@ -244,14 +267,13 @@ function buildShotstackTimeline(project: Project, segments: Segment[]) {
     },
     output: {
       format: "mp4",
-      resolution: "hd", // 1080p
-      aspectRatio: "9:16", // Vertical video
+      resolution: "hd",
+      aspectRatio: "9:16",
       fps: 30,
     },
   };
 }
 
-// Helper to escape HTML special characters
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -262,7 +284,7 @@ function escapeHtml(text: string): string {
 }
 
 async function pollForCompletion(renderId: string, apiKey: string): Promise<string> {
-  const maxAttempts = 60; // 5 minutes with 5-second intervals
+  const maxAttempts = 60;
   const pollInterval = 5000;
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -291,7 +313,6 @@ async function pollForCompletion(renderId: string, apiKey: string): Promise<stri
     } else if (status === "failed") {
       throw new Error("Shotstack render failed: " + (statusData.response.error || "Unknown error"));
     }
-    // Continue polling for "queued", "fetching", "rendering" statuses
   }
 
   throw new Error("Render timed out after 5 minutes");

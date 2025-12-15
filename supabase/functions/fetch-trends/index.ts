@@ -38,7 +38,7 @@ async function searchTrendingTopics(platform: string, query: string): Promise<Tr
       body: JSON.stringify({
         query,
         limit: 15,
-        tbs: 'qdr:d', // Last 24 hours
+        tbs: 'qdr:d',
       }),
     });
 
@@ -74,19 +74,16 @@ async function searchTrendingTopics(platform: string, query: string): Promise<Tr
 // Fetch Google Trends using RSS feed
 async function fetchGoogleTrends(): Promise<TrendItem[]> {
   try {
-    // Use Google Trends RSS feed for daily trends
     const response = await fetch('https://trends.google.com/trending/rss?geo=US');
     
     if (!response.ok) {
       console.error('Google Trends RSS error:', response.status);
-      // Fallback to search
       return searchTrendingTopics('google', 'trending topics today United States');
     }
 
     const xml = await response.text();
     const trends: TrendItem[] = [];
     
-    // Parse RSS XML to extract trending topics
     const itemRegex = /<item>[\s\S]*?<title>([^<]+)<\/title>[\s\S]*?<ht:approx_traffic>([^<]*)<\/ht:approx_traffic>[\s\S]*?<\/item>/g;
     let match;
     let rank = 1;
@@ -106,7 +103,6 @@ async function fetchGoogleTrends(): Promise<TrendItem[]> {
       }
     }
     
-    // If RSS parsing didn't work well, try simple title extraction
     if (trends.length === 0) {
       const simpleTitleRegex = /<title>([^<]+)<\/title>/g;
       let simpleMatch;
@@ -133,12 +129,8 @@ async function fetchGoogleTrends(): Promise<TrendItem[]> {
   }
 }
 
-// Fetch TikTok trending via search
 async function fetchTikTokTrends(): Promise<TrendItem[]> {
-  // Use search to find what's trending on TikTok
   const trends = await searchTrendingTopics('tiktok', 'TikTok trending hashtags sounds today site:tiktok.com OR site:newsweek.com OR site:today.com');
-  
-  // Also try to get general TikTok trending news
   const newsTrends = await searchTrendingTopics('tiktok', 'viral TikTok trends this week');
   
   const combined = [...trends];
@@ -151,31 +143,26 @@ async function fetchTikTokTrends(): Promise<TrendItem[]> {
   return combined.slice(0, 15);
 }
 
-// Fetch Instagram trending via search
 async function fetchInstagramTrends(): Promise<TrendItem[]> {
   const trends = await searchTrendingTopics('instagram', 'Instagram trending hashtags reels today site:later.com OR site:hootsuite.com OR site:sproutsocial.com');
   return trends.slice(0, 15);
 }
 
-// Fetch LinkedIn trending via search
 async function fetchLinkedInTrends(): Promise<TrendItem[]> {
   const trends = await searchTrendingTopics('linkedin', 'LinkedIn trending topics news today site:linkedin.com/pulse OR site:socialmediatoday.com');
   return trends.slice(0, 15);
 }
 
-// Fetch Facebook trending via search
 async function fetchFacebookTrends(): Promise<TrendItem[]> {
   const trends = await searchTrendingTopics('facebook', 'Facebook trending topics viral posts today');
   return trends.slice(0, 15);
 }
 
-// Fetch Snapchat trending via search
 async function fetchSnapchatTrends(): Promise<TrendItem[]> {
   const trends = await searchTrendingTopics('snapchat', 'Snapchat trending lenses filters spotlight today');
   return trends.slice(0, 10);
 }
 
-// Fetch Twitter/X trends (requires API keys or fallback to search)
 async function fetchTwitterTrends(): Promise<TrendItem[]> {
   if (!TWITTER_CONSUMER_KEY || !TWITTER_CONSUMER_SECRET || !TWITTER_ACCESS_TOKEN || !TWITTER_ACCESS_TOKEN_SECRET) {
     console.log('Twitter API keys not configured, using search fallback');
@@ -184,11 +171,6 @@ async function fetchTwitterTrends(): Promise<TrendItem[]> {
   }
 
   try {
-    // OAuth 1.0a implementation for Twitter API
-    const oauthTimestamp = Math.floor(Date.now() / 1000).toString();
-    const oauthNonce = crypto.randomUUID().replace(/-/g, '');
-    
-    // For now, use search fallback until full OAuth implementation
     console.log('Twitter API keys detected - using search until OAuth fully implemented');
     const trends = await searchTrendingTopics('twitter', 'Twitter X trending topics hashtags today');
     return trends.slice(0, 15);
@@ -204,14 +186,34 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, platforms } = await req.json();
-    
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID required' }), {
-        status: 400,
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = user.id;
+    const { platforms } = await req.json();
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -221,35 +223,28 @@ serve(async (req) => {
     const allTrends: TrendItem[] = [];
     const requestedPlatforms = platforms || ['tiktok', 'instagram', 'linkedin', 'facebook', 'google', 'twitter', 'snapchat'];
 
-    console.log(`Fetching trends for platforms: ${requestedPlatforms.join(', ')}`);
+    console.log(`Fetching trends for platforms: ${requestedPlatforms.join(', ')}, User: ${userId}`);
 
-    // Fetch trends from each platform in parallel
     const promises: { platform: string; promise: Promise<TrendItem[]> }[] = [];
 
     if (requestedPlatforms.includes('google')) {
       promises.push({ platform: 'google', promise: fetchGoogleTrends() });
     }
-
     if (requestedPlatforms.includes('tiktok')) {
       promises.push({ platform: 'tiktok', promise: fetchTikTokTrends() });
     }
-
     if (requestedPlatforms.includes('instagram')) {
       promises.push({ platform: 'instagram', promise: fetchInstagramTrends() });
     }
-
     if (requestedPlatforms.includes('linkedin')) {
       promises.push({ platform: 'linkedin', promise: fetchLinkedInTrends() });
     }
-
     if (requestedPlatforms.includes('facebook')) {
       promises.push({ platform: 'facebook', promise: fetchFacebookTrends() });
     }
-
     if (requestedPlatforms.includes('twitter')) {
       promises.push({ platform: 'twitter', promise: fetchTwitterTrends() });
     }
-
     if (requestedPlatforms.includes('snapchat')) {
       promises.push({ platform: 'snapchat', promise: fetchSnapchatTrends() });
     }
@@ -267,7 +262,6 @@ serve(async (req) => {
 
     console.log(`Found ${allTrends.length} total trends`);
 
-    // Save trends to database
     if (allTrends.length > 0) {
       const trendsToInsert = allTrends.map(trend => ({
         user_id: userId,

@@ -181,7 +181,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { searchTerm, userId, scheduledReportId, scheduled } = body;
+    const { searchTerm, scheduledReportId, scheduled } = body;
     
     if (!FIRECRAWL_API_KEY) {
       console.error('FIRECRAWL_API_KEY not configured');
@@ -193,7 +193,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    // Scheduled cron run - process all due reports
+    // Scheduled cron run - process all due reports (no auth needed for cron)
     if (scheduled === true) {
       console.log('Processing scheduled reports...');
       
@@ -216,7 +216,6 @@ serve(async (req) => {
         );
       }
       
-      // Filter reports that match the current hour
       const matchingReports = (dueReports || []).filter(r => {
         const reportHour = r.schedule_time.split(':')[0];
         return reportHour === currentHour;
@@ -241,10 +240,37 @@ serve(async (req) => {
       );
     }
     
-    // Manual run
-    if (!searchTerm || !userId) {
+    // Manual run - verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = user.id;
+
+    if (!searchTerm) {
       return new Response(
-        JSON.stringify({ error: 'Search term and userId are required' }),
+        JSON.stringify({ error: 'Search term is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

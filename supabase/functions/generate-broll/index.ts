@@ -15,7 +15,6 @@ async function generateBrollTask(segmentId: string, prompt: string) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Get segment to determine duration
     const { data: segment, error: segmentError } = await supabase
       .from("segments")
       .select("*")
@@ -29,12 +28,10 @@ async function generateBrollTask(segmentId: string, prompt: string) {
     }
 
     const segmentDuration = Math.ceil(segment.end_seconds - segment.start_seconds);
-    // Runway veo3 only supports durations of 4, 6, or 8 seconds
     let duration = 4;
     if (segmentDuration >= 7) duration = 8;
     else if (segmentDuration >= 5) duration = 6;
 
-    // Call Runway text-to-video API with veo3.1
     console.log("Calling Runway API for segment:", segmentId, "duration:", duration);
     
     const runwayResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_video", {
@@ -63,11 +60,10 @@ async function generateBrollTask(segmentId: string, prompt: string) {
     const runwayData = await runwayResponse.json();
     console.log("Runway task created:", runwayData.id);
 
-    // Poll for completion
     const taskId = runwayData.id;
     let videoUrl = null;
     let attempts = 0;
-    const maxAttempts = 180; // 15 minutes max (180 * 5 seconds)
+    const maxAttempts = 180;
 
     while (attempts < maxAttempts) {
       const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
@@ -88,9 +84,7 @@ async function generateBrollTask(segmentId: string, prompt: string) {
         await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
         return;
       }
-      // THROTTLED and RUNNING are normal states - keep polling
 
-      // Wait 5 seconds before polling again
       await new Promise((resolve) => setTimeout(resolve, 5000));
       attempts++;
     }
@@ -101,7 +95,6 @@ async function generateBrollTask(segmentId: string, prompt: string) {
       return;
     }
 
-    // Check if generation was cancelled before saving
     const { data: currentSegment } = await supabase
       .from("segments")
       .select("broll_status")
@@ -110,10 +103,9 @@ async function generateBrollTask(segmentId: string, prompt: string) {
 
     if (currentSegment?.broll_status !== "generating") {
       console.log("Generation was cancelled for segment:", segmentId);
-      return; // User cancelled, don't update
+      return;
     }
 
-    // Update segment with generated video
     const { error: updateError } = await supabase
       .from("segments")
       .update({
@@ -140,12 +132,65 @@ serve(async (req) => {
   }
 
   try {
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { segmentId, prompt } = await req.json();
-    console.log("Generating B-roll for segment:", segmentId);
+    console.log("Generating B-roll for segment:", segmentId, "User:", user.id);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify user owns the segment's project
+    const { data: segment, error: segmentError } = await supabase
+      .from("segments")
+      .select("id, project_id")
+      .eq("id", segmentId)
+      .single();
+
+    if (segmentError || !segment) {
+      return new Response(JSON.stringify({ error: 'Segment not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("owner_id")
+      .eq("id", segment.project_id)
+      .single();
+
+    if (projectError || !project || project.owner_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Update status to generating immediately
     await supabase
@@ -153,17 +198,15 @@ serve(async (req) => {
       .update({ broll_status: "generating" })
       .eq("id", segmentId);
 
-    // Start background task - don't await it
+    // Start background task
     // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
     if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
       // @ts-ignore
       EdgeRuntime.waitUntil(generateBrollTask(segmentId, prompt));
     } else {
-      // Fallback for environments without waitUntil
       generateBrollTask(segmentId, prompt);
     }
 
-    // Return immediately - the task runs in background
     return new Response(JSON.stringify({ 
       message: "Generation started",
       segmentId 

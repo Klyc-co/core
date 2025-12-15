@@ -19,8 +19,34 @@ serve(async (req) => {
   }
 
   try {
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { projectId } = await req.json();
-    console.log("Processing project:", projectId);
+    console.log("Processing project:", projectId, "User:", user.id);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -29,7 +55,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get project
+    // Get project and verify ownership
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("*")
@@ -38,6 +64,13 @@ serve(async (req) => {
 
     if (projectError || !project) {
       throw new Error("Project not found");
+    }
+
+    if (project.owner_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log("Transcribing video:", project.original_video_url);
@@ -68,7 +101,7 @@ serve(async (req) => {
     // Step 2: Poll for transcription completion
     let transcript = null;
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutes max
+    const maxAttempts = 60;
 
     while (attempts < maxAttempts) {
       const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
@@ -85,7 +118,6 @@ serve(async (req) => {
         throw new Error(`Transcription failed: ${statusData.error}`);
       }
 
-      // Wait 5 seconds before polling again
       await new Promise((resolve) => setTimeout(resolve, 5000));
       attempts++;
     }
@@ -104,9 +136,9 @@ serve(async (req) => {
       .update({ duration_seconds: duration })
       .eq("id", projectId);
 
-    // Step 3: Split transcript into ~5 second segments, preserving word-level data
+    // Step 3: Split transcript into ~5 second segments
     const words: Word[] = transcript.words || [];
-    const segmentDuration = 5; // seconds
+    const segmentDuration = 5;
     const segments: Array<{
       start_seconds: number;
       end_seconds: number;
@@ -122,7 +154,7 @@ serve(async (req) => {
     };
 
     for (const word of words) {
-      const wordStart = word.start / 1000; // Convert ms to seconds
+      const wordStart = word.start / 1000;
       const wordEnd = word.end / 1000;
 
       if (currentSegment.wordTexts.length === 0) {
@@ -137,7 +169,6 @@ serve(async (req) => {
       });
       currentSegment.end_seconds = wordEnd;
 
-      // Check if we've reached segment duration
       if (wordEnd - currentSegment.start_seconds >= segmentDuration) {
         segments.push({
           start_seconds: currentSegment.start_seconds,
@@ -155,7 +186,6 @@ serve(async (req) => {
       }
     }
 
-    // Push remaining words as final segment
     if (currentSegment.wordTexts.length > 0) {
       segments.push({
         start_seconds: currentSegment.start_seconds,
@@ -165,7 +195,6 @@ serve(async (req) => {
       });
     }
 
-    // If no words detected, create segments from full transcript
     if (segments.length === 0 && transcript.text) {
       const sentences = transcript.text.split(/[.!?]+/).filter((s: string) => s.trim());
       const segmentCount = Math.ceil(duration / segmentDuration);
@@ -183,21 +212,20 @@ serve(async (req) => {
           start_seconds: start,
           end_seconds: end,
           transcript_snippet: segmentSentences.join(". ").trim() || "...",
-          words_json: [], // No word-level data available
+          words_json: [],
         });
       }
     }
 
     console.log(`Created ${segments.length} segments`);
 
-    // Step 4: Generate visual prompts for each segment using Lovable AI
+    // Step 4: Generate visual prompts for each segment
     const dbSegments = [];
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       console.log(`Generating prompt for segment ${i + 1}/${segments.length}`);
 
-      // Call Lovable AI to generate visual prompt
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -252,7 +280,6 @@ Examples of good prompts:
       });
     }
 
-    // Insert all segments
     const { error: segmentsError } = await supabase.from("segments").insert(dbSegments);
 
     if (segmentsError) {
@@ -260,7 +287,6 @@ Examples of good prompts:
       throw new Error("Failed to create segments");
     }
 
-    // Update project status
     await supabase
       .from("projects")
       .update({ status: "ready_for_edit" })
