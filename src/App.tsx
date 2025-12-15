@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -35,9 +36,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Wrapper component for routes that should have the chat sidebar
+// Wrapper component for routes that should have the chat sidebar and auth protection
 const WithSidebar = ({ children }: { children: React.ReactNode }) => (
-  <AppLayout showSidebar={true}>{children}</AppLayout>
+  <ProtectedRoute>
+    <AppLayout showSidebar={true}>{children}</AppLayout>
+  </ProtectedRoute>
 );
 
 const App = () => (
