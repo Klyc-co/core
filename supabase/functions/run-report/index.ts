@@ -193,8 +193,20 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    // Scheduled cron run - process all due reports (no auth needed for cron)
+    // Scheduled cron run - process all due reports (requires CRON_SECRET for authentication)
     if (scheduled === true) {
+      // Validate cron secret to prevent unauthorized scheduled runs
+      const cronSecret = req.headers.get('X-Cron-Secret');
+      const expectedSecret = Deno.env.get('CRON_SECRET');
+      
+      if (!expectedSecret || cronSecret !== expectedSecret) {
+        console.error('Invalid or missing cron secret');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized scheduled request' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       console.log('Processing scheduled reports...');
       
       const now = new Date();
