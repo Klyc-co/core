@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { ArrowLeft, Play, Download, Loader2, Sparkles } from "lucide-react";
 import SegmentCard from "@/components/SegmentCard";
 import Logo from "@/components/Logo";
@@ -45,6 +46,10 @@ const ProjectEdit = () => {
   const [loading, setLoading] = useState(true);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [rendering, setRendering] = useState(false);
+
+  // Get signed URLs for videos
+  const { signedUrl: originalVideoUrl } = useSignedUrl(project?.original_video_url);
+  const { signedUrl: finalVideoUrl } = useSignedUrl(project?.final_video_url);
 
   useEffect(() => {
     if (!id) return;
@@ -275,9 +280,9 @@ const ProjectEdit = () => {
               )}
               Render Final Video
             </Button>
-            {project.status === "complete" && project.final_video_url && (
+            {project.status === "complete" && finalVideoUrl && (
               <Button asChild variant="success">
-                <a href={project.final_video_url} download>
+                <a href={finalVideoUrl} download>
                   <Download className="w-4 h-4" />
                   Download MP4
                 </a>
@@ -294,9 +299,9 @@ const ProjectEdit = () => {
           <div className="space-y-3 mb-6">
             <h2 className="text-lg font-semibold text-foreground">Original Video</h2>
             <div className="video-player aspect-video w-full">
-              {project.original_video_url ? (
+              {originalVideoUrl ? (
                 <video
-                  src={project.original_video_url}
+                  src={originalVideoUrl}
                   controls
                   className="w-full h-full object-contain"
                 />
@@ -312,9 +317,9 @@ const ProjectEdit = () => {
           <div className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">Final Video</h2>
             <div className="video-player aspect-[9/16] w-[200px]">
-              {project.status === "complete" && project.final_video_url ? (
+              {project.status === "complete" && finalVideoUrl ? (
                 <video
-                  src={project.final_video_url}
+                  src={finalVideoUrl}
                   controls
                   className="w-full h-full object-contain"
                 />

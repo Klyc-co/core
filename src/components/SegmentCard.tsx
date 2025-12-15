@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { RefreshCw, Sparkles, Loader2, CheckCircle, XCircle, Clock, Timer, StopCircle } from "lucide-react";
 
 interface Segment {
@@ -43,6 +44,9 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const { toast } = useToast();
+  
+  // Get signed URL for B-roll video
+  const { signedUrl: brollSignedUrl } = useSignedUrl(segment.broll_video_url);
 
   // Track elapsed time when generating
   useEffect(() => {
@@ -286,10 +290,10 @@ const SegmentCard = ({ segment, onUpdate, style }: SegmentCardProps) => {
         </Button>
       </div>
 
-      {segment.broll_status === "generated" && segment.broll_video_url && (
+      {segment.broll_status === "generated" && brollSignedUrl && (
         <div className="mt-4 pt-4 border-t border-border">
           <video
-            src={segment.broll_video_url}
+            src={brollSignedUrl}
             controls
             className="w-full rounded-lg aspect-[9/16] max-w-[200px] bg-muted"
           />
