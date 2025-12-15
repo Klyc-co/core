@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const Auth = () => {
@@ -73,6 +73,14 @@ const Auth = () => {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(185_75%_55%/0.1),transparent_50%)]" />
       
       <div className="w-full max-w-md relative animate-fade-in">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">Back to home</span>
+        </button>
+        
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Logo size="lg" />
