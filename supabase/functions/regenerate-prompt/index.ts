@@ -12,14 +12,67 @@ serve(async (req) => {
   }
 
   try {
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { segmentId, transcript } = await req.json();
-    console.log("Regenerating prompt for segment:", segmentId);
+    console.log("Regenerating prompt for segment:", segmentId, "User:", user.id);
 
     const lovableKey = Deno.env.get("LOVABLE_API_KEY")!;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify user owns the segment's project
+    const { data: segment, error: segmentError } = await supabase
+      .from("segments")
+      .select("id, project_id")
+      .eq("id", segmentId)
+      .single();
+
+    if (segmentError || !segment) {
+      return new Response(JSON.stringify({ error: 'Segment not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("owner_id")
+      .eq("id", segment.project_id)
+      .single();
+
+    if (projectError || !project || project.owner_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Call Lovable AI to generate new visual prompt
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

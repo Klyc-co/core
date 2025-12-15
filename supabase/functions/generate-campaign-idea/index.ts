@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,32 @@ serve(async (req) => {
   }
 
   try {
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { contentType, targetAudience, prompt, productInfo } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -18,7 +45,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating campaign idea for content type:", contentType);
+    console.log("Generating campaign idea for content type:", contentType, "User:", user.id);
 
     let systemPrompt = `You are an expert marketing strategist and campaign creator. Generate creative, actionable campaign ideas based on the user's input.
 
@@ -32,7 +59,6 @@ ${productInfo ? `- Product Info: ${productInfo}` : ""}
 
 `;
 
-    // Different output format based on content type
     if (contentType === "social-video" || contentType === "video-ad") {
       userPrompt += `
 Respond with this exact JSON structure:
@@ -115,10 +141,8 @@ Respond with this exact JSON structure:
     
     console.log("Raw AI response:", content);
 
-    // Parse the JSON response
     let result;
     try {
-      // Clean the response - remove markdown code blocks if present
       let cleanContent = content.trim();
       if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);

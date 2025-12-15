@@ -15,16 +15,43 @@ serve(async (req) => {
   }
 
   try {
-    const { competitorName, competitorUrl, userId } = await req.json();
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!competitorName || !userId) {
-      return new Response(JSON.stringify({ error: 'Missing competitor name or user ID' }), {
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = user.id;
+    const { competitorName, competitorUrl } = await req.json();
+
+    if (!competitorName) {
+      return new Response(JSON.stringify({ error: 'Missing competitor name' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Analyzing competitor: ${competitorName}, URL: ${competitorUrl || 'N/A'}`);
+    console.log(`Analyzing competitor: ${competitorName}, URL: ${competitorUrl || 'N/A'}, User: ${userId}`);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -57,7 +84,7 @@ serve(async (req) => {
             scrapedData.push({
               source: 'website',
               url: competitorUrl,
-              content: scrapeData.markdown.substring(0, 10000), // Limit content
+              content: scrapeData.markdown.substring(0, 10000),
             });
           }
         }
@@ -190,7 +217,6 @@ Return ONLY valid JSON, no markdown or extra text.`;
     // Parse the JSON response
     let analysis;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysis = JSON.parse(jsonMatch[0]);
