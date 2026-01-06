@@ -315,6 +315,11 @@ const Index = () => {
       <footer className="py-8 px-6 bg-gray-900 border-t border-gray-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <img src={klycLogo} alt="Klyc" className="h-6 brightness-0 invert" />
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <a href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</a>
+            <span>|</span>
+            <a href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</a>
+          </div>
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} Klyc. All rights reserved.
           </p>
