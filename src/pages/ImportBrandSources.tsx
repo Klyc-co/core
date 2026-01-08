@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2 } from "lucide-react";
@@ -19,6 +19,7 @@ interface SocialPlatform {
   provider?: 'google' | 'facebook' | 'twitter' | 'linkedin_oidc';
   scopes?: string[];
   comingSoon?: boolean;
+  customOAuth?: boolean;
 }
 
 const socialPlatforms: SocialPlatform[] = [
@@ -63,16 +64,35 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Music, 
     color: "bg-black", 
     textColor: "text-black dark:text-white",
-    comingSoon: true
+    customOAuth: true,
   },
 ];
 
 const ImportBrandSources = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
+
+  useEffect(() => {
+    // Handle OAuth callback messages
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    
+    if (success === "tiktok") {
+      toast.success("TikTok connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, TikTok: 'connected' }));
+      // Clear the URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (error) {
+      toast.error(`Connection failed: ${error}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -86,13 +106,12 @@ const ImportBrandSources = () => {
     });
   }, [navigate]);
 
-  const checkConnectedAccounts = (user: User) => {
+  const checkConnectedAccounts = async (user: User) => {
     const identities = user.identities || [];
     const newStatus: Record<string, ConnectionStatus> = {};
     
     identities.forEach(identity => {
       if (identity.provider === 'google') {
-        // Check if YouTube scopes are present
         newStatus['YouTube'] = 'connected';
       }
       if (identity.provider === 'facebook') {
@@ -106,6 +125,18 @@ const ImportBrandSources = () => {
         newStatus['LinkedIn'] = 'connected';
       }
     });
+    
+    // Check for TikTok connection in social_connections table
+    const { data: tiktokConnection } = await supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "tiktok")
+      .single();
+    
+    if (tiktokConnection) {
+      newStatus['TikTok'] = 'connected';
+    }
     
     setConnectionStatus(newStatus);
   };
@@ -121,6 +152,38 @@ const ImportBrandSources = () => {
     if (platform.comingSoon) {
       toast.info(`${platform.name} integration coming soon!`);
       return;
+    }
+
+    // Handle TikTok custom OAuth
+    if (platform.customOAuth && platform.name === "TikTok") {
+      if (!user) {
+        toast.error("Please log in first");
+        return;
+      }
+
+      setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
+
+      try {
+        // Get auth URL from edge function (keeps client key secure)
+        const { data, error } = await supabase.functions.invoke("tiktok-auth-url");
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data?.authUrl) {
+          // Redirect to TikTok
+          window.location.href = data.authUrl;
+        } else {
+          throw new Error("No auth URL returned");
+        }
+        return;
+      } catch (err) {
+        console.error("TikTok OAuth error:", err);
+        toast.error("Failed to connect TikTok");
+        setConnectionStatus(prev => ({ ...prev, [platform.name]: 'disconnected' }));
+        return;
+      }
     }
 
     if (!platform.provider) {
