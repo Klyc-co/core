@@ -24,7 +24,7 @@ serve(async (req) => {
   if (error) {
     console.error("TikTok OAuth error:", error, errorDescription);
     return Response.redirect(
-      `${FRONTEND_URL}/import-brand-sources?error=${encodeURIComponent(errorDescription || error)}`,
+      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(errorDescription || error)}`,
       302
     );
   }
@@ -32,7 +32,7 @@ serve(async (req) => {
   if (!code || !state) {
     console.error("Missing code or state parameter");
     return Response.redirect(
-      `${FRONTEND_URL}/import-brand-sources?error=Missing+authorization+code`,
+      `${FRONTEND_URL}/profile/import?error=Missing+authorization+code`,
       302
     );
   }
@@ -124,13 +124,13 @@ serve(async (req) => {
     console.log("TikTok connection saved successfully for user:", userId);
 
     return Response.redirect(
-      `${FRONTEND_URL}/import-brand-sources?success=tiktok`,
+      `${FRONTEND_URL}/profile/import?success=tiktok`,
       302
     );
   } catch (err) {
     console.error("TikTok OAuth callback error:", err);
     return Response.redirect(
-      `${FRONTEND_URL}/import-brand-sources?error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
+      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
       302
     );
   }
