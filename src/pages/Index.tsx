@@ -139,7 +139,7 @@ const Index = () => {
           </div>
           
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight leading-tight mb-6">
-            Your AI Marketing Agent —<br />
+            Your AI Marketing Agent<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
               From Strategy to Execution
             </span>
