@@ -51,8 +51,8 @@ serve(async (req) => {
     // Create state with user_id
     const state = btoa(JSON.stringify({ user_id: userId, timestamp: Date.now() }));
     
-    // TikTok OAuth scopes for video analytics
-    const scopes = "user.info.basic,video.list";
+    // TikTok OAuth scopes
+    const scopes = "user.info.profile,user.info.stats";
     
     // Build TikTok OAuth URL
     const tiktokAuthUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
