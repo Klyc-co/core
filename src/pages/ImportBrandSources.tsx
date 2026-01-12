@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -335,15 +335,28 @@ const ImportBrandSources = () => {
                         <Check className="w-4 h-4 text-green-500" />
                       )}
                     </div>
-                    <Button 
-                      variant={isConnected ? "outline" : "secondary"} 
-                      size="sm" 
-                      className={`w-full ${isConnected ? 'border-green-500/50 text-green-600 dark:text-green-400' : ''} ${platform.comingSoon ? 'opacity-50' : ''}`}
-                      onClick={() => handleConnectPlatform(platform)}
-                      disabled={isConnecting || platform.comingSoon}
-                    >
-                      {getButtonContent(platform)}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={isConnected ? "outline" : "secondary"} 
+                        size="sm" 
+                        className={`flex-1 ${isConnected ? 'border-green-500/50 text-green-600 dark:text-green-400' : ''} ${platform.comingSoon ? 'opacity-50' : ''}`}
+                        onClick={() => handleConnectPlatform(platform)}
+                        disabled={isConnecting || platform.comingSoon}
+                      >
+                        {getButtonContent(platform)}
+                      </Button>
+                      {isConnected && platform.name === "TikTok" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/tiktok-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
