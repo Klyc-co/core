@@ -527,28 +527,32 @@ const CampaignDraftView = () => {
                         <InstagramIcon className="w-5 h-5" />
                         <span className="font-medium">Instagram</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyCaption("instagram", generatedCaptions.instagram.caption)}
-                          className="gap-2"
-                        >
-                          {copiedField === "caption-instagram" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          Copy
-                        </Button>
-                        <a
-                          href="https://www.instagram.com/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Open
-                        </a>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyCaption("instagram", generatedCaptions.instagram.caption)}
+                        className="gap-2"
+                      >
+                        {copiedField === "caption-instagram" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        Copy Caption
+                      </Button>
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.instagram.caption}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap mb-3">{generatedCaptions.instagram.caption}</p>
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <span className="text-xs text-muted-foreground flex-1">Open in new tab:</span>
+                      <code className="text-xs bg-background px-2 py-1 rounded select-all">instagram.com</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText("https://www.instagram.com/");
+                          toast({ title: "URL copied!", description: "Paste in a new browser tab" });
+                        }}
+                        className="h-7 px-2"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* LinkedIn */}
@@ -558,28 +562,32 @@ const CampaignDraftView = () => {
                         <LinkedInIcon className="w-5 h-5" />
                         <span className="font-medium">LinkedIn</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyCaption("linkedin", generatedCaptions.linkedin.caption)}
-                          className="gap-2"
-                        >
-                          {copiedField === "caption-linkedin" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          Copy
-                        </Button>
-                        <a
-                          href="https://www.linkedin.com/feed/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Open
-                        </a>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyCaption("linkedin", generatedCaptions.linkedin.caption)}
+                        className="gap-2"
+                      >
+                        {copiedField === "caption-linkedin" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        Copy Caption
+                      </Button>
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.linkedin.caption}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap mb-3">{generatedCaptions.linkedin.caption}</p>
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <span className="text-xs text-muted-foreground flex-1">Open in new tab:</span>
+                      <code className="text-xs bg-background px-2 py-1 rounded select-all">linkedin.com/feed</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText("https://www.linkedin.com/feed/");
+                          toast({ title: "URL copied!", description: "Paste in a new browser tab" });
+                        }}
+                        className="h-7 px-2"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Twitter/X */}
@@ -589,28 +597,32 @@ const CampaignDraftView = () => {
                         <TwitterIcon className="w-5 h-5" />
                         <span className="font-medium">X (Twitter)</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyCaption("twitter", generatedCaptions.twitter.caption)}
-                          className="gap-2"
-                        >
-                          {copiedField === "caption-twitter" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          Copy
-                        </Button>
-                        <a
-                          href="https://twitter.com/compose/tweet"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Open
-                        </a>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyCaption("twitter", generatedCaptions.twitter.caption)}
+                        className="gap-2"
+                      >
+                        {copiedField === "caption-twitter" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        Copy Caption
+                      </Button>
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.twitter.caption}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap mb-3">{generatedCaptions.twitter.caption}</p>
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <span className="text-xs text-muted-foreground flex-1">Open in new tab:</span>
+                      <code className="text-xs bg-background px-2 py-1 rounded select-all">x.com/compose/post</code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText("https://x.com/compose/post");
+                          toast({ title: "URL copied!", description: "Paste in a new browser tab" });
+                        }}
+                        className="h-7 px-2"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
