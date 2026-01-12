@@ -502,23 +502,15 @@ const CampaignDraftView = () => {
                           {copiedField === "caption-tiktok" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                           Copy
                         </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            toast({
-                              title: "Opening TikTok",
-                              description: "If blocked, go to tiktok.com/upload manually",
-                            });
-                            setTimeout(() => {
-                              window.location.href = "https://www.tiktok.com/upload";
-                            }, 100);
-                          }}
-                          className="gap-2"
+                        <a
+                          href="https://www.tiktok.com/creator-center/upload"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
                         >
                           <Share2 className="w-4 h-4" />
                           Open TikTok
-                        </Button>
+                        </a>
                       </div>
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.tiktok.caption}</p>
