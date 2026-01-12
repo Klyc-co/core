@@ -32,6 +32,7 @@ import CampaignDraftView from "./pages/CampaignDraftView";
 import BrandStrategy from "./pages/BrandStrategy";
 import TrendMonitor from "./pages/TrendMonitor";
 import CompetitorAnalysis from "./pages/CompetitorAnalysis";
+import TikTokAnalytics from "./pages/TikTokAnalytics";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
           <Route path="/trend-monitor" element={<WithSidebar><TrendMonitor /></WithSidebar>} />
           <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
+          <Route path="/profile/tiktok-analytics" element={<WithSidebar><TikTokAnalytics /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
