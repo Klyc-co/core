@@ -197,7 +197,7 @@ const CampaignDraftView = () => {
     setCopiedField(`caption-${platform}`);
     toast({
       title: "Caption copied!",
-      description: `${platform} caption copied to clipboard. Opening ${platform}...`,
+      description: `Now paste it on ${platform}`,
     });
     setTimeout(() => setCopiedField(null), 2000);
   };
@@ -492,16 +492,34 @@ const CampaignDraftView = () => {
                         <TikTokIcon className="w-5 h-5" />
                         <span className="font-medium">TikTok</span>
                       </div>
-                      <a
-                        href={getPlatformUrl("tiktok")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => handleCopyCaption("tiktok", generatedCaptions.tiktok.caption)}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                      >
-                        {copiedField === "caption-tiktok" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        Copy & Share
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyCaption("tiktok", generatedCaptions.tiktok.caption)}
+                          className="gap-2"
+                        >
+                          {copiedField === "caption-tiktok" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          Copy
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            toast({
+                              title: "Opening TikTok",
+                              description: "If blocked, go to tiktok.com/upload manually",
+                            });
+                            setTimeout(() => {
+                              window.location.href = "https://www.tiktok.com/upload";
+                            }, 100);
+                          }}
+                          className="gap-2"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Open TikTok
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.tiktok.caption}</p>
                   </div>
@@ -513,16 +531,26 @@ const CampaignDraftView = () => {
                         <InstagramIcon className="w-5 h-5" />
                         <span className="font-medium">Instagram</span>
                       </div>
-                      <a
-                        href={getPlatformUrl("instagram")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => handleCopyCaption("instagram", generatedCaptions.instagram.caption)}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                      >
-                        {copiedField === "caption-instagram" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        Copy & Share
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyCaption("instagram", generatedCaptions.instagram.caption)}
+                          className="gap-2"
+                        >
+                          {copiedField === "caption-instagram" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          Copy
+                        </Button>
+                        <a
+                          href="https://www.instagram.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Open
+                        </a>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.instagram.caption}</p>
                   </div>
@@ -534,16 +562,26 @@ const CampaignDraftView = () => {
                         <LinkedInIcon className="w-5 h-5" />
                         <span className="font-medium">LinkedIn</span>
                       </div>
-                      <a
-                        href={getPlatformUrl("linkedin")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => handleCopyCaption("linkedin", generatedCaptions.linkedin.caption)}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                      >
-                        {copiedField === "caption-linkedin" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        Copy & Share
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyCaption("linkedin", generatedCaptions.linkedin.caption)}
+                          className="gap-2"
+                        >
+                          {copiedField === "caption-linkedin" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          Copy
+                        </Button>
+                        <a
+                          href="https://www.linkedin.com/feed/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Open
+                        </a>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.linkedin.caption}</p>
                   </div>
@@ -555,16 +593,26 @@ const CampaignDraftView = () => {
                         <TwitterIcon className="w-5 h-5" />
                         <span className="font-medium">X (Twitter)</span>
                       </div>
-                      <a
-                        href={getPlatformUrl("twitter")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => handleCopyCaption("twitter", generatedCaptions.twitter.caption)}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                      >
-                        {copiedField === "caption-twitter" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        Copy & Share
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyCaption("twitter", generatedCaptions.twitter.caption)}
+                          className="gap-2"
+                        >
+                          {copiedField === "caption-twitter" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          Copy
+                        </Button>
+                        <a
+                          href="https://twitter.com/compose/tweet"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Open
+                        </a>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{generatedCaptions.twitter.caption}</p>
                   </div>
