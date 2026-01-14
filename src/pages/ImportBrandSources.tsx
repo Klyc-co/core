@@ -43,7 +43,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Instagram, 
     color: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400", 
     textColor: "text-pink-500",
-    comingSoon: true
+    customOAuth: true,
   },
   { 
     name: "LinkedIn", 
@@ -84,7 +84,12 @@ const ImportBrandSources = () => {
     if (success === "tiktok") {
       toast.success("TikTok connected successfully!");
       setConnectionStatus(prev => ({ ...prev, TikTok: 'connected' }));
-      // Clear the URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "instagram") {
+      toast.success("Instagram connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Instagram: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -138,6 +143,18 @@ const ImportBrandSources = () => {
       newStatus['TikTok'] = 'connected';
     }
     
+    // Check for Instagram connection in social_connections table
+    const { data: instagramConnection } = await supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "instagram")
+      .single();
+    
+    if (instagramConnection) {
+      newStatus['Instagram'] = 'connected';
+    }
+    
     setConnectionStatus(newStatus);
   };
 
@@ -154,8 +171,8 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // Handle TikTok custom OAuth
-    if (platform.customOAuth && platform.name === "TikTok") {
+    // Handle custom OAuth (TikTok, Instagram)
+    if (platform.customOAuth) {
       if (!user) {
         toast.error("Please log in first");
         return;
@@ -164,23 +181,23 @@ const ImportBrandSources = () => {
       setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
 
       try {
-        // Get auth URL from edge function (keeps client key secure)
-        const { data, error } = await supabase.functions.invoke("tiktok-auth-url");
+        const functionName = platform.name === "TikTok" ? "tiktok-auth-url" : "instagram-auth-url";
+        const { data, error } = await supabase.functions.invoke(functionName);
         
         if (error) {
           throw new Error(error.message);
         }
 
-        if (data?.authUrl) {
-          // Redirect to TikTok
-          window.location.href = data.authUrl;
+        const authUrl = data?.authUrl || data?.url;
+        if (authUrl) {
+          window.location.href = authUrl;
         } else {
           throw new Error("No auth URL returned");
         }
         return;
       } catch (err) {
-        console.error("TikTok OAuth error:", err);
-        toast.error("Failed to connect TikTok");
+        console.error(`${platform.name} OAuth error:`, err);
+        toast.error(`Failed to connect ${platform.name}`);
         setConnectionStatus(prev => ({ ...prev, [platform.name]: 'disconnected' }));
         return;
       }
@@ -350,6 +367,17 @@ const ImportBrandSources = () => {
                           variant="secondary" 
                           size="sm"
                           onClick={() => navigate("/profile/tiktok-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
+                      {isConnected && platform.name === "Instagram" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/instagram-analytics")}
                           className="gap-1"
                         >
                           <BarChart3 className="w-3 h-3" />
