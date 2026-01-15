@@ -55,17 +55,16 @@ serve(async (req) => {
     });
     const encodedState = btoa(state);
 
-    // Use Facebook Login for Business configuration ID (recommended approach)
-    const configId = "875201778390509";
-    
-    console.log("Using config_id:", configId);
-    console.log("Redirect URI:", `${supabaseUrl}/functions/v1/instagram-oauth-callback`);
+    // Test with absolute minimal Facebook OAuth (no Instagram scopes)
+    // Just to verify the basic OAuth flow works
+    console.log("Redirect URI:", redirectUri);
+    console.log("Client ID:", clientId);
 
-    // Use Facebook OAuth for Instagram Graph API access
+    // Use Facebook OAuth with minimal scope to test
     const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("config_id", configId);
+    authUrl.searchParams.set("scope", "email");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
 
