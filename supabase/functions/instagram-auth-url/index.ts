@@ -56,13 +56,10 @@ serve(async (req) => {
     const encodedState = btoa(state);
 
     // Instagram Graph API scopes (via Facebook OAuth)
-    // Using updated scope names as per Meta's recent changes
+    // Using minimal scopes - some may require App Review
     const scopes = [
-      "instagram_basic",           // Basic profile info
-      "instagram_manage_insights", // Access to insights/analytics
-      "pages_show_list",           // Required to see connected pages
-      "pages_read_engagement",     // Required for insights
-      "business_management",       // Required for business accounts
+      "public_profile",              // Basic Facebook profile (always available)
+      "pages_show_list",             // Required to see connected pages
     ].join(",");
     
     console.log("Using scopes:", scopes);
