@@ -15,6 +15,9 @@ import ClientApprovals from "./pages/ClientApprovals";
 import ClientInsights from "./pages/ClientInsights";
 import ClientSettings from "./pages/ClientSettings";
 import ClientSocialAssets from "./pages/ClientSocialAssets";
+import ClientStrategy from "./pages/ClientStrategy";
+import ClientTrendMonitor from "./pages/ClientTrendMonitor";
+import ClientCompetitorAnalysis from "./pages/ClientCompetitorAnalysis";
 import Messages from "./pages/Messages";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
@@ -77,6 +80,9 @@ const App = () => (
           <Route path="/client/approvals" element={<ClientApprovals />} />
           <Route path="/client/insights" element={<ClientInsights />} />
           <Route path="/client/settings" element={<ClientSettings />} />
+          <Route path="/client/strategy" element={<ClientStrategy />} />
+          <Route path="/client/strategy/trends" element={<ClientTrendMonitor />} />
+          <Route path="/client/strategy/competitors" element={<ClientCompetitorAnalysis />} />
           <Route path="/client/messages" element={<Messages portalType="client" />} />
           
           {/* Marketer routes with sidebar */}

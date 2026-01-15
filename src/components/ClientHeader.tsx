@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User, FileText, CheckCircle, MessageSquare, BarChart3 } from "lucide-react";
+import { LogOut, Settings, User, MessageSquare, Lightbulb } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -19,7 +19,7 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
     navigate("/");
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
@@ -46,6 +46,13 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
             className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
             Insights
+          </Button>
+          <Button
+            variant={isActive("/client/strategy") ? "secondary" : "outline"}
+            onClick={() => navigate("/client/strategy")}
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+          >
+            Strategy
           </Button>
         </div>
 
