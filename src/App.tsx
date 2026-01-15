@@ -14,6 +14,7 @@ import ClientCampaigns from "./pages/ClientCampaigns";
 import ClientApprovals from "./pages/ClientApprovals";
 import ClientInsights from "./pages/ClientInsights";
 import ClientSettings from "./pages/ClientSettings";
+import ClientSocialAssets from "./pages/ClientSocialAssets";
 import Messages from "./pages/Messages";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/client/auth" element={<ClientAuth />} />
           <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/client/profile" element={<ClientProfile />} />
+          <Route path="/client/profile/social" element={<ClientSocialAssets />} />
           <Route path="/client/campaigns" element={<ClientCampaigns />} />
           <Route path="/client/approvals" element={<ClientApprovals />} />
           <Route path="/client/insights" element={<ClientInsights />} />
