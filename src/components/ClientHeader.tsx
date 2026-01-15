@@ -25,7 +25,7 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
     <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Logo />
+          <Logo to="/client/dashboard" />
           <Button
             variant={isActive("/client/campaigns") ? "secondary" : "outline"}
             onClick={() => navigate("/client/campaigns")}

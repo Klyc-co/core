@@ -6,9 +6,10 @@ import klycLogoDark from "@/assets/klyc-logo-dark.png";
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
+  to?: string;
 }
 
-const Logo = ({ className = "", size = "md" }: LogoProps) => {
+const Logo = ({ className = "", size = "md", to = "/home" }: LogoProps) => {
   const { theme } = useTheme();
   
   const sizes = {
@@ -20,7 +21,7 @@ const Logo = ({ className = "", size = "md" }: LogoProps) => {
   const logoSrc = theme === "dark" ? klycLogoDark : klycLogo;
 
   return (
-    <Link to="/home" className={`flex items-center ${className}`}>
+    <Link to={to} className={`flex items-center ${className}`}>
       <img 
         src={logoSrc} 
         alt="Klyc" 
