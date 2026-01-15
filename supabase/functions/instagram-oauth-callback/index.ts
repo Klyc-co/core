@@ -45,7 +45,7 @@ serve(async (req) => {
       throw new Error("Invalid state: missing user_id");
     }
 
-    // Get Instagram credentials
+    // Get credentials
     const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
     const clientSecret = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -57,20 +57,15 @@ serve(async (req) => {
 
     const redirectUri = `${supabaseUrl}/functions/v1/instagram-oauth-callback`;
 
-    // Exchange code for access token
-    const tokenResponse = await fetch("https://api.instagram.com/oauth/access_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: "authorization_code",
-        redirect_uri: redirectUri,
-        code: code,
-      }),
-    });
+    // Exchange code for Facebook access token
+    const tokenResponse = await fetch(
+      `https://graph.facebook.com/v18.0/oauth/access_token?` +
+      `client_id=${clientId}&` +
+      `client_secret=${clientSecret}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `code=${code}`,
+      { method: "GET" }
+    );
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
@@ -79,39 +74,79 @@ serve(async (req) => {
     }
 
     const tokenData = await tokenResponse.json();
-    console.log("Short-lived token obtained successfully");
+    console.log("Facebook access token obtained successfully");
 
-    // Exchange short-lived token for long-lived token
+    // Exchange for long-lived token
     const longLivedResponse = await fetch(
-      `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${clientSecret}&access_token=${tokenData.access_token}`,
+      `https://graph.facebook.com/v18.0/oauth/access_token?` +
+      `grant_type=fb_exchange_token&` +
+      `client_id=${clientId}&` +
+      `client_secret=${clientSecret}&` +
+      `fb_exchange_token=${tokenData.access_token}`,
       { method: "GET" }
     );
 
     let accessToken = tokenData.access_token;
-    let expiresIn = 3600; // Default 1 hour for short-lived token
+    let expiresIn = 3600;
 
     if (longLivedResponse.ok) {
       const longLivedData = await longLivedResponse.json();
       accessToken = longLivedData.access_token;
       expiresIn = longLivedData.expires_in || 5184000; // ~60 days
       console.log("Long-lived token obtained successfully");
-    } else {
-      console.warn("Could not get long-lived token, using short-lived token");
     }
 
-    // Get user info
-    const userResponse = await fetch(
-      `https://graph.instagram.com/me?fields=id,username&access_token=${accessToken}`
+    // Get the user's Facebook Pages to find connected Instagram account
+    const pagesResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
     );
 
-    let platformUserId = tokenData.user_id?.toString();
-    let platformUsername = null;
+    if (!pagesResponse.ok) {
+      const errorText = await pagesResponse.text();
+      console.error("Failed to get Facebook pages:", errorText);
+      throw new Error("Failed to get connected Facebook Pages. Make sure your Instagram is linked to a Facebook Page.");
+    }
 
-    if (userResponse.ok) {
-      const userData = await userResponse.json();
-      platformUserId = userData.id;
-      platformUsername = userData.username;
-      console.log("User info obtained:", { platformUserId, platformUsername });
+    const pagesData = await pagesResponse.json();
+    console.log("Facebook pages found:", pagesData.data?.length || 0);
+
+    if (!pagesData.data || pagesData.data.length === 0) {
+      throw new Error("No Facebook Pages found. Please link your Instagram Business account to a Facebook Page.");
+    }
+
+    // Get the Instagram Business Account ID from the first page
+    let instagramAccountId = null;
+    let instagramUsername = null;
+    let pageAccessToken = null;
+
+    for (const page of pagesData.data) {
+      const igResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
+      );
+
+      if (igResponse.ok) {
+        const igData = await igResponse.json();
+        if (igData.instagram_business_account) {
+          instagramAccountId = igData.instagram_business_account.id;
+          pageAccessToken = page.access_token;
+          
+          // Get Instagram username
+          const usernameResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${instagramAccountId}?fields=username&access_token=${pageAccessToken}`
+          );
+          if (usernameResponse.ok) {
+            const usernameData = await usernameResponse.json();
+            instagramUsername = usernameData.username;
+          }
+          
+          console.log("Found Instagram Business Account:", instagramAccountId, instagramUsername);
+          break;
+        }
+      }
+    }
+
+    if (!instagramAccountId) {
+      throw new Error("No Instagram Business account found linked to your Facebook Pages. Please link your Instagram to a Facebook Page in Meta Business Suite.");
     }
 
     // Calculate token expiration
@@ -126,12 +161,12 @@ serve(async (req) => {
         {
           user_id: userId,
           platform: "instagram",
-          access_token: accessToken,
-          refresh_token: null, // Instagram doesn't use refresh tokens the same way
+          access_token: pageAccessToken || accessToken,
+          refresh_token: instagramAccountId, // Store IG account ID in refresh_token field for easy access
           token_expires_at: tokenExpiresAt,
-          platform_user_id: platformUserId,
-          platform_username: platformUsername,
-          scopes: ["user_profile", "user_media"],
+          platform_user_id: instagramAccountId,
+          platform_username: instagramUsername,
+          scopes: ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
           updated_at: new Date().toISOString(),
         },
         {
@@ -144,7 +179,7 @@ serve(async (req) => {
       throw new Error(`Failed to save connection: ${upsertError.message}`);
     }
 
-    console.log("Instagram connection saved successfully for user:", userId);
+    console.log("Instagram Graph API connection saved successfully for user:", userId);
 
     return Response.redirect(
       `${FRONTEND_URL}/profile/import?success=instagram`,
