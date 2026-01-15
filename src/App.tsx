@@ -9,6 +9,10 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ClientAuth from "./pages/ClientAuth";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientProfile from "./pages/ClientProfile";
+import ClientCampaigns from "./pages/ClientCampaigns";
+import ClientApprovals from "./pages/ClientApprovals";
+import Messages from "./pages/Messages";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
 import NewProject from "./pages/NewProject";
@@ -42,7 +46,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
-// Wrapper component for routes that should have the chat sidebar and auth protection
 const WithSidebar = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
     <AppLayout showSidebar={true}>{children}</AppLayout>
@@ -56,15 +59,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public routes without sidebar */}
+          {/* Public routes */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/client/auth" element={<ClientAuth />} />
-          <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           
-          {/* Authenticated routes with persistent chat sidebar */}
+          {/* Client Portal routes */}
+          <Route path="/client/auth" element={<ClientAuth />} />
+          <Route path="/client/dashboard" element={<ClientDashboard />} />
+          <Route path="/client/profile" element={<ClientProfile />} />
+          <Route path="/client/campaigns" element={<ClientCampaigns />} />
+          <Route path="/client/approvals" element={<ClientApprovals />} />
+          <Route path="/client/messages" element={<Messages portalType="client" />} />
+          
+          {/* Marketer routes with sidebar */}
           <Route path="/home" element={<WithSidebar><Home /></WithSidebar>} />
           <Route path="/projects" element={<WithSidebar><Projects /></WithSidebar>} />
           <Route path="/projects/new" element={<WithSidebar><NewProject /></WithSidebar>} />
@@ -92,6 +101,7 @@ const App = () => (
           <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
           <Route path="/profile/tiktok-analytics" element={<WithSidebar><TikTokAnalytics /></WithSidebar>} />
           <Route path="/profile/instagram-analytics" element={<WithSidebar><InstagramAnalytics /></WithSidebar>} />
+          <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,16 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User, MessageSquare } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AppHeaderProps {
   user: SupabaseUser | null;
   businessName?: string;
+  unreadMessages?: number;
 }
 
-const AppHeader = ({ user, businessName }: AppHeaderProps) => {
+const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -50,6 +51,19 @@ const AppHeader = ({ user, businessName }: AppHeaderProps) => {
           {businessName && (
             <span className="text-sm text-muted-foreground mr-2">{businessName}</span>
           )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate("/messages")}
+            className="relative"
+          >
+            <MessageSquare className="w-4 h-4" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
             <User className="w-4 h-4" />
           </Button>

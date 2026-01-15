@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
+import ClientSwitcher from "@/components/ClientSwitcher";
+import AddClientDialog from "@/components/AddClientDialog";
 import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
@@ -47,6 +49,10 @@ const ProfileCard = ({ icon, iconBg, title, description, status, onClick, button
 const Profile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [currentClientId, setCurrentClientId] = useState<string | null>(null);
+  const [currentClientName, setCurrentClientName] = useState<string | null>(null);
+  const [addClientOpen, setAddClientOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -54,18 +60,49 @@ const Profile = () => {
         navigate("/auth");
       } else {
         setUser(user);
+        // Load saved client from localStorage
+        const savedClientId = localStorage.getItem("currentClientId");
+        const savedClientName = localStorage.getItem("currentClientName");
+        if (savedClientId) {
+          setCurrentClientId(savedClientId);
+          setCurrentClientName(savedClientName);
+        }
       }
     });
   }, [navigate]);
 
+  const handleClientChange = (clientId: string | null, clientName: string | null) => {
+    setCurrentClientId(clientId);
+    setCurrentClientName(clientName);
+    if (clientId) {
+      localStorage.setItem("currentClientId", clientId);
+      localStorage.setItem("currentClientName", clientName || "");
+    } else {
+      localStorage.removeItem("currentClientId");
+      localStorage.removeItem("currentClientName");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader user={user} />
+      <AppHeader user={user} businessName={currentClientName || undefined} />
       
       <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
-          <p className="text-muted-foreground">Build your company profile to personalize your content generation</p>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
+            <p className="text-muted-foreground">Build your company profile to personalize your content generation</p>
+          </div>
+          
+          <div className="flex flex-col items-end gap-2">
+            <span className="text-sm text-muted-foreground">Working on:</span>
+            <ClientSwitcher
+              key={refreshKey}
+              currentClientId={currentClientId}
+              onClientChange={handleClientChange}
+              onAddClient={() => setAddClientOpen(true)}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -140,6 +177,12 @@ const Profile = () => {
           />
         </div>
       </main>
+
+      <AddClientDialog
+        open={addClientOpen}
+        onOpenChange={setAddClientOpen}
+        onClientAdded={() => setRefreshKey(prev => prev + 1)}
+      />
     </div>
   );
 };
