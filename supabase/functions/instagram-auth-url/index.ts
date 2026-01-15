@@ -63,8 +63,9 @@ serve(async (req) => {
     const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    // Start with pages_show_list which is often available by default for Business apps
-    authUrl.searchParams.set("scope", "pages_show_list");
+    // Request pages_show_list and pages_read_engagement to ensure Page selection is shown
+    // Also add instagram_basic for Instagram account access
+    authUrl.searchParams.set("scope", "pages_show_list,pages_read_engagement,instagram_basic");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
     authUrl.searchParams.set("display", "page");
