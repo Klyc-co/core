@@ -18,7 +18,7 @@ serve(async (req) => {
   const errorDescription = url.searchParams.get("error_description");
 
   // Get frontend URL for redirects
-  const FRONTEND_URL = Deno.env.get("FRONTEND_URL") || "https://klyc.ai";
+  const FRONTEND_URL = Deno.env.get("FRONTEND_URL") || "https://idea-to-idiom.lovable.app";
 
   if (error) {
     console.error("Instagram OAuth error:", error, errorDescription);
