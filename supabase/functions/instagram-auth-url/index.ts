@@ -38,6 +38,7 @@ serve(async (req) => {
 
     // Get Instagram/Facebook App credentials (same app for Graph API)
     const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
+    console.log("Using Instagram Client ID:", clientId?.substring(0, 6) + "...");
     if (!clientId) {
       return new Response(
         JSON.stringify({ error: "Instagram client ID not configured" }),
