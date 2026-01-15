@@ -16,6 +16,13 @@ interface MediaItem {
   timestamp: string;
   like_count?: number;
   comments_count?: number;
+  insights?: {
+    reach?: number;
+    impressions?: number;
+    engagement?: number;
+    saved?: number;
+    shares?: number;
+  };
 }
 
 serve(async (req) => {
@@ -69,76 +76,129 @@ serve(async (req) => {
       );
     }
 
-    // Check if token is expired
-    if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
-      // Try to refresh the long-lived token
-      const clientSecret = Deno.env.get("INSTAGRAM_CLIENT_SECRET");
-      if (clientSecret) {
-        const refreshResponse = await fetch(
-          `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${connection.access_token}`,
-          { method: "GET" }
-        );
+    const accessToken = connection.access_token;
+    const instagramAccountId = connection.platform_user_id;
 
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json();
-          const newExpiresAt = new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString();
-          
-          await supabaseAdmin
-            .from("social_connections")
-            .update({
-              access_token: refreshData.access_token,
-              token_expires_at: newExpiresAt,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", connection.id);
-
-          connection.access_token = refreshData.access_token;
-        } else {
-          return new Response(
-            JSON.stringify({ error: "Token expired, please reconnect Instagram", needsReconnect: true }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
+    if (!instagramAccountId) {
+      return new Response(
+        JSON.stringify({ error: "Instagram account ID not found. Please reconnect your account.", needsReconnect: true }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Fetch user profile
+    // Fetch Instagram Business Account profile
     const profileResponse = await fetch(
-      `https://graph.instagram.com/me?fields=id,username,account_type,media_count&access_token=${connection.access_token}`
+      `https://graph.facebook.com/v18.0/${instagramAccountId}?fields=id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url&access_token=${accessToken}`
     );
 
     let profile = null;
     if (profileResponse.ok) {
       profile = await profileResponse.json();
+      console.log("Profile fetched:", profile.username);
     } else {
       const errorData = await profileResponse.json();
       console.error("Instagram profile API error:", errorData);
+      
+      // Check if token expired
+      if (errorData.error?.code === 190) {
+        return new Response(
+          JSON.stringify({ error: "Token expired, please reconnect Instagram", needsReconnect: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    // Fetch user media
+    // Fetch media with insights
     const mediaResponse = await fetch(
-      `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=20&access_token=${connection.access_token}`
+      `https://graph.facebook.com/v18.0/${instagramAccountId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=20&access_token=${accessToken}`
     );
 
     let media: MediaItem[] = [];
     if (mediaResponse.ok) {
       const mediaData = await mediaResponse.json();
       media = mediaData.data || [];
+
+      // Fetch insights for each media item
+      for (let i = 0; i < media.length; i++) {
+        const item = media[i];
+        
+        // Different metrics for different media types
+        let metrics = "reach,impressions";
+        if (item.media_type === "VIDEO" || item.media_type === "REELS") {
+          metrics = "reach,impressions,saved,shares,plays";
+        } else if (item.media_type === "CAROUSEL_ALBUM") {
+          metrics = "reach,impressions,saved";
+        } else {
+          metrics = "reach,impressions,saved";
+        }
+
+        try {
+          const insightsResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${item.id}/insights?metric=${metrics}&access_token=${accessToken}`
+          );
+
+          if (insightsResponse.ok) {
+            const insightsData = await insightsResponse.json();
+            const insights: MediaItem["insights"] = {};
+            
+            for (const metric of insightsData.data || []) {
+              if (metric.name === "reach") insights.reach = metric.values?.[0]?.value || 0;
+              if (metric.name === "impressions") insights.impressions = metric.values?.[0]?.value || 0;
+              if (metric.name === "saved") insights.saved = metric.values?.[0]?.value || 0;
+              if (metric.name === "shares") insights.shares = metric.values?.[0]?.value || 0;
+            }
+            
+            media[i].insights = insights;
+          }
+        } catch (insightError) {
+          console.error(`Failed to fetch insights for media ${item.id}:`, insightError);
+        }
+      }
     } else {
       const errorData = await mediaResponse.json();
       console.error("Instagram media API error:", errorData);
     }
 
-    // Calculate basic stats
-    const totalPosts = profile?.media_count || media.length;
+    // Fetch account insights (last 30 days)
+    let accountInsights: Record<string, number> | null = null;
+    try {
+      const insightsResponse = await fetch(
+        `https://graph.facebook.com/v18.0/${instagramAccountId}/insights?metric=reach,impressions,follower_count,profile_views&period=day&since=${Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60}&until=${Math.floor(Date.now() / 1000)}&access_token=${accessToken}`
+      );
+
+      if (insightsResponse.ok) {
+        const insightsData = await insightsResponse.json();
+        accountInsights = {};
+        
+        for (const metric of insightsData.data || []) {
+          const values = metric.values || [];
+          const total = values.reduce((sum: number, v: { value: number }) => sum + (v.value || 0), 0);
+          accountInsights[metric.name] = total;
+        }
+      }
+    } catch (insightError) {
+      console.error("Failed to fetch account insights:", insightError);
+    }
+
+    // Calculate engagement rate
+    const totalLikes = media.reduce((sum, item) => sum + (item.like_count || 0), 0);
+    const totalComments = media.reduce((sum, item) => sum + (item.comments_count || 0), 0);
+    const totalReach = media.reduce((sum, item) => sum + (item.insights?.reach || 0), 0);
+    const engagementRate = totalReach > 0 
+      ? ((totalLikes + totalComments) / totalReach * 100).toFixed(2)
+      : "0.00";
 
     return new Response(
       JSON.stringify({
         connected: true,
         profile: {
-          username: connection.platform_username || profile?.username,
-          account_type: profile?.account_type,
-          media_count: totalPosts,
+          username: profile?.username || connection.platform_username,
+          name: profile?.name,
+          biography: profile?.biography,
+          followers_count: profile?.followers_count,
+          follows_count: profile?.follows_count,
+          media_count: profile?.media_count,
+          profile_picture_url: profile?.profile_picture_url,
         },
         media: media.map((item) => ({
           id: item.id,
@@ -148,9 +208,19 @@ serve(async (req) => {
           thumbnail_url: item.thumbnail_url,
           permalink: item.permalink,
           timestamp: item.timestamp,
+          like_count: item.like_count,
+          comments_count: item.comments_count,
+          insights: item.insights,
         })),
         stats: {
-          total_posts: totalPosts,
+          total_posts: profile?.media_count || media.length,
+          followers: profile?.followers_count || 0,
+          following: profile?.follows_count || 0,
+          total_likes: totalLikes,
+          total_comments: totalComments,
+          total_reach: totalReach,
+          engagement_rate: engagementRate,
+          account_insights: accountInsights,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

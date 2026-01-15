@@ -36,7 +36,7 @@ serve(async (req) => {
       );
     }
 
-    // Get Instagram credentials
+    // Get Instagram/Facebook App credentials (same app for Graph API)
     const clientId = Deno.env.get("INSTAGRAM_CLIENT_ID");
     if (!clientId) {
       return new Response(
@@ -54,14 +54,20 @@ serve(async (req) => {
     });
     const encodedState = btoa(state);
 
-    // Instagram Basic Display API scopes
-    const scope = "user_profile,user_media";
+    // Instagram Graph API scopes (via Facebook OAuth)
+    // These require a Business/Creator account linked to a Facebook Page
+    const scopes = [
+      "instagram_basic",           // Basic profile info
+      "instagram_manage_insights", // Access to insights/analytics
+      "pages_show_list",           // Required to see connected pages
+      "pages_read_engagement",     // Required for insights
+    ].join(",");
 
-    // Build the authorization URL
-    const authUrl = new URL("https://api.instagram.com/oauth/authorize");
+    // Use Facebook OAuth for Instagram Graph API access
+    const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", scope);
+    authUrl.searchParams.set("scope", scopes);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
 

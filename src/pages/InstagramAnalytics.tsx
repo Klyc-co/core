@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Image, Video, RefreshCw, ExternalLink, Instagram, Grid3X3 } from "lucide-react";
+import { ArrowLeft, Image, Video, RefreshCw, ExternalLink, Instagram, Grid3X3, Users, Heart, MessageCircle, Eye, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,18 +17,37 @@ interface MediaItem {
   thumbnail_url?: string;
   permalink: string;
   timestamp: string;
+  like_count?: number;
+  comments_count?: number;
+  insights?: {
+    reach?: number;
+    impressions?: number;
+    saved?: number;
+    shares?: number;
+  };
 }
 
 interface AnalyticsData {
   connected: boolean;
   profile: {
     username: string;
-    account_type?: string;
+    name?: string;
+    biography?: string;
+    followers_count?: number;
+    follows_count?: number;
     media_count: number;
+    profile_picture_url?: string;
   };
   media: MediaItem[];
   stats: {
     total_posts: number;
+    followers?: number;
+    following?: number;
+    total_likes?: number;
+    total_comments?: number;
+    total_reach?: number;
+    engagement_rate?: string;
+    account_insights?: Record<string, number>;
   };
 }
 
@@ -47,7 +66,7 @@ const StatCard = ({ icon: Icon, label, value, color }: { icon: React.ElementType
 );
 
 const MediaCard = ({ item }: { item: MediaItem }) => {
-  const isVideo = item.media_type === "VIDEO";
+  const isVideo = item.media_type === "VIDEO" || item.media_type === "REELS";
   
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -77,6 +96,29 @@ const MediaCard = ({ item }: { item: MediaItem }) => {
         <p className="text-sm text-foreground line-clamp-2">
           {item.caption || "No caption"}
         </p>
+        
+        {/* Engagement metrics */}
+        <div className="flex items-center gap-3 text-muted-foreground">
+          {item.like_count !== undefined && (
+            <span className="flex items-center gap-1 text-xs">
+              <Heart className="w-3 h-3" />
+              {item.like_count.toLocaleString()}
+            </span>
+          )}
+          {item.comments_count !== undefined && (
+            <span className="flex items-center gap-1 text-xs">
+              <MessageCircle className="w-3 h-3" />
+              {item.comments_count.toLocaleString()}
+            </span>
+          )}
+          {item.insights?.reach !== undefined && (
+            <span className="flex items-center gap-1 text-xs">
+              <Eye className="w-3 h-3" />
+              {item.insights.reach.toLocaleString()}
+            </span>
+          )}
+        </div>
+        
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <span className="text-xs text-muted-foreground">
             {new Date(item.timestamp).toLocaleDateString()}
@@ -177,9 +219,17 @@ const InstagramAnalytics = () => {
 
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
-              <Instagram className="w-6 h-6 text-white" />
-            </div>
+            {analytics?.profile?.profile_picture_url ? (
+              <img 
+                src={analytics.profile.profile_picture_url} 
+                alt={analytics.profile.username}
+                className="w-12 h-12 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center">
+                <Instagram className="w-6 h-6 text-white" />
+              </div>
+            )}
             <div>
               <h1 className="text-3xl font-bold text-foreground">Instagram Analytics</h1>
               {analytics?.profile?.username && (
@@ -200,8 +250,8 @@ const InstagramAnalytics = () => {
 
         {loading ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-24 rounded-lg" />
               ))}
             </div>
@@ -229,28 +279,67 @@ const InstagramAnalytics = () => {
           </Card>
         ) : analytics ? (
           <div className="space-y-8">
+            {/* Profile Bio */}
+            {analytics.profile.biography && (
+              <Card className="p-4">
+                <p className="text-sm text-muted-foreground">{analytics.profile.biography}</p>
+              </Card>
+            )}
+
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard 
+                icon={Users} 
+                label="Followers" 
+                value={analytics.stats.followers || 0} 
+                color="bg-gradient-to-br from-purple-600 to-pink-500" 
+              />
               <StatCard 
                 icon={Grid3X3} 
                 label="Total Posts" 
                 value={analytics.stats.total_posts} 
-                color="bg-gradient-to-br from-purple-600 to-pink-500" 
+                color="bg-blue-500" 
+              />
+              <StatCard 
+                icon={Heart} 
+                label="Total Likes" 
+                value={analytics.stats.total_likes || 0} 
+                color="bg-red-500" 
+              />
+              <StatCard 
+                icon={TrendingUp} 
+                label="Engagement Rate" 
+                value={`${analytics.stats.engagement_rate || 0}%`} 
+                color="bg-green-500" 
+              />
+            </div>
+
+            {/* Additional Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard 
+                icon={MessageCircle} 
+                label="Total Comments" 
+                value={analytics.stats.total_comments || 0} 
+                color="bg-orange-500" 
+              />
+              <StatCard 
+                icon={Eye} 
+                label="Total Reach" 
+                value={analytics.stats.total_reach || 0} 
+                color="bg-cyan-500" 
+              />
+              <StatCard 
+                icon={Users} 
+                label="Following" 
+                value={analytics.stats.following || 0} 
+                color="bg-slate-500" 
               />
               <StatCard 
                 icon={Image} 
                 label="Media Count" 
                 value={analytics.profile.media_count || analytics.media.length} 
-                color="bg-blue-500" 
+                color="bg-indigo-500" 
               />
-              {analytics.profile.account_type && (
-                <StatCard 
-                  icon={Instagram} 
-                  label="Account Type" 
-                  value={analytics.profile.account_type} 
-                  color="bg-orange-500" 
-                />
-              )}
             </div>
 
             {/* Media Grid */}
@@ -270,12 +359,11 @@ const InstagramAnalytics = () => {
               )}
             </div>
 
-            {/* Note about limitations */}
-            <Card className="p-4 bg-muted/50">
-              <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> Instagram Basic Display API provides limited analytics. 
-                For advanced metrics (likes, comments, reach), a Business or Creator account 
-                with Instagram Graph API access is required.
+            {/* Note about Graph API */}
+            <Card className="p-4 bg-green-500/10 border-green-500/20">
+              <p className="text-sm text-green-600 dark:text-green-400">
+                <strong>✓ Instagram Graph API Connected:</strong> You're seeing full analytics including 
+                likes, comments, reach, and engagement metrics.
               </p>
             </Card>
           </div>
