@@ -55,18 +55,20 @@ serve(async (req) => {
     });
     const encodedState = btoa(state);
 
-    // Test with absolute minimal Facebook OAuth (no Instagram scopes)
-    // Just to verify the basic OAuth flow works
+    // Try with newer API version and explicit display mode
     console.log("Redirect URI:", redirectUri);
     console.log("Client ID:", clientId);
 
-    // Use Facebook OAuth with minimal scope to test
-    const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
+    // Use Facebook OAuth - try v19.0 with display parameter
+    const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", "email");
+    authUrl.searchParams.set("scope", "public_profile,email");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
+    authUrl.searchParams.set("display", "page");
+    
+    console.log("Full auth URL:", authUrl.toString());
 
     return new Response(
       JSON.stringify({ url: authUrl.toString() }),
