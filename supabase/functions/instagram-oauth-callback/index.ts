@@ -100,22 +100,33 @@ serve(async (req) => {
       console.log("Long-lived token obtained successfully");
     }
 
+    // First, let's check what permissions were actually granted
+    const debugResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me/permissions?access_token=${accessToken}`
+    );
+    if (debugResponse.ok) {
+      const permData = await debugResponse.json();
+      console.log("Granted permissions:", JSON.stringify(permData.data));
+    }
+
     // Get the user's Facebook Pages to find connected Instagram account
     const pagesResponse = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
     );
 
+    const pagesResponseText = await pagesResponse.text();
+    console.log("Pages API raw response:", pagesResponseText);
+
     if (!pagesResponse.ok) {
-      const errorText = await pagesResponse.text();
-      console.error("Failed to get Facebook pages:", errorText);
+      console.error("Failed to get Facebook pages:", pagesResponseText);
       throw new Error("Failed to get connected Facebook Pages. Make sure your Instagram is linked to a Facebook Page.");
     }
 
-    const pagesData = await pagesResponse.json();
+    const pagesData = JSON.parse(pagesResponseText);
     console.log("Facebook pages found:", pagesData.data?.length || 0);
 
     if (!pagesData.data || pagesData.data.length === 0) {
-      throw new Error("No Facebook Pages found. Please link your Instagram Business account to a Facebook Page.");
+      throw new Error("No Facebook Pages found. Please grant 'pages_show_list' permission and select your Page during authorization.");
     }
 
     // Get the Instagram Business Account ID from the first page
