@@ -51,6 +51,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    console.log("Client ID present:", !!clientId);
+    console.log("Client Secret length:", clientSecret?.length || 0);
+    console.log("Client Secret first 4 chars:", clientSecret?.substring(0, 4) || "N/A");
+
     if (!clientId || !clientSecret) {
       throw new Error("Instagram credentials not configured");
     }
