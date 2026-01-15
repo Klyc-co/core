@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_approvals: {
+        Row: {
+          campaign_draft_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          marketer_id: string
+          notes: string | null
+          scheduled_campaign_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_draft_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          marketer_id: string
+          notes?: string | null
+          scheduled_campaign_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_draft_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          marketer_id?: string
+          notes?: string | null
+          scheduled_campaign_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_approvals_campaign_draft_id_fkey"
+            columns: ["campaign_draft_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_approvals_scheduled_campaign_id_fkey"
+            columns: ["scheduled_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_drafts: {
         Row: {
           article_outline: string | null
@@ -71,6 +122,51 @@ export type Database = {
           updated_at?: string
           user_id?: string
           video_script?: string | null
+        }
+        Relationships: []
+      }
+      client_profiles: {
+        Row: {
+          brand_colors: string[] | null
+          business_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          logo_url: string | null
+          target_audience: string | null
+          updated_at: string
+          user_id: string
+          value_proposition: string | null
+          website: string | null
+        }
+        Insert: {
+          brand_colors?: string[] | null
+          business_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id: string
+          value_proposition?: string | null
+          website?: string | null
+        }
+        Update: {
+          brand_colors?: string[] | null
+          business_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          logo_url?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id?: string
+          value_proposition?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -133,6 +229,77 @@ export type Database = {
           weaknesses?: string | null
         }
         Relationships: []
+      }
+      marketer_clients: {
+        Row: {
+          client_email: string | null
+          client_id: string
+          client_name: string
+          created_at: string
+          id: string
+          marketer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_email?: string | null
+          client_id: string
+          client_name: string
+          created_at?: string
+          id?: string
+          marketer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_email?: string | null
+          client_id?: string
+          client_name?: string
+          created_at?: string
+          id?: string
+          marketer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          marketer_client_id: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          marketer_client_id?: string | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          marketer_client_id?: string | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_marketer_client_id_fkey"
+            columns: ["marketer_client_id"]
+            isOneToOne: false
+            referencedRelation: "marketer_clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
