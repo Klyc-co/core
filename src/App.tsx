@@ -7,6 +7,8 @@ import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ClientAuth from "./pages/ClientAuth";
+import ClientDashboard from "./pages/ClientDashboard";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
 import NewProject from "./pages/NewProject";
@@ -57,6 +59,8 @@ const App = () => (
           {/* Public routes without sidebar */}
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/client/auth" element={<ClientAuth />} />
+          <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           

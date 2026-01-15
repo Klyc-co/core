@@ -116,13 +116,23 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <img src={klycLogo} alt="Klyc" className="h-8" />
-          <Button 
-            onClick={() => navigate("/auth")}
-            variant="outline"
-            className="border-gray-200 text-gray-700 hover:bg-gray-50"
-          >
-            Sign in
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => navigate("/client/auth")}
+              variant="ghost"
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Client Login
+            </Button>
+            <Button 
+              onClick={() => navigate("/auth")}
+              variant="outline"
+              className="border-gray-200 text-gray-700 hover:bg-gray-50"
+            >
+              Marketer Login
+            </Button>
+          </div>
         </div>
       </nav>
 
@@ -149,15 +159,46 @@ const Index = () => {
             Klyc plans, creates, distributes, and optimizes your marketing — combining AI automation with access to real professional creators when you need human polish.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg"
+          {/* Two Sign-in Options */}
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-10">
+            {/* Marketer Portal */}
+            <div 
               onClick={() => navigate("/auth")}
-              className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg rounded-xl"
+              className="group cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300"
             >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Brain className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Marketer Portal</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Create campaigns, generate content, and manage your marketing strategy with AI.
+              </p>
+              <div className="inline-flex items-center text-blue-600 font-medium text-sm group-hover:gap-2 transition-all">
+                Sign in as Marketer
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </div>
+            </div>
+
+            {/* Client Portal */}
+            <div 
+              onClick={() => navigate("/client/auth")}
+              className="group cursor-pointer bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-8 border border-purple-200 hover:border-purple-300 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Users className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Client Portal</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Review campaigns, provide feedback, and approve content from your marketing team.
+              </p>
+              <div className="inline-flex items-center text-purple-600 font-medium text-sm group-hover:gap-2 transition-all">
+                Sign in as Client
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
               variant="outline"
