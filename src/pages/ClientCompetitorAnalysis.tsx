@@ -1,55 +1,58 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import ClientHeader from "@/components/ClientHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  ArrowLeft, 
   Users, 
-  Loader2, 
-  Search,
-  Building2,
   Target,
+  Lightbulb,
   TrendingUp,
   TrendingDown,
-  Eye
+  AlertTriangle,
+  Loader2,
+  Search,
+  BarChart3,
+  Globe,
+  Trash2,
+  ArrowLeft
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import ClientHeader from "@/components/ClientHeader";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { User } from "@supabase/supabase-js";
 
 interface CompetitorAnalysis {
   id: string;
   competitor_name: string;
   competitor_url: string | null;
+  analyzed_at: string;
   company_description: string | null;
   target_audience: string | null;
   value_proposition: string | null;
+  key_products: string | null;
+  pricing_strategy: string | null;
+  marketing_channels: string | null;
   strengths: string | null;
   weaknesses: string | null;
   opportunities: string | null;
   threats: string | null;
-  key_products: string | null;
-  pricing_strategy: string | null;
-  marketing_channels: string | null;
-  analyzed_at: string;
 }
 
 const ClientCompetitorAnalysis = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
   const [user, setUser] = useState<User | null>(null);
-  const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
   const [competitorName, setCompetitorName] = useState("");
   const [competitorUrl, setCompetitorUrl] = useState("");
-  const [viewingAnalysis, setViewingAnalysis] = useState<CompetitorAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<CompetitorAnalysis | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -71,11 +74,12 @@ const ClientCompetitorAnalysis = () => {
       .select('*')
       .eq('user_id', userId)
       .order('analyzed_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching analyses:', error);
-    } else {
-      setAnalyses(data || []);
+    
+    if (!error && data) {
+      setAnalyses(data as CompetitorAnalysis[]);
+      if (data.length > 0 && !selectedAnalysis) {
+        setSelectedAnalysis(data[0] as CompetitorAnalysis);
+      }
     }
     setLoading(false);
   };
@@ -86,7 +90,7 @@ const ClientCompetitorAnalysis = () => {
       return;
     }
 
-    setAnalyzing(true);
+    setIsAnalyzing(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-competitor', {
@@ -99,232 +103,352 @@ const ClientCompetitorAnalysis = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Analysis complete!",
-        description: `Generated SWOT analysis for ${competitorName}`,
+      toast({ 
+        title: "Analysis complete!", 
+        description: `Analyzed ${competitorName} using ${data.sourcesCount} sources` 
       });
       
       setCompetitorName("");
       setCompetitorUrl("");
       fetchAnalyses(user.id);
-    } catch (error) {
-      console.error('Error analyzing competitor:', error);
-      toast({
-        title: "Error",
-        description: "Failed to analyze competitor. Please try again.",
-        variant: "destructive",
+      
+      if (data.analysis) {
+        setSelectedAnalysis(data.analysis);
+      }
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      toast({ 
+        title: "Analysis failed", 
+        description: error.message || "Please try again",
+        variant: "destructive" 
       });
     } finally {
-      setAnalyzing(false);
+      setIsAnalyzing(false);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from('competitor_analyses')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete analysis", variant: "destructive" });
+    } else {
+      setAnalyses(analyses.filter(a => a.id !== id));
+      if (selectedAnalysis?.id === id) {
+        setSelectedAnalysis(analyses.find(a => a.id !== id) || null);
+      }
+      toast({ title: "Deleted", description: "Analysis removed" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <ClientHeader user={user} />
       
+      {/* Page Header */}
       <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/client/strategy")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Strategy
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/client/strategy')}>
+              <ArrowLeft className="w-5 h-5" />
             </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Competitor Analysis</h1>
+              <p className="text-muted-foreground mt-1">
+                AI-powered competitive intelligence and market positioning analysis.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground">Competitor Analysis</h1>
-          <p className="text-muted-foreground">AI-powered SWOT analysis of your competitors</p>
-        </div>
-
-        {/* Analyze Form */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground">Analyze a Competitor</h3>
-                <p className="text-sm text-muted-foreground">Enter a competitor's name and optionally their website</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Input
-                placeholder="Competitor name (e.g., Nike)"
-                value={competitorName}
-                onChange={(e) => setCompetitorName(e.target.value)}
-                className="flex-1"
-              />
-              <Input
-                placeholder="Website URL (optional)"
-                value={competitorUrl}
-                onChange={(e) => setCompetitorUrl(e.target.value)}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleAnalyze}
-                disabled={!competitorName || analyzing}
-                className="gap-2"
+        <div className="flex gap-8">
+          {/* Left Sidebar - Strategy Modules */}
+          <div className="w-64 flex-shrink-0">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
+            <nav className="space-y-1">
+              <button 
+                onClick={() => navigate("/client/strategy")}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
               >
-                {analyzing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4" />
-                    Analyze
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <BarChart3 className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Run Report</div>
+                  <div className="text-xs text-muted-foreground">Schedule web reports</div>
+                </div>
+              </button>
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
+                <Users className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Competitor Analysis</div>
+                  <div className="text-xs text-muted-foreground">Analyze competitors</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => navigate("/client/strategy/trends")}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="text-sm font-medium">Trend Monitor</div>
+                  <div className="text-xs text-muted-foreground">Track social trends</div>
+                </div>
+              </button>
+            </nav>
 
-        {/* Analyses List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : analyses.length === 0 ? (
-          <Card className="p-12 text-center border-dashed">
-            <Users className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No competitor analyses yet</h3>
-            <p className="text-muted-foreground">
-              Enter a competitor's name above to generate an AI-powered SWOT analysis
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {analyses.map((analysis) => (
-              <Card key={analysis.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setViewingAnalysis(analysis)}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground">{analysis.competitor_name}</h4>
+            {/* Previous Analyses */}
+            {analyses.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Recent Analyses</h3>
+                <ScrollArea className="h-[300px]">
+                  <div className="space-y-2 pr-2">
+                    {analyses.map((analysis) => (
+                      <div 
+                        key={analysis.id}
+                        onClick={() => setSelectedAnalysis(analysis)}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedAnalysis?.id === analysis.id 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'bg-card hover:bg-muted'
+                        }`}
+                      >
+                        <p className="font-medium text-sm truncate">{analysis.competitor_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(analysis.analyzed_at), "MMM d, yyyy")}
                         </p>
                       </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    ))}
                   </div>
-                  
-                  {analysis.company_description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {analysis.company_description}
-                    </p>
-                  )}
-                  
-                  <div className="flex gap-2 mt-3">
-                    {analysis.strengths && <Badge variant="secondary" className="text-green-600">Strengths</Badge>}
-                    {analysis.weaknesses && <Badge variant="secondary" className="text-red-600">Weaknesses</Badge>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Analysis Detail Dialog */}
-      <Dialog open={!!viewingAnalysis} onOpenChange={() => setViewingAnalysis(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              {viewingAnalysis?.competitor_name}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            {viewingAnalysis && (
-              <div className="space-y-6 p-4">
-                {viewingAnalysis.company_description && (
-                  <div>
-                    <h4 className="font-medium text-foreground mb-2">Company Overview</h4>
-                    <p className="text-muted-foreground">{viewingAnalysis.company_description}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  {viewingAnalysis.strengths && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-green-600" />
-                        <h4 className="font-medium text-green-700 dark:text-green-400">Strengths</h4>
-                      </div>
-                      <p className="text-sm text-green-800 dark:text-green-300">{viewingAnalysis.strengths}</p>
-                    </div>
-                  )}
-                  
-                  {viewingAnalysis.weaknesses && (
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingDown className="w-4 h-4 text-red-600" />
-                        <h4 className="font-medium text-red-700 dark:text-red-400">Weaknesses</h4>
-                      </div>
-                      <p className="text-sm text-red-800 dark:text-red-300">{viewingAnalysis.weaknesses}</p>
-                    </div>
-                  )}
-                  
-                  {viewingAnalysis.opportunities && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-4 h-4 text-blue-600" />
-                        <h4 className="font-medium text-blue-700 dark:text-blue-400">Opportunities</h4>
-                      </div>
-                      <p className="text-sm text-blue-800 dark:text-blue-300">{viewingAnalysis.opportunities}</p>
-                    </div>
-                  )}
-                  
-                  {viewingAnalysis.threats && (
-                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-4 h-4 text-amber-600" />
-                        <h4 className="font-medium text-amber-700 dark:text-amber-400">Threats</h4>
-                      </div>
-                      <p className="text-sm text-amber-800 dark:text-amber-300">{viewingAnalysis.threats}</p>
-                    </div>
-                  )}
-                </div>
-
-                {viewingAnalysis.target_audience && (
-                  <div>
-                    <h4 className="font-medium text-foreground mb-2">Target Audience</h4>
-                    <p className="text-muted-foreground">{viewingAnalysis.target_audience}</p>
-                  </div>
-                )}
-
-                {viewingAnalysis.value_proposition && (
-                  <div>
-                    <h4 className="font-medium text-foreground mb-2">Value Proposition</h4>
-                    <p className="text-muted-foreground">{viewingAnalysis.value_proposition}</p>
-                  </div>
-                )}
-
-                {viewingAnalysis.marketing_channels && (
-                  <div>
-                    <h4 className="font-medium text-foreground mb-2">Marketing Channels</h4>
-                    <p className="text-muted-foreground">{viewingAnalysis.marketing_channels}</p>
-                  </div>
-                )}
+                </ScrollArea>
               </div>
             )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 space-y-6">
+            {/* Input Card */}
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Analyze a Competitor
+                </h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Competitor Name *
+                    </label>
+                    <Input
+                      placeholder="e.g., Notion, Slack, Figma"
+                      value={competitorName}
+                      onChange={(e) => setCompetitorName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-1">
+                      <Globe className="w-3 h-3" />
+                      Website URL (optional)
+                    </label>
+                    <Input
+                      placeholder="https://competitor.com"
+                      value={competitorUrl}
+                      onChange={(e) => setCompetitorUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleAnalyze} 
+                  disabled={isAnalyzing || !competitorName}
+                  className="w-full"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Analyze Competitor
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Results */}
+            {selectedAnalysis ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedAnalysis.competitor_name}</h2>
+                    {selectedAnalysis.competitor_url && (
+                      <a 
+                        href={selectedAnalysis.competitor_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {selectedAnalysis.competitor_url}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">
+                      {format(new Date(selectedAnalysis.analyzed_at), "MMM d, yyyy")}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleDelete(selectedAnalysis.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Overview */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Company Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{selectedAnalysis.company_description}</p>
+                  </CardContent>
+                </Card>
+
+                {/* Key Info Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Target className="w-4 h-4 text-primary" />
+                        Target Audience
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{selectedAnalysis.target_audience}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-yellow-500" />
+                        Value Proposition
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{selectedAnalysis.value_proposition}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Key Products</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{selectedAnalysis.key_products}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Pricing Strategy</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">{selectedAnalysis.pricing_strategy}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Marketing Channels</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{selectedAnalysis.marketing_channels}</p>
+                  </CardContent>
+                </Card>
+
+                {/* SWOT */}
+                <div className="grid grid-cols-2 gap-4">
+                  <Card className="border-green-500/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 text-green-600">
+                        <TrendingUp className="w-4 h-4" />
+                        Strengths
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.strengths}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-red-500/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 text-red-600">
+                        <TrendingDown className="w-4 h-4" />
+                        Weaknesses
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.weaknesses}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-blue-500/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 text-blue-600">
+                        <Lightbulb className="w-4 h-4" />
+                        Opportunities
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.opportunities}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-yellow-500/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2 text-yellow-600">
+                        <AlertTriangle className="w-4 h-4" />
+                        Threats
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.threats}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <Card className="py-12">
+                <CardContent className="text-center">
+                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Analysis Yet</h3>
+                  <p className="text-muted-foreground">
+                    Enter a competitor name above to get started with your first analysis.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
