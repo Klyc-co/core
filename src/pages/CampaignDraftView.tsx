@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import type { User } from "@supabase/supabase-js";
 
 // TikTok logo as inline SVG component
@@ -70,6 +71,7 @@ const CampaignDraftView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { triggerZapier, isSending: isSendingToZapier } = useZapierIntegration();
   const [user, setUser] = useState<User | null>(null);
   const [draft, setDraft] = useState<CampaignDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +81,11 @@ const CampaignDraftView = () => {
   const [scenePrompts, setScenePrompts] = useState<{ time: string; title: string; prompt: string }[]>([]);
   const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptions | null>(null);
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
+
+  const handleSendToZapier = async () => {
+    if (!id) return;
+    await triggerZapier(id, "all_data");
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -243,20 +250,31 @@ const CampaignDraftView = () => {
             Back to Campaign Drafts
           </Button>
           
-          <Button
-            variant="outline"
-            onClick={() => {
-              // TikTok share intent - opens TikTok with content ready to post
-              const shareText = encodeURIComponent(
-                `${draft?.campaign_idea || ''}\n\n${tags.join(' ')}`
-              );
-              window.open(`https://www.tiktok.com/upload`, '_blank');
-            }}
-            className="gap-2"
-          >
-            <TikTokIcon className="w-4 h-4" />
-            Share to TikTok
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSendToZapier}
+              disabled={isSendingToZapier}
+              className="gap-2 border-orange-500 text-orange-500 hover:bg-orange-500/10"
+            >
+              {isSendingToZapier ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {isSendingToZapier ? "Sending..." : "Send to Zapier"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // TikTok share intent - opens TikTok with content ready to post
+                const shareText = encodeURIComponent(
+                  `${draft?.campaign_idea || ''}\n\n${tags.join(' ')}`
+                );
+                window.open(`https://www.tiktok.com/upload`, '_blank');
+              }}
+              className="gap-2"
+            >
+              <TikTokIcon className="w-4 h-4" />
+              Share to TikTok
+            </Button>
+          </div>
         </div>
         
         <div className="mb-8">
