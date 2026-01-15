@@ -12,6 +12,8 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientProfile from "./pages/ClientProfile";
 import ClientCampaigns from "./pages/ClientCampaigns";
 import ClientApprovals from "./pages/ClientApprovals";
+import ClientInsights from "./pages/ClientInsights";
+import ClientSettings from "./pages/ClientSettings";
 import Messages from "./pages/Messages";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
@@ -71,6 +73,8 @@ const App = () => (
           <Route path="/client/profile" element={<ClientProfile />} />
           <Route path="/client/campaigns" element={<ClientCampaigns />} />
           <Route path="/client/approvals" element={<ClientApprovals />} />
+          <Route path="/client/insights" element={<ClientInsights />} />
+          <Route path="/client/settings" element={<ClientSettings />} />
           <Route path="/client/messages" element={<Messages portalType="client" />} />
           
           {/* Marketer routes with sidebar */}

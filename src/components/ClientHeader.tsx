@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User, FileText, CheckCircle, MessageSquare, Users } from "lucide-react";
+import { LogOut, Settings, User, FileText, CheckCircle, MessageSquare, BarChart3 } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -26,33 +26,26 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Logo />
-          <div className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            Client Portal
-          </div>
-          <Button
-            variant={isActive("/client/profile") ? "secondary" : "outline"}
-            onClick={() => navigate("/client/profile")}
-            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-2"
-          >
-            <User className="w-4 h-4" />
-            Profile
-          </Button>
           <Button
             variant={isActive("/client/campaigns") ? "secondary" : "outline"}
             onClick={() => navigate("/client/campaigns")}
-            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-2"
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
-            <FileText className="w-4 h-4" />
             Campaigns
           </Button>
           <Button
             variant={isActive("/client/approvals") ? "secondary" : "outline"}
             onClick={() => navigate("/client/approvals")}
-            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border gap-2"
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
           >
-            <CheckCircle className="w-4 h-4" />
             Approvals
+          </Button>
+          <Button
+            variant={isActive("/client/insights") ? "secondary" : "outline"}
+            onClick={() => navigate("/client/insights")}
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+          >
+            Insights
           </Button>
         </div>
 
@@ -69,6 +62,9 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
                 {unreadMessages > 9 ? "9+" : unreadMessages}
               </span>
             )}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/client/profile")}>
+            <User className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => navigate("/client/settings")}>
             <Settings className="w-4 h-4" />
