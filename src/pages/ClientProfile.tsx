@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ClientHeader from "@/components/ClientHeader";
-import { Building2, Users, Lightbulb, Pencil } from "lucide-react";
+import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2, Package, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -68,7 +68,7 @@ const ClientProfile = () => {
           <p className="text-muted-foreground">Complete your profile so your marketing team can create personalized content</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <ProfileCard
             icon={<Building2 className="w-6 h-6 text-primary" />}
             iconBg="bg-primary/10"
@@ -95,6 +95,57 @@ const ClientProfile = () => {
             status="not_filled"
             onClick={() => navigate("/client/profile/value")}
             buttonColor="text-orange-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <ProfileCard
+            icon={<Globe className="w-6 h-6 text-blue-500" />}
+            iconBg="bg-blue-500/10"
+            title="Import Brand Sources"
+            description="Website & social media assets"
+            status="not_filled"
+            onClick={() => navigate("/client/profile/import")}
+            buttonColor="text-blue-500"
+          />
+          <ProfileCard
+            icon={<FolderOpen className="w-6 h-6 text-purple-500" />}
+            iconBg="bg-purple-500/10"
+            title="Brand Library"
+            description="All your imported assets"
+            status="not_filled"
+            onClick={() => navigate("/client/profile/library")}
+            buttonColor="text-purple-500"
+          />
+          <ProfileCard
+            icon={<Share2 className="w-6 h-6 text-pink-500" />}
+            iconBg="bg-pink-500/10"
+            title="Social Media Assets"
+            description="Posts, images & analytics"
+            status="not_filled"
+            onClick={() => navigate("/client/profile/social")}
+            buttonColor="text-pink-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <ProfileCard
+            icon={<Package className="w-6 h-6 text-teal-500" />}
+            iconBg="bg-teal-500/10"
+            title="Products"
+            description="Your products & product lines"
+            status="not_filled"
+            onClick={() => navigate("/client/profile/products")}
+            buttonColor="text-teal-500"
+          />
+          <ProfileCard
+            icon={<History className="w-6 h-6 text-indigo-500" />}
+            iconBg="bg-indigo-500/10"
+            title="Campaign History"
+            description="Past campaigns & performance"
+            status="not_filled"
+            onClick={() => navigate("/client/campaigns")}
+            buttonColor="text-indigo-500"
           />
         </div>
 
