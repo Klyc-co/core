@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2 } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap } from "lucide-react";
+import { useZapierIntegration } from "@/hooks/use-zapier-integration";
+import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 
 const contentTypes = [
@@ -19,6 +21,8 @@ const contentTypes = [
 
 const GenerateCampaignIdeas = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { triggerZapier, isSending: isSendingToZapier } = useZapierIntegration();
   const [user, setUser] = useState<User | null>(null);
   const [selectedContentType, setSelectedContentType] = useState<string | null>(null);
   const [targetAudience, setTargetAudience] = useState("");
@@ -134,12 +138,12 @@ const GenerateCampaignIdeas = () => {
     }
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (sendToZapier: boolean = false) => {
     if (!user) return;
     
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("campaign_drafts" as any).insert({
+      const insertResult = await supabase.from("campaign_drafts" as any).insert({
         user_id: user.id,
         campaign_idea: campaignIdea,
         content_type: selectedContentType,
@@ -154,13 +158,24 @@ const GenerateCampaignIdeas = () => {
         target_audience_description: targetAudienceDescription,
         campaign_objective: campaignObjective,
         tags,
-      });
+      }).select().single();
 
-      if (error) throw error;
+      if (insertResult.error) throw insertResult.error;
+      
+      // Trigger Zapier if requested
+      if (sendToZapier && insertResult.data) {
+        const draftData = insertResult.data as unknown as { id: string };
+        await triggerZapier(draftData.id, "all_data");
+      }
+      
       navigate("/campaigns/drafts");
     } catch (error) {
       console.error("Error saving draft:", error);
-      alert("Failed to save draft");
+      toast({
+        title: "Failed to save draft",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -393,15 +408,25 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
-              {/* Save Button */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
-              </Button>
+              {/* Save Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg"
+                  onClick={() => handleSaveDraft(false)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90"
+                  onClick={() => handleSaveDraft(true)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSendingToZapier ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {isSendingToZapier ? "Sending..." : "Save & Send to Zapier"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -489,15 +514,25 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
-              {/* Save Button */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
-              </Button>
+              {/* Save Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg"
+                  onClick={() => handleSaveDraft(false)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90"
+                  onClick={() => handleSaveDraft(true)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSendingToZapier ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {isSendingToZapier ? "Sending..." : "Save & Send to Zapier"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -557,15 +592,25 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
-              {/* Save Button */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
-              </Button>
+              {/* Save Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg"
+                  onClick={() => handleSaveDraft(false)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90"
+                  onClick={() => handleSaveDraft(true)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSendingToZapier ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {isSendingToZapier ? "Sending..." : "Save & Send to Zapier"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -664,15 +709,25 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
-              {/* Save Button */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save to Campaign Drafts"}
-              </Button>
+              {/* Save Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg"
+                  onClick={() => handleSaveDraft(false)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button 
+                  className="flex-1 gap-2 py-6 text-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90"
+                  onClick={() => handleSaveDraft(true)}
+                  disabled={isSaving || isSendingToZapier}
+                >
+                  {isSendingToZapier ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                  {isSendingToZapier ? "Sending..." : "Save & Send to Zapier"}
+                </Button>
+              </div>
             </div>
           )}
         </div>
