@@ -63,9 +63,8 @@ serve(async (req) => {
     const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    // Request pages_show_list and pages_read_engagement to ensure Page selection is shown
-    // Also add instagram_basic for Instagram account access
-    authUrl.searchParams.set("scope", "pages_show_list,pages_read_engagement,instagram_basic");
+    // Request business_management for New Pages Experience / Business Suite managed pages
+    authUrl.searchParams.set("scope", "pages_show_list,pages_read_engagement,instagram_basic,business_management");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
     authUrl.searchParams.set("display", "page");

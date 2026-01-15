@@ -109,7 +109,10 @@ serve(async (req) => {
       console.log("Granted permissions:", JSON.stringify(permData.data));
     }
 
-    // Get the user's Facebook Pages to find connected Instagram account
+    // Get the user's Facebook Pages - try multiple endpoints for different Page types
+    let pagesData: { data: any[] } = { data: [] };
+    
+    // First try standard me/accounts
     const pagesResponse = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
     );
@@ -117,16 +120,42 @@ serve(async (req) => {
     const pagesResponseText = await pagesResponse.text();
     console.log("Pages API raw response:", pagesResponseText);
 
-    if (!pagesResponse.ok) {
-      console.error("Failed to get Facebook pages:", pagesResponseText);
-      throw new Error("Failed to get connected Facebook Pages. Make sure your Instagram is linked to a Facebook Page.");
+    if (pagesResponse.ok) {
+      pagesData = JSON.parse(pagesResponseText);
     }
 
-    const pagesData = JSON.parse(pagesResponseText);
-    console.log("Facebook pages found:", pagesData.data?.length || 0);
+    // If no pages found, try the business endpoint for New Pages Experience
+    if (!pagesData.data || pagesData.data.length === 0) {
+      console.log("No pages from me/accounts, trying me/businesses...");
+      
+      const businessResponse = await fetch(
+        `https://graph.facebook.com/v18.0/me/businesses?access_token=${accessToken}`
+      );
+      
+      if (businessResponse.ok) {
+        const businessData = await businessResponse.json();
+        console.log("Businesses found:", businessData.data?.length || 0);
+        
+        // For each business, get the pages
+        for (const business of businessData.data || []) {
+          const bizPagesResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${business.id}/owned_pages?access_token=${accessToken}`
+          );
+          if (bizPagesResponse.ok) {
+            const bizPagesData = await bizPagesResponse.json();
+            console.log(`Business ${business.id} pages:`, bizPagesData.data?.length || 0);
+            if (bizPagesData.data) {
+              pagesData.data = [...pagesData.data, ...bizPagesData.data];
+            }
+          }
+        }
+      }
+    }
+
+    console.log("Total Facebook pages found:", pagesData.data?.length || 0);
 
     if (!pagesData.data || pagesData.data.length === 0) {
-      throw new Error("No Facebook Pages found. Please grant 'pages_show_list' permission and select your Page during authorization.");
+      throw new Error("No Facebook Pages found. Your Page may require 'business_management' permission or you need to be an Admin of the Page.");
     }
 
     // Get the Instagram Business Account ID from the first page
