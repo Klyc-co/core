@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { useTheme } from "next-themes";
 import klycLogo from "@/assets/klyc-logo.png";
+import klycLogoDark from "@/assets/klyc-logo-dark.png";
 
 interface LogoProps {
   className?: string;
@@ -7,16 +9,20 @@ interface LogoProps {
 }
 
 const Logo = ({ className = "", size = "md" }: LogoProps) => {
+  const { theme } = useTheme();
+  
   const sizes = {
     sm: "h-8",
     md: "h-12",
     lg: "h-14",
   };
 
+  const logoSrc = theme === "dark" ? klycLogoDark : klycLogo;
+
   return (
     <Link to="/home" className={`flex items-center ${className}`}>
       <img 
-        src={klycLogo} 
+        src={logoSrc} 
         alt="Klyc" 
         className={`${sizes[size]} w-auto object-contain`}
       />
