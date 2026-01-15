@@ -447,6 +447,50 @@ export type Database = {
         }
         Relationships: []
       }
+      zapier_automation_results: {
+        Row: {
+          campaign_draft_id: string | null
+          created_at: string
+          id: string
+          payload_sent: Json | null
+          result_data: Json | null
+          status: string
+          trigger_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_draft_id?: string | null
+          created_at?: string
+          id?: string
+          payload_sent?: Json | null
+          result_data?: Json | null
+          status?: string
+          trigger_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_draft_id?: string | null
+          created_at?: string
+          id?: string
+          payload_sent?: Json | null
+          result_data?: Json | null
+          status?: string
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapier_automation_results_campaign_draft_id_fkey"
+            columns: ["campaign_draft_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
