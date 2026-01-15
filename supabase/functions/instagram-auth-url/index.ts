@@ -55,21 +55,17 @@ serve(async (req) => {
     });
     const encodedState = btoa(state);
 
-    // Instagram Graph API scopes (via Facebook OAuth)
-    // Using minimal scopes - some may require App Review
-    const scopes = [
-      "public_profile",              // Basic Facebook profile (always available)
-      "pages_show_list",             // Required to see connected pages
-    ].join(",");
+    // Use Facebook Login for Business configuration ID (recommended approach)
+    const configId = "875201778390509";
     
-    console.log("Using scopes:", scopes);
+    console.log("Using config_id:", configId);
     console.log("Redirect URI:", `${supabaseUrl}/functions/v1/instagram-oauth-callback`);
 
     // Use Facebook OAuth for Instagram Graph API access
     const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", scopes);
+    authUrl.searchParams.set("config_id", configId);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
 
