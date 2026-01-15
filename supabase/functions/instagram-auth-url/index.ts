@@ -56,13 +56,17 @@ serve(async (req) => {
     const encodedState = btoa(state);
 
     // Instagram Graph API scopes (via Facebook OAuth)
-    // These require a Business/Creator account linked to a Facebook Page
+    // Using updated scope names as per Meta's recent changes
     const scopes = [
       "instagram_basic",           // Basic profile info
       "instagram_manage_insights", // Access to insights/analytics
       "pages_show_list",           // Required to see connected pages
       "pages_read_engagement",     // Required for insights
+      "business_management",       // Required for business accounts
     ].join(",");
+    
+    console.log("Using scopes:", scopes);
+    console.log("Redirect URI:", `${supabaseUrl}/functions/v1/instagram-oauth-callback`);
 
     // Use Facebook OAuth for Instagram Graph API access
     const authUrl = new URL("https://www.facebook.com/v18.0/dialog/oauth");
