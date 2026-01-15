@@ -59,12 +59,12 @@ serve(async (req) => {
     console.log("Redirect URI:", redirectUri);
     console.log("Client ID:", clientId);
 
-    // Use Facebook OAuth with Instagram Business scopes
+    // Use Facebook OAuth with minimal scope for Business app testing
     const authUrl = new URL("https://www.facebook.com/v19.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    // Request Instagram and Pages permissions for Business app
-    authUrl.searchParams.set("scope", "instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement");
+    // Start with pages_show_list which is often available by default for Business apps
+    authUrl.searchParams.set("scope", "pages_show_list");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
     authUrl.searchParams.set("display", "page");
