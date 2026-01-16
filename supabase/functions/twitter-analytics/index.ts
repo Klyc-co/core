@@ -26,39 +26,57 @@ function validateEnvironmentVariables() {
 function generateOAuthSignature(
   method: string,
   url: string,
-  params: Record<string, string>,
+  allParams: Record<string, string>,
   consumerSecret: string,
   tokenSecret: string
 ): string {
-  const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(
-    Object.entries(params)
-      .sort()
-      .map(([k, v]) => `${k}=${v}`)
-      .join("&")
-  )}`;
+  // Sort all params alphabetically and create parameter string
+  const paramString = Object.entries(allParams)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+  
+  const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
+  
+  console.log("Signature base string:", signatureBaseString);
+  
   const hmacSha1 = createHmac("sha1", signingKey);
   return hmacSha1.update(signatureBaseString).digest("base64");
 }
 
-function generateOAuthHeader(method: string, url: string): string {
-  const oauthParams = {
+function generateOAuthHeader(method: string, fullUrl: string): string {
+  // Parse the URL to separate base URL and query params
+  const urlObj = new URL(fullUrl);
+  const baseUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
+  
+  // Get query parameters from URL
+  const queryParams: Record<string, string> = {};
+  urlObj.searchParams.forEach((value, key) => {
+    queryParams[key] = value;
+  });
+
+  const oauthParams: Record<string, string> = {
     oauth_consumer_key: API_KEY!,
-    oauth_nonce: Math.random().toString(36).substring(2),
+    oauth_nonce: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
     oauth_token: ACCESS_TOKEN!,
     oauth_version: "1.0",
   };
 
+  // Combine oauth params with query params for signature
+  const allParams = { ...oauthParams, ...queryParams };
+
   const signature = generateOAuthSignature(
     method,
-    url,
-    oauthParams,
+    baseUrl,
+    allParams,
     API_SECRET!,
     ACCESS_TOKEN_SECRET!
   );
 
+  // Only include oauth params in the header (not query params)
   const signedOAuthParams = {
     ...oauthParams,
     oauth_signature: signature,
@@ -73,7 +91,9 @@ const BASE_URL = "https://api.x.com/2";
 async function getUser() {
   const url = `${BASE_URL}/users/me?user.fields=public_metrics,profile_image_url,description,created_at`;
   const method = "GET";
-  const oauthHeader = generateOAuthHeader(method, url.split("?")[0]);
+  const oauthHeader = generateOAuthHeader(method, url);
+  
+  console.log("Fetching user from:", url);
   
   const response = await fetch(url, {
     method,
@@ -94,7 +114,9 @@ async function getUser() {
 async function getUserTweets(userId: string) {
   const url = `${BASE_URL}/users/${userId}/tweets?max_results=10&tweet.fields=public_metrics,created_at`;
   const method = "GET";
-  const oauthHeader = generateOAuthHeader(method, url.split("?")[0]);
+  const oauthHeader = generateOAuthHeader(method, url);
+  
+  console.log("Fetching tweets from:", url);
   
   const response = await fetch(url, {
     method,
