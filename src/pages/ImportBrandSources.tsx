@@ -28,8 +28,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Youtube, 
     color: "bg-red-600", 
     textColor: "text-red-600",
-    provider: 'google',
-    scopes: ['https://www.googleapis.com/auth/youtube.readonly']
+    customOAuth: true,
   },
   { 
     name: "Facebook", 
@@ -79,6 +78,8 @@ const ImportBrandSources = () => {
   useEffect(() => {
     // Handle OAuth callback messages
     const success = searchParams.get("success");
+    const youtubeSuccess = searchParams.get("youtube_success");
+    const youtubeError = searchParams.get("youtube_error");
     const error = searchParams.get("error");
     
     if (success === "tiktok") {
@@ -90,6 +91,17 @@ const ImportBrandSources = () => {
     if (success === "instagram") {
       toast.success("Instagram connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Instagram: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (youtubeSuccess === "true") {
+      toast.success("YouTube connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (youtubeError) {
+      toast.error(`YouTube connection failed: ${youtubeError}`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -116,12 +128,8 @@ const ImportBrandSources = () => {
     const newStatus: Record<string, ConnectionStatus> = {};
     
     identities.forEach(identity => {
-      if (identity.provider === 'google') {
-        newStatus['YouTube'] = 'connected';
-      }
       if (identity.provider === 'facebook') {
         newStatus['Facebook'] = 'connected';
-        newStatus['Instagram'] = 'connected';
       }
       if (identity.provider === 'twitter') {
         newStatus['Twitter/X'] = 'connected';
@@ -131,28 +139,24 @@ const ImportBrandSources = () => {
       }
     });
     
-    // Check for TikTok connection in social_connections table
-    const { data: tiktokConnection } = await supabase
+    // Check for custom OAuth connections in social_connections table
+    const { data: socialConnections } = await supabase
       .from("social_connections")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("platform", "tiktok")
-      .single();
+      .select("platform")
+      .eq("user_id", user.id);
     
-    if (tiktokConnection) {
-      newStatus['TikTok'] = 'connected';
-    }
-    
-    // Check for Instagram connection in social_connections table
-    const { data: instagramConnection } = await supabase
-      .from("social_connections")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("platform", "instagram")
-      .single();
-    
-    if (instagramConnection) {
-      newStatus['Instagram'] = 'connected';
+    if (socialConnections) {
+      socialConnections.forEach((conn) => {
+        if (conn.platform === "tiktok") {
+          newStatus['TikTok'] = 'connected';
+        }
+        if (conn.platform === "instagram") {
+          newStatus['Instagram'] = 'connected';
+        }
+        if (conn.platform === "youtube") {
+          newStatus['YouTube'] = 'connected';
+        }
+      });
     }
     
     setConnectionStatus(newStatus);
@@ -171,7 +175,7 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // Handle custom OAuth (TikTok, Instagram)
+    // Handle custom OAuth (TikTok, Instagram, YouTube)
     if (platform.customOAuth) {
       if (!user) {
         toast.error("Please log in first");
@@ -181,7 +185,15 @@ const ImportBrandSources = () => {
       setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
 
       try {
-        const functionName = platform.name === "TikTok" ? "tiktok-auth-url" : "instagram-auth-url";
+        let functionName: string;
+        if (platform.name === "TikTok") {
+          functionName = "tiktok-auth-url";
+        } else if (platform.name === "YouTube") {
+          functionName = "youtube-auth-url";
+        } else {
+          functionName = "instagram-auth-url";
+        }
+        
         const { data, error } = await supabase.functions.invoke(functionName);
         
         if (error) {
@@ -378,6 +390,17 @@ const ImportBrandSources = () => {
                           variant="secondary" 
                           size="sm"
                           onClick={() => navigate("/profile/instagram-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
+                      {isConnected && platform.name === "YouTube" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/youtube-analytics")}
                           className="gap-1"
                         >
                           <BarChart3 className="w-3 h-3" />
