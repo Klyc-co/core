@@ -47,6 +47,7 @@ import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import TikTokAnalytics from "./pages/TikTokAnalytics";
 import InstagramAnalytics from "./pages/InstagramAnalytics";
 import YouTubeAnalytics from "./pages/YouTubeAnalytics";
+import FacebookAnalytics from "./pages/FacebookAnalytics";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -115,6 +116,7 @@ const App = () => (
           <Route path="/profile/tiktok-analytics" element={<WithSidebar><TikTokAnalytics /></WithSidebar>} />
           <Route path="/profile/instagram-analytics" element={<WithSidebar><InstagramAnalytics /></WithSidebar>} />
           <Route path="/profile/youtube-analytics" element={<WithSidebar><YouTubeAnalytics /></WithSidebar>} />
+          <Route path="/profile/facebook-analytics" element={<WithSidebar><FacebookAnalytics /></WithSidebar>} />
           <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
           
           <Route path="*" element={<NotFound />} />
