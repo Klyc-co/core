@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.twitter-analytics]
 verify_jwt = false
+
+[functions.twitter-auth-url]
+verify_jwt = false
+
+[functions.twitter-oauth-callback]
+verify_jwt = false

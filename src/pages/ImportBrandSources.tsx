@@ -100,6 +100,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "twitter") {
+      toast.success("Twitter/X connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "Twitter/X": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -205,10 +211,7 @@ const ImportBrandSources = () => {
         } else if (platform.name === "Facebook") {
           functionName = "facebook-auth-url";
         } else if (platform.name === "Twitter/X") {
-          // Twitter uses stored keys, go directly to analytics
-          navigate("/profile/twitter-analytics");
-          setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connected' }));
-          return;
+          functionName = "twitter-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
