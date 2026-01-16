@@ -56,7 +56,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Twitter, 
     color: "bg-gray-800", 
     textColor: "text-gray-800 dark:text-gray-200",
-    comingSoon: true
+    customOAuth: true,
   },
   { 
     name: "TikTok", 
@@ -165,6 +165,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "facebook") {
           newStatus['Facebook'] = 'connected';
         }
+        if (conn.platform === "twitter") {
+          newStatus['Twitter/X'] = 'connected';
+        }
       });
     }
     
@@ -201,6 +204,11 @@ const ImportBrandSources = () => {
           functionName = "youtube-auth-url";
         } else if (platform.name === "Facebook") {
           functionName = "facebook-auth-url";
+        } else if (platform.name === "Twitter/X") {
+          // Twitter uses stored keys, go directly to analytics
+          navigate("/profile/twitter-analytics");
+          setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connected' }));
+          return;
         } else {
           functionName = "instagram-auth-url";
         }
@@ -423,6 +431,17 @@ const ImportBrandSources = () => {
                           variant="secondary" 
                           size="sm"
                           onClick={() => navigate("/profile/facebook-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
+                      {isConnected && platform.name === "Twitter/X" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/twitter-analytics")}
                           className="gap-1"
                         >
                           <BarChart3 className="w-3 h-3" />
