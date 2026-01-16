@@ -35,7 +35,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Facebook, 
     color: "bg-blue-600", 
     textColor: "text-blue-600",
-    comingSoon: true
+    customOAuth: true,
   },
   { 
     name: "Instagram", 
@@ -91,6 +91,12 @@ const ImportBrandSources = () => {
     if (success === "instagram") {
       toast.success("Instagram connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Instagram: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "facebook") {
+      toast.success("Facebook connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Facebook: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -156,6 +162,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "youtube") {
           newStatus['YouTube'] = 'connected';
         }
+        if (conn.platform === "facebook") {
+          newStatus['Facebook'] = 'connected';
+        }
       });
     }
     
@@ -190,6 +199,8 @@ const ImportBrandSources = () => {
           functionName = "tiktok-auth-url";
         } else if (platform.name === "YouTube") {
           functionName = "youtube-auth-url";
+        } else if (platform.name === "Facebook") {
+          functionName = "facebook-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
@@ -401,6 +412,17 @@ const ImportBrandSources = () => {
                           variant="secondary" 
                           size="sm"
                           onClick={() => navigate("/profile/youtube-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
+                      {isConnected && platform.name === "Facebook" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/facebook-analytics")}
                           className="gap-1"
                         >
                           <BarChart3 className="w-3 h-3" />
