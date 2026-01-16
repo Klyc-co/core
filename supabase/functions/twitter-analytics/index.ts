@@ -12,6 +12,11 @@ const ACCESS_TOKEN = Deno.env.get("TWITTER_ACCESS_TOKEN")?.trim();
 const ACCESS_TOKEN_SECRET = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")?.trim();
 
 function validateEnvironmentVariables() {
+  console.log("API_KEY present:", !!API_KEY, "length:", API_KEY?.length);
+  console.log("API_SECRET present:", !!API_SECRET, "length:", API_SECRET?.length);
+  console.log("ACCESS_TOKEN present:", !!ACCESS_TOKEN, "length:", ACCESS_TOKEN?.length);
+  console.log("ACCESS_TOKEN_SECRET present:", !!ACCESS_TOKEN_SECRET, "length:", ACCESS_TOKEN_SECRET?.length);
+  
   if (!API_KEY) throw new Error("Missing TWITTER_CONSUMER_KEY");
   if (!API_SECRET) throw new Error("Missing TWITTER_CONSUMER_SECRET");
   if (!ACCESS_TOKEN) throw new Error("Missing TWITTER_ACCESS_TOKEN");
