@@ -49,7 +49,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Linkedin, 
     color: "bg-blue-700", 
     textColor: "text-blue-700",
-    comingSoon: true
+    customOAuth: true
   },
   { 
     name: "Twitter/X", 
@@ -103,6 +103,12 @@ const ImportBrandSources = () => {
     if (success === "twitter") {
       toast.success("Twitter/X connected successfully!");
       setConnectionStatus(prev => ({ ...prev, "Twitter/X": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "linkedin") {
+      toast.success("LinkedIn connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, LinkedIn: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -174,6 +180,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "twitter") {
           newStatus['Twitter/X'] = 'connected';
         }
+        if (conn.platform === "linkedin") {
+          newStatus['LinkedIn'] = 'connected';
+        }
       });
     }
     
@@ -212,6 +221,8 @@ const ImportBrandSources = () => {
           functionName = "facebook-auth-url";
         } else if (platform.name === "Twitter/X") {
           functionName = "twitter-auth-url";
+        } else if (platform.name === "LinkedIn") {
+          functionName = "linkedin-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }

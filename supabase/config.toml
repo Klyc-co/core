@@ -62,3 +62,9 @@ verify_jwt = false
 
 [functions.twitter-oauth-callback]
 verify_jwt = false
+
+[functions.linkedin-auth-url]
+verify_jwt = false
+
+[functions.linkedin-oauth-callback]
+verify_jwt = false
