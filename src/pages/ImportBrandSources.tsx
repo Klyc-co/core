@@ -462,6 +462,17 @@ const ImportBrandSources = () => {
                           Analytics
                         </Button>
                       )}
+                      {isConnected && platform.name === "LinkedIn" && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate("/profile/linkedin-analytics")}
+                          className="gap-1"
+                        >
+                          <BarChart3 className="w-3 h-3" />
+                          Analytics
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

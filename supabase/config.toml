@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.linkedin-oauth-callback]
 verify_jwt = false
+
+[functions.linkedin-analytics]
+verify_jwt = false
