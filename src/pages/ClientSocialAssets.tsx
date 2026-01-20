@@ -50,7 +50,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: Linkedin, 
     color: "bg-blue-700", 
     textColor: "text-blue-700",
-    comingSoon: true
+    customOAuth: true
   },
   { 
     name: "Twitter/X", 
@@ -89,6 +89,12 @@ const ClientSocialAssets = () => {
     if (success === "instagram") {
       toast.success("Instagram connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Instagram: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "linkedin") {
+      toast.success("LinkedIn connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, LinkedIn: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -151,6 +157,17 @@ const ClientSocialAssets = () => {
       newStatus['Instagram'] = 'connected';
     }
     
+    const { data: linkedinConnection } = await supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "linkedin")
+      .single();
+    
+    if (linkedinConnection) {
+      newStatus['LinkedIn'] = 'connected';
+    }
+    
     setConnectionStatus(newStatus);
   };
 
@@ -178,7 +195,15 @@ const ClientSocialAssets = () => {
       setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
 
       try {
-        const functionName = platform.name === "TikTok" ? "tiktok-auth-url" : "instagram-auth-url";
+        let functionName: string;
+        if (platform.name === "TikTok") {
+          functionName = "tiktok-auth-url";
+        } else if (platform.name === "LinkedIn") {
+          functionName = "linkedin-auth-url";
+        } else {
+          functionName = "instagram-auth-url";
+        }
+        
         const { data, error } = await supabase.functions.invoke(functionName);
         
         if (error) {
