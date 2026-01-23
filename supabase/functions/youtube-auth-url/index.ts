@@ -58,9 +58,12 @@ serve(async (req) => {
     ].join(" ");
     
     // Build Google OAuth URL for YouTube
+    const redirectUri = `${SUPABASE_URL}/functions/v1/youtube-oauth-callback`;
+    console.log("Using redirect_uri:", redirectUri);
+    
     const youtubeAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     youtubeAuthUrl.searchParams.set("client_id", YOUTUBE_CLIENT_ID);
-    youtubeAuthUrl.searchParams.set("redirect_uri", `${SUPABASE_URL}/functions/v1/youtube-oauth-callback`);
+    youtubeAuthUrl.searchParams.set("redirect_uri", redirectUri);
     youtubeAuthUrl.searchParams.set("response_type", "code");
     youtubeAuthUrl.searchParams.set("scope", scopes);
     youtubeAuthUrl.searchParams.set("state", state);
