@@ -82,16 +82,19 @@ serve(async (req) => {
     const channelData = await channelResponse.json();
     console.log("Channel data response:", channelResponse.status);
 
-    if (!channelResponse.ok || !channelData.items?.length) {
-      console.error("Failed to get channel:", channelData);
-      throw new Error("Failed to get YouTube channel info");
+    let channelId = null;
+    let channelTitle = null;
+
+    if (channelResponse.ok && channelData.items?.length > 0) {
+      const channel = channelData.items[0];
+      channelId = channel.id;
+      channelTitle = channel.snippet.title;
+      console.log("Connected YouTube channel:", channelTitle, channelId);
+    } else {
+      // User doesn't have a YouTube channel, but we can still store the connection
+      // They may have access to managed channels or want to use YouTube Analytics
+      console.log("No YouTube channel found for user, proceeding with connection anyway");
     }
-
-    const channel = channelData.items[0];
-    const channelId = channel.id;
-    const channelTitle = channel.snippet.title;
-
-    console.log("Connected YouTube channel:", channelTitle, channelId);
 
     // Store in social_connections table
     const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
