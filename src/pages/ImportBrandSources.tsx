@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3 } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,13 @@ interface SocialPlatform {
   scopes?: string[];
   comingSoon?: boolean;
   customOAuth?: boolean;
+}
+
+interface ScanResult {
+  colors: number;
+  fonts: number;
+  images: number;
+  copy: number;
 }
 
 const socialPlatforms: SocialPlatform[] = [
@@ -73,6 +80,7 @@ const ImportBrandSources = () => {
   const [user, setUser] = useState<User | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
 
   useEffect(() => {
@@ -135,7 +143,6 @@ const ImportBrandSources = () => {
         navigate("/auth");
       } else {
         setUser(user);
-        // Check for connected identities
         checkConnectedAccounts(user);
       }
     });
@@ -157,7 +164,6 @@ const ImportBrandSources = () => {
       }
     });
     
-    // Check for custom OAuth connections in social_connections table
     const { data: socialConnections } = await supabase
       .from("social_connections")
       .select("platform")
@@ -191,9 +197,32 @@ const ImportBrandSources = () => {
 
   const handleScanWebsite = async () => {
     if (!websiteUrl) return;
+    
     setIsScanning(true);
-    // TODO: Implement website scraping with Firecrawl
-    setTimeout(() => setIsScanning(false), 2000);
+    setScanResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-website", {
+        body: { url: websiteUrl }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (!data.success) {
+        throw new Error(data.error || "Failed to scan website");
+      }
+      
+      setScanResult(data.summary);
+      toast.success(`Website scanned! Found ${data.assetsCount} brand assets.`);
+    } catch (err: unknown) {
+      console.error("Failed to scan website:", err);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(message);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleConnectPlatform = async (platform: SocialPlatform) => {
@@ -202,7 +231,6 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // Handle custom OAuth (TikTok, Instagram, YouTube)
     if (platform.customOAuth) {
       if (!user) {
         toast.error("Please log in first");
@@ -256,7 +284,7 @@ const ImportBrandSources = () => {
     setConnectionStatus(prev => ({ ...prev, [platform.name]: 'connecting' }));
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: platform.provider,
         options: {
           redirectTo: `${window.location.origin}/import-brand-sources`,
@@ -351,6 +379,7 @@ const ImportBrandSources = () => {
                   placeholder="https://example.com"
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
+                  disabled={isScanning}
                 />
               </div>
 
@@ -359,8 +388,49 @@ const ImportBrandSources = () => {
                 disabled={!websiteUrl || isScanning}
                 className="w-full bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white"
               >
-                {isScanning ? "Scanning..." : "⚡ Scan Website (1-5 min)"}
+                {isScanning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Scanning Website...
+                  </>
+                ) : (
+                  "⚡ Scan Website"
+                )}
               </Button>
+
+              {scanResult && (
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">Scan Complete!</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Colors:</span>
+                      <span className="font-medium text-foreground">{scanResult.colors}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fonts:</span>
+                      <span className="font-medium text-foreground">{scanResult.fonts}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Images:</span>
+                      <span className="font-medium text-foreground">{scanResult.images}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Copy:</span>
+                      <span className="font-medium text-foreground">{scanResult.copy}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="link" 
+                    className="mt-3 p-0 h-auto text-primary"
+                    onClick={() => navigate("/profile/library")}
+                  >
+                    View in Brand Library →
+                  </Button>
+                </div>
+              )}
 
               <p className="text-xs text-muted-foreground">
                 We will crawl your public pages and extract colors, fonts, copy blocks, images, and brand structure.
@@ -486,9 +556,9 @@ const ImportBrandSources = () => {
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>
-              <h3 className="font-medium text-foreground mb-1">Security & Privacy:</h3>
+              <h3 className="font-medium text-foreground mb-1">Secure Connection</h3>
               <p className="text-sm text-muted-foreground">
-                We securely store your credentials and never share them with third parties. You can disconnect any account at any time. All imported assets are stored locally and can be managed from your library.
+                Your brand assets and social media connections are stored securely. We only access public information and the permissions you explicitly grant.
               </p>
             </div>
           </div>

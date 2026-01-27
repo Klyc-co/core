@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_assets: {
+        Row: {
+          asset_type: string
+          brand_import_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          name: string | null
+          user_id: string
+          value: string
+        }
+        Insert: {
+          asset_type: string
+          brand_import_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          user_id: string
+          value: string
+        }
+        Update: {
+          asset_type?: string
+          brand_import_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_assets_brand_import_id_fkey"
+            columns: ["brand_import_id"]
+            isOneToOne: false
+            referencedRelation: "brand_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_imports: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+          website_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          website_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          website_url?: string
+        }
+        Relationships: []
+      }
       campaign_approvals: {
         Row: {
           campaign_draft_id: string | null
