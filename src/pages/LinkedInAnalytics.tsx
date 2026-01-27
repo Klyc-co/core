@@ -81,7 +81,7 @@ const LinkedInAnalytics = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 min-h-screen bg-background">
       <AppHeader user={user} />
       
       <main className="max-w-6xl mx-auto px-6 py-12">
