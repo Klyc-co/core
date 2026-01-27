@@ -8,6 +8,11 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
+interface LinkedInLocale {
+  country: string;
+  language: string;
+}
+
 interface LinkedInAnalyticsData {
   profile: {
     id: string;
@@ -17,7 +22,7 @@ interface LinkedInAnalyticsData {
     email: string;
     emailVerified: boolean;
     picture: string;
-    locale: string;
+    locale: LinkedInLocale | string | null;
   };
   connectionInfo: {
     connectedAt: string;
@@ -140,7 +145,9 @@ const LinkedInAnalytics = () => {
                   {analytics.profile.locale && (
                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                       <Globe className="w-3 h-3" />
-                      {analytics.profile.locale}
+                      {typeof analytics.profile.locale === 'object' 
+                        ? `${analytics.profile.locale.language}-${analytics.profile.locale.country}` 
+                        : analytics.profile.locale}
                     </p>
                   )}
                 </div>
