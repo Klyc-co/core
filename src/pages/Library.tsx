@@ -217,7 +217,7 @@ const Library = () => {
 
     if (type === 'image') {
       return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
           {filtered.map(asset => <ImageCard key={asset.id} asset={asset} />)}
         </div>
       );
@@ -225,14 +225,14 @@ const Library = () => {
 
     if (type === 'copy') {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
           {filtered.map(asset => <CopyCard key={asset.id} asset={asset} />)}
         </div>
       );
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         {filtered.map(asset => 
           type === 'color' ? <ColorCard key={asset.id} asset={asset} /> : <FontCard key={asset.id} asset={asset} />
         )}
@@ -244,36 +244,36 @@ const Library = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       
-      <main className="max-w-6xl mx-auto px-6 py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <Button
           variant="ghost"
           onClick={() => navigate("/profile")}
-          className="mb-6 text-primary hover:text-primary/80 -ml-2"
+          className="mb-4 sm:mb-6 text-primary hover:text-primary/80 -ml-2"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Brand Library</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Brand Library</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               All your imported brand assets in one place
             </p>
           </div>
-          <Button onClick={() => navigate("/profile/import")}>
+          <Button onClick={() => navigate("/profile/import")} className="w-full sm:w-auto">
             + Import More
           </Button>
         </div>
 
         {imports.length > 0 && (
-          <Card className="p-4 mb-6">
-            <h3 className="text-sm font-medium text-foreground mb-3">Recent Imports</h3>
+          <Card className="p-3 sm:p-4 mb-4 sm:mb-6">
+            <h3 className="text-sm font-medium text-foreground mb-2 sm:mb-3">Recent Imports</h3>
             <div className="flex flex-wrap gap-2">
               {imports.slice(0, 5).map(imp => (
-                <div key={imp.id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm">
-                  <span className={`w-2 h-2 rounded-full ${imp.status === 'completed' ? 'bg-green-500' : imp.status === 'scanning' ? 'bg-amber-500' : 'bg-red-500'}`} />
-                  <span className="text-muted-foreground truncate max-w-[200px]">{imp.website_url}</span>
+                <div key={imp.id} className="inline-flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-muted text-xs sm:text-sm">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${imp.status === 'completed' ? 'bg-success' : imp.status === 'scanning' ? 'bg-warning' : 'bg-destructive'}`} />
+                  <span className="text-muted-foreground truncate max-w-[120px] sm:max-w-[200px]">{imp.website_url}</span>
                 </div>
               ))}
             </div>
@@ -281,12 +281,12 @@ const Library = () => {
         )}
 
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="all">All Assets ({assets.length})</TabsTrigger>
-            <TabsTrigger value="images">Images ({filterAssets('image').length})</TabsTrigger>
-            <TabsTrigger value="colors">Colors ({filterAssets('color').length})</TabsTrigger>
-            <TabsTrigger value="fonts">Fonts ({filterAssets('font').length})</TabsTrigger>
-            <TabsTrigger value="copy">Copy ({filterAssets('copy').length})</TabsTrigger>
+          <TabsList className="mb-4 sm:mb-6 w-full sm:w-auto overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">All ({assets.length})</TabsTrigger>
+            <TabsTrigger value="images" className="text-xs sm:text-sm">Images ({filterAssets('image').length})</TabsTrigger>
+            <TabsTrigger value="colors" className="text-xs sm:text-sm">Colors ({filterAssets('color').length})</TabsTrigger>
+            <TabsTrigger value="fonts" className="text-xs sm:text-sm">Fonts ({filterAssets('font').length})</TabsTrigger>
+            <TabsTrigger value="copy" className="text-xs sm:text-sm">Copy ({filterAssets('copy').length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -303,43 +303,43 @@ const Library = () => {
                 />
               </Card>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 {filterAssets('color').length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <Palette className="w-5 h-5" /> Colors
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Palette className="w-4 h-4 sm:w-5 sm:h-5" /> Colors
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                       {filterAssets('color').map(asset => <ColorCard key={asset.id} asset={asset} />)}
                     </div>
                   </div>
                 )}
                 {filterAssets('font').length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <Type className="w-5 h-5" /> Fonts
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Type className="w-4 h-4 sm:w-5 sm:h-5" /> Fonts
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                       {filterAssets('font').map(asset => <FontCard key={asset.id} asset={asset} />)}
                     </div>
                   </div>
                 )}
                 {filterAssets('image').length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <Image className="w-5 h-5" /> Images
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Image className="w-4 h-4 sm:w-5 sm:h-5" /> Images
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                       {filterAssets('image').map(asset => <ImageCard key={asset.id} asset={asset} />)}
                     </div>
                   </div>
                 )}
                 {filterAssets('copy').length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5" /> Copy
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> Copy
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                       {filterAssets('copy').map(asset => <CopyCard key={asset.id} asset={asset} />)}
                     </div>
                   </div>
