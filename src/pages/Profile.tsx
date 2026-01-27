@@ -19,30 +19,36 @@ interface ProfileCardProps {
 }
 
 const ProfileCard = ({ icon, iconBg, title, description, status, onClick, buttonColor }: ProfileCardProps) => (
-  <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4 hover:shadow-lg transition-shadow">
-    <div className="flex items-start justify-between">
-      <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-lg ${iconBg} flex items-center justify-center`}>
-          {icon}
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground text-lg">{title}</h3>
-          <p className="text-muted-foreground text-sm">{description}</p>
-        </div>
+  <div 
+    className="bg-card border border-border rounded-xl p-4 sm:p-6 flex flex-col gap-3 sm:gap-4 hover:shadow-lg hover:border-primary/30 transition-all duration-300 cursor-pointer group"
+    onClick={onClick}
+  >
+    <div className="flex items-start gap-3 sm:gap-4">
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+        {icon}
       </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-foreground text-base sm:text-lg truncate">{title}</h3>
+        <p className="text-muted-foreground text-xs sm:text-sm truncate">{description}</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between">
+      <p className="text-muted-foreground text-xs sm:text-sm">
+        {status === "filled" ? "✓ Completed" : "Not filled yet"}
+      </p>
       <Button 
         variant="outline" 
         size="sm" 
-        onClick={onClick}
-        className={`gap-2 ${buttonColor} border-current hover:bg-current/10`}
+        className={`gap-1.5 ${buttonColor} border-current hover:bg-current/10 text-xs sm:text-sm`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
       >
         <Pencil className="w-3 h-3" />
-        Fill
+        <span className="hidden sm:inline">Fill</span>
       </Button>
     </div>
-    <p className="text-muted-foreground text-sm">
-      {status === "filled" ? "Completed" : "Not filled yet. Click Fill to get started."}
-    </p>
   </div>
 );
 
@@ -87,15 +93,15 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} businessName={currentClientName || undefined} />
       
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex items-start justify-between mb-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Profile</h1>
-            <p className="text-muted-foreground">Build your company profile to personalize your content generation</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Profile</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Build your company profile to personalize your content generation</p>
           </div>
           
-          <div className="flex flex-col items-end gap-2">
-            <span className="text-sm text-muted-foreground">Working on:</span>
+          <div className="flex flex-col sm:items-end gap-1 sm:gap-2">
+            <span className="text-xs sm:text-sm text-muted-foreground">Working on:</span>
             <ClientSwitcher
               key={refreshKey}
               currentClientId={currentClientId}
@@ -105,9 +111,9 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <ProfileCard
-            icon={<Building2 className="w-6 h-6 text-primary" />}
+            icon={<Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />}
             iconBg="bg-primary/10"
             title="Company Information"
             description="Business info & market analysis"
@@ -116,7 +122,7 @@ const Profile = () => {
             buttonColor="text-primary"
           />
           <ProfileCard
-            icon={<Users className="w-6 h-6 text-emerald-500" />}
+            icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />}
             iconBg="bg-emerald-500/10"
             title="Target Audience"
             description="Who you want to reach"
@@ -125,7 +131,7 @@ const Profile = () => {
             buttonColor="text-emerald-500"
           />
           <ProfileCard
-            icon={<Lightbulb className="w-6 h-6 text-orange-500" />}
+            icon={<Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />}
             iconBg="bg-orange-500/10"
             title="Value Proposition"
             description="What makes you unique"
@@ -133,11 +139,8 @@ const Profile = () => {
             onClick={() => navigate("/profile/value")}
             buttonColor="text-orange-500"
           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <ProfileCard
-            icon={<Globe className="w-6 h-6 text-blue-500" />}
+            icon={<Globe className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />}
             iconBg="bg-blue-500/10"
             title="Import Brand Sources"
             description="Website & social media assets"
@@ -146,7 +149,7 @@ const Profile = () => {
             buttonColor="text-blue-500"
           />
           <ProfileCard
-            icon={<FolderOpen className="w-6 h-6 text-purple-500" />}
+            icon={<FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />}
             iconBg="bg-purple-500/10"
             title="Brand Library"
             description="All your imported assets"
@@ -155,7 +158,7 @@ const Profile = () => {
             buttonColor="text-purple-500"
           />
           <ProfileCard
-            icon={<Share2 className="w-6 h-6 text-pink-500" />}
+            icon={<Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500" />}
             iconBg="bg-pink-500/10"
             title="Social Media Assets"
             description="Posts, images & analytics"
@@ -163,11 +166,8 @@ const Profile = () => {
             onClick={() => navigate("/profile/social")}
             buttonColor="text-pink-500"
           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <ProfileCard
-            icon={<Package className="w-6 h-6 text-teal-500" />}
+            icon={<Package className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500" />}
             iconBg="bg-teal-500/10"
             title="Products"
             description="Your products & product lines"

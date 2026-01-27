@@ -339,24 +339,24 @@ const ImportBrandSources = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <Button
           variant="ghost"
           onClick={() => navigate("/profile")}
-          className="mb-6 text-primary hover:text-primary/80 -ml-2"
+          className="mb-4 sm:mb-6 text-primary hover:text-primary/80 -ml-2"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Import Brand Sources</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Import Brand Sources</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Connect your website and social media accounts to automatically extract and organize your brand assets
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Website Import Card */}
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
