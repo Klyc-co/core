@@ -20,12 +20,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 import linkedinLogo from "@/assets/linkedin-logo.png";
 import snapchatLogo from "@/assets/snapchat-logo.png";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SocialPlatform {
   id: string;
@@ -66,6 +74,10 @@ const NewCampaign = () => {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [scheduledTime, setScheduledTime] = useState("");
   const [isLaunching, setIsLaunching] = useState(false);
+  const [isSendingForApproval, setIsSendingForApproval] = useState(false);
+  const [showClientDialog, setShowClientDialog] = useState(false);
+  const [clients, setClients] = useState<{ id: string; client_id: string; client_name: string }[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
 
   useEffect(() => {
     const getUser = async () => {
@@ -75,9 +87,127 @@ const NewCampaign = () => {
         return;
       }
       setUser(user);
+      fetchClients(user.id);
     };
     getUser();
   }, [navigate]);
+
+  const fetchClients = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("marketer_clients")
+      .select("id, client_id, client_name")
+      .eq("marketer_id", userId)
+      .eq("status", "active");
+    
+    if (!error && data) {
+      setClients(data);
+    }
+  };
+
+  const handleSendForApproval = async () => {
+    if (!campaignName.trim()) {
+      toast({
+        title: "Campaign name required",
+        description: "Please enter a campaign name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedPlatforms.length === 0) {
+      toast({
+        title: "Select platforms",
+        description: "Please select at least one platform to post to",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!scheduledDate) {
+      toast({
+        title: "Select date",
+        description: "Please select a date for your campaign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!scheduledTime) {
+      toast({
+        title: "Select time",
+        description: "Please select a time for your campaign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if there are clients to send to
+    if (clients.length === 0) {
+      toast({
+        title: "No clients available",
+        description: "You need to add a client first before sending for approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShowClientDialog(true);
+  };
+
+  const confirmSendForApproval = async () => {
+    if (!user || !selectedClientId) return;
+
+    setIsSendingForApproval(true);
+
+    try {
+      // First create the scheduled campaign with pending_approval status
+      const { data: campaignData, error: campaignError } = await supabase
+        .from("scheduled_campaigns")
+        .insert({
+          user_id: user.id,
+          campaign_name: campaignName.trim(),
+          product: selectedProduct || null,
+          links: links,
+          tags: tags,
+          platforms: selectedPlatforms,
+          scheduled_date: format(scheduledDate!, "yyyy-MM-dd"),
+          scheduled_time: scheduledTime,
+          status: "pending_approval",
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      // Then create the approval request
+      const { error: approvalError } = await supabase
+        .from("campaign_approvals")
+        .insert({
+          scheduled_campaign_id: campaignData.id,
+          marketer_id: user.id,
+          client_id: selectedClientId,
+          status: "pending",
+        });
+
+      if (approvalError) throw approvalError;
+
+      toast({
+        title: "Sent for Approval! 📩",
+        description: `Your campaign "${campaignName}" has been sent for client approval.`,
+      });
+
+      setShowClientDialog(false);
+      navigate("/campaigns/pending");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send campaign for approval.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingForApproval(false);
+    }
+  };
 
   const handleAddLink = () => {
     if (newLink.trim() && isValidUrl(newLink.trim())) {
@@ -461,8 +591,27 @@ const NewCampaign = () => {
             </div>
           </div>
 
-          {/* Launch Button */}
-          <div className="pt-4">
+          {/* Action Buttons */}
+          <div className="pt-4 space-y-3">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full border-amber-500 text-amber-500 hover:bg-amber-500/10"
+              onClick={handleSendForApproval}
+              disabled={isSendingForApproval}
+            >
+              {isSendingForApproval ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-5 w-5" />
+                  Send for Approval
+                </>
+              )}
+            </Button>
             <Button
               size="lg"
               className="w-full"
@@ -480,6 +629,52 @@ const NewCampaign = () => {
             </Button>
           </div>
         </div>
+
+        {/* Client Selection Dialog */}
+        <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send for Client Approval</DialogTitle>
+              <DialogDescription>
+                Select which client should review and approve this campaign.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <Label>Select Client</Label>
+              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Choose a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.client_id}>
+                      {client.client_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowClientDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={confirmSendForApproval}
+                disabled={!selectedClientId || isSendingForApproval}
+                className="bg-amber-500 hover:bg-amber-600"
+              >
+                {isSendingForApproval ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Send for Approval
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

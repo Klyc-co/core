@@ -39,6 +39,7 @@ import Campaigns from "./pages/Campaigns";
 import NewCampaign from "./pages/NewCampaign";
 import Schedule from "./pages/Schedule";
 import GenerateCampaignIdeas from "./pages/GenerateCampaignIdeas";
+import PendingApprovals from "./pages/PendingApprovals";
 import CampaignDrafts from "./pages/CampaignDrafts";
 import CampaignDraftView from "./pages/CampaignDraftView";
 import BrandStrategy from "./pages/BrandStrategy";
@@ -110,6 +111,7 @@ const App = () => (
           <Route path="/campaigns/new" element={<WithSidebar><NewCampaign /></WithSidebar>} />
           <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />
           <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
+          <Route path="/campaigns/pending" element={<WithSidebar><PendingApprovals /></WithSidebar>} />
           <Route path="/campaigns/drafts" element={<WithSidebar><CampaignDrafts /></WithSidebar>} />
           <Route path="/campaigns/drafts/:id" element={<WithSidebar><CampaignDraftView /></WithSidebar>} />
           <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
