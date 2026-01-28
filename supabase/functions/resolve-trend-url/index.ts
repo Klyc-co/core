@@ -17,96 +17,138 @@ type Platform =
   | "twitter"
   | "snapchat";
 
+// Platform-native search/explore URLs (fallback when no direct post found)
+function getPlatformFallbackUrl(platform: Platform, trendName: string): string {
+  const q = encodeURIComponent(trendName);
+  switch (platform) {
+    case "tiktok":
+      return `https://www.tiktok.com/search?q=${q}`;
+    case "instagram":
+      // Instagram hashtag explore (remove spaces for hashtag)
+      const hashtag = trendName.replace(/\s+/g, "").toLowerCase();
+      return `https://www.instagram.com/explore/tags/${hashtag}/`;
+    case "facebook":
+      return `https://www.facebook.com/search/posts?q=${q}`;
+    case "linkedin":
+      return `https://www.linkedin.com/search/results/content/?keywords=${q}`;
+    case "twitter":
+      return `https://x.com/search?q=${q}&src=typed_query&f=top`;
+    case "snapchat":
+      return `https://www.snapchat.com/explore/${q}`;
+    case "google":
+    default:
+      return `https://trends.google.com/trends/explore?q=${q}&geo=US`;
+  }
+}
+
 function buildSearchQuery(platform: Platform, trendName: string) {
   // Goal: return URLs that are *actual post/permalink pages*.
-  // We bias queries toward common permalink patterns.
   const base = `"${trendName}"`;
 
   switch (platform) {
     case "instagram":
-      // Posts/Reels
-      return `${base} site:instagram.com (reel OR p OR tv)`;
+      return `${base} site:instagram.com/p OR site:instagram.com/reel`;
     case "facebook":
-      return `${base} site:facebook.com (posts OR permalink OR reel OR videos)`;
+      return `${base} site:facebook.com/*/posts OR site:facebook.com/watch`;
     case "linkedin":
-      return `${base} site:linkedin.com (posts OR feed/update)`;
+      return `${base} site:linkedin.com/posts OR site:linkedin.com/feed/update`;
     case "snapchat":
-      return `${base} site:snapchat.com (spotlight OR discover)`;
+      return `${base} site:snapchat.com/spotlight`;
     case "tiktok":
-      return `${base} site:tiktok.com (video OR @)`;
+      return `${base} site:tiktok.com/@*/video`;
     case "twitter":
-      return `${base} site:x.com (status)`;
+      return `${base} site:x.com/*/status`;
     case "google":
     default:
       return trendName;
   }
 }
 
-function scoreUrl(platform: Platform, url: string) {
+function scoreUrl(platform: Platform, url: string): number {
   const u = url.toLowerCase();
 
-  // Hard domain preferences
-  const domainScore: Record<Platform, number> = {
-    instagram: u.includes("instagram.com") ? 50 : -50,
-    facebook: u.includes("facebook.com") ? 50 : -50,
-    linkedin: u.includes("linkedin.com") ? 50 : -50,
-    snapchat: u.includes("snapchat.com") ? 50 : -50,
-    tiktok: u.includes("tiktok.com") ? 50 : -50,
-    twitter: u.includes("x.com") || u.includes("twitter.com") ? 50 : -50,
-    google: 0,
+  // Must be on the correct domain
+  const domainMap: Record<Platform, string[]> = {
+    instagram: ["instagram.com"],
+    facebook: ["facebook.com", "fb.com", "fb.watch"],
+    linkedin: ["linkedin.com"],
+    snapchat: ["snapchat.com"],
+    tiktok: ["tiktok.com"],
+    twitter: ["x.com", "twitter.com"],
+    google: ["google.com", "trends.google.com"],
   };
 
-  // Permalink heuristics
+  const domains = domainMap[platform] || [];
+  const onCorrectDomain = domains.some((d) => u.includes(d));
+  if (!onCorrectDomain) return -100;
+
+  let score = 50; // Base score for being on correct domain
+
+  // Permalink heuristics (bonus points)
   const patterns: Record<Platform, RegExp[]> = {
-    instagram: [/\/p\//, /\/reel\//, /\/tv\//],
+    instagram: [/\/p\/[A-Za-z0-9_-]+/, /\/reel\/[A-Za-z0-9_-]+/, /\/tv\/[A-Za-z0-9_-]+/],
     facebook: [/\/posts\//, /permalink\.php/, /\/reel\//, /\/videos\//, /\/watch\//],
-    linkedin: [/\/posts\//, /\/feed\/update\//],
+    linkedin: [/\/posts\/[a-z0-9-]+/, /\/feed\/update\//],
     snapchat: [/\/spotlight\//, /\/discover\//],
-    tiktok: [/\/video\//],
-    twitter: [/\/(status|statuses)\//],
-    google: [],
+    tiktok: [/\/@[^/]+\/video\/\d+/],
+    twitter: [/\/status\/\d+/],
+    google: [/\/trends\/explore/],
   };
 
-  let s = domainScore[platform] ?? 0;
   for (const re of patterns[platform] ?? []) {
-    if (re.test(u)) s += 25;
+    if (re.test(u)) {
+      score += 30;
+      break; // Only count once
+    }
   }
 
-  // Penalize obvious non-post pages
-  if (u.includes("/search") || u.includes("/explore") || u.includes("/hashtag")) s -= 10;
-  if (u.includes("google.") || u.includes("duckduckgo.")) s -= 100;
+  // Penalize non-post pages
+  if (u.includes("/search") || u.includes("/explore/search")) score -= 20;
+  if (u.includes("/login") || u.includes("/signup")) score -= 50;
+  if (u.includes("help.") || u.includes("about.")) score -= 30;
 
-  return s;
+  return score;
 }
 
-async function firecrawlSearch(query: string) {
+async function firecrawlSearch(query: string): Promise<string[]> {
   if (!FIRECRAWL_API_KEY) {
-    throw new Error("FIRECRAWL_API_KEY not configured");
+    console.log("FIRECRAWL_API_KEY not configured");
+    return [];
   }
 
-  const res = await fetch("https://api.firecrawl.dev/v1/search", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query,
-      limit: 8,
-      tbs: "qdr:d",
-    }),
-  });
+  try {
+    console.log("Searching Firecrawl:", query);
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Search failed (${res.status}): ${text.slice(0, 200)}`);
+    const res = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        limit: 10,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Firecrawl search failed (${res.status}):`, text.slice(0, 300));
+      return [];
+    }
+
+    const data = await res.json();
+    const results: { url?: string; title?: string }[] = Array.isArray(data?.data) ? data.data : [];
+    
+    console.log(`Firecrawl returned ${results.length} results`);
+    
+    return results
+      .map((r) => r.url)
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+  } catch (error) {
+    console.error("Firecrawl search error:", error);
+    return [];
   }
-
-  const data = await res.json();
-  const results: { url?: string; title?: string }[] = Array.isArray(data?.data) ? data.data : [];
-  return results
-    .map((r) => r.url)
-    .filter((u): u is string => typeof u === "string" && u.length > 0);
 }
 
 serve(async (req) => {
@@ -173,8 +215,9 @@ serve(async (req) => {
       });
     }
 
+    // If we already have a URL, return it
     if (trend.trend_url) {
-      return new Response(JSON.stringify({ url: trend.trend_url, cached: true }), {
+      return new Response(JSON.stringify({ url: trend.trend_url, cached: true, type: "direct" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -183,39 +226,54 @@ serve(async (req) => {
     const query = buildSearchQuery(platform, trend.trend_name);
     const urls = await firecrawlSearch(query);
 
-    const best = urls
+    console.log(`Scoring ${urls.length} URLs for platform ${platform}`);
+
+    // Score and sort URLs
+    const scored = urls
       .map((url) => ({ url, score: scoreUrl(platform, url) }))
-      .sort((a, b) => b.score - a.score)[0];
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-    if (!best || best.score < 10) {
-      return new Response(JSON.stringify({ error: "No direct post URL found" }), {
-        status: 404,
+    console.log("Top scored URLs:", scored.slice(0, 3).map(s => `${s.url} (${s.score})`));
+
+    const best = scored[0];
+
+    // If we found a good direct URL, save and return it
+    if (best && best.score >= 50) {
+      const { error: updateError } = await supabaseAdmin
+        .from("social_trends")
+        .update({ trend_url: best.url })
+        .eq("id", trendId)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        console.error("Failed updating trend_url", updateError);
+      }
+
+      return new Response(JSON.stringify({ url: best.url, cached: false, type: "direct" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from("social_trends")
-      .update({ trend_url: best.url })
-      .eq("id", trendId)
-      .eq("user_id", userId);
+    // Fallback: return platform-native search/explore URL
+    const fallbackUrl = getPlatformFallbackUrl(platform, trend.trend_name);
+    console.log(`No direct post found, using fallback: ${fallbackUrl}`);
 
-    if (updateError) {
-      console.error("Failed updating trend_url", updateError);
-      return new Response(JSON.stringify({ error: "Failed to save URL" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    return new Response(
+      JSON.stringify({ 
+        url: fallbackUrl, 
+        cached: false, 
+        type: "search",
+        message: "No direct post found. Opening platform search instead."
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
-    return new Response(JSON.stringify({ url: best.url, cached: false }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
     console.error("resolve-trend-url error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

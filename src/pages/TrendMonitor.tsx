@@ -476,6 +476,7 @@ function TrendCard({ trend }: { trend: TrendItem }) {
   const [isResolving, setIsResolving] = useState(false);
 
   const handleView = async () => {
+    // If we already have a cached URL, open it directly
     if (trend.trend_url) {
       window.open(trend.trend_url, "_blank", "noopener,noreferrer");
       return;
@@ -488,22 +489,33 @@ function TrendCard({ trend }: { trend: TrendItem }) {
       });
 
       if (res.error) throw res.error;
+
       const url = res.data?.url as string | undefined;
+      const type = res.data?.type as "direct" | "search" | undefined;
+      const message = res.data?.message as string | undefined;
+
       if (!url) throw new Error("No URL returned");
 
-      // Open the resolved direct post link.
+      // Open the resolved link
       window.open(url, "_blank", "noopener,noreferrer");
 
-      toast({
-        title: "Link found",
-        description: "Opened the direct post link and saved it for next time.",
-      });
+      if (type === "direct") {
+        toast({
+          title: "Direct post found!",
+          description: "Opened the post and saved the link for next time.",
+        });
+      } else {
+        // It's a platform search fallback
+        toast({
+          title: "Opening platform search",
+          description: message || "No direct post found—opening search on the platform instead.",
+        });
+      }
     } catch (e: any) {
+      console.error("Error resolving trend URL:", e);
       toast({
-        title: "Couldn't find a direct post link",
-        description:
-          e?.message ||
-          "That platform may require login or the trend doesn't map to a single public post.",
+        title: "Couldn't open link",
+        description: e?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {
