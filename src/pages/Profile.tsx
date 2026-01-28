@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import ClientSwitcher from "@/components/ClientSwitcher";
 import AddClientDialog from "@/components/AddClientDialog";
-import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2, Package } from "lucide-react";
+import { Building2, Pencil, Globe, FolderOpen, Share2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -115,29 +115,11 @@ const Profile = () => {
           <ProfileCard
             icon={<Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />}
             iconBg="bg-primary/10"
-            title="Company Information"
-            description="Business info & market analysis"
+            title="Business Profile"
+            description="Company, audience & value proposition"
             status="not_filled"
             onClick={() => navigate("/profile/company")}
             buttonColor="text-primary"
-          />
-          <ProfileCard
-            icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />}
-            iconBg="bg-emerald-500/10"
-            title="Target Audience"
-            description="Who you want to reach"
-            status="not_filled"
-            onClick={() => navigate("/profile/audience")}
-            buttonColor="text-emerald-500"
-          />
-          <ProfileCard
-            icon={<Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />}
-            iconBg="bg-orange-500/10"
-            title="Value Proposition"
-            description="What makes you unique"
-            status="not_filled"
-            onClick={() => navigate("/profile/value")}
-            buttonColor="text-orange-500"
           />
           <ProfileCard
             icon={<Globe className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />}
