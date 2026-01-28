@@ -472,6 +472,32 @@ export default function TrendMonitor() {
 function TrendCard({ trend }: { trend: TrendItem }) {
   const config = platformConfig[trend.platform];
   const [open, setOpen] = useState(false);
+
+  const externalUrl = (() => {
+    if (trend.trend_url) return trend.trend_url;
+
+    const q = (query: string) => `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    const name = trend.trend_name;
+
+    switch (trend.platform) {
+      case "tiktok":
+        // TikTok is often viewable without login; keep direct search
+        return `https://www.tiktok.com/search?q=${encodeURIComponent(name)}`;
+      case "twitter":
+        return `https://x.com/search?q=${encodeURIComponent(name)}&src=typed_query`;
+      case "instagram":
+        return q(`${name} site:instagram.com`);
+      case "facebook":
+        return q(`${name} site:facebook.com`);
+      case "linkedin":
+        return q(`${name} site:linkedin.com`);
+      case "snapchat":
+        return q(`${name} site:snapchat.com`);
+      case "google":
+      default:
+        return q(name);
+    }
+  })();
   
   return (
     <>
@@ -528,30 +554,11 @@ function TrendCard({ trend }: { trend: TrendItem }) {
             <p className="text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
-            <Button 
-              onClick={() => {
-                if (trend.trend_url) {
-                  window.open(trend.trend_url, '_blank');
-                } else {
-                  // Generate search URLs - use Google for platforms that require login
-                  const searchQuery = encodeURIComponent(trend.trend_name);
-                  const platformUrls: Record<string, string> = {
-                    google: `https://www.google.com/search?q=${searchQuery}`,
-                    tiktok: `https://www.tiktok.com/search?q=${searchQuery}`,
-                    instagram: `https://www.google.com/search?q=${searchQuery}+site:instagram.com`,
-                    twitter: `https://x.com/search?q=${searchQuery}&src=typed_query`,
-                    facebook: `https://www.google.com/search?q=${searchQuery}+site:facebook.com`,
-                    linkedin: `https://www.google.com/search?q=${searchQuery}+site:linkedin.com`,
-                    snapchat: `https://www.google.com/search?q=${searchQuery}+snapchat`,
-                  };
-                  const url = platformUrls[trend.platform] || `https://www.google.com/search?q=${searchQuery}`;
-                  window.open(url, '_blank');
-                }
-              }}
-              className="w-full gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View on {config?.label || trend.platform}
+            <Button asChild className="w-full gap-2">
+              <a href={externalUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4" />
+                View on {config?.label || trend.platform}
+              </a>
             </Button>
           </div>
         </DialogContent>
