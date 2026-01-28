@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,32 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentClientName, setCurrentClientName] = useState<string | null>(null);
+
+  // Read current client from localStorage
+  useEffect(() => {
+    const loadClient = () => {
+      const savedClientName = localStorage.getItem("currentClientName");
+      setCurrentClientName(savedClientName);
+    };
+    
+    loadClient();
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      loadClient();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also poll for changes within the same tab (localStorage events don't fire in same tab)
+    const interval = setInterval(loadClient, 1000);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -52,6 +78,11 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
     <div className={mobile ? "flex flex-col gap-2 pt-4 border-t border-border" : "flex items-center gap-1"}>
       {businessName && !mobile && (
         <span className="text-sm text-muted-foreground mr-2 hidden lg:block">{businessName}</span>
+      )}
+      {currentClientName && !mobile && (
+        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+          <span className="text-sm font-medium text-primary">{currentClientName}</span>
+        </div>
       )}
       <Button 
         variant="ghost" 
@@ -129,6 +160,12 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
                 <div className="flex items-center justify-between mb-6">
                   <Logo />
                 </div>
+                {currentClientName && (
+                  <div className="mb-4 pb-4 border-b border-border">
+                    <p className="text-xs text-muted-foreground mb-1">Current Client</p>
+                    <p className="font-semibold text-primary">{currentClientName}</p>
+                  </div>
+                )}
                 {businessName && (
                   <p className="text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
                     Working on: <span className="font-medium text-foreground">{businessName}</span>

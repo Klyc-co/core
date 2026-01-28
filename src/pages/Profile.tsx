@@ -87,6 +87,8 @@ const Profile = () => {
       localStorage.removeItem("currentClientId");
       localStorage.removeItem("currentClientName");
     }
+    // Trigger storage event for components listening (like AppHeader)
+    window.dispatchEvent(new Event("storage"));
   };
 
   return (

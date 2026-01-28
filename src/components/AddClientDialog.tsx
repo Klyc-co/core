@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Send } from "lucide-react";
 
 interface AddClientDialogProps {
   open: boolean;
@@ -28,29 +28,54 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: AddClientDialogP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientName.trim()) return;
+    if (!clientName.trim() || !clientEmail.trim()) return;
 
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Generate a placeholder client_id (will be linked when client signs up)
+      // Generate a placeholder client_id (will be updated when client signs up)
       const placeholderClientId = crypto.randomUUID();
 
       const { error } = await supabase.from("marketer_clients").insert({
         marketer_id: user.id,
         client_id: placeholderClientId,
         client_name: clientName.trim(),
-        client_email: clientEmail.trim() || null,
+        client_email: clientEmail.trim().toLowerCase(),
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Client added!",
-        description: `${clientName} has been added to your clients.`,
+      // Get marketer's name from their profile
+      const { data: marketerProfile } = await supabase
+        .from("client_profiles")
+        .select("business_name")
+        .eq("user_id", user.id)
+        .single();
+
+      // Send invitation email
+      const { error: emailError } = await supabase.functions.invoke("send-client-invite", {
+        body: {
+          clientEmail: clientEmail.trim().toLowerCase(),
+          clientName: clientName.trim(),
+          marketerName: marketerProfile?.business_name || null,
+        },
       });
+
+      if (emailError) {
+        console.error("Failed to send invitation email:", emailError);
+        toast({
+          title: "Client added",
+          description: `${clientName} was added but the invitation email could not be sent. Please share the portal link manually.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Invitation sent!",
+          description: `An invitation email has been sent to ${clientEmail}.`,
+        });
+      }
 
       setClientName("");
       setClientEmail("");
@@ -71,9 +96,9 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: AddClientDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Client</DialogTitle>
+          <DialogTitle>Invite New Client</DialogTitle>
           <DialogDescription>
-            Add a client to manage their campaigns and content.
+            Add a client and send them an invitation to the Klyc client portal.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -89,16 +114,21 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: AddClientDialogP
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientEmail">Client Email (optional)</Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                placeholder="client@example.com"
-              />
+              <Label htmlFor="clientEmail">Client Email *</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  className="pl-10"
+                  required
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
-                Used to invite them to the client portal
+                The client must sign up with this exact email to be connected to your account
               </p>
             </div>
           </div>
@@ -106,9 +136,13 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: AddClientDialogP
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !clientName.trim()}>
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Add Client
+            <Button type="submit" disabled={loading || !clientName.trim() || !clientEmail.trim()}>
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Send Invitation
             </Button>
           </DialogFooter>
         </form>

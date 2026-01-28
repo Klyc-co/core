@@ -41,21 +41,56 @@ const ClientAuth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const linkClientToMarketer = async (userId: string, userEmail: string) => {
+    // Find any marketer_clients record with matching email (case-insensitive)
+    const { data: pendingClients, error } = await supabase
+      .from("marketer_clients")
+      .select("*")
+      .ilike("client_email", userEmail);
+
+    if (error) {
+      console.error("Error finding marketer link:", error);
+      return;
+    }
+
+    // Update all matching records to link with this user's ID
+    for (const client of pendingClients || []) {
+      // Check if client_id is a placeholder UUID (not yet linked to a real user)
+      // We update it to the real user ID
+      const { error: updateError } = await supabase
+        .from("marketer_clients")
+        .update({ client_id: userId })
+        .eq("id", client.id);
+
+      if (updateError) {
+        console.error("Error linking client to marketer:", updateError);
+      } else {
+        console.log("Successfully linked client to marketer:", client.client_name);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        
+        // Link client to marketer on login (in case they signed up before being invited)
+        if (data.user) {
+          await linkClientToMarketer(data.user.id, email.toLowerCase());
+        }
+        
         toast({ title: "Welcome back!", description: "You've been logged in." });
         navigate("/client/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -66,6 +101,12 @@ const ClientAuth = () => {
           },
         });
         if (error) throw error;
+        
+        // Link this new client to any marketer who invited them
+        if (data.user) {
+          await linkClientToMarketer(data.user.id, email.toLowerCase());
+        }
+        
         toast({ title: "Account created!", description: "Welcome to Klyc Client Portal." });
         navigate("/client/dashboard");
       }
