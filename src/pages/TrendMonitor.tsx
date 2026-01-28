@@ -528,15 +528,31 @@ function TrendCard({ trend }: { trend: TrendItem }) {
             <p className="text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
-            {trend.trend_url && (
-              <Button 
-                onClick={() => window.open(trend.trend_url!, '_blank')}
-                className="w-full gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                View Link
-              </Button>
-            )}
+            <Button 
+              onClick={() => {
+                if (trend.trend_url) {
+                  window.open(trend.trend_url, '_blank');
+                } else {
+                  // Generate a search URL based on platform
+                  const searchQuery = encodeURIComponent(trend.trend_name);
+                  const platformUrls: Record<string, string> = {
+                    google: `https://www.google.com/search?q=${searchQuery}`,
+                    tiktok: `https://www.tiktok.com/search?q=${searchQuery}`,
+                    instagram: `https://www.instagram.com/explore/tags/${searchQuery.replace(/%20/g, '')}`,
+                    twitter: `https://twitter.com/search?q=${searchQuery}`,
+                    facebook: `https://www.facebook.com/search/top?q=${searchQuery}`,
+                    linkedin: `https://www.linkedin.com/search/results/content/?keywords=${searchQuery}`,
+                    snapchat: `https://www.snapchat.com/explore/${searchQuery}`,
+                  };
+                  const url = platformUrls[trend.platform] || `https://www.google.com/search?q=${searchQuery}`;
+                  window.open(url, '_blank');
+                }
+              }}
+              className="w-full gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View on {config?.label || trend.platform}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
