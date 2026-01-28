@@ -476,7 +476,8 @@ function TrendCard({ trend }: { trend: TrendItem }) {
   const externalUrl = (() => {
     if (trend.trend_url) return trend.trend_url;
 
-    const q = (query: string) => `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    // Some environments/extensions block google.com; use an alternate search provider for fallbacks.
+    const q = (query: string) => `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
     const name = trend.trend_name;
 
     switch (trend.platform) {
