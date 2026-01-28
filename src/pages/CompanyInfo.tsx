@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Building2, Users, Lightbulb } from "lucide-react";
+import { ArrowLeft, Building2, Users, Lightbulb, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const industries = [
   "Technology",
@@ -58,6 +59,9 @@ const benefitFocuses = [
 const CompanyInfo = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("company");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Company Info state
   const [companyData, setCompanyData] = useState({
@@ -100,18 +104,125 @@ const CompanyInfo = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         navigate("/auth");
+        return;
       }
-    });
+      
+      setUserId(user.id);
+
+      // Load existing profile data
+      const { data: profile, error } = await supabase
+        .from("client_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error loading profile:", error);
+        toast.error("Failed to load profile data");
+      } else if (profile) {
+        // Populate company data
+        setCompanyData({
+          businessName: profile.business_name || "",
+          website: profile.website || "",
+          shortDescription: profile.description || "",
+          industry: profile.industry || "",
+          productCategory: profile.product_category || "",
+          geographyMarkets: profile.geography_markets || "",
+          marketingGoals: profile.marketing_goals || "",
+          mainCompetitors: profile.main_competitors || ""
+        });
+
+        // Populate audience data from JSONB
+        const savedAudience = profile.audience_data as Record<string, unknown> || {};
+        setAudienceData({
+          audienceType: (savedAudience.audienceType as string) || "",
+          mainAudienceSummary: profile.target_audience || (savedAudience.mainAudienceSummary as string) || "",
+          secondaryAudiences: (savedAudience.secondaryAudiences as string) || "",
+          ageRange: (savedAudience.ageRange as number[]) || [25],
+          incomeLevel: (savedAudience.incomeLevel as string) || "",
+          femalePercent: (savedAudience.femalePercent as string) || "50",
+          malePercent: (savedAudience.malePercent as string) || "50",
+          geographicFocus: (savedAudience.geographicFocus as string) || "",
+          coreValuesInterests: (savedAudience.coreValuesInterests as string) || "",
+          lifestyleSummary: (savedAudience.lifestyleSummary as string) || "",
+          purchaseFrequency: (savedAudience.purchaseFrequency as string) || "",
+          preferredChannels: (savedAudience.preferredChannels as string) || "",
+          commonObjections: (savedAudience.commonObjections as string) || ""
+        });
+
+        // Populate value data from JSONB
+        const savedValue = profile.value_data as Record<string, unknown> || {};
+        setValueData({
+          corePromise: profile.value_proposition || (savedValue.corePromise as string) || "",
+          elevatorPitch: (savedValue.elevatorPitch as string) || "",
+          customerPainPoints: (savedValue.customerPainPoints as string) || "",
+          howWeSolveIt: (savedValue.howWeSolveIt as string) || "",
+          benefitFocus: (savedValue.benefitFocus as string) || "",
+          uniqueValueDrivers: (savedValue.uniqueValueDrivers as string) || "",
+          proofPoints: (savedValue.proofPoints as string) || ""
+        });
+      }
+
+      setLoading(false);
+    };
+
+    loadProfile();
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save to database
-    navigate("/profile");
+    
+    if (!userId) {
+      toast.error("You must be logged in to save");
+      return;
+    }
+
+    setSaving(true);
+
+    const profileData = {
+      user_id: userId,
+      business_name: companyData.businessName,
+      website: companyData.website,
+      description: companyData.shortDescription,
+      industry: companyData.industry,
+      product_category: companyData.productCategory,
+      geography_markets: companyData.geographyMarkets,
+      marketing_goals: companyData.marketingGoals,
+      main_competitors: companyData.mainCompetitors,
+      target_audience: audienceData.mainAudienceSummary,
+      value_proposition: valueData.corePromise,
+      audience_data: audienceData,
+      value_data: valueData,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from("client_profiles")
+      .upsert(profileData, { onConflict: "user_id" });
+
+    setSaving(false);
+
+    if (error) {
+      console.error("Error saving profile:", error);
+      toast.error("Failed to save profile");
+    } else {
+      toast.success("Profile saved successfully!");
+      navigate("/profile");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -484,8 +595,15 @@ const CompanyInfo = () => {
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <Button type="submit" className="flex-1 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90">
-              Save Profile
+            <Button type="submit" disabled={saving} className="flex-1 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90">
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Profile"
+              )}
             </Button>
           </div>
         </form>
