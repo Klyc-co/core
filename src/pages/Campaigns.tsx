@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Clock, Zap, History, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Clock, Zap, History, Sparkles, Send } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Campaigns = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -17,9 +19,20 @@ const Campaigns = () => {
         navigate("/auth");
       } else {
         setUser(user);
+        fetchPendingCount(user.id);
       }
     });
   }, [navigate]);
+
+  const fetchPendingCount = async (userId: string) => {
+    const { count } = await supabase
+      .from("campaign_approvals")
+      .select("*", { count: "exact", head: true })
+      .eq("marketer_id", userId)
+      .eq("status", "pending");
+    
+    setPendingCount(count || 0);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,6 +56,19 @@ const Campaigns = () => {
             >
               <Sparkles className="w-4 h-4" />
               Generate Campaign Ideas
+            </Button>
+            <Button 
+              variant="outline"
+              className="gap-2 border-amber-500 text-amber-500 hover:bg-amber-500/10 relative"
+              onClick={() => navigate("/campaigns/pending")}
+            >
+              <Send className="w-4 h-4" />
+              Pending Approvals
+              {pendingCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-amber-500 text-white">
+                  {pendingCount}
+                </Badge>
+              )}
             </Button>
             <Button 
               variant="outline"
