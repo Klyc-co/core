@@ -9,32 +9,88 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Upload, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+
+interface ProductLine {
+  id: string;
+  name: string;
+}
 
 const CreateProduct = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [productLines, setProductLines] = useState<ProductLine[]>([]);
+  
   const [productType, setProductType] = useState("");
   const [productName, setProductName] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [valuePropositions, setValuePropositions] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
-  const [productLine, setProductLine] = useState("");
+  const [productLineId, setProductLineId] = useState("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         navigate("/auth");
-      } else {
-        setUser(user);
+        return;
       }
-    });
+      
+      setUser(user);
+
+      // Load existing product lines
+      const { data: lines } = await supabase
+        .from("product_lines")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("name");
+
+      if (lines) {
+        setProductLines(lines);
+      }
+    };
+
+    loadData();
   }, [navigate]);
 
-  const handleSubmit = () => {
-    // TODO: Save product to database
-    navigate("/profile/products");
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
+
+    if (!productType || !productName) {
+      toast.error("Please fill in required fields (Product Type and Name)");
+      return;
+    }
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("products")
+      .insert({
+        user_id: user.id,
+        product_type: productType,
+        name: productName,
+        short_description: shortDescription || null,
+        value_propositions: valuePropositions || null,
+        target_audience: targetAudience || null,
+        product_line_id: productLineId && productLineId !== "none" ? productLineId : null
+      });
+
+    setSaving(false);
+
+    if (error) {
+      console.error("Error creating product:", error);
+      toast.error("Failed to create product");
+    } else {
+      toast.success("Product created successfully!");
+      navigate("/profile/products");
+    }
   };
 
   return (
@@ -57,7 +113,7 @@ const CreateProduct = () => {
         <Card>
           <CardContent className="p-6 space-y-6">
             <div className="space-y-2">
-              <Label>What type of product is this?</Label>
+              <Label>What type of product is this? *</Label>
               <Select value={productType} onValueChange={setProductType}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select product type" />
@@ -72,7 +128,7 @@ const CreateProduct = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Product Name</Label>
+              <Label>Product Name *</Label>
               <Input 
                 placeholder="Enter product name" 
                 value={productName}
@@ -140,12 +196,17 @@ const CreateProduct = () => {
 
             <div className="space-y-2">
               <Label>Add to existing product line</Label>
-              <Select value={productLine} onValueChange={setProductLine}>
+              <Select value={productLineId} onValueChange={setProductLineId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a product line..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No product lines yet</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                  {productLines.map((line) => (
+                    <SelectItem key={line.id} value={line.id}>
+                      {line.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -161,8 +222,16 @@ const CreateProduct = () => {
               <Button 
                 className="flex-1 bg-gradient-to-r from-primary to-pink-500 hover:opacity-90"
                 onClick={handleSubmit}
+                disabled={saving}
               >
-                Create Product
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Product"
+                )}
               </Button>
             </div>
           </CardContent>
