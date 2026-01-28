@@ -198,44 +198,62 @@ export type Database = {
       }
       client_profiles: {
         Row: {
+          audience_data: Json | null
           brand_colors: string[] | null
           business_name: string | null
           created_at: string
           description: string | null
+          geography_markets: string | null
           id: string
           industry: string | null
           logo_url: string | null
+          main_competitors: string | null
+          marketing_goals: string | null
+          product_category: string | null
           target_audience: string | null
           updated_at: string
           user_id: string
+          value_data: Json | null
           value_proposition: string | null
           website: string | null
         }
         Insert: {
+          audience_data?: Json | null
           brand_colors?: string[] | null
           business_name?: string | null
           created_at?: string
           description?: string | null
+          geography_markets?: string | null
           id?: string
           industry?: string | null
           logo_url?: string | null
+          main_competitors?: string | null
+          marketing_goals?: string | null
+          product_category?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id: string
+          value_data?: Json | null
           value_proposition?: string | null
           website?: string | null
         }
         Update: {
+          audience_data?: Json | null
           brand_colors?: string[] | null
           business_name?: string | null
           created_at?: string
           description?: string | null
+          geography_markets?: string | null
           id?: string
           industry?: string | null
           logo_url?: string | null
+          main_competitors?: string | null
+          marketing_goals?: string | null
+          product_category?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id?: string
+          value_data?: Json | null
           value_proposition?: string | null
           website?: string | null
         }
