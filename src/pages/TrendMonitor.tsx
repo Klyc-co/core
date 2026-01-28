@@ -533,16 +533,16 @@ function TrendCard({ trend }: { trend: TrendItem }) {
                 if (trend.trend_url) {
                   window.open(trend.trend_url, '_blank');
                 } else {
-                  // Generate a search URL based on platform
+                  // Generate search URLs - use Google for platforms that require login
                   const searchQuery = encodeURIComponent(trend.trend_name);
                   const platformUrls: Record<string, string> = {
                     google: `https://www.google.com/search?q=${searchQuery}`,
                     tiktok: `https://www.tiktok.com/search?q=${searchQuery}`,
-                    instagram: `https://www.instagram.com/explore/tags/${searchQuery.replace(/%20/g, '')}`,
-                    twitter: `https://twitter.com/search?q=${searchQuery}`,
-                    facebook: `https://www.facebook.com/search/top?q=${searchQuery}`,
-                    linkedin: `https://www.linkedin.com/search/results/content/?keywords=${searchQuery}`,
-                    snapchat: `https://www.snapchat.com/explore/${searchQuery}`,
+                    instagram: `https://www.google.com/search?q=${searchQuery}+site:instagram.com`,
+                    twitter: `https://x.com/search?q=${searchQuery}&src=typed_query`,
+                    facebook: `https://www.google.com/search?q=${searchQuery}+site:facebook.com`,
+                    linkedin: `https://www.google.com/search?q=${searchQuery}+site:linkedin.com`,
+                    snapchat: `https://www.google.com/search?q=${searchQuery}+snapchat`,
                   };
                   const url = platformUrls[trend.platform] || `https://www.google.com/search?q=${searchQuery}`;
                   window.open(url, '_blank');
