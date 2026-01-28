@@ -472,33 +472,44 @@ export default function TrendMonitor() {
 function TrendCard({ trend }: { trend: TrendItem }) {
   const config = platformConfig[trend.platform];
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const [isResolving, setIsResolving] = useState(false);
 
-  const externalUrl = (() => {
-    if (trend.trend_url) return trend.trend_url;
-
-    // Some environments/extensions block google.com; use an alternate search provider for fallbacks.
-    const q = (query: string) => `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-    const name = trend.trend_name;
-
-    switch (trend.platform) {
-      case "tiktok":
-        // TikTok is often viewable without login; keep direct search
-        return `https://www.tiktok.com/search?q=${encodeURIComponent(name)}`;
-      case "twitter":
-        return `https://x.com/search?q=${encodeURIComponent(name)}&src=typed_query`;
-      case "instagram":
-        return q(`${name} site:instagram.com`);
-      case "facebook":
-        return q(`${name} site:facebook.com`);
-      case "linkedin":
-        return q(`${name} site:linkedin.com`);
-      case "snapchat":
-        return q(`${name} site:snapchat.com`);
-      case "google":
-      default:
-        return q(name);
+  const handleView = async () => {
+    if (trend.trend_url) {
+      window.open(trend.trend_url, "_blank", "noopener,noreferrer");
+      return;
     }
-  })();
+
+    setIsResolving(true);
+    try {
+      const res = await supabase.functions.invoke("resolve-trend-url", {
+        body: { trendId: trend.id },
+      });
+
+      if (res.error) throw res.error;
+      const url = res.data?.url as string | undefined;
+      if (!url) throw new Error("No URL returned");
+
+      // Open the resolved direct post link.
+      window.open(url, "_blank", "noopener,noreferrer");
+
+      toast({
+        title: "Link found",
+        description: "Opened the direct post link and saved it for next time.",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Couldn't find a direct post link",
+        description:
+          e?.message ||
+          "That platform may require login or the trend doesn't map to a single public post.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResolving(false);
+    }
+  };
   
   return (
     <>
@@ -555,11 +566,11 @@ function TrendCard({ trend }: { trend: TrendItem }) {
             <p className="text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
-            <Button asChild className="w-full gap-2">
-              <a href={externalUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4" />
-                View on {config?.label || trend.platform}
-              </a>
+            <Button onClick={handleView} className="w-full gap-2" disabled={isResolving}>
+              <ExternalLink className={`w-4 h-4 ${isResolving ? "animate-pulse" : ""}`} />
+              {isResolving
+                ? "Finding post..."
+                : `View on ${config?.label || trend.platform}`}
             </Button>
           </div>
         </DialogContent>
