@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import ClientSwitcher from "@/components/ClientSwitcher";
 import AddClientDialog from "@/components/AddClientDialog";
-import { Building2, Pencil, Globe, FolderOpen, Share2, Package } from "lucide-react";
+import { Building2, Pencil, FolderOpen, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -46,7 +46,7 @@ const ProfileCard = ({ icon, iconBg, title, description, status, onClick, button
         }}
       >
         <Pencil className="w-3 h-3" />
-        <span className="hidden sm:inline">Fill</span>
+        <span className="hidden sm:inline">Open</span>
       </Button>
     </div>
   </div>
@@ -111,42 +111,24 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <ProfileCard
             icon={<Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />}
             iconBg="bg-primary/10"
             title="Business Profile"
-            description="Company, audience & value proposition"
+            description="Company info, audience & brand sources"
             status="not_filled"
             onClick={() => navigate("/profile/company")}
             buttonColor="text-primary"
           />
           <ProfileCard
-            icon={<Globe className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />}
-            iconBg="bg-blue-500/10"
-            title="Import Brand Sources"
-            description="Website & social media assets"
-            status="not_filled"
-            onClick={() => navigate("/profile/import")}
-            buttonColor="text-blue-500"
-          />
-          <ProfileCard
             icon={<FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />}
             iconBg="bg-purple-500/10"
             title="Brand Library"
-            description="All your imported assets"
+            description="Assets & social media content"
             status="not_filled"
             onClick={() => navigate("/profile/library")}
             buttonColor="text-purple-500"
-          />
-          <ProfileCard
-            icon={<Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-pink-500" />}
-            iconBg="bg-pink-500/10"
-            title="Social Media Assets"
-            description="Posts, images & analytics"
-            status="not_filled"
-            onClick={() => navigate("/profile/social")}
-            buttonColor="text-pink-500"
           />
           <ProfileCard
             icon={<Package className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500" />}
