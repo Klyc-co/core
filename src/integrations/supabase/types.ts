@@ -390,6 +390,80 @@ export type Database = {
           },
         ]
       }
+      product_lines: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          product_line_id: string | null
+          product_type: string
+          short_description: string | null
+          target_audience: string | null
+          updated_at: string
+          user_id: string
+          value_propositions: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          product_line_id?: string | null
+          product_type: string
+          short_description?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id: string
+          value_propositions?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          product_line_id?: string | null
+          product_type?: string
+          short_description?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id?: string
+          value_propositions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_product_line_id_fkey"
+            columns: ["product_line_id"]
+            isOneToOne: false
+            referencedRelation: "product_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
