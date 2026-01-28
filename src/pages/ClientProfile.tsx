@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ClientHeader from "@/components/ClientHeader";
-import { Building2, Users, Lightbulb, Pencil, Globe, FolderOpen, Share2, Package, History } from "lucide-react";
+import { Building2, Pencil, Globe, FolderOpen, Share2, Package, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 
@@ -72,33 +72,12 @@ const ClientProfile = () => {
           <ProfileCard
             icon={<Building2 className="w-6 h-6 text-primary" />}
             iconBg="bg-primary/10"
-            title="Company Information"
-            description="Business details & industry"
+            title="Business Profile"
+            description="Company, audience & value proposition"
             status="not_filled"
             onClick={() => navigate("/client/profile/company")}
             buttonColor="text-primary"
           />
-          <ProfileCard
-            icon={<Users className="w-6 h-6 text-emerald-500" />}
-            iconBg="bg-emerald-500/10"
-            title="Target Audience"
-            description="Who you want to reach"
-            status="not_filled"
-            onClick={() => navigate("/client/profile/audience")}
-            buttonColor="text-emerald-500"
-          />
-          <ProfileCard
-            icon={<Lightbulb className="w-6 h-6 text-orange-500" />}
-            iconBg="bg-orange-500/10"
-            title="Value Proposition"
-            description="What makes you unique"
-            status="not_filled"
-            onClick={() => navigate("/client/profile/value")}
-            buttonColor="text-orange-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <ProfileCard
             icon={<Globe className="w-6 h-6 text-blue-500" />}
             iconBg="bg-blue-500/10"
