@@ -52,7 +52,6 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
 
   const navItems = [
     { label: "Campaigns", path: "/campaigns" },
-    { label: "Content", path: "/projects" },
     { label: "Strategy", path: "/brand-strategy" },
   ];
 

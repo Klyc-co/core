@@ -466,11 +466,21 @@ const BrandStrategy = () => {
       
       {/* Page Header */}
       <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold text-foreground">Brand Strategy</h1>
-          <p className="text-muted-foreground mt-1">
-            AI-powered brand and market intelligence for creative, audience, and SEO strategy.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Brand Strategy</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              AI-powered brand and market intelligence for creative, audience, and SEO strategy.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/projects")}
+            className="gap-2 w-full sm:w-auto"
+          >
+            <FileText className="w-4 h-4" />
+            Content
+          </Button>
         </div>
       </div>
 
