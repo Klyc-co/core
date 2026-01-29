@@ -748,8 +748,8 @@ const ImportBrandSources = () => {
             {/* Riverside */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                  <RiversideIcon className="w-8 h-8" />
+                <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center">
+                  <RiversideIcon className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-medium text-foreground">Riverside</span>
               </div>
