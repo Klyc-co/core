@@ -319,6 +319,116 @@ export type Database = {
         }
         Relationships: []
       }
+      google_drive_assets: {
+        Row: {
+          asset_name: string
+          asset_type: string | null
+          content_extracted: string | null
+          created_at: string
+          description: string | null
+          drive_connection_id: string | null
+          drive_file_id: string | null
+          drive_url: string | null
+          id: string
+          is_priority: boolean | null
+          metadata: Json | null
+          synced_at: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          asset_name: string
+          asset_type?: string | null
+          content_extracted?: string | null
+          created_at?: string
+          description?: string | null
+          drive_connection_id?: string | null
+          drive_file_id?: string | null
+          drive_url?: string | null
+          id?: string
+          is_priority?: boolean | null
+          metadata?: Json | null
+          synced_at?: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          asset_name?: string
+          asset_type?: string | null
+          content_extracted?: string | null
+          created_at?: string
+          description?: string | null
+          drive_connection_id?: string | null
+          drive_file_id?: string | null
+          drive_url?: string | null
+          id?: string
+          is_priority?: boolean | null
+          metadata?: Json | null
+          synced_at?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_drive_assets_drive_connection_id_fkey"
+            columns: ["drive_connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_drive_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_drive_connections: {
+        Row: {
+          assets_sheet_id: string | null
+          assets_sheet_url: string | null
+          brand_guidelines_sheet_id: string | null
+          brand_guidelines_sheet_url: string | null
+          connection_status: string
+          created_at: string
+          folder_id: string
+          folder_url: string | null
+          id: string
+          last_sync_at: string | null
+          metadata: Json | null
+          updated_at: string
+          user_id: string
+          zapier_webhook_url: string | null
+        }
+        Insert: {
+          assets_sheet_id?: string | null
+          assets_sheet_url?: string | null
+          brand_guidelines_sheet_id?: string | null
+          brand_guidelines_sheet_url?: string | null
+          connection_status?: string
+          created_at?: string
+          folder_id: string
+          folder_url?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          updated_at?: string
+          user_id: string
+          zapier_webhook_url?: string | null
+        }
+        Update: {
+          assets_sheet_id?: string | null
+          assets_sheet_url?: string | null
+          brand_guidelines_sheet_id?: string | null
+          brand_guidelines_sheet_url?: string | null
+          connection_status?: string
+          created_at?: string
+          folder_id?: string
+          folder_url?: string | null
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          updated_at?: string
+          user_id?: string
+          zapier_webhook_url?: string | null
+        }
+        Relationships: []
+      }
       marketer_clients: {
         Row: {
           client_email: string | null
