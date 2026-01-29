@@ -12,6 +12,9 @@ import type { User } from "@supabase/supabase-js";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import CanvaIcon from "@/components/icons/CanvaIcon";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
+import SlackIcon from "@/components/icons/SlackIcon";
+import DiscordIcon from "@/components/icons/DiscordIcon";
+import CapCutIcon from "@/components/icons/CapCutIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -676,6 +679,60 @@ const ImportBrandSources = () => {
                   <ElevenLabsIcon className="w-4 h-4 text-white dark:text-black" />
                 </div>
                 <span className="text-sm font-medium text-foreground">ElevenLabs</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Slack */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#4A154B] flex items-center justify-center border border-border">
+                  <SlackIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Slack</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Discord */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#5865F2] flex items-center justify-center">
+                  <DiscordIcon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Discord</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* CapCut */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
+                  <CapCutIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">CapCut</span>
               </div>
               <Button 
                 variant="secondary" 
