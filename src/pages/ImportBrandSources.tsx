@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, HardDrive, FolderOpen, ExternalLink, CircleDot } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
+import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -34,8 +35,8 @@ interface ScanResult {
 const socialPlatforms: SocialPlatform[] = [
   { 
     name: "Google Drive", 
-    icon: HardDrive, 
-    color: "bg-gradient-to-br from-yellow-400 via-green-500 to-blue-500", 
+    icon: GoogleDriveIcon, 
+    color: "bg-white dark:bg-gray-800", 
     textColor: "text-green-600",
     isGoogleDrive: true,
   },
@@ -693,7 +694,7 @@ const ImportBrandSources = () => {
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <HardDrive className="w-5 h-5" />
+              <GoogleDriveIcon className="w-5 h-5" />
               Connect Google Drive via Zapier
             </DialogTitle>
             <DialogDescription>
