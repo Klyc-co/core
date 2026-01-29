@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, HardDrive, FolderOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, HardDrive, FolderOpen, ExternalLink, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -80,6 +80,13 @@ const socialPlatforms: SocialPlatform[] = [
     color: "bg-black", 
     textColor: "text-black dark:text-white",
     customOAuth: true,
+  },
+  { 
+    name: "Pinterest", 
+    icon: CircleDot, 
+    color: "bg-red-600", 
+    textColor: "text-red-600",
+    comingSoon: true,
   },
 ];
 
