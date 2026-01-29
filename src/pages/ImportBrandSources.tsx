@@ -15,6 +15,7 @@ import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import SlackIcon from "@/components/icons/SlackIcon";
 import DiscordIcon from "@/components/icons/DiscordIcon";
 import CapCutIcon from "@/components/icons/CapCutIcon";
+import RiversideIcon from "@/components/icons/RiversideIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -733,6 +734,24 @@ const ImportBrandSources = () => {
                   <CapCutIcon className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-medium text-foreground">CapCut</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Riverside */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center">
+                  <RiversideIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Riverside</span>
               </div>
               <Button 
                 variant="secondary" 
