@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ClientHeader from "@/components/ClientHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3 } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, HardDrive, FolderOpen, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -20,9 +21,17 @@ interface SocialPlatform {
   scopes?: string[];
   comingSoon?: boolean;
   customOAuth?: boolean;
+  isGoogleDrive?: boolean;
 }
 
 const socialPlatforms: SocialPlatform[] = [
+  { 
+    name: "Google Drive", 
+    icon: HardDrive, 
+    color: "bg-gradient-to-br from-yellow-400 via-green-500 to-blue-500", 
+    textColor: "text-green-600",
+    isGoogleDrive: true,
+  },
   { 
     name: "YouTube", 
     icon: Youtube, 
@@ -75,6 +84,17 @@ const ClientSocialAssets = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
+  const [showDriveDialog, setShowDriveDialog] = useState(false);
+  const [driveSetupInfo, setDriveSetupInfo] = useState<{
+    user_id: string;
+    callback_url: string;
+    folder_url?: string;
+  } | null>(null);
+  const [driveConnection, setDriveConnection] = useState<{
+    folder_url?: string;
+    assets_sheet_url?: string;
+    last_sync_at?: string;
+  } | null>(null);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -140,7 +160,7 @@ const ClientSocialAssets = () => {
       .select("id")
       .eq("user_id", user.id)
       .eq("platform", "tiktok")
-      .single();
+      .maybeSingle();
     
     if (tiktokConnection) {
       newStatus['TikTok'] = 'connected';
@@ -151,7 +171,7 @@ const ClientSocialAssets = () => {
       .select("id")
       .eq("user_id", user.id)
       .eq("platform", "instagram")
-      .single();
+      .maybeSingle();
     
     if (instagramConnection) {
       newStatus['Instagram'] = 'connected';
@@ -162,13 +182,64 @@ const ClientSocialAssets = () => {
       .select("id")
       .eq("user_id", user.id)
       .eq("platform", "linkedin")
-      .single();
+      .maybeSingle();
     
     if (linkedinConnection) {
       newStatus['LinkedIn'] = 'connected';
     }
+
+    // Check Google Drive connection
+    const { data: driveConn } = await supabase
+      .from("google_drive_connections")
+      .select("id, folder_url, assets_sheet_url, last_sync_at, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (driveConn && driveConn.connection_status === 'connected') {
+      newStatus['Google Drive'] = 'connected';
+      setDriveConnection({
+        folder_url: driveConn.folder_url,
+        assets_sheet_url: driveConn.assets_sheet_url,
+        last_sync_at: driveConn.last_sync_at,
+      });
+    }
     
     setConnectionStatus(newStatus);
+  };
+
+  const handleConnectGoogleDrive = async () => {
+    if (!user) {
+      toast.error("Please log in first");
+      return;
+    }
+
+    setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connecting' }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("google-drive-init");
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.already_connected) {
+        toast.success("Google Drive already connected!");
+        setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connected' }));
+        setDriveConnection({ folder_url: data.folder_url });
+        return;
+      }
+
+      setDriveSetupInfo({
+        user_id: data.user_id,
+        callback_url: data.callback_url,
+      });
+      setShowDriveDialog(true);
+      setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
+    } catch (err) {
+      console.error("Google Drive init error:", err);
+      toast.error("Failed to initialize Google Drive connection");
+      setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
+    }
   };
 
   const handleScanWebsite = async () => {
@@ -183,6 +254,12 @@ const ClientSocialAssets = () => {
   const handleConnectPlatform = async (platform: SocialPlatform) => {
     if (platform.comingSoon) {
       toast.info(`${platform.name} integration coming soon!`);
+      return;
+    }
+
+    // Handle Google Drive separately
+    if (platform.isGoogleDrive) {
+      await handleConnectGoogleDrive();
       return;
     }
 
@@ -419,7 +496,109 @@ const ClientSocialAssets = () => {
             </div>
           </div>
         </Card>
+
+        {/* Google Drive Connected Info */}
+        {driveConnection && connectionStatus['Google Drive'] === 'connected' && (
+          <Card className="p-4 mt-4 bg-green-500/10 border-green-500/30">
+            <div className="flex items-start gap-3">
+              <FolderOpen className="w-5 h-5 text-green-500 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-medium text-foreground mb-1">Google Drive Connected</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Your marketing assets folder is connected. Assets will sync automatically.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {driveConnection.folder_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={driveConnection.folder_url} target="_blank" rel="noopener noreferrer">
+                        <FolderOpen className="w-3 h-3 mr-1" />
+                        Open Folder
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </a>
+                    </Button>
+                  )}
+                  {driveConnection.assets_sheet_url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={driveConnection.assets_sheet_url} target="_blank" rel="noopener noreferrer">
+                        Asset Index
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                {driveConnection.last_sync_at && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Last synced: {new Date(driveConnection.last_sync_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
       </main>
+
+      {/* Google Drive Setup Dialog */}
+      <Dialog open={showDriveDialog} onOpenChange={setShowDriveDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HardDrive className="w-5 h-5" />
+              Connect Google Drive via Zapier
+            </DialogTitle>
+            <DialogDescription>
+              Set up a Zapier automation to connect your Google Drive for marketing asset storage.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            <div className="bg-muted rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-sm">Your Zapier Setup Details:</h4>
+              
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">User ID:</span>
+                  <code className="ml-2 bg-background px-2 py-0.5 rounded text-xs">{driveSetupInfo?.user_id}</code>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Callback URL:</span>
+                  <div className="mt-1">
+                    <code className="bg-background px-2 py-1 rounded text-xs block break-all">{driveSetupInfo?.callback_url}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Steps to complete:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Create a Zap with a "Webhooks by Zapier" trigger (Catch Hook)</li>
+                <li>Add Google Drive actions to create your asset folder structure</li>
+                <li>Add Google Sheets actions to create an asset tracking spreadsheet</li>
+                <li>Add a final "POST" action to send the folder/sheet IDs to the callback URL above</li>
+                <li>Trigger the Zap to complete the connection</li>
+              </ol>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                <strong>Tip:</strong> Include <code className="text-xs">action: "setup_complete"</code> and your <code className="text-xs">user_id</code> in the POST body, along with <code className="text-xs">folder_id</code>, <code className="text-xs">folder_url</code>, and sheet details.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setShowDriveDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              navigator.clipboard.writeText(driveSetupInfo?.callback_url || '');
+              toast.success("Callback URL copied to clipboard!");
+            }}>
+              Copy Callback URL
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

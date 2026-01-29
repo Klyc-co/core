@@ -71,3 +71,9 @@ verify_jwt = false
 
 [functions.linkedin-analytics]
 verify_jwt = false
+
+[functions.google-drive-init]
+verify_jwt = false
+
+[functions.google-drive-zapier-callback]
+verify_jwt = false
