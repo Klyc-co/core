@@ -8,14 +8,21 @@ const SlackIcon = ({ className }: SlackIconProps) => (
     className={className}
     fill="none"
   >
-    <path d="M6 15a2 2 0 1 1 0-4h2v2a2 2 0 0 1-2 2z" fill="#E01E5A" />
-    <path d="M9 15a2 2 0 0 1 2-2h2v6a2 2 0 1 1-4 0v-4z" fill="#E01E5A" />
-    <path d="M15 6a2 2 0 1 1 4 0v2h-2a2 2 0 0 1-2-2z" fill="#2EB67D" />
-    <path d="M15 9a2 2 0 0 1 2-2h2a2 2 0 1 1 0 4h-4V9z" fill="#2EB67D" />
-    <path d="M18 15a2 2 0 1 1 0 4h-2v-2a2 2 0 0 1 2-2z" fill="#ECB22E" />
-    <path d="M15 15a2 2 0 0 1-2 2H5a2 2 0 1 1 0-4h8a2 2 0 0 1 2 2z" fill="#ECB22E" />
-    <path d="M9 18a2 2 0 1 1-4 0v-2h2a2 2 0 0 1 2 2z" fill="#36C5F0" />
-    <path d="M9 15a2 2 0 0 1-2-2V5a2 2 0 1 1 4 0v10z" fill="#36C5F0" />
+    {/* Top left - blue */}
+    <path d="M5.5 9.5A1.5 1.5 0 1 1 5.5 6.5H7V8A1.5 1.5 0 0 1 5.5 9.5Z" fill="#36C5F0" />
+    <path d="M8.5 9.5A1.5 1.5 0 0 1 7 8V4.5a1.5 1.5 0 1 1 3 0V8A1.5 1.5 0 0 1 8.5 9.5Z" fill="#36C5F0" />
+    
+    {/* Top right - green */}
+    <path d="M14.5 5.5A1.5 1.5 0 1 1 17.5 5.5V7H16A1.5 1.5 0 0 1 14.5 5.5Z" fill="#2EB67D" />
+    <path d="M14.5 8.5A1.5 1.5 0 0 1 16 7H19.5a1.5 1.5 0 0 1 0 3H16A1.5 1.5 0 0 1 14.5 8.5Z" fill="#2EB67D" />
+    
+    {/* Bottom right - yellow */}
+    <path d="M18.5 14.5A1.5 1.5 0 1 1 18.5 17.5H17V16A1.5 1.5 0 0 1 18.5 14.5Z" fill="#ECB22E" />
+    <path d="M15.5 14.5A1.5 1.5 0 0 1 17 16V19.5a1.5 1.5 0 0 1-3 0V16A1.5 1.5 0 0 1 15.5 14.5Z" fill="#ECB22E" />
+    
+    {/* Bottom left - red */}
+    <path d="M9.5 18.5A1.5 1.5 0 1 1 6.5 18.5V17H8A1.5 1.5 0 0 1 9.5 18.5Z" fill="#E01E5A" />
+    <path d="M9.5 15.5A1.5 1.5 0 0 1 8 17H4.5a1.5 1.5 0 0 1 0-3H8A1.5 1.5 0 0 1 9.5 15.5Z" fill="#E01E5A" />
   </svg>
 );
 
