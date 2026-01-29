@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
+import CanvaIcon from "@/components/icons/CanvaIcon";
+import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -636,8 +638,59 @@ const ImportBrandSources = () => {
           </Card>
         </div>
 
+        {/* Social Tools Section */}
+        <Card className="p-6 mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <Wand2 className="w-6 h-6 text-purple-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Social Tools</h2>
+              <p className="text-sm text-muted-foreground">Creative and AI-powered tools</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Canva */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#00C4CC] flex items-center justify-center">
+                  <CanvaIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Canva</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* ElevenLabs */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center">
+                  <ElevenLabsIcon className="w-4 h-4 text-white dark:text-black" />
+                </div>
+                <span className="text-sm font-medium text-foreground">ElevenLabs</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+          </div>
+        </Card>
+
         {/* Security Note */}
-        <Card className="p-4 bg-muted/50 border-muted">
+        <Card className="p-4 mt-6 bg-muted/50 border-muted">
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>
