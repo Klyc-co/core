@@ -172,15 +172,26 @@ const ImportBrandSources = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        navigate("/auth");
-      } else {
-        setUser(user);
-        checkConnectedAccounts(user);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        checkConnectedAccounts(session.user);
       }
     });
-  }, [navigate]);
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          checkConnectedAccounts(session.user);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const checkConnectedAccounts = async (user: User) => {
     const identities = user.identities || [];
