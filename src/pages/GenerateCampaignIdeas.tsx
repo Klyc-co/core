@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap, Wand2, Download } from "lucide-react";
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -50,6 +50,8 @@ const GenerateCampaignIdeas = () => {
   const [campaignGoals, setCampaignGoals] = useState("");
   const [targetAudienceDescription, setTargetAudienceDescription] = useState("");
   const [campaignObjective, setCampaignObjective] = useState("");
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -107,6 +109,7 @@ const GenerateCampaignIdeas = () => {
       } else if (selectedContentType === "visual-post") {
         setPostCaption(data.postCaption || "");
         setImagePrompt(data.imagePrompt || "");
+        setGeneratedImageUrl(null); // Reset image when generating new idea
       } else if (selectedContentType === "written") {
         setArticleOutline(data.articleOutline || "");
       }
@@ -136,6 +139,68 @@ const GenerateCampaignIdeas = () => {
       setTags([...tags, formattedTag]);
       setNewTag("");
     }
+  };
+
+  const handleGenerateImage = async () => {
+    if (!imagePrompt.trim()) {
+      toast({
+        title: "No image prompt",
+        description: "Please generate a campaign idea first or enter an image prompt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ prompt: imagePrompt }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        if (response.status === 402) {
+          throw new Error("Payment required. Please add credits to your workspace.");
+        }
+        throw new Error(error.error || "Failed to generate image");
+      }
+
+      const data = await response.json();
+      setGeneratedImageUrl(data.imageUrl);
+      
+      toast({
+        title: "Image generated!",
+        description: "Your AI-generated image is ready.",
+      });
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Failed to generate image",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!generatedImageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = generatedImageUrl;
+    link.download = `campaign-image-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSaveDraft = async (sendToZapier: boolean = false) => {
@@ -488,7 +553,7 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Use this prompt with an AI image generator like DALL-E, Midjourney, or Stable Diffusion:
+                    Edit the prompt below and click "Generate Image" to create your visual:
                   </p>
                   <Textarea
                     value={imagePrompt}
@@ -497,8 +562,55 @@ const GenerateCampaignIdeas = () => {
                     rows={5}
                     className="resize-none bg-muted/50"
                   />
+                  <Button 
+                    className="w-full mt-4 gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-90"
+                    onClick={handleGenerateImage}
+                    disabled={isGeneratingImage || !imagePrompt.trim()}
+                  >
+                    {isGeneratingImage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating Image...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4" />
+                        Generate Image with AI
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
+
+              {/* Generated Image Preview */}
+              {generatedImageUrl && (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-foreground">Generated Image</h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleDownloadImage}
+                        className="gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="rounded-lg overflow-hidden border border-border">
+                      <img 
+                        src={generatedImageUrl} 
+                        alt="AI Generated Campaign Image" 
+                        className="w-full h-auto"
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-3">
+                      Right-click to save, or use the download button above.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <CampaignStrategy 
                 tags={tags} 
