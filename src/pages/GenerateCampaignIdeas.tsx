@@ -52,6 +52,7 @@ const GenerateCampaignIdeas = () => {
   const [campaignObjective, setCampaignObjective] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus">("nano-banana");
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -159,7 +160,10 @@ const GenerateCampaignIdeas = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ prompt: imagePrompt }),
+        body: JSON.stringify({ 
+          prompt: imagePrompt,
+          model: selectedImageModel 
+        }),
       });
 
       if (!response.ok) {
@@ -553,7 +557,7 @@ const GenerateCampaignIdeas = () => {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Edit the prompt below and click "Generate Image" to create your visual:
+                    Edit the prompt below, select an AI model, and click "Generate Image":
                   </p>
                   <Textarea
                     value={imagePrompt}
@@ -562,20 +566,64 @@ const GenerateCampaignIdeas = () => {
                     rows={5}
                     className="resize-none bg-muted/50"
                   />
+                  
+                  {/* Model Selection */}
+                  <div className="mt-4 mb-4">
+                    <p className="text-sm font-medium text-foreground mb-2">Select AI Model:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setSelectedImageModel("nano-banana")}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                          selectedImageModel === "nano-banana"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="text-lg mb-1">🍌</span>
+                        <span className="text-xs font-medium text-foreground">Nano Banana</span>
+                        <span className="text-[10px] text-muted-foreground">Fast & Free</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedImageModel("runway")}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                          selectedImageModel === "runway"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="text-lg mb-1">🎬</span>
+                        <span className="text-xs font-medium text-foreground">Runway</span>
+                        <span className="text-[10px] text-muted-foreground">High Quality</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedImageModel("fooocus")}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                          selectedImageModel === "fooocus"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="text-lg mb-1">🎨</span>
+                        <span className="text-xs font-medium text-foreground">Fooocus</span>
+                        <span className="text-[10px] text-muted-foreground">Coming Soon</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <Button 
-                    className="w-full mt-4 gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-90"
+                    className="w-full gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-90"
                     onClick={handleGenerateImage}
-                    disabled={isGeneratingImage || !imagePrompt.trim()}
+                    disabled={isGeneratingImage || !imagePrompt.trim() || selectedImageModel === "fooocus"}
                   >
                     {isGeneratingImage ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating Image...
+                        Generating with {selectedImageModel === "nano-banana" ? "Nano Banana" : "Runway"}...
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4" />
-                        Generate Image with AI
+                        Generate Image with {selectedImageModel === "nano-banana" ? "Nano Banana" : selectedImageModel === "runway" ? "Runway" : "Fooocus"}
                       </>
                     )}
                   </Button>
