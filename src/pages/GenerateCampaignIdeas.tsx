@@ -74,26 +74,19 @@ const GenerateCampaignIdeas = () => {
     setShowResults(false);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-campaign-idea`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('generate-campaign-idea', {
+        body: {
           contentType: selectedContentType,
           targetAudience,
           prompt: customPrompt,
           productInfo: selectedProduct || null,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate campaign idea");
+      if (error) {
+        throw new Error(error.message || "Failed to generate campaign idea");
       }
 
-      const data = await response.json();
       
       // Populate the fields based on content type
       setCampaignIdea(data.campaignIdea || "");
@@ -154,30 +147,16 @@ const GenerateCampaignIdeas = () => {
 
     setIsGeneratingImage(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ 
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { 
           prompt: imagePrompt,
           model: selectedImageModel 
-        }),
+        },
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        if (response.status === 429) {
-          throw new Error("Rate limit exceeded. Please try again later.");
-        }
-        if (response.status === 402) {
-          throw new Error("Payment required. Please add credits to your workspace.");
-        }
-        throw new Error(error.error || "Failed to generate image");
+      if (error) {
+        throw new Error(error.message || "Failed to generate image");
       }
-
-      const data = await response.json();
       setGeneratedImageUrl(data.imageUrl);
       
       toast({
