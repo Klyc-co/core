@@ -142,8 +142,19 @@ Deno.serve(async (req) => {
     let homepageBranding: BrandingData | null = null;
     
     if (brandingResponse.ok && brandingData.success) {
-      homepageBranding = brandingData.data?.branding || null;
-      console.log('Homepage branding extracted');
+      // Firecrawl v1 nests data inside data.data for scrape responses
+      const pageData = brandingData.data?.data || brandingData.data;
+      homepageBranding = pageData?.branding || brandingData.branding || null;
+      console.log('Homepage branding response:', JSON.stringify(brandingData, null, 2).substring(0, 500));
+      console.log('Extracted branding:', homepageBranding ? 'Found' : 'Not found');
+      if (homepageBranding?.colors) {
+        console.log('Colors found:', Object.keys(homepageBranding.colors));
+      }
+      if (homepageBranding?.fonts) {
+        console.log('Fonts found:', homepageBranding.fonts.length);
+      }
+    } else {
+      console.error('Branding scrape failed:', brandingData.error || 'Unknown error');
     }
 
     // Step 2: Start a crawl to get all pages
