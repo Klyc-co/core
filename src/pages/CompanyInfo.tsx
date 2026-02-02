@@ -9,9 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3 } from "lucide-react";
+import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import CanvaIcon from "@/components/icons/CanvaIcon";
+import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
+import SlackIcon from "@/components/icons/SlackIcon";
+import DiscordIcon from "@/components/icons/DiscordIcon";
+import CapCutIcon from "@/components/icons/CapCutIcon";
+import RiversideIcon from "@/components/icons/RiversideIcon";
 import { useClientContext } from "@/contexts/ClientContext";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -654,6 +660,99 @@ const CompanyInfo = () => {
                       </div>
                     );
                   })}
+                </div>
+              </Card>
+
+              {/* Social Tools Section */}
+              <Card className="p-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <Wand2 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-semibold text-foreground">Social Tools</h2>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Creative and AI-powered tools</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Canva */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#00C4CC] flex items-center justify-center">
+                        <CanvaIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Canva</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* ElevenLabs */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center">
+                        <ElevenLabsIcon className="w-4 h-4 text-white dark:text-black" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">ElevenLabs</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Slack */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#4A154B] flex items-center justify-center border border-border">
+                        <SlackIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Slack</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Discord */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#5865F2] flex items-center justify-center">
+                        <DiscordIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Discord</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* CapCut */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
+                        <CapCutIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">CapCut</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Riverside */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center">
+                        <RiversideIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Riverside</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </TabsContent>
