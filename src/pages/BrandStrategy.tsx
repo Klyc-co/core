@@ -16,14 +16,17 @@ import {
   TrendingUp,
   Eye,
   ExternalLink,
-  Users
+  Users,
+  Menu
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import AppHeader from "@/components/AppHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { User } from "@supabase/supabase-js";
 
 interface ScheduledReport {
@@ -106,6 +109,7 @@ const quickTemplates = [
 const BrandStrategy = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [user, setUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -115,6 +119,7 @@ const BrandStrategy = () => {
   const [amPm, setAmPm] = useState<"AM" | "PM">("AM");
   const [isScheduling, setIsScheduling] = useState(false);
   const [isRunningNow, setIsRunningNow] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([]);
   const [reportResults, setReportResults] = useState<ReportResult[]>([]);
@@ -460,6 +465,45 @@ const BrandStrategy = () => {
     );
   }
 
+  // Strategy sidebar navigation content
+  const SidebarNav = () => (
+    <nav className="space-y-1">
+      <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
+        <BarChart3 className="w-4 h-4" />
+        <div className="text-left">
+          <div className="text-sm font-medium">Run Report</div>
+          <div className="text-xs text-muted-foreground">Schedule and run web reports</div>
+        </div>
+      </button>
+      <button 
+        onClick={() => {
+          setMobileMenuOpen(false);
+          navigate("/competitor-analysis");
+        }}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+      >
+        <Users className="w-4 h-4" />
+        <div className="text-left">
+          <div className="text-sm font-medium">Competitor Analysis</div>
+          <div className="text-xs text-muted-foreground">Analyze competitors</div>
+        </div>
+      </button>
+      <button 
+        onClick={() => {
+          setMobileMenuOpen(false);
+          navigate("/trend-monitor");
+        }}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+      >
+        <TrendingUp className="w-4 h-4" />
+        <div className="text-left">
+          <div className="text-sm font-medium">Trend Monitor</div>
+          <div className="text-xs text-muted-foreground">Track social media trends</div>
+        </div>
+      </button>
+    </nav>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
@@ -467,11 +511,27 @@ const BrandStrategy = () => {
       {/* Page Header */}
       <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Brand Strategy</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              AI-powered brand and market intelligence for creative, audience, and SEO strategy.
-            </p>
+          <div className="flex items-center gap-3">
+            {/* Mobile menu button */}
+            {isMobile && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="shrink-0">
+                    <Menu className="w-4 h-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] p-4">
+                  <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
+                  <SidebarNav />
+                </SheetContent>
+              </Sheet>
+            )}
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Brand Strategy</h1>
+              <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
+                AI-powered brand and market intelligence for creative, audience, and SEO strategy.
+              </p>
+            </div>
           </div>
           <Button
             variant="outline"
@@ -484,41 +544,15 @@ const BrandStrategy = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex gap-8">
-          {/* Left Sidebar - Strategy Modules */}
-          <div className="w-64 flex-shrink-0">
-            <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
-            <nav className="space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
-                <BarChart3 className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Run Report</div>
-                  <div className="text-xs text-muted-foreground">Schedule and run web reports</div>
-                </div>
-              </button>
-              <button 
-                onClick={() => navigate("/competitor-analysis")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
-              >
-                <Users className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Competitor Analysis</div>
-                  <div className="text-xs text-muted-foreground">Analyze competitors</div>
-                </div>
-              </button>
-              <button 
-                onClick={() => navigate("/trend-monitor")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
-              >
-                <TrendingUp className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Trend Monitor</div>
-                  <div className="text-xs text-muted-foreground">Track social media trends</div>
-                </div>
-              </button>
-            </nav>
-          </div>
+          {/* Left Sidebar - Strategy Modules (Desktop only) */}
+          {!isMobile && (
+            <div className="w-64 flex-shrink-0">
+              <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
+              <SidebarNav />
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="flex-1 space-y-8">
@@ -544,7 +578,7 @@ const BrandStrategy = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                         <Clock className="w-4 h-4" />
@@ -625,22 +659,22 @@ const BrandStrategy = () => {
                             </Badge>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
                             <div>
                               <p className="text-xs text-muted-foreground">Mentions</p>
-                              <p className="text-xl font-bold text-foreground">{report.mentions.toLocaleString()}</p>
+                              <p className="text-lg sm:text-xl font-bold text-foreground">{report.mentions.toLocaleString()}</p>
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Sources</p>
-                              <p className="text-xl font-bold text-foreground">{report.sources}</p>
+                              <p className="text-lg sm:text-xl font-bold text-foreground">{report.sources}</p>
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Positive</p>
-                              <p className="text-xl font-bold text-green-500">{report.positive_percent}%</p>
+                              <p className="text-lg sm:text-xl font-bold text-green-500">{report.positive_percent}%</p>
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Negative</p>
-                              <p className="text-xl font-bold text-red-500">{report.negative_percent}%</p>
+                              <p className="text-lg sm:text-xl font-bold text-red-500">{report.negative_percent}%</p>
                             </div>
                           </div>
 
@@ -660,7 +694,7 @@ const BrandStrategy = () => {
                                 style={{ width: `${report.negative_percent}%` }}
                               />
                             </div>
-                            <div className="flex text-xs mt-1 gap-4">
+                            <div className="flex flex-wrap text-xs mt-1 gap-2 sm:gap-4">
                               <span className="text-green-500">{report.positive_percent}% Positive</span>
                               <span className="text-yellow-500">{report.neutral_percent}% Neutral</span>
                               <span className="text-red-500">{report.negative_percent}% Negative</span>
@@ -673,7 +707,7 @@ const BrandStrategy = () => {
                             </div>
                           )}
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Button 
                               variant="outline" 
                               size="sm" 
@@ -683,24 +717,26 @@ const BrandStrategy = () => {
                               <Eye className="w-4 h-4 mr-2" />
                               View ({report.raw_results?.length || 0})
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={() => handleDownloadPDF(report)}
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              PDF
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={() => handleDownloadCSV(report)}
-                            >
-                              <FileText className="w-4 h-4 mr-2" />
-                              CSV
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => handleDownloadPDF(report)}
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                PDF
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => handleDownloadCSV(report)}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                CSV
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -715,7 +751,7 @@ const BrandStrategy = () => {
                   <Clock className="w-5 h-5" />
                   Quick Schedule Templates
                 </h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {quickTemplates.map((template, index) => (
                     <Card key={index} className="hover:border-primary/50 transition-colors cursor-pointer">
                       <CardContent className="pt-4 pb-4">
@@ -776,32 +812,32 @@ const BrandStrategy = () => {
 
       {/* View Sources Dialog */}
       <Dialog open={!!viewingReport} onOpenChange={() => setViewingReport(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh] w-[95vw] sm:w-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Report Sources: {viewingReport?.search_term}
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="truncate">Report: {viewingReport?.search_term}</span>
             </DialogTitle>
           </DialogHeader>
           
           {viewingReport && (
             <div className="space-y-4">
               {/* Summary Stats */}
-              <div className="grid grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{viewingReport.mentions.toLocaleString()}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{viewingReport.mentions.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Mentions</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{viewingReport.sources}</p>
+                  <p className="text-lg sm:text-2xl font-bold">{viewingReport.sources}</p>
                   <p className="text-xs text-muted-foreground">Sources</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500">{viewingReport.positive_percent}%</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-500">{viewingReport.positive_percent}%</p>
                   <p className="text-xs text-muted-foreground">Positive</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-500">{viewingReport.negative_percent}%</p>
+                  <p className="text-lg sm:text-2xl font-bold text-red-500">{viewingReport.negative_percent}%</p>
                   <p className="text-xs text-muted-foreground">Negative</p>
                 </div>
               </div>
@@ -818,7 +854,7 @@ const BrandStrategy = () => {
                 <p className="text-sm font-medium mb-2">
                   All Sources ({viewingReport.raw_results?.length || 0})
                 </p>
-                <ScrollArea className="h-[400px] pr-4">
+                <ScrollArea className="h-[300px] sm:h-[400px] pr-2 sm:pr-4">
                   <div className="space-y-3">
                     {(viewingReport.raw_results || []).map((source, index) => (
                       <div 
