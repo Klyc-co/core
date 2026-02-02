@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3 } from "lucide-react";
+import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { useClientContext } from "@/contexts/ClientContext";
@@ -34,7 +35,9 @@ const Library = () => {
   const [imports, setImports] = useState<BrandImport[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMainTab, setActiveMainTab] = useState("assets");
-  const { getEffectiveUserId, selectedClientId, selectedClientName, isDefaultClient } = useClientContext();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { getEffectiveUserId, selectedClientId } = useClientContext();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -56,6 +59,7 @@ const Library = () => {
 
   const fetchAssets = async (userId: string) => {
     setLoading(true);
+    setSelectedIds(new Set()); // Clear selection when fetching new data
     try {
       const [assetsResponse, importsResponse] = await Promise.all([
         supabase.from('brand_assets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
@@ -82,6 +86,11 @@ const Library = () => {
       const { error } = await supabase.from('brand_assets').delete().eq('id', assetId);
       if (error) throw error;
       setAssets(prev => prev.filter(a => a.id !== assetId));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(assetId);
+        return next;
+      });
       toast.success('Asset deleted');
     } catch (error) {
       console.error('Failed to delete asset:', error);
@@ -89,66 +98,145 @@ const Library = () => {
     }
   };
 
+  const handleToggleSelect = (assetId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === assets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(assets.map(a => a.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedIds);
+      const { error } = await supabase
+        .from('brand_assets')
+        .delete()
+        .in('id', idsToDelete);
+      
+      if (error) throw error;
+      
+      setAssets(prev => prev.filter(a => !selectedIds.has(a.id)));
+      toast.success(`Deleted ${selectedIds.size} asset${selectedIds.size > 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error('Failed to delete assets:', error);
+      toast.error('Failed to delete assets');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filterAssets = (type: string) => assets.filter(a => a.asset_type === type);
 
-  const ColorCard = ({ asset }: { asset: BrandAsset }) => (
-    <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors group">
-      <div className="w-12 h-12 rounded-lg border border-border shadow-sm flex-shrink-0" style={{ backgroundColor: asset.value }} />
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground text-sm truncate">{asset.name || 'Color'}</p>
-        <p className="text-xs text-muted-foreground font-mono">{asset.value}</p>
-      </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-      </div>
-    </div>
-  );
-
-  const FontCard = ({ asset }: { asset: BrandAsset }) => (
-    <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors group">
-      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <Type className="w-5 h-5 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-foreground text-sm truncate" style={{ fontFamily: asset.value }}>{asset.name || asset.value}</p>
-        <p className="text-xs text-muted-foreground">{asset.value}</p>
-      </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3.5 h-3.5" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-      </div>
-    </div>
-  );
-
-  const ImageCard = ({ asset }: { asset: BrandAsset }) => (
-    <div className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/50 transition-colors group">
-      <div className="aspect-video bg-muted relative">
-        <img src={asset.value} alt={asset.name || 'Brand image'} className="w-full h-full object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <Button variant="secondary" size="sm" asChild>
-            <a href={asset.value} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1" />Open</a>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+  const SelectableColorCard = ({ asset }: { asset: BrandAsset }) => {
+    const isSelected = selectedIds.has(asset.id);
+    return (
+      <div className={`flex items-center gap-3 p-3 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-card'} hover:bg-accent/5 transition-colors group`}>
+        <Checkbox 
+          checked={isSelected} 
+          onCheckedChange={() => handleToggleSelect(asset.id)}
+          className="flex-shrink-0"
+        />
+        <div className="w-10 h-10 rounded-lg border border-border shadow-sm flex-shrink-0" style={{ backgroundColor: asset.value }} />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground text-sm truncate">{asset.name || 'Color'}</p>
+          <p className="text-xs text-muted-foreground font-mono">{asset.value}</p>
         </div>
-      </div>
-      <div className="p-2"><p className="text-xs font-medium text-foreground truncate">{asset.name || 'Image'}</p></div>
-    </div>
-  );
-
-  const CopyCard = ({ asset }: { asset: BrandAsset }) => (
-    <div className="p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors group">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-xs font-medium text-muted-foreground">{asset.name || 'Copy'}</p>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3 h-3" /></Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3 h-3" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3.5 h-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
         </div>
       </div>
-      <p className="text-sm text-foreground line-clamp-3">{asset.value}</p>
-    </div>
-  );
+    );
+  };
+
+  const SelectableFontCard = ({ asset }: { asset: BrandAsset }) => {
+    const isSelected = selectedIds.has(asset.id);
+    return (
+      <div className={`flex items-center gap-3 p-3 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-card'} hover:bg-accent/5 transition-colors group`}>
+        <Checkbox 
+          checked={isSelected} 
+          onCheckedChange={() => handleToggleSelect(asset.id)}
+          className="flex-shrink-0"
+        />
+        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+          <Type className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground text-sm truncate" style={{ fontFamily: asset.value }}>{asset.name || asset.value}</p>
+          <p className="text-xs text-muted-foreground">{asset.value}</p>
+        </div>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3.5 h-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+        </div>
+      </div>
+    );
+  };
+
+  const SelectableImageCard = ({ asset }: { asset: BrandAsset }) => {
+    const isSelected = selectedIds.has(asset.id);
+    return (
+      <div className={`rounded-lg border ${isSelected ? 'border-primary' : 'border-border'} bg-card overflow-hidden hover:border-primary/50 transition-colors group relative`}>
+        <div className="absolute top-2 left-2 z-10">
+          <Checkbox 
+            checked={isSelected} 
+            onCheckedChange={() => handleToggleSelect(asset.id)}
+            className="bg-white/90 border-gray-300"
+          />
+        </div>
+        <div className="aspect-video bg-muted relative">
+          <img src={asset.value} alt={asset.name || 'Brand image'} className="w-full h-full object-contain"
+            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button variant="secondary" size="sm" asChild>
+              <a href={asset.value} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1" />Open</a>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+          </div>
+        </div>
+        <div className="p-2"><p className="text-xs font-medium text-foreground truncate">{asset.name || 'Image'}</p></div>
+      </div>
+    );
+  };
+
+  const SelectableCopyCard = ({ asset }: { asset: BrandAsset }) => {
+    const isSelected = selectedIds.has(asset.id);
+    return (
+      <div className={`p-4 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-card'} hover:bg-accent/5 transition-colors group`}>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Checkbox 
+              checked={isSelected} 
+              onCheckedChange={() => handleToggleSelect(asset.id)}
+            />
+            <p className="text-xs font-medium text-muted-foreground">{asset.name || 'Copy'}</p>
+          </div>
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyValue(asset.value)}><Copy className="w-3 h-3" /></Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3 h-3" /></Button>
+          </div>
+        </div>
+        <p className="text-sm text-foreground line-clamp-3">{asset.value}</p>
+      </div>
+    );
+  };
 
   const EmptyState = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -167,9 +255,9 @@ const Library = () => {
     if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
     if (filtered.length === 0) return <EmptyState icon={Icon} title={emptyTitle} description={emptyDesc} />;
 
-    if (type === 'image') return <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">{filtered.map(asset => <ImageCard key={asset.id} asset={asset} />)}</div>;
-    if (type === 'copy') return <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">{filtered.map(asset => <CopyCard key={asset.id} asset={asset} />)}</div>;
-    return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filtered.map(asset => type === 'color' ? <ColorCard key={asset.id} asset={asset} /> : <FontCard key={asset.id} asset={asset} />)}</div>;
+    if (type === 'image') return <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">{filtered.map(asset => <SelectableImageCard key={asset.id} asset={asset} />)}</div>;
+    if (type === 'copy') return <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">{filtered.map(asset => <SelectableCopyCard key={asset.id} asset={asset} />)}</div>;
+    return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filtered.map(asset => type === 'color' ? <SelectableColorCard key={asset.id} asset={asset} /> : <SelectableFontCard key={asset.id} asset={asset} />)}</div>;
   };
 
   const SocialEmptyState = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
@@ -181,6 +269,9 @@ const Library = () => {
       <p className="text-sm text-muted-foreground max-w-md">{description}</p>
     </div>
   );
+
+  const allSelected = assets.length > 0 && selectedIds.size === assets.length;
+  const someSelected = selectedIds.size > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,6 +304,39 @@ const Library = () => {
 
           {/* Assets Tab */}
           <TabsContent value="assets">
+            {/* Selection Controls */}
+            {assets.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSelectAll}
+                  className="gap-2"
+                >
+                  {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </Button>
+                
+                {someSelected && (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedIds.size} selected
+                    </span>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={handleDeleteSelected}
+                      disabled={isDeleting}
+                      className="gap-2"
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Delete Selected
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
             {imports.length > 0 && (
               <Card className="p-3 sm:p-4 mb-4 sm:mb-6">
                 <h3 className="text-sm font-medium text-foreground mb-2 sm:mb-3">Recent Imports</h3>
@@ -248,25 +372,25 @@ const Library = () => {
                     {filterAssets('color').length > 0 && (
                       <div>
                         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2"><Palette className="w-4 h-4 sm:w-5 sm:h-5" /> Colors</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filterAssets('color').map(asset => <ColorCard key={asset.id} asset={asset} />)}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filterAssets('color').map(asset => <SelectableColorCard key={asset.id} asset={asset} />)}</div>
                       </div>
                     )}
                     {filterAssets('font').length > 0 && (
                       <div>
                         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2"><Type className="w-4 h-4 sm:w-5 sm:h-5" /> Fonts</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filterAssets('font').map(asset => <FontCard key={asset.id} asset={asset} />)}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">{filterAssets('font').map(asset => <SelectableFontCard key={asset.id} asset={asset} />)}</div>
                       </div>
                     )}
                     {filterAssets('image').length > 0 && (
                       <div>
                         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2"><Image className="w-4 h-4 sm:w-5 sm:h-5" /> Images</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">{filterAssets('image').map(asset => <ImageCard key={asset.id} asset={asset} />)}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">{filterAssets('image').map(asset => <SelectableImageCard key={asset.id} asset={asset} />)}</div>
                       </div>
                     )}
                     {filterAssets('copy').length > 0 && (
                       <div>
                         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2"><FileText className="w-4 h-4 sm:w-5 sm:h-5" /> Copy</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">{filterAssets('copy').map(asset => <CopyCard key={asset.id} asset={asset} />)}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">{filterAssets('copy').map(asset => <SelectableCopyCard key={asset.id} asset={asset} />)}</div>
                       </div>
                     )}
                   </div>
