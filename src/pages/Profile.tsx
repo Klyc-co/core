@@ -7,6 +7,7 @@ import AddClientDialog from "@/components/AddClientDialog";
 import { Building2, Pencil, FolderOpen, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
+import { useClientContext } from "@/contexts/ClientContext";
 
 interface ProfileCardProps {
   icon: React.ReactNode;
@@ -55,10 +56,8 @@ const ProfileCard = ({ icon, iconBg, title, description, status, onClick, button
 const Profile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [currentClientId, setCurrentClientId] = useState<string | null>(null);
-  const [currentClientName, setCurrentClientName] = useState<string | null>(null);
   const [addClientOpen, setAddClientOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { selectedClientName, isDefaultClient } = useClientContext();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -66,34 +65,15 @@ const Profile = () => {
         navigate("/auth");
       } else {
         setUser(user);
-        // Load saved client from localStorage
-        const savedClientId = localStorage.getItem("currentClientId");
-        const savedClientName = localStorage.getItem("currentClientName");
-        if (savedClientId) {
-          setCurrentClientId(savedClientId);
-          setCurrentClientName(savedClientName);
-        }
       }
     });
   }, [navigate]);
 
-  const handleClientChange = (clientId: string | null, clientName: string | null) => {
-    setCurrentClientId(clientId);
-    setCurrentClientName(clientName);
-    if (clientId) {
-      localStorage.setItem("currentClientId", clientId);
-      localStorage.setItem("currentClientName", clientName || "");
-    } else {
-      localStorage.removeItem("currentClientId");
-      localStorage.removeItem("currentClientName");
-    }
-    // Trigger storage event for components listening (like AppHeader)
-    window.dispatchEvent(new Event("storage"));
-  };
+  const displayName = isDefaultClient ? "My Business" : selectedClientName;
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader user={user} businessName={currentClientName || undefined} />
+      <AppHeader user={user} businessName={displayName || undefined} />
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
@@ -105,9 +85,6 @@ const Profile = () => {
           <div className="flex flex-col sm:items-end gap-1 sm:gap-2">
             <span className="text-xs sm:text-sm text-muted-foreground">Working on:</span>
             <ClientSwitcher
-              key={refreshKey}
-              currentClientId={currentClientId}
-              onClientChange={handleClientChange}
               onAddClient={() => setAddClientOpen(true)}
             />
           </div>
@@ -147,7 +124,7 @@ const Profile = () => {
       <AddClientDialog
         open={addClientOpen}
         onOpenChange={setAddClientOpen}
-        onClientAdded={() => setRefreshKey(prev => prev + 1)}
+        onClientAdded={() => {}}
       />
     </div>
   );

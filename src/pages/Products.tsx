@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, Package, Layers, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import { useClientContext } from "@/contexts/ClientContext";
 
 interface Product {
   id: string;
@@ -30,6 +31,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [productLines, setProductLines] = useState<ProductLine[]>([]);
+  const { getEffectiveUserId, selectedClientId } = useClientContext();
 
   const loadData = async (userId: string) => {
     const [productsResult, linesResult] = await Promise.all([
@@ -60,10 +62,18 @@ const Products = () => {
         navigate("/auth");
       } else {
         setUser(user);
-        loadData(user.id);
       }
     });
   }, [navigate]);
+
+  // Reload data when client changes
+  useEffect(() => {
+    const effectiveUserId = getEffectiveUserId();
+    if (effectiveUserId) {
+      setLoading(true);
+      loadData(effectiveUserId);
+    }
+  }, [selectedClientId, getEffectiveUserId]);
 
   const handleDeleteProduct = async (productId: string) => {
     const { error } = await supabase

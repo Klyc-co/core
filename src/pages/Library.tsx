@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import { useClientContext } from "@/contexts/ClientContext";
 
 interface BrandAsset {
   id: string;
@@ -33,6 +34,7 @@ const Library = () => {
   const [imports, setImports] = useState<BrandImport[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMainTab, setActiveMainTab] = useState("assets");
+  const { getEffectiveUserId, selectedClientId, selectedClientName, isDefaultClient } = useClientContext();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -40,10 +42,17 @@ const Library = () => {
         navigate("/auth");
       } else {
         setUser(user);
-        fetchAssets(user.id);
       }
     });
   }, [navigate]);
+
+  // Refetch when client changes
+  useEffect(() => {
+    const effectiveUserId = getEffectiveUserId();
+    if (effectiveUserId) {
+      fetchAssets(effectiveUserId);
+    }
+  }, [selectedClientId, getEffectiveUserId]);
 
   const fetchAssets = async (userId: string) => {
     setLoading(true);

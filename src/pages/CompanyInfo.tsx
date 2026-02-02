@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import { useClientContext } from "@/contexts/ClientContext";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -55,6 +56,7 @@ const CompanyInfo = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const { getEffectiveUserId, selectedClientId, isDefaultClient, selectedClientName } = useClientContext();
 
   // Import states
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -107,6 +109,7 @@ const CompanyInfo = () => {
     }
   }, [searchParams]);
 
+  // Load profile based on selected client
   useEffect(() => {
     const loadProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -117,12 +120,20 @@ const CompanyInfo = () => {
       }
       
       setUser(user);
-      await checkConnectedAccounts(user);
+      
+      // Get the effective user ID based on selected client
+      const effectiveUserId = getEffectiveUserId();
+      if (!effectiveUserId) {
+        setLoading(false);
+        return;
+      }
+      
+      await checkConnectedAccounts(effectiveUserId);
 
       const { data: profile, error } = await supabase
         .from("client_profiles")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId)
         .maybeSingle();
 
       if (error) {
@@ -166,21 +177,37 @@ const CompanyInfo = () => {
           uniqueValueDrivers: (savedValue.uniqueValueDrivers as string) || "",
           proofPoints: (savedValue.proofPoints as string) || ""
         });
+      } else {
+        // Clear form for new profile
+        setCompanyData({
+          businessName: "", website: "", shortDescription: "", industry: "",
+          productCategory: "", geographyMarkets: "", marketingGoals: "", mainCompetitors: ""
+        });
+        setAudienceData({
+          audienceType: "", mainAudienceSummary: "", secondaryAudiences: "", ageRange: [25],
+          incomeLevel: "", femalePercent: "50", malePercent: "50", geographicFocus: "",
+          coreValuesInterests: "", lifestyleSummary: "", purchaseFrequency: "",
+          preferredChannels: "", commonObjections: ""
+        });
+        setValueData({
+          corePromise: "", elevatorPitch: "", customerPainPoints: "", howWeSolveIt: "",
+          benefitFocus: "", uniqueValueDrivers: "", proofPoints: ""
+        });
       }
 
       setLoading(false);
     };
 
     loadProfile();
-  }, [navigate]);
+  }, [navigate, selectedClientId, getEffectiveUserId]);
 
-  const checkConnectedAccounts = async (user: User) => {
+  const checkConnectedAccounts = async (userId: string) => {
     const newStatus: Record<string, ConnectionStatus> = {};
     
     const { data: socialConnections } = await supabase
       .from("social_connections")
       .select("platform")
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
     
     if (socialConnections) {
       const platformMap: Record<string, string> = {
@@ -261,10 +288,23 @@ const CompanyInfo = () => {
       return;
     }
 
+    // Get the effective user ID for saving
+    const effectiveUserId = getEffectiveUserId();
+    if (!effectiveUserId) {
+      toast.error("No client selected");
+      return;
+    }
+
+    // Check if marketer can save to client profile (only for default)
+    if (!isDefaultClient) {
+      toast.error("Only clients can edit their own profile. You can view but not edit client profiles.");
+      return;
+    }
+
     setSaving(true);
 
     const profileData = {
-      user_id: user.id,
+      user_id: effectiveUserId,
       business_name: companyData.businessName,
       website: companyData.website,
       description: companyData.shortDescription,
