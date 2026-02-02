@@ -9,8 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Users, Plus, Check } from "lucide-react";
+import { ChevronDown, Users, Plus, Check, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useClientContext } from "@/contexts/ClientContext";
 
 interface Client {
   id: string;
@@ -20,15 +21,14 @@ interface Client {
 }
 
 interface ClientSwitcherProps {
-  currentClientId: string | null;
-  onClientChange: (clientId: string | null, clientName: string | null) => void;
   onAddClient: () => void;
 }
 
-const ClientSwitcher = ({ currentClientId, onClientChange, onAddClient }: ClientSwitcherProps) => {
+const ClientSwitcher = ({ onAddClient }: ClientSwitcherProps) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
 
   useEffect(() => {
     fetchClients();
@@ -55,16 +55,22 @@ const ClientSwitcher = ({ currentClientId, onClientChange, onAddClient }: Client
     }
   };
 
-  const currentClient = clients.find(c => c.client_id === currentClientId);
+  const handleClientChange = (clientId: string | null, clientName: string | null) => {
+    setSelectedClient(clientId, clientName);
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
+            {isDefaultClient ? (
+              <Briefcase className="w-4 h-4" />
+            ) : (
+              <Users className="w-4 h-4" />
+            )}
             <span className="truncate">
-              {currentClient ? currentClient.client_name : "Select Client"}
+              {isDefaultClient ? "My Business" : selectedClientName || "Select Client"}
             </span>
           </div>
           <ChevronDown className="w-4 h-4 opacity-50" />
@@ -73,19 +79,36 @@ const ClientSwitcher = ({ currentClientId, onClientChange, onAddClient }: Client
       <DropdownMenuContent align="start" className="w-[250px]">
         <DropdownMenuLabel>Switch Client</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        
+        {/* Default "My Business" option */}
+        <DropdownMenuItem
+          onClick={() => handleClientChange("default", "My Business")}
+          className="flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-primary" />
+            <span>My Business</span>
+          </div>
+          {isDefaultClient && (
+            <Check className="w-4 h-4 text-primary" />
+          )}
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
         {loading ? (
           <DropdownMenuItem disabled>Loading clients...</DropdownMenuItem>
         ) : clients.length === 0 ? (
-          <DropdownMenuItem disabled>No clients yet</DropdownMenuItem>
+          <DropdownMenuItem disabled className="text-muted-foreground">No clients yet</DropdownMenuItem>
         ) : (
           clients.map((client) => (
             <DropdownMenuItem
               key={client.id}
-              onClick={() => onClientChange(client.client_id, client.client_name)}
+              onClick={() => handleClientChange(client.client_id, client.client_name)}
               className="flex items-center justify-between"
             >
               <span className="truncate">{client.client_name}</span>
-              {currentClientId === client.client_id && (
+              {selectedClientId === client.client_id && (
                 <Check className="w-4 h-4 text-primary" />
               )}
             </DropdownMenuItem>
