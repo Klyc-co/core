@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useSidebarContext } from "@/contexts/SidebarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -12,6 +13,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 
 const ChatSidebar = () => {
   const { isOpen, setIsOpen } = useSidebarContext();
+  const isMobile = useIsMobile();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" }
   ]);
@@ -127,7 +129,18 @@ const ChatSidebar = () => {
   }
 
   return (
-    <div className="fixed left-0 top-0 w-80 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-40">
+    <>
+      {/* Backdrop for mobile */}
+      {isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+      <div className={cn(
+        "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-50",
+        isMobile ? "w-[85vw] max-w-80" : "w-80"
+      )}>
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -205,6 +218,7 @@ const ChatSidebar = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
