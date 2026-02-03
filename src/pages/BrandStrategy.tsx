@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import AppHeader from "@/components/AppHeader";
+import StrategyMobileNav from "@/components/StrategyMobileNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { User } from "@supabase/supabase-js";
 
@@ -507,6 +508,9 @@ const BrandStrategy = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
+      
+      {/* Mobile Strategy Navigation */}
+      {isMobile && <StrategyMobileNav />}
       
       {/* Page Header */}
       <div className="border-b border-border bg-card/50">
