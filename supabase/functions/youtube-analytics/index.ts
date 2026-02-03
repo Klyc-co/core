@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken, encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,12 +73,25 @@ serve(async (req) => {
       );
     }
 
-    let accessToken = connection.access_token;
+    // Decrypt tokens
+    let accessToken = await decryptToken(connection.access_token);
+    const refreshToken = connection.refresh_token ? await decryptToken(connection.refresh_token) : null;
 
     // Check if token is expired and refresh if needed
     if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
       console.log("Token expired, refreshing...");
-      const refreshResult = await refreshYouTubeToken(connection.refresh_token);
+      
+      if (!refreshToken) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to refresh token. Please reconnect YouTube.",
+            connected: false 
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const refreshResult = await refreshYouTubeToken(refreshToken);
       
       if (refreshResult.error) {
         return new Response(
@@ -91,11 +105,13 @@ serve(async (req) => {
 
       accessToken = refreshResult.access_token;
       
-      // Update stored token
+      // Encrypt and update stored token
+      const encryptedAccessToken = await encryptToken(refreshResult.access_token);
+      
       await adminSupabase
         .from("social_connections")
         .update({
-          access_token: refreshResult.access_token,
+          access_token: encryptedAccessToken,
           token_expires_at: new Date(Date.now() + (refreshResult.expires_in || 3600) * 1000).toISOString(),
           updated_at: new Date().toISOString(),
         })

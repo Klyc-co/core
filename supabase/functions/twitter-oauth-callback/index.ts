@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createHmac, randomBytes } from "node:crypto";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -168,6 +169,10 @@ serve(async (req) => {
       .eq("platform", "twitter_pending")
       .eq("user_id", userId);
 
+    // Encrypt tokens before storing
+    const encryptedAccessToken = await encryptToken(accessToken);
+    const encryptedAccessTokenSecret = await encryptToken(accessTokenSecret);
+
     // Store the final connection
     const { error: upsertError } = await supabase
       .from("social_connections")
@@ -175,8 +180,8 @@ serve(async (req) => {
         {
           user_id: userId,
           platform: "twitter",
-          access_token: accessToken,
-          refresh_token: accessTokenSecret, // Store the access token secret
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedAccessTokenSecret, // Store the encrypted access token secret
           platform_user_id: twitterUserId,
           platform_username: screenName,
           scopes: ["read", "write"],

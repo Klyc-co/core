@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken, encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,10 +76,21 @@ serve(async (req) => {
       );
     }
 
+    // Decrypt tokens
+    let accessToken = await decryptToken(connection.access_token);
+    const refreshToken = connection.refresh_token ? await decryptToken(connection.refresh_token) : null;
+
     // Check if token is expired
     if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
       // Attempt to refresh token
-      const refreshResult = await refreshTikTokToken(connection.refresh_token);
+      if (!refreshToken) {
+        return new Response(
+          JSON.stringify({ error: "Token expired, please reconnect TikTok", needsReconnect: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const refreshResult = await refreshTikTokToken(refreshToken);
       if (refreshResult.error) {
         return new Response(
           JSON.stringify({ error: "Token expired, please reconnect TikTok", needsReconnect: true }),
@@ -86,19 +98,24 @@ serve(async (req) => {
         );
       }
 
-      // Update stored tokens
+      // Encrypt and update stored tokens
+      const encryptedAccessToken = await encryptToken(refreshResult.access_token);
+      const encryptedRefreshToken = refreshResult.refresh_token 
+        ? await encryptToken(refreshResult.refresh_token) 
+        : connection.refresh_token;
+
       await supabaseAdmin
         .from("social_connections")
         .update({
-          access_token: refreshResult.access_token,
-          refresh_token: refreshResult.refresh_token || connection.refresh_token,
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken,
           token_expires_at: refreshResult.expires_in
             ? new Date(Date.now() + refreshResult.expires_in * 1000).toISOString()
             : null,
         })
         .eq("id", connection.id);
 
-      connection.access_token = refreshResult.access_token;
+      accessToken = refreshResult.access_token;
     }
 
     // Fetch videos from TikTok
@@ -107,7 +124,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${connection.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

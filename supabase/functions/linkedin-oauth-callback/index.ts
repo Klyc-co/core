@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,13 +115,16 @@ Deno.serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
+    // Encrypt the access token before storing
+    const encryptedAccessToken = await encryptToken(accessToken);
+
     const { error: upsertError } = await supabase
       .from("social_connections")
       .upsert(
         {
           user_id: userId,
           platform: "linkedin",
-          access_token: accessToken,
+          access_token: encryptedAccessToken,
           token_expires_at: expiresAt,
           platform_user_id: linkedinUserId,
           platform_username: displayName,

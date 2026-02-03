@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -199,13 +200,16 @@ serve(async (req) => {
     // Store in database using service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Encrypt the access token before storing
+    const encryptedAccessToken = await encryptToken(pageAccessToken || accessToken);
+
     const { error: upsertError } = await supabase
       .from("social_connections")
       .upsert(
         {
           user_id: userId,
           platform: "instagram",
-          access_token: pageAccessToken || accessToken,
+          access_token: encryptedAccessToken,
           refresh_token: instagramAccountId, // Store IG account ID in refresh_token field for easy access
           token_expires_at: tokenExpiresAt,
           platform_user_id: instagramAccountId,
