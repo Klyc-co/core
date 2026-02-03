@@ -36,6 +36,16 @@ import DescriptIcon from "@/components/icons/DescriptIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import MondayIcon from "@/components/icons/MondayIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
+import SalesforceIcon from "@/components/icons/SalesforceIcon";
+import HubSpotIcon from "@/components/icons/HubSpotIcon";
+import SAPIcon from "@/components/icons/SAPIcon";
+import OracleIcon from "@/components/icons/OracleIcon";
+import AdobeCRMIcon from "@/components/icons/AdobeCRMIcon";
+import ZohoIcon from "@/components/icons/ZohoIcon";
+import PegaIcon from "@/components/icons/PegaIcon";
+import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
+import InforIcon from "@/components/icons/InforIcon";
+import InsightlyIcon from "@/components/icons/InsightlyIcon";
 import { useClientContext } from "@/contexts/ClientContext";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -1000,6 +1010,142 @@ const CompanyInfo = () => {
                         <AirtableIcon className="w-5 h-5" />
                       </div>
                       <span className="text-sm font-medium text-foreground">Airtable</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              {/* CRM Section */}
+              <Card className="p-6 bg-card border-border">
+                <h3 className="text-lg font-semibold text-foreground mb-4">CRM</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {/* Salesforce */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <SalesforceIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Salesforce</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* HubSpot */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <HubSpotIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">HubSpot</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* SAP CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <SAPIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">SAP CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Oracle CX */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <OracleIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Oracle CX</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Adobe CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <AdobeCRMIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Adobe CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Zoho CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <ZohoIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Zoho CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Pega CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <PegaIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Pega CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Sugar CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <SugarCRMIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Sugar CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Infor CRM */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <InforIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Infor CRM</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Insightly */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <InsightlyIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Insightly</span>
                     </div>
                     <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
                       Coming Soon
