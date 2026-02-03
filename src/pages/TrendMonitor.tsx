@@ -25,6 +25,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfDay, isSameDay } from "date-fns";
 import AppHeader from "@/components/AppHeader";
+import StrategyMobileNav from "@/components/StrategyMobileNav";
 import type { User } from "@supabase/supabase-js";
 
 // Platform icons/colors
@@ -297,6 +298,9 @@ export default function TrendMonitor() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
+      
+      {/* Mobile Strategy Navigation */}
+      {isMobile && <StrategyMobileNav />}
       
       <div className="p-3 sm:p-6">
         <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">

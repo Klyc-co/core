@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Users, 
   Target,
@@ -17,11 +18,14 @@ import {
   BarChart3,
   Globe,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  Menu
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import AppHeader from "@/components/AppHeader";
+import StrategyMobileNav from "@/components/StrategyMobileNav";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { User } from "@supabase/supabase-js";
 
@@ -42,9 +46,10 @@ interface CompetitorAnalysis {
   threats: string | null;
 }
 
-const CompetitorAnalysis = () => {
+const CompetitorAnalysisPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [user, setUser] = useState<User | null>(null);
   const [competitorName, setCompetitorName] = useState("");
@@ -53,6 +58,7 @@ const CompetitorAnalysis = () => {
   const [analyses, setAnalyses] = useState<CompetitorAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<CompetitorAnalysis | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -152,20 +158,119 @@ const CompetitorAnalysis = () => {
     );
   }
 
+  // Sidebar content for mobile sheet
+  const SidebarContent = () => (
+    <>
+      <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
+      <nav className="space-y-1">
+        <button 
+          onClick={() => {
+            setMobileMenuOpen(false);
+            navigate("/brand-strategy");
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+        >
+          <BarChart3 className="w-4 h-4" />
+          <div className="text-left">
+            <div className="text-sm font-medium">Run Report</div>
+            <div className="text-xs text-muted-foreground">Schedule web reports</div>
+          </div>
+        </button>
+        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
+          <Users className="w-4 h-4" />
+          <div className="text-left">
+            <div className="text-sm font-medium">Competitor Analysis</div>
+            <div className="text-xs text-muted-foreground">Analyze competitors</div>
+          </div>
+        </button>
+        <button 
+          onClick={() => {
+            setMobileMenuOpen(false);
+            navigate("/trend-monitor");
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+        >
+          <TrendingUp className="w-4 h-4" />
+          <div className="text-left">
+            <div className="text-sm font-medium">Trend Monitor</div>
+            <div className="text-xs text-muted-foreground">Track social trends</div>
+          </div>
+        </button>
+      </nav>
+
+      {/* Previous Analyses */}
+      {analyses.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Recent Analyses</h3>
+          <ScrollArea className="h-[250px]">
+            <div className="space-y-2 pr-2">
+              {analyses.map((analysis) => (
+                <div 
+                  key={analysis.id}
+                  onClick={() => {
+                    setSelectedAnalysis(analysis);
+                    if (isMobile) setMobileMenuOpen(false);
+                  }}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedAnalysis?.id === analysis.id 
+                      ? 'bg-primary/10 border-primary' 
+                      : 'bg-card hover:bg-muted'
+                  }`}
+                >
+                  <p className="font-medium text-sm truncate">{analysis.competitor_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(analysis.analyzed_at), "MMM d, yyyy")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       
+      {/* Mobile Strategy Navigation */}
+      {isMobile && <StrategyMobileNav />}
+      
       {/* Page Header */}
       <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/brand-strategy')}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Competitor Analysis</h1>
-              <p className="text-muted-foreground mt-1">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Mobile sidebar toggle */}
+            {isMobile && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="shrink-0">
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[85vw] max-w-[320px] overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      Competitor Analysis
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4">
+                    <SidebarContent />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+            
+            {!isMobile && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/brand-strategy')}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Competitor Analysis</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
                 AI-powered competitive intelligence and market positioning analysis.
               </p>
             </div>
@@ -173,91 +278,38 @@ const CompetitorAnalysis = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-8">
-          {/* Left Sidebar - Strategy Modules */}
-          <div className="w-64 flex-shrink-0">
-            <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
-            <nav className="space-y-1">
-              <button 
-                onClick={() => navigate("/brand-strategy")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Run Report</div>
-                  <div className="text-xs text-muted-foreground">Schedule web reports</div>
-                </div>
-              </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
-                <Users className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Competitor Analysis</div>
-                  <div className="text-xs text-muted-foreground">Analyze competitors</div>
-                </div>
-              </button>
-              <button 
-                onClick={() => navigate("/trend-monitor")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
-              >
-                <TrendingUp className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-sm font-medium">Trend Monitor</div>
-                  <div className="text-xs text-muted-foreground">Track social trends</div>
-                </div>
-              </button>
-            </nav>
-
-            {/* Previous Analyses */}
-            {analyses.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Recent Analyses</h3>
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-2 pr-2">
-                    {analyses.map((analysis) => (
-                      <div 
-                        key={analysis.id}
-                        onClick={() => setSelectedAnalysis(analysis)}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedAnalysis?.id === analysis.id 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'bg-card hover:bg-muted'
-                        }`}
-                      >
-                        <p className="font-medium text-sm truncate">{analysis.competitor_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(analysis.analyzed_at), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-          </div>
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-8">
+          {/* Desktop Left Sidebar */}
+          {!isMobile && (
+            <div className="w-64 flex-shrink-0">
+              <SidebarContent />
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="flex-1 space-y-6">
             {/* Input Card */}
             <Card>
-              <CardContent className="pt-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Search className="w-5 h-5" />
+              <CardContent className="pt-4 sm:pt-6">
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                   Analyze a Competitor
                 </h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">
+                    <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block">
                       Competitor Name *
                     </label>
                     <Input
-                      placeholder="e.g., Notion, Slack, Figma"
+                      placeholder="e.g., Notion, Slack"
                       value={competitorName}
                       onChange={(e) => setCompetitorName(e.target.value)}
+                      className="text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block flex items-center gap-1">
+                    <label className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 block flex items-center gap-1">
                       <Globe className="w-3 h-3" />
                       Website URL (optional)
                     </label>
@@ -265,6 +317,7 @@ const CompetitorAnalysis = () => {
                       placeholder="https://competitor.com"
                       value={competitorUrl}
                       onChange={(e) => setCompetitorUrl(e.target.value)}
+                      className="text-sm"
                     />
                   </div>
                 </div>
@@ -272,6 +325,7 @@ const CompetitorAnalysis = () => {
                   onClick={handleAnalyze} 
                   disabled={isAnalyzing || !competitorName}
                   className="w-full"
+                  size={isMobile ? "sm" : "default"}
                 >
                   {isAnalyzing ? (
                     <>
@@ -290,23 +344,23 @@ const CompetitorAnalysis = () => {
 
             {/* Results */}
             {selectedAnalysis ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedAnalysis.competitor_name}</h2>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-bold truncate">{selectedAnalysis.competitor_name}</h2>
                     {selectedAnalysis.competitor_url && (
                       <a 
                         href={selectedAnalysis.competitor_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
+                        className="text-xs sm:text-sm text-primary hover:underline truncate block"
                       >
                         {selectedAnalysis.competitor_url}
                       </a>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline" className="text-xs">
                       {format(new Date(selectedAnalysis.analyzed_at), "MMM d, yyyy")}
                     </Badge>
                     <Button 
@@ -322,126 +376,126 @@ const CompetitorAnalysis = () => {
 
                 {/* Overview */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Company Overview</CardTitle>
+                  <CardHeader className="pb-2 sm:pb-4">
+                    <CardTitle className="text-sm sm:text-base">Company Overview</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground">{selectedAnalysis.company_description}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.company_description}</p>
                   </CardContent>
                 </Card>
 
                 {/* Key Info Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Target className="w-4 h-4 text-primary" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                        <Target className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                         Target Audience
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{selectedAnalysis.target_audience}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.target_audience}</p>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-yellow-500" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+                        <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
                         Value Proposition
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{selectedAnalysis.value_proposition}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.value_proposition}</p>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Key Products</CardTitle>
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Key Products</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{selectedAnalysis.key_products}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.key_products}</p>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Pricing Strategy</CardTitle>
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm">Pricing Strategy</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{selectedAnalysis.pricing_strategy}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.pricing_strategy}</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Marketing Channels</CardTitle>
+                  <CardHeader className="pb-1 sm:pb-2">
+                    <CardTitle className="text-xs sm:text-sm">Marketing Channels</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{selectedAnalysis.marketing_channels}</p>
+                  <CardContent className="pt-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground">{selectedAnalysis.marketing_channels}</p>
                   </CardContent>
                 </Card>
 
                 {/* SWOT */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Card className="border-green-500/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 text-green-600">
-                        <TrendingUp className="w-4 h-4" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2 text-green-600">
+                        <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                         Strengths
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.strengths}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.strengths}</p>
                     </CardContent>
                   </Card>
 
                   <Card className="border-red-500/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 text-red-600">
-                        <TrendingDown className="w-4 h-4" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2 text-red-600">
+                        <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />
                         Weaknesses
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.weaknesses}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.weaknesses}</p>
                     </CardContent>
                   </Card>
 
                   <Card className="border-blue-500/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 text-blue-600">
-                        <Lightbulb className="w-4 h-4" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2 text-blue-600">
+                        <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4" />
                         Opportunities
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.opportunities}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.opportunities}</p>
                     </CardContent>
                   </Card>
 
                   <Card className="border-yellow-500/30">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2 text-yellow-600">
-                        <AlertTriangle className="w-4 h-4" />
+                    <CardHeader className="pb-1 sm:pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center gap-2 text-yellow-600">
+                        <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
                         Threats
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.threats}</p>
+                    <CardContent className="pt-0">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-line">{selectedAnalysis.threats}</p>
                     </CardContent>
                   </Card>
                 </div>
               </div>
             ) : (
-              <Card className="py-12">
+              <Card className="py-8 sm:py-12">
                 <CardContent className="text-center">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Analysis Yet</h3>
-                  <p className="text-muted-foreground">
-                    Enter a competitor name above to get started with your first analysis.
+                  <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No Analysis Yet</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Enter a competitor name above to get started.
                   </p>
                 </CardContent>
               </Card>
@@ -453,4 +507,4 @@ const CompetitorAnalysis = () => {
   );
 };
 
-export default CompetitorAnalysis;
+export default CompetitorAnalysisPage;
