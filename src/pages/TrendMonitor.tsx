@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
   RefreshCw, 
   TrendingUp, 
@@ -17,7 +19,8 @@ import {
   Search,
   MessageCircle,
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Menu
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfDay, isSameDay } from "date-fns";
@@ -49,6 +52,7 @@ interface TrendItem {
 export default function TrendMonitor() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [user, setUser] = useState<User | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,6 +62,7 @@ export default function TrendMonitor() {
   const [activePlatform, setActivePlatform] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [datesWithData, setDatesWithData] = useState<Date[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -233,237 +238,278 @@ export default function TrendMonitor() {
 
   const platforms = Object.keys(platformConfig);
 
+  // Mobile sidebar content
+  const SidebarContent = () => (
+    <>
+      <Card>
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+            History
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 sm:p-6">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => {
+              if (date) {
+                setSelectedDate(date);
+                if (isMobile) setMobileMenuOpen(false);
+              }
+            }}
+            modifiers={{
+              hasData: datesWithData,
+            }}
+            modifiersStyles={{
+              hasData: {
+                backgroundColor: 'hsl(var(--primary) / 0.2)',
+                borderRadius: '50%',
+              }
+            }}
+            className="rounded-md border mx-auto"
+          />
+          <p className="text-xs text-muted-foreground mt-3 text-center sm:text-left">
+            Dates with data are highlighted.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="text-base sm:text-lg">Platforms</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {platforms.map(platform => (
+            <div key={platform} className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${platformConfig[platform].color}`} />
+              <span className="text-sm">{platformConfig[platform].label}</span>
+              <Badge variant="outline" className="ml-auto text-xs">
+                {trends.filter(t => t.platform === platform).length}
+              </Badge>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Mobile Menu Button */}
+              {isMobile && (
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" className="shrink-0">
+                      <Menu className="w-5 h-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[85vw] max-w-[320px] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-primary" />
+                        Trend Monitor
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4">
+                      <SidebarContent />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
+              
               <Button 
                 variant="ghost" 
                 size="icon"
                 onClick={() => navigate('/brand-strategy')}
+                className="shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                  <TrendingUp className="w-8 h-8 text-primary" />
-                  Trend Monitor
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-3xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
+                  <span className="truncate">Trend Monitor</span>
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm hidden sm:block">
                   Track what's trending across social media platforms
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {lastUpdated && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                   Last updated: {format(lastUpdated, "MMM d, h:mm a")}
                 </span>
               )}
               <Button 
                 onClick={handleRefreshTrends} 
                 disabled={isFetching}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
+                size={isMobile ? "sm" : "default"}
               >
                 <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-                {isFetching ? "Fetching..." : "Refresh Trends"}
+                {isFetching ? "Fetching..." : isMobile ? "Refresh" : "Refresh Trends"}
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-12 gap-6">
-            {/* Calendar Sidebar */}
-            <div className="col-span-3">
-              <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CalendarIcon className="w-5 h-5" />
-                  History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  modifiers={{
-                    hasData: datesWithData,
-                  }}
-                  modifiersStyles={{
-                    hasData: {
-                      backgroundColor: 'hsl(var(--primary) / 0.2)',
-                      borderRadius: '50%',
-                    }
-                  }}
-                  className="rounded-md border"
-                />
-                <p className="text-xs text-muted-foreground mt-3">
-                  Dates with data are highlighted. Data is saved hourly when you refresh.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+            {/* Desktop Sidebar */}
+            {!isMobile && (
+              <div className="lg:col-span-3">
+                <SidebarContent />
+              </div>
+            )}
 
-            {/* Platform Legend */}
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-lg">Platforms</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {platforms.map(platform => (
-                  <div key={platform} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${platformConfig[platform].color}`} />
-                    <span className="text-sm">{platformConfig[platform].label}</span>
-                    <Badge variant="outline" className="ml-auto text-xs">
-                      {trends.filter(t => t.platform === platform).length}
+            {/* Main Content */}
+            <div className="lg:col-span-9">
+              <Card>
+                <CardHeader className="pb-2 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <CardTitle className="text-base sm:text-xl">
+                      {isMobile ? format(selectedDate, "MMM d, yyyy") : `Trending on ${format(selectedDate, "MMMM d, yyyy")}`}
+                    </CardTitle>
+                    <Badge variant="secondary" className="w-fit">
+                      {filteredTrends.length} trends
                     </Badge>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+                </CardHeader>
+                <CardContent className="p-2 sm:p-6">
+                  <Tabs value={activePlatform} onValueChange={setActivePlatform}>
+                    {/* Scrollable tabs for mobile */}
+                    <ScrollArea className="w-full pb-2">
+                      <TabsList className="mb-4 inline-flex w-max">
+                        <TabsTrigger value="all" className="text-xs sm:text-sm">All</TabsTrigger>
+                        {platforms.map(platform => (
+                          <TabsTrigger key={platform} value={platform} className="text-xs sm:text-sm">
+                            {isMobile ? platform.charAt(0).toUpperCase() + platform.slice(1, 4) : platformConfig[platform].label}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
 
-          {/* Main Content */}
-          <div className="col-span-9">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    Trending on {format(selectedDate, "MMMM d, yyyy")}
-                  </CardTitle>
-                  <Badge variant="secondary">
-                    {filteredTrends.length} trends
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={activePlatform} onValueChange={setActivePlatform}>
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="all">All Platforms</TabsTrigger>
-                    {platforms.map(platform => (
-                      <TabsTrigger key={platform} value={platform}>
-                        {platformConfig[platform].label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-
-                  <TabsContent value={activePlatform}>
-                    {isLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : filteredTrends.length === 0 ? (
-                      <div className="text-center py-12">
-                        <TrendingUp className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No trends found</h3>
-                        <p className="text-muted-foreground mb-4">
-                          {isSameDay(selectedDate, new Date()) 
-                            ? "Click 'Refresh Trends' to fetch the latest trending topics."
-                            : "No trend data saved for this date."}
-                        </p>
-                        {isSameDay(selectedDate, new Date()) && (
-                          <Button onClick={handleRefreshTrends} disabled={isFetching}>
-                            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-                            Fetch Trends Now
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <ScrollArea className="h-[500px]">
-                        <div className="space-y-4">
-                          {activePlatform === "all" ? (
-                            // Show grouped by platform
-                            Object.entries(trendsByPlatform).map(([platform, platformTrends]) => (
-                              <div key={platform}>
-                                <div className="flex items-center gap-2 mb-3">
-                                  <div className={`w-3 h-3 rounded-full ${platformConfig[platform]?.color || 'bg-gray-500'}`} />
-                                  <h3 className="font-semibold">{platformConfig[platform]?.label || platform}</h3>
-                                  <Badge variant="outline">{platformTrends.length}</Badge>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6">
-                                  {platformTrends.slice(0, 12).map((trend) => (
-                                    <TrendCard key={trend.id} trend={trend} />
-                                  ))}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            // Show single platform
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                              {filteredTrends.map((trend) => (
-                                <TrendCard key={trend.id} trend={trend} />
-                              ))}
-                            </div>
+                    <TabsContent value={activePlatform}>
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : filteredTrends.length === 0 ? (
+                        <div className="text-center py-8 sm:py-12">
+                          <TrendingUp className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-4" />
+                          <h3 className="text-base sm:text-lg font-semibold mb-2">No trends found</h3>
+                          <p className="text-muted-foreground mb-4 text-sm">
+                            {isSameDay(selectedDate, new Date()) 
+                              ? "Tap 'Refresh' to fetch trending topics."
+                              : "No trend data saved for this date."}
+                          </p>
+                          {isSameDay(selectedDate, new Date()) && (
+                            <Button onClick={handleRefreshTrends} disabled={isFetching} size="sm">
+                              <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+                              Fetch Now
+                            </Button>
                           )}
                         </div>
-                      </ScrollArea>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* Cross-Platform Trends Section */}
-            {crossPlatformTrends.length > 0 && (
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Hash className="w-5 h-5 text-primary" />
-                    Cross-Platform Trends
-                    <Badge variant="secondary" className="ml-2">
-                      {crossPlatformTrends.length} found
-                    </Badge>
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Trends appearing across multiple platforms
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    {crossPlatformTrends.map((crossTrend, index) => (
-                      <div 
-                        key={index}
-                        className="p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-base">{crossTrend.name}</h4>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {crossTrend.platforms.map(platform => {
-                                const config = platformConfig[platform];
-                                return (
-                                  <Badge 
-                                    key={platform}
-                                    variant="outline" 
-                                    className={`text-xs ${config?.color || 'bg-gray-500'} text-white border-none`}
-                                  >
-                                    {config?.label || platform}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
+                      ) : (
+                        <ScrollArea className="h-[400px] sm:h-[500px]">
+                          <div className="space-y-4">
+                            {activePlatform === "all" ? (
+                              // Show grouped by platform
+                              Object.entries(trendsByPlatform).map(([platform, platformTrends]) => (
+                                <div key={platform}>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className={`w-3 h-3 rounded-full ${platformConfig[platform]?.color || 'bg-gray-500'}`} />
+                                    <h3 className="font-semibold text-sm sm:text-base">{platformConfig[platform]?.label || platform}</h3>
+                                    <Badge variant="outline" className="text-xs">{platformTrends.length}</Badge>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-6">
+                                    {platformTrends.slice(0, 12).map((trend) => (
+                                      <TrendCard key={trend.id} trend={trend} />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              // Show single platform
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {filteredTrends.map((trend) => (
+                                  <TrendCard key={trend.id} trend={trend} />
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-right">
-                            <Badge variant="secondary" className="text-lg font-bold">
-                              {crossTrend.platforms.length}
-                            </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">platforms</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        </ScrollArea>
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
-            )}
+
+              {/* Cross-Platform Trends Section */}
+              {crossPlatformTrends.length > 0 && (
+                <Card className="mt-4 sm:mt-6">
+                  <CardHeader className="pb-2 sm:pb-4">
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-xl">
+                      <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                      <span>Cross-Platform</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {crossPlatformTrends.length}
+                      </Badge>
+                    </CardTitle>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Trending across multiple platforms
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-2 sm:p-6">
+                    <div className="grid gap-2 sm:gap-3">
+                      {crossPlatformTrends.map((crossTrend, index) => (
+                        <div 
+                          key={index}
+                          className="p-3 sm:p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-sm sm:text-base truncate">{crossTrend.name}</h4>
+                              <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                                {crossTrend.platforms.map(platform => {
+                                  const config = platformConfig[platform];
+                                  return (
+                                    <Badge 
+                                      key={platform}
+                                      variant="outline" 
+                                      className={`text-[10px] sm:text-xs ${config?.color || 'bg-gray-500'} text-white border-none`}
+                                    >
+                                      {config?.label || platform}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <Badge variant="secondary" className="text-sm sm:text-lg font-bold">
+                                {crossTrend.platforms.length}
+                              </Badge>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">platforms</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -527,58 +573,58 @@ function TrendCard({ trend }: { trend: TrendItem }) {
     <>
       <div 
         onClick={() => setOpen(true)}
-        className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+        className="p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
       >
         <div className="flex items-start gap-2">
           <Badge 
             variant="secondary" 
-            className={`text-xs ${config?.color || 'bg-gray-500'} text-white`}
+            className={`text-[10px] sm:text-xs ${config?.color || 'bg-gray-500'} text-white shrink-0`}
           >
             #{trend.trend_rank}
           </Badge>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{trend.trend_name}</p>
+            <p className="font-medium text-xs sm:text-sm truncate">{trend.trend_name}</p>
             {trend.trend_category && (
-              <p className="text-xs text-muted-foreground capitalize">
+              <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
                 {trend.trend_category}
               </p>
             )}
           </div>
         </div>
         {trend.trend_volume && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
             {trend.trend_volume} mentions
           </p>
         )}
       </div>
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${config?.color || 'bg-gray-500'}`} />
-              {trend.trend_name}
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <div className={`w-3 h-3 rounded-full shrink-0 ${config?.color || 'bg-gray-500'}`} />
+              <span className="truncate">{trend.trend_name}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">#{trend.trend_rank}</Badge>
-              <Badge variant="secondary">{config?.label || trend.platform}</Badge>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-xs">#{trend.trend_rank}</Badge>
+              <Badge variant="secondary" className="text-xs">{config?.label || trend.platform}</Badge>
             </div>
             {trend.trend_category && (
-              <p className="text-sm">
+              <p className="text-xs sm:text-sm">
                 <span className="text-muted-foreground">Category:</span> {trend.trend_category}
               </p>
             )}
             {trend.trend_volume && (
-              <p className="text-sm">
+              <p className="text-xs sm:text-sm">
                 <span className="text-muted-foreground">Volume:</span> {trend.trend_volume} mentions
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
-            <Button onClick={handleView} className="w-full gap-2" disabled={isResolving}>
+            <Button onClick={handleView} className="w-full gap-2" size="sm" disabled={isResolving}>
               <ExternalLink className={`w-4 h-4 ${isResolving ? "animate-pulse" : ""}`} />
               {isResolving
                 ? "Finding post..."
