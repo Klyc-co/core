@@ -22,6 +22,12 @@ interface PendingApproval {
     scheduled_date: string;
     scheduled_time: string;
   } | null;
+  campaign_drafts: {
+    id: string;
+    campaign_idea: string | null;
+    content_type: string | null;
+    created_at: string;
+  } | null;
 }
 
 const platformColors: Record<string, string> = {
@@ -59,7 +65,8 @@ const PendingApprovals = () => {
         .from("campaign_approvals")
         .select(`
           *,
-          scheduled_campaigns (*)
+          scheduled_campaigns (*),
+          campaign_drafts (*)
         `)
         .eq("marketer_id", userId)
         .order("created_at", { ascending: false });
@@ -163,66 +170,93 @@ const PendingApprovals = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {approvals.map((approval) => (
-              <Card key={approval.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-foreground">
-                          {approval.scheduled_campaigns?.campaign_name || "Untitled Campaign"}
-                        </h3>
-                        {getStatusBadge(approval.status)}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          Sent {new Date(approval.created_at).toLocaleDateString()}
+            {approvals.map((approval) => {
+              const campaignName = approval.scheduled_campaigns?.campaign_name 
+                || approval.campaign_drafts?.campaign_idea 
+                || "Untitled Campaign";
+              const isDraft = !!approval.campaign_drafts && !approval.scheduled_campaigns;
+              
+              return (
+                <Card key={approval.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-foreground">
+                            {campaignName}
+                          </h3>
+                          {getStatusBadge(approval.status)}
+                          {isDraft && (
+                            <Badge variant="outline" className="text-xs">
+                              Draft
+                            </Badge>
+                          )}
                         </div>
-                        {approval.scheduled_campaigns?.scheduled_date && (
-                          <span>
-                            Scheduled for {new Date(approval.scheduled_campaigns.scheduled_date).toLocaleDateString()}
-                          </span>
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            Sent {new Date(approval.created_at).toLocaleDateString()}
+                          </div>
+                          {approval.scheduled_campaigns?.scheduled_date && (
+                            <span>
+                              Scheduled for {new Date(approval.scheduled_campaigns.scheduled_date).toLocaleDateString()}
+                            </span>
+                          )}
+                          {isDraft && approval.campaign_drafts?.content_type && (
+                            <span className="capitalize">
+                              {approval.campaign_drafts.content_type.replace("-", " ")}
+                            </span>
+                          )}
+                        </div>
+
+                        {approval.scheduled_campaigns?.platforms && (
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            {approval.scheduled_campaigns.platforms.map((platform) => (
+                              <span
+                                key={platform}
+                                className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
+                              >
+                                {platform}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {approval.notes && approval.status !== "pending" && (
+                          <div className="mt-3 p-3 bg-secondary/50 rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              <span className="font-medium">Client Feedback:</span> {approval.notes}
+                            </p>
+                          </div>
                         )}
                       </div>
 
-                      {approval.scheduled_campaigns?.platforms && (
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {approval.scheduled_campaigns.platforms.map((platform) => (
-                            <span
-                              key={platform}
-                              className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
-                            >
-                              {platform}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {approval.notes && approval.status !== "pending" && (
-                        <div className="mt-3 p-3 bg-secondary/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium">Client Feedback:</span> {approval.notes}
-                          </p>
-                        </div>
-                      )}
+                      <div className="flex gap-2 ml-4">
+                        {isDraft && approval.campaign_drafts && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/campaigns/drafts/${approval.campaign_drafts!.id}`)}
+                          >
+                            View Draft
+                          </Button>
+                        )}
+                        {approval.status === "approved" && approval.scheduled_campaigns && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate("/campaigns/schedule")}
+                          >
+                            View in Schedule
+                          </Button>
+                        )}
+                      </div>
                     </div>
-
-                    {approval.status === "approved" && approval.scheduled_campaigns && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate("/campaigns/schedule")}
-                        className="ml-4"
-                      >
-                        View in Schedule
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
