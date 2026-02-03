@@ -22,6 +22,20 @@ import DropboxIcon from "@/components/icons/DropboxIcon";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import BazaartIcon from "@/components/icons/BazaartIcon";
 import VideoleapIcon from "@/components/icons/VideoleapIcon";
+import NotionIcon from "@/components/icons/NotionIcon";
+import AsanaIcon from "@/components/icons/AsanaIcon";
+import FrameioIcon from "@/components/icons/FrameioIcon";
+import OneDriveIcon from "@/components/icons/OneDriveIcon";
+import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
+import KajabiIcon from "@/components/icons/KajabiIcon";
+import PatreonIcon from "@/components/icons/PatreonIcon";
+import RunwayMLIcon from "@/components/icons/RunwayMLIcon";
+import MidjourneyIcon from "@/components/icons/MidjourneyIcon";
+import SynthesiaIcon from "@/components/icons/SynthesiaIcon";
+import DescriptIcon from "@/components/icons/DescriptIcon";
+import ClickUpIcon from "@/components/icons/ClickUpIcon";
+import MondayIcon from "@/components/icons/MondayIcon";
+import AirtableIcon from "@/components/icons/AirtableIcon";
 import { useClientContext } from "@/contexts/ClientContext";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -804,6 +818,188 @@ const CompanyInfo = () => {
                         <VideoleapIcon className="w-8 h-8" />
                       </div>
                       <span className="text-sm font-medium text-foreground">Videoleap</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Notion */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <NotionIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Notion</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Asana */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <AsanaIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Asana</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Frame.io */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <FrameioIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Frame.io</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* OneDrive */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <OneDriveIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">OneDrive</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Adobe Creative Cloud */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <AdobeCreativeCloudIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Adobe CC</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Kajabi */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <KajabiIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Kajabi</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Patreon */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <PatreonIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Patreon</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* RunwayML */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <RunwayMLIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">RunwayML</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Midjourney */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <MidjourneyIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Midjourney</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Synthesia */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <SynthesiaIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Synthesia</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Descript */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <DescriptIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Descript</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* ClickUp */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <ClickUpIcon className="w-8 h-8" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">ClickUp</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Monday.com */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <MondayIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Monday.com</span>
+                    </div>
+                    <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
+                      Coming Soon
+                    </Button>
+                  </div>
+
+                  {/* Airtable */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                        <AirtableIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Airtable</span>
                     </div>
                     <Button type="button" variant="secondary" size="sm" className="w-full opacity-50" disabled>
                       Coming Soon
