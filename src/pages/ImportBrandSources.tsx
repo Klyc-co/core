@@ -16,6 +16,9 @@ import SlackIcon from "@/components/icons/SlackIcon";
 import DiscordIcon from "@/components/icons/DiscordIcon";
 import CapCutIcon from "@/components/icons/CapCutIcon";
 import RiversideIcon from "@/components/icons/RiversideIcon";
+import DropboxIcon from "@/components/icons/DropboxIcon";
+import BazaartIcon from "@/components/icons/BazaartIcon";
+import VideoleapIcon from "@/components/icons/VideoleapIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -774,6 +777,78 @@ const ImportBrandSources = () => {
                   <RiversideIcon className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-medium text-foreground">Riverside</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Dropbox */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                  <DropboxIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Dropbox</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Google Drive */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                  <GoogleDriveIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Google Drive</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Bazaart */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                  <BazaartIcon className="w-8 h-8" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Bazaart</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            </div>
+
+            {/* Videoleap */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                  <VideoleapIcon className="w-8 h-8" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Videoleap</span>
               </div>
               <Button 
                 variant="secondary" 
