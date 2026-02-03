@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
+import { useClientContext } from "@/contexts/ClientContext";
 import type { User } from "@supabase/supabase-js";
 
 // TikTok logo as inline SVG component
@@ -72,6 +73,7 @@ const CampaignDraftView = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const { triggerZapier, isSending: isSendingToZapier } = useZapierIntegration();
+  const { selectedClientUserId, selectedClientName, isDefaultClient } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
   const [draft, setDraft] = useState<CampaignDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,10 +83,55 @@ const CampaignDraftView = () => {
   const [scenePrompts, setScenePrompts] = useState<{ time: string; title: string; prompt: string }[]>([]);
   const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptions | null>(null);
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
+  const [isSendingForApproval, setIsSendingForApproval] = useState(false);
 
   const handleSendToZapier = async () => {
     if (!id) return;
     await triggerZapier(id, "all_data");
+  };
+
+  const handleSendForApproval = async () => {
+    if (!id || !user) return;
+    
+    // Check if a client is selected
+    if (isDefaultClient || !selectedClientUserId) {
+      toast({
+        title: "No client selected",
+        description: "Please select a client from the client switcher to send for approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingForApproval(true);
+    try {
+      const { error } = await supabase
+        .from("campaign_approvals")
+        .insert({
+          campaign_draft_id: id,
+          marketer_id: user.id,
+          client_id: selectedClientUserId,
+          status: "pending",
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sent for approval!",
+        description: `Campaign draft sent to ${selectedClientName} for approval.`,
+      });
+      
+      navigate("/campaigns/pending");
+    } catch (error) {
+      console.error("Error sending for approval:", error);
+      toast({
+        title: "Failed to send for approval",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingForApproval(false);
+    }
   };
 
   useEffect(() => {
@@ -261,18 +308,12 @@ const CampaignDraftView = () => {
               {isSendingToZapier ? "Sending..." : "Send to Zapier"}
             </Button>
             <Button
-              variant="outline"
-              onClick={() => {
-                // TikTok share intent - opens TikTok with content ready to post
-                const shareText = encodeURIComponent(
-                  `${draft?.campaign_idea || ''}\n\n${tags.join(' ')}`
-                );
-                window.open(`https://www.tiktok.com/upload`, '_blank');
-              }}
+              onClick={handleSendForApproval}
+              disabled={isSendingForApproval}
               className="gap-2"
             >
-              <TikTokIcon className="w-4 h-4" />
-              Share to TikTok
+              {isSendingForApproval ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {isSendingForApproval ? "Sending..." : "Send for Approval"}
             </Button>
           </div>
         </div>
