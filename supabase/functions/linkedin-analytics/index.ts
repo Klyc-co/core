@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { decryptToken } from "../_shared/encryption.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -54,7 +54,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = connection.access_token;
+    // Decrypt the access token
+    const accessToken = await decryptToken(connection.access_token);
 
     // Check if token is expired
     if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {

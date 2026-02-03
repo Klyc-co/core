@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,13 +103,17 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
+    // Encrypt tokens before storing
+    const encryptedAccessToken = await encryptToken(accessToken);
+    const encryptedRefreshToken = refreshToken ? await encryptToken(refreshToken) : null;
+
     const { error: upsertError } = await supabase
       .from("social_connections")
       .upsert({
         user_id: userId,
         platform: "youtube",
-        access_token: accessToken,
-        refresh_token: refreshToken,
+        access_token: encryptedAccessToken,
+        refresh_token: encryptedRefreshToken,
         token_expires_at: expiresAt,
         platform_user_id: channelId,
         platform_username: channelTitle,

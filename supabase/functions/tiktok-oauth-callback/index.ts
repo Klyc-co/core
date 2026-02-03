@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,14 +99,20 @@ serve(async (req) => {
     // Store in database using service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
+    // Encrypt tokens before storing
+    const encryptedAccessToken = await encryptToken(tokenData.access_token);
+    const encryptedRefreshToken = tokenData.refresh_token 
+      ? await encryptToken(tokenData.refresh_token) 
+      : null;
+
     const { error: upsertError } = await supabase
       .from("social_connections")
       .upsert(
         {
           user_id: userId,
           platform: "tiktok",
-          access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken,
           token_expires_at: tokenData.expires_in
             ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
             : null,

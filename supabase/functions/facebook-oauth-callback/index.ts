@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,12 +101,15 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
+    // Encrypt the access token before storing
+    const encryptedAccessToken = await encryptToken(pageAccessToken);
+
     const { error: upsertError } = await supabase
       .from("social_connections")
       .upsert({
         user_id: userId,
         platform: "facebook",
-        access_token: pageAccessToken,
+        access_token: encryptedAccessToken,
         platform_user_id: pageId,
         platform_username: pageName,
         token_expires_at: expiresAt,

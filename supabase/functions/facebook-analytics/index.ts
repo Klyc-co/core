@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,7 +63,8 @@ serve(async (req) => {
       );
     }
 
-    const accessToken = connection.access_token;
+    // Decrypt the access token
+    const accessToken = await decryptToken(connection.access_token);
     const pageId = connection.platform_user_id;
 
     console.log("Fetching analytics for Page:", pageId);
