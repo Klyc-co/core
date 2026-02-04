@@ -472,203 +472,155 @@ const ImportBrandSources = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* Website Import Card */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Globe className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">Website Import</h2>
-                <p className="text-sm text-muted-foreground">Scan your website for brand assets</p>
-              </div>
+        {/* Website Import Section */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Globe className="w-6 h-6 text-primary" />
             </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Website Import</h2>
+              <p className="text-sm text-muted-foreground">Scan your website for brand assets</p>
+            </div>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Enter your website URL
-                </label>
-                <Input
-                  type="url"
-                  placeholder="https://example.com"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  disabled={isScanning}
-                />
-              </div>
-
-              <Button 
-                onClick={handleScanWebsite}
-                disabled={!websiteUrl || isScanning}
-                className="w-full bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white"
-              >
-                {isScanning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Scanning Website...
-                  </>
-                ) : (
-                  "⚡ Scan Website"
-                )}
-              </Button>
-
-              {scanResult && (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span className="font-medium">Scan Complete!</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Colors:</span>
-                      <span className="font-medium text-foreground">{scanResult.colors}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fonts:</span>
-                      <span className="font-medium text-foreground">{scanResult.fonts}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Images:</span>
-                      <span className="font-medium text-foreground">{scanResult.images}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Copy:</span>
-                      <span className="font-medium text-foreground">{scanResult.copy}</span>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="link" 
-                    className="mt-3 p-0 h-auto text-primary"
-                    onClick={() => navigate("/profile/library")}
-                  >
-                    View in Brand Library →
-                  </Button>
-                </div>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+            <div className="flex-1 w-full">
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Enter your website URL
+              </label>
+              <Input
+                type="url"
+                placeholder="https://example.com"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                disabled={isScanning}
+              />
+            </div>
+            <Button 
+              onClick={handleScanWebsite}
+              disabled={!websiteUrl || isScanning}
+              className="w-full sm:w-auto bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white"
+            >
+              {isScanning ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                "⚡ Scan Website"
               )}
+            </Button>
+          </div>
 
-              <p className="text-xs text-muted-foreground">
-                We will crawl your public pages and extract colors, fonts, copy blocks, images, and brand structure.
-              </p>
-            </div>
-          </Card>
-
-          {/* Social Media Import Card */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-pink-500/10 flex items-center justify-center">
-                <Music className="w-6 h-6 text-pink-500" />
+          {scanResult && (
+            <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-medium">Scan Complete!</span>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">Social Media Import</h2>
-                <p className="text-sm text-muted-foreground">Connect your social platforms</p>
+              <div className="grid grid-cols-4 gap-4 text-sm">
+                <div className="text-center">
+                  <span className="block text-lg font-bold text-foreground">{scanResult.colors}</span>
+                  <span className="text-muted-foreground">Colors</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-lg font-bold text-foreground">{scanResult.fonts}</span>
+                  <span className="text-muted-foreground">Fonts</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-lg font-bold text-foreground">{scanResult.images}</span>
+                  <span className="text-muted-foreground">Images</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-lg font-bold text-foreground">{scanResult.copy}</span>
+                  <span className="text-muted-foreground">Copy</span>
+                </div>
               </div>
+              <Button 
+                variant="link" 
+                className="mt-3 p-0 h-auto text-primary"
+                onClick={() => navigate("/profile/library")}
+              >
+                View in Brand Library →
+              </Button>
             </div>
+          )}
 
-            <div className="grid grid-cols-2 gap-4">
-              {socialPlatforms.map((platform) => {
-                const status = connectionStatus[platform.name] || 'disconnected';
-                const isConnected = status === 'connected';
-                const isConnecting = status === 'connecting';
-                
-                return (
-                  <div key={platform.name} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg ${platform.color} flex items-center justify-center`}>
-                        <platform.icon className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{platform.name}</span>
-                      {isConnected && (
-                        <Check className="w-4 h-4 text-green-500" />
-                      )}
+          <p className="text-xs text-muted-foreground mt-3">
+            We will crawl your public pages and extract colors, fonts, copy blocks, images, and brand structure.
+          </p>
+        </Card>
+
+        {/* Social Media Import Section */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-lg bg-pink-500/10 flex items-center justify-center">
+              <Music className="w-6 h-6 text-pink-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Social Media Import</h2>
+              <p className="text-sm text-muted-foreground">Connect your social platforms</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {socialPlatforms.map((platform) => {
+              const status = connectionStatus[platform.name] || 'disconnected';
+              const isConnected = status === 'connected';
+              const isConnecting = status === 'connecting';
+              
+              return (
+                <div key={platform.name} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg ${platform.color} flex items-center justify-center`}>
+                      <platform.icon className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant={isConnected ? "outline" : "secondary"} 
-                        size="sm" 
-                        className={`flex-1 ${isConnected ? 'border-green-500/50 text-green-600 dark:text-green-400' : ''} ${platform.comingSoon ? 'opacity-50' : ''}`}
-                        onClick={() => handleConnectPlatform(platform)}
-                        disabled={isConnecting || platform.comingSoon}
-                      >
-                        {getButtonContent(platform)}
-                      </Button>
-                      {isConnected && platform.name === "TikTok" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/tiktok-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                      {isConnected && platform.name === "Instagram" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/instagram-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                      {isConnected && platform.name === "YouTube" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/youtube-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                      {isConnected && platform.name === "Facebook" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/facebook-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                      {isConnected && platform.name === "Twitter/X" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/twitter-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                      {isConnected && platform.name === "LinkedIn" && (
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={() => navigate("/profile/linkedin-analytics")}
-                          className="gap-1"
-                        >
-                          <BarChart3 className="w-3 h-3" />
-                          Analytics
-                        </Button>
-                      )}
-                    </div>
+                    <span className="text-sm font-medium text-foreground">{platform.name}</span>
+                    {isConnected && (
+                      <Check className="w-4 h-4 text-purple-500" />
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={isConnected ? "outline" : "secondary"} 
+                      size="sm" 
+                      className={`flex-1 ${isConnected ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''} ${platform.comingSoon ? 'opacity-50' : ''}`}
+                      onClick={() => handleConnectPlatform(platform)}
+                      disabled={isConnecting || platform.comingSoon}
+                    >
+                      {getButtonContent(platform)}
+                    </Button>
+                  </div>
+                  {isConnected && (
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => {
+                        const routes: Record<string, string> = {
+                          'TikTok': '/profile/tiktok-analytics',
+                          'Instagram': '/profile/instagram-analytics',
+                          'YouTube': '/profile/youtube-analytics',
+                          'Facebook': '/profile/facebook-analytics',
+                          'Twitter/X': '/profile/twitter-analytics',
+                          'LinkedIn': '/profile/linkedin-analytics',
+                        };
+                        if (routes[platform.name]) navigate(routes[platform.name]);
+                      }}
+                      className="w-full gap-1"
+                    >
+                      <BarChart3 className="w-3 h-3" />
+                      Analytics
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
 
         {/* Social Tools Section */}
-        <Card className="p-6 mt-6">
+        <Card className="p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
               <Wand2 className="w-6 h-6 text-purple-500" />
@@ -679,7 +631,7 @@ const ImportBrandSources = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {/* Canva */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
