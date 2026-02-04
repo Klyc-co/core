@@ -37,7 +37,9 @@ const Home = () => {
   };
 
   const handleConnectGA = () => {
-    navigate("/profile/company?tab=analytics");
+    // Keep the URL free of query params so Google OAuth redirect_uri can match exactly.
+    // The analytics tab can be restored client-side after the callback.
+    navigate("/profile/company");
   };
 
   return (
