@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// NOTE: Radix ScrollArea can be finicky inside Dialogs depending on layout constraints.
+// We use a plain overflow container here for reliable scrolling.
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { 
@@ -251,7 +252,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
         </div>
 
         {/* File List */}
-        <ScrollArea className="flex-1 min-h-0 border rounded-lg overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
           {loading ? (
             <div className="flex items-center justify-center h-full py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -325,7 +326,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Actions */}
         <div className="flex justify-between items-center pt-2 border-t">
