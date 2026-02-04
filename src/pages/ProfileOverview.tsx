@@ -39,6 +39,7 @@ const ProfileOverview = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
+  const [hasGoogleDrive, setHasGoogleDrive] = useState(false);
   const [brandAssetCount, setBrandAssetCount] = useState(0);
   const [campaignDraftCount, setCampaignDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,16 @@ const ProfileOverview = () => {
         .eq("user_id", effectiveUserId);
       
       setSocialConnections(connections || []);
+
+      // Check for Google Drive connection
+      const { data: driveConn } = await supabase
+        .from("google_drive_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      
+      setHasGoogleDrive(!!driveConn);
 
       // Fetch brand asset count
       const { count: assetCount } = await supabase
@@ -107,12 +118,21 @@ const ProfileOverview = () => {
     twitter: "Twitter/X",
     linkedin: "LinkedIn",
     google_analytics: "Google Analytics",
+    google_drive: "Google Drive",
   };
+
+  // Combine social connections with Google Drive for display
+  const allConnections = [
+    ...socialConnections,
+    ...(hasGoogleDrive ? [{ platform: "google_drive", platform_username: null }] : []),
+  ];
+
+  const connectedPlatformCount = allConnections.length;
 
   const quickStats: QuickStat[] = [
     {
       label: "Connected Platforms",
-      value: socialConnections.length.toString(),
+      value: connectedPlatformCount.toString(),
       icon: <TrendingUp className="w-5 h-5" />,
       color: "text-primary",
       bgColor: "bg-primary/10",
@@ -238,9 +258,9 @@ const ProfileOverview = () => {
         <Card className="bg-card border-border mb-8">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Platforms Connected</h2>
-            {socialConnections.length > 0 ? (
+            {allConnections.length > 0 ? (
               <div className="flex flex-wrap gap-3">
-                {socialConnections.map((conn) => (
+                {allConnections.map((conn) => (
                   <div 
                     key={conn.platform}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/5 border border-green-500/20"
