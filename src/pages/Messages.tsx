@@ -21,11 +21,13 @@ interface Message {
   created_at: string;
 }
 
-interface Conversation {
+interface Contact {
+  id: string;
   partnerId: string;
   partnerName: string;
-  lastMessage: string;
-  lastMessageAt: string;
+  partnerEmail: string | null;
+  lastMessage?: string;
+  lastMessageAt?: string;
   unreadCount: number;
 }
 
@@ -37,8 +39,8 @@ const Messages = ({ portalType }: MessagesProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -54,11 +56,11 @@ const Messages = ({ portalType }: MessagesProps) => {
         return;
       }
       setUser(user);
-      await fetchConversations(user.id);
+      await fetchContacts(user.id);
       
       const partnerId = searchParams.get("with");
       if (partnerId) {
-        setSelectedConversation(partnerId);
+        setSelectedContact(partnerId);
       }
     };
 
@@ -66,11 +68,11 @@ const Messages = ({ portalType }: MessagesProps) => {
   }, [navigate, portalType, searchParams]);
 
   useEffect(() => {
-    if (selectedConversation && user) {
-      fetchMessages(user.id, selectedConversation);
-      markMessagesAsRead(user.id, selectedConversation);
+    if (selectedContact && user) {
+      fetchMessages(user.id, selectedContact);
+      markMessagesAsRead(user.id, selectedContact);
     }
-  }, [selectedConversation, user]);
+  }, [selectedContact, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -86,13 +88,13 @@ const Messages = ({ portalType }: MessagesProps) => {
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          if (newMsg.sender_id === selectedConversation || newMsg.receiver_id === selectedConversation) {
+          if (newMsg.sender_id === selectedContact || newMsg.receiver_id === selectedContact) {
             setMessages(prev => [...prev, newMsg]);
             if (newMsg.receiver_id === user.id) {
-              markMessagesAsRead(user.id, selectedConversation!);
+              markMessagesAsRead(user.id, selectedContact!);
             }
           }
-          fetchConversations(user.id);
+          fetchContacts(user.id);
         }
       )
       .subscribe();
@@ -100,64 +102,90 @@ const Messages = ({ portalType }: MessagesProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedConversation]);
+  }, [user, selectedContact]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const fetchConversations = async (userId: string) => {
+  const fetchContacts = async (userId: string) => {
     try {
-      // Get all messages involving this user
-      const { data: allMessages, error } = await supabase
+      // Get linked clients/marketers from marketer_clients table
+      const { data: relationships, error: relError } = await supabase
+        .from("marketer_clients")
+        .select("*")
+        .or(`marketer_id.eq.${userId},client_id.eq.${userId}`);
+
+      if (relError) throw relError;
+
+      // Build contact list from relationships
+      const contactMap = new Map<string, Contact>();
+      
+      for (const rel of relationships || []) {
+        // Determine if current user is marketer or client in this relationship
+        const isMarketer = rel.marketer_id === userId;
+        const partnerId = isMarketer ? rel.client_id : rel.marketer_id;
+        const partnerName = isMarketer ? rel.client_name : "Your Marketer";
+        const partnerEmail = isMarketer ? rel.client_email : null;
+        
+        contactMap.set(partnerId, {
+          id: rel.id,
+          partnerId,
+          partnerName,
+          partnerEmail,
+          unreadCount: 0,
+        });
+      }
+
+      // Get recent messages to add last message info and unread counts
+      const { data: allMessages, error: msgError } = await supabase
         .from("messages")
         .select("*")
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (!msgError && allMessages) {
+        for (const msg of allMessages) {
+          const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+          
+          if (contactMap.has(partnerId)) {
+            const contact = contactMap.get(partnerId)!;
+            
+            // Set last message if not already set
+            if (!contact.lastMessage) {
+              contact.lastMessage = msg.content;
+              contact.lastMessageAt = msg.created_at;
+            }
+            
+            // Count unread messages
+            if (msg.receiver_id === userId && !msg.is_read) {
+              contact.unreadCount++;
+            }
+          }
+        }
+      }
 
-      // Group by conversation partner
-      const conversationMap = new Map<string, Conversation>();
+      // Sort contacts: those with messages first, then by last message time
+      const sortedContacts = Array.from(contactMap.values()).sort((a, b) => {
+        if (a.lastMessageAt && !b.lastMessageAt) return -1;
+        if (!a.lastMessageAt && b.lastMessageAt) return 1;
+        if (a.lastMessageAt && b.lastMessageAt) {
+          return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+        }
+        return a.partnerName.localeCompare(b.partnerName);
+      });
+
+      setContacts(sortedContacts);
       
-      for (const msg of allMessages || []) {
-        const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-        
-        if (!conversationMap.has(partnerId)) {
-          conversationMap.set(partnerId, {
-            partnerId,
-            partnerName: "Loading...",
-            lastMessage: msg.content,
-            lastMessageAt: msg.created_at,
-            unreadCount: msg.receiver_id === userId && !msg.is_read ? 1 : 0,
-          });
-        } else if (msg.receiver_id === userId && !msg.is_read) {
-          const conv = conversationMap.get(partnerId)!;
-          conv.unreadCount++;
+      // Auto-select first contact if none selected
+      if (!selectedContact && sortedContacts.length > 0) {
+        const partnerId = searchParams.get("with");
+        if (partnerId && sortedContacts.find(c => c.partnerId === partnerId)) {
+          setSelectedContact(partnerId);
         }
       }
-
-      // Get partner names from marketer_clients
-      const partnerIds = Array.from(conversationMap.keys());
-      if (partnerIds.length > 0) {
-        const { data: clients } = await supabase
-          .from("marketer_clients")
-          .select("client_id, client_name, marketer_id")
-          .or(`client_id.in.(${partnerIds.join(",")}),marketer_id.in.(${partnerIds.join(",")})`);
-
-        for (const client of clients || []) {
-          if (conversationMap.has(client.client_id)) {
-            conversationMap.get(client.client_id)!.partnerName = client.client_name;
-          }
-          if (conversationMap.has(client.marketer_id)) {
-            conversationMap.get(client.marketer_id)!.partnerName = "Your Marketer";
-          }
-        }
-      }
-
-      setConversations(Array.from(conversationMap.values()));
     } catch (error) {
-      console.error("Error fetching conversations:", error);
+      console.error("Error fetching contacts:", error);
     } finally {
       setLoading(false);
     }
@@ -189,13 +217,13 @@ const Messages = ({ portalType }: MessagesProps) => {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || !user) return;
+    if (!newMessage.trim() || !selectedContact || !user) return;
 
     setSending(true);
     try {
       const { error } = await supabase.from("messages").insert({
         sender_id: user.id,
-        receiver_id: selectedConversation,
+        receiver_id: selectedContact,
         content: newMessage.trim(),
       });
 
@@ -212,6 +240,12 @@ const Messages = ({ portalType }: MessagesProps) => {
     }
   };
 
+  const handleContactSelect = (partnerId: string) => {
+    setSelectedContact(partnerId);
+    setMessages([]); // Clear messages while loading
+  };
+
+  const selectedContactInfo = contacts.find(c => c.partnerId === selectedContact);
   const Header = portalType === "marketer" ? AppHeader : ClientHeader;
 
   return (
@@ -222,10 +256,12 @@ const Messages = ({ portalType }: MessagesProps) => {
         <h1 className="text-2xl font-bold text-foreground mb-6">Messages</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
-          {/* Conversations List */}
+          {/* Contacts List */}
           <Card className="md:col-span-1">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Conversations</CardTitle>
+              <CardTitle className="text-lg">
+                {portalType === "marketer" ? "Clients" : "Your Marketer"}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="h-[500px]">
@@ -233,38 +269,40 @@ const Messages = ({ portalType }: MessagesProps) => {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : conversations.length === 0 ? (
+                ) : contacts.length === 0 ? (
                   <div className="text-center py-8 px-4 text-muted-foreground text-sm">
-                    No conversations yet
+                    {portalType === "marketer" 
+                      ? "No clients yet. Add a client to start messaging."
+                      : "No marketer connected yet."}
                   </div>
                 ) : (
-                  conversations.map((conv) => (
+                  contacts.map((contact) => (
                     <button
-                      key={conv.partnerId}
-                      onClick={() => setSelectedConversation(conv.partnerId)}
+                      key={contact.id}
+                      onClick={() => handleContactSelect(contact.partnerId)}
                       className={`w-full p-4 text-left hover:bg-muted/50 transition-colors border-b border-border ${
-                        selectedConversation === conv.partnerId ? "bg-muted" : ""
+                        selectedContact === contact.partnerId ? "bg-muted" : ""
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10">
                           <AvatarFallback>
-                            {conv.partnerName.charAt(0).toUpperCase()}
+                            {contact.partnerName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-foreground truncate">
-                              {conv.partnerName}
+                              {contact.partnerName}
                             </span>
-                            {conv.unreadCount > 0 && (
+                            {contact.unreadCount > 0 && (
                               <span className="w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                                {conv.unreadCount}
+                                {contact.unreadCount}
                               </span>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
-                            {conv.lastMessage}
+                            {contact.lastMessage || "Start a conversation"}
                           </p>
                         </div>
                       </div>
@@ -277,37 +315,44 @@ const Messages = ({ portalType }: MessagesProps) => {
 
           {/* Messages Area */}
           <Card className="md:col-span-2 flex flex-col">
-            {selectedConversation ? (
+            {selectedContact && selectedContactInfo ? (
               <>
                 <CardHeader className="pb-3 border-b">
                   <CardTitle className="text-lg">
-                    {conversations.find(c => c.partnerId === selectedConversation)?.partnerName || "Chat"}
+                    {selectedContactInfo.partnerName}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 flex flex-col">
                   <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
-                      {messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}
-                        >
-                          <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                              msg.sender_id === user?.id
-                                ? "bg-primary text-primary-foreground rounded-br-sm"
-                                : "bg-muted rounded-bl-sm"
-                            }`}
-                          >
-                            <p className="text-sm">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${
-                              msg.sender_id === user?.id ? "text-primary-foreground/70" : "text-muted-foreground"
-                            }`}>
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </p>
-                          </div>
+                      {messages.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>No messages yet. Say hello!</p>
                         </div>
-                      ))}
+                      ) : (
+                        messages.map((msg) => (
+                          <div
+                            key={msg.id}
+                            className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                                msg.sender_id === user?.id
+                                  ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : "bg-muted rounded-bl-sm"
+                              }`}
+                            >
+                              <p className="text-sm">{msg.content}</p>
+                              <p className={`text-xs mt-1 ${
+                                msg.sender_id === user?.id ? "text-primary-foreground/70" : "text-muted-foreground"
+                              }`}>
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
@@ -322,7 +367,7 @@ const Messages = ({ portalType }: MessagesProps) => {
                       <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
+                        placeholder={`Message ${selectedContactInfo.partnerName}...`}
                         className="flex-1"
                       />
                       <Button type="submit" disabled={sending || !newMessage.trim()}>
@@ -340,7 +385,13 @@ const Messages = ({ portalType }: MessagesProps) => {
               <CardContent className="flex-1 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Select a conversation to start messaging</p>
+                  <p>
+                    {contacts.length === 0 
+                      ? (portalType === "marketer" 
+                          ? "Add a client to start messaging" 
+                          : "You'll be able to message your marketer once connected")
+                      : "Select a conversation to start messaging"}
+                  </p>
                 </div>
               </CardContent>
             )}
