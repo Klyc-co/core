@@ -27,6 +27,13 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
         <div className="flex items-center gap-6">
           <Logo to="/client/dashboard" />
           <Button
+            variant={isActive("/client/profile") ? "secondary" : "outline"}
+            onClick={() => navigate("/client/profile")}
+            className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+          >
+            Profile
+          </Button>
+          <Button
             variant={isActive("/client/campaigns") ? "secondary" : "outline"}
             onClick={() => navigate("/client/campaigns")}
             className="border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
