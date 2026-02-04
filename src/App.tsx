@@ -52,6 +52,7 @@ import YouTubeAnalytics from "./pages/YouTubeAnalytics";
 import FacebookAnalytics from "./pages/FacebookAnalytics";
 import TwitterAnalytics from "./pages/TwitterAnalytics";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
+import FullAnalytics from "./pages/FullAnalytics";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/profile/facebook-analytics" element={<WithSidebar><FacebookAnalytics /></WithSidebar>} />
             <Route path="/profile/twitter-analytics" element={<WithSidebar><TwitterAnalytics /></WithSidebar>} />
             <Route path="/profile/linkedin-analytics" element={<WithSidebar><LinkedInAnalytics /></WithSidebar>} />
+            <Route path="/analytics" element={<WithSidebar><FullAnalytics /></WithSidebar>} />
             <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
             
             <Route path="*" element={<NotFound />} />
