@@ -251,7 +251,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
         </div>
 
         {/* File List */}
-        <ScrollArea className="flex-1 min-h-[300px] border rounded-lg">
+        <ScrollArea className="flex-1 min-h-[300px] max-h-[50vh] border rounded-lg overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-full py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
