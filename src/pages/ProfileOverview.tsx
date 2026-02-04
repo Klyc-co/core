@@ -234,11 +234,11 @@ const ProfileOverview = () => {
           ))}
         </div>
 
-        {/* Connected Platforms - Only show if there are connections */}
-        {socialConnections.length > 0 && (
-          <Card className="bg-card border-border">
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Connected Platforms</h2>
+        {/* Connected Platforms - Always visible */}
+        <Card className="bg-card border-border mb-8">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Platforms Connected</h2>
+            {socialConnections.length > 0 ? (
               <div className="flex flex-wrap gap-3">
                 {socialConnections.map((conn) => (
                   <div 
@@ -257,9 +257,15 @@ const ProfileOverview = () => {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <div className="h-16 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  No platforms connected yet. Import brand sources to get started.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
