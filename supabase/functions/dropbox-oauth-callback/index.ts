@@ -22,7 +22,7 @@ serve(async (req) => {
     if (error) {
       console.error("Dropbox OAuth error:", error, errorDescription);
       return Response.redirect(
-        `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/client/profile/social?error=${encodeURIComponent(errorDescription || error)}`,
+        `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/profile/import?error=${encodeURIComponent(errorDescription || error)}`,
         302
       );
     }
@@ -115,12 +115,12 @@ serve(async (req) => {
       throw new Error("Failed to store connection");
     }
 
-    const redirectUrl = `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/client/profile/social?success=dropbox`;
+    const redirectUrl = `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/profile/import?success=dropbox`;
     return Response.redirect(redirectUrl, 302);
   } catch (error: unknown) {
     console.error("Dropbox callback error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const redirectUrl = `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/client/profile/social?error=${encodeURIComponent(errorMessage)}`;
+    const redirectUrl = `${Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app"}/profile/import?error=${encodeURIComponent(errorMessage)}`;
     return Response.redirect(redirectUrl, 302);
   }
 });
