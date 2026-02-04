@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import ClientSwitcher from "@/components/ClientSwitcher";
 import AddClientDialog from "@/components/AddClientDialog";
-import { Building2, Pencil, FolderOpen, Package } from "lucide-react";
+import { Building2, Pencil, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { User } from "@supabase/supabase-js";
 import { useClientContext } from "@/contexts/ClientContext";
@@ -90,7 +90,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <ProfileCard
             icon={<Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />}
             iconBg="bg-primary/10"
@@ -104,19 +104,10 @@ const Profile = () => {
             icon={<FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />}
             iconBg="bg-purple-500/10"
             title="Brand Library"
-            description="Assets & social media content"
+            description="Assets, social media content & products"
             status="not_filled"
             onClick={() => navigate("/profile/library")}
             buttonColor="text-purple-500"
-          />
-          <ProfileCard
-            icon={<Package className="w-5 h-5 sm:w-6 sm:h-6 text-teal-500" />}
-            iconBg="bg-teal-500/10"
-            title="Products"
-            description="Your products & product lines"
-            status="not_filled"
-            onClick={() => navigate("/profile/products")}
-            buttonColor="text-teal-500"
           />
         </div>
       </main>
