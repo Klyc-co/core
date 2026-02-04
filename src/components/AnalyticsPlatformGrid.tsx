@@ -250,7 +250,7 @@ export function AnalyticsPlatformGrid() {
     }
   };
 
-  // Handle OAuth callback
+  // Handle OAuth callback - runs on any page with code param, not just analytics tab
   useEffect(() => {
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
@@ -258,18 +258,35 @@ export function AnalyticsPlatformGrid() {
       const state = params.get('state');
       const storedState = sessionStorage.getItem('ga_oauth_state');
 
-      if (code && state && storedState === state) {
+      console.log('GA OAuth callback check:', { hasCode: !!code, hasState: !!state, hasStoredState: !!storedState, statesMatch: storedState === state });
+
+      // If we have a code and state from Google, process the callback
+      if (code && state) {
+        // Verify CSRF state
+        if (storedState !== state) {
+          console.error('GA OAuth state mismatch - possible CSRF or stale session');
+          // Still try to clean up URL
+          window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
+          toast.error('OAuth session expired. Please try connecting again.');
+          return;
+        }
+
         sessionStorage.removeItem('ga_oauth_state');
         // Remove OAuth params from the URL and restore the analytics tab.
         window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
         
+        setConnectionStatus(prev => ({ ...prev, google_analytics: 'connecting' }));
+        
         try {
+          console.log('Invoking GA OAuth callback function...');
           const { data, error } = await supabase.functions.invoke('google-analytics-oauth-callback', {
             body: {
               code,
               redirectUri: `${window.location.origin}/profile/company`
             }
           });
+
+          console.log('GA OAuth callback response:', { data, error });
 
           if (error) throw error;
 
@@ -278,6 +295,7 @@ export function AnalyticsPlatformGrid() {
         } catch (error) {
           console.error('OAuth callback error:', error);
           toast.error('Failed to complete Google Analytics connection');
+          setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
         }
       }
     };

@@ -35,11 +35,13 @@ export function WebsiteAnalyticsSummary({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Use maybeSingle() instead of single() to avoid 406 error when no rows exist
     const { data } = await supabase
       .from('social_connections')
       .select('id')
       .eq('platform', 'google_analytics')
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     setIsConnected(!!data);
 
