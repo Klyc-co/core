@@ -31,6 +31,7 @@ import CompanyInfo from "./pages/CompanyInfo";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
+import ImportAssetSources from "./pages/ImportAssetSources";
 import Library from "./pages/Library";
 import SocialMediaAssets from "./pages/SocialMediaAssets";
 import Products from "./pages/Products";
@@ -112,6 +113,7 @@ const App = () => (
             <Route path="/profile/value" element={<WithSidebar><ValueProposition /></WithSidebar>} />
             <Route path="/profile/import" element={<WithSidebar><ImportBrandSources /></WithSidebar>} />
             <Route path="/profile/library" element={<WithSidebar><Library /></WithSidebar>} />
+            <Route path="/profile/library/import" element={<WithSidebar><ImportAssetSources /></WithSidebar>} />
             <Route path="/profile/social" element={<WithSidebar><SocialMediaAssets /></WithSidebar>} />
             <Route path="/profile/products" element={<WithSidebar><Products /></WithSidebar>} />
             <Route path="/profile/products/create" element={<WithSidebar><CreateProduct /></WithSidebar>} />

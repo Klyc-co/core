@@ -288,7 +288,7 @@ const Library = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">Brand Library</h1>
             <p className="text-sm sm:text-base text-muted-foreground">All your imported brand assets and social content</p>
           </div>
-          <Button onClick={() => navigate("/profile/company")} className="w-full sm:w-auto">+ Import More</Button>
+          <Button onClick={() => navigate("/profile/library/import")} className="w-full sm:w-auto">+ Import More</Button>
         </div>
 
         <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
