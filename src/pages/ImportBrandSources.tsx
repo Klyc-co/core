@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2 } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
+// Icon imports
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import SnapchatIcon from "@/components/icons/SnapchatIcon";
 import CanvaIcon from "@/components/icons/CanvaIcon";
@@ -20,6 +21,76 @@ import RiversideIcon from "@/components/icons/RiversideIcon";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import BazaartIcon from "@/components/icons/BazaartIcon";
 import VideoleapIcon from "@/components/icons/VideoleapIcon";
+import NotionIcon from "@/components/icons/NotionIcon";
+import TrelloIcon from "@/components/icons/TrelloIcon";
+import AsanaIcon from "@/components/icons/AsanaIcon";
+import AirtableIcon from "@/components/icons/AirtableIcon";
+import ClickUpIcon from "@/components/icons/ClickUpIcon";
+import FigmaIcon from "@/components/icons/FigmaIcon";
+import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
+import FinalCutProIcon from "@/components/icons/FinalCutProIcon";
+import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
+import DescriptIcon from "@/components/icons/DescriptIcon";
+import VeedIcon from "@/components/icons/VeedIcon";
+import LoomIcon from "@/components/icons/LoomIcon";
+import FrameioIcon from "@/components/icons/FrameioIcon";
+import GooglePhotosIcon from "@/components/icons/GooglePhotosIcon";
+import GoogleCalendarIcon from "@/components/icons/GoogleCalendarIcon";
+import GoogleSheetsIcon from "@/components/icons/GoogleSheetsIcon";
+import GoogleDocsIcon from "@/components/icons/GoogleDocsIcon";
+import MiroIcon from "@/components/icons/MiroIcon";
+import MilanoteIcon from "@/components/icons/MilanoteIcon";
+import ZapierIcon from "@/components/icons/ZapierIcon";
+import IFTTTIcon from "@/components/icons/IFTTTIcon";
+import HootsuiteIcon from "@/components/icons/HootsuiteIcon";
+import BufferIcon from "@/components/icons/BufferIcon";
+import SproutSocialIcon from "@/components/icons/SproutSocialIcon";
+import MondayIcon from "@/components/icons/MondayIcon";
+import OneDriveIcon from "@/components/icons/OneDriveIcon";
+import BoxIcon from "@/components/icons/BoxIcon";
+import WeTransferIcon from "@/components/icons/WeTransferIcon";
+import StreamYardIcon from "@/components/icons/StreamYardIcon";
+import RestreamIcon from "@/components/icons/RestreamIcon";
+import OBSStudioIcon from "@/components/icons/OBSStudioIcon";
+import ZoomIcon from "@/components/icons/ZoomIcon";
+import MicrosoftTeamsIcon from "@/components/icons/MicrosoftTeamsIcon";
+// CRM Icons
+import SalesforceIcon from "@/components/icons/SalesforceIcon";
+import HubSpotIcon from "@/components/icons/HubSpotIcon";
+import ZohoIcon from "@/components/icons/ZohoIcon";
+import PipedriveIcon from "@/components/icons/PipedriveIcon";
+import KeapIcon from "@/components/icons/KeapIcon";
+import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
+import MicrosoftDynamicsIcon from "@/components/icons/MicrosoftDynamicsIcon";
+import CopperIcon from "@/components/icons/CopperIcon";
+import FreshsalesIcon from "@/components/icons/FreshsalesIcon";
+import CloseIcon from "@/components/icons/CloseIcon";
+import NutshellIcon from "@/components/icons/NutshellIcon";
+import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
+import AgileCRMIcon from "@/components/icons/AgileCRMIcon";
+// E-commerce Icons
+import ShopifyIcon from "@/components/icons/ShopifyIcon";
+import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
+import BigCommerceIcon from "@/components/icons/BigCommerceIcon";
+import MagentoIcon from "@/components/icons/MagentoIcon";
+import SamCartIcon from "@/components/icons/SamCartIcon";
+import ClickFunnelsIcon from "@/components/icons/ClickFunnelsIcon";
+import KajabiIcon from "@/components/icons/KajabiIcon";
+import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
+import WixIcon from "@/components/icons/WixIcon";
+import StripeIcon from "@/components/icons/StripeIcon";
+import SquareIcon from "@/components/icons/SquareIcon";
+// Additional Social Icons
+import TwitchIcon from "@/components/icons/TwitchIcon";
+import RedditIcon from "@/components/icons/RedditIcon";
+import TumblrIcon from "@/components/icons/TumblrIcon";
+import ThreadsIcon from "@/components/icons/ThreadsIcon";
+import SubstackIcon from "@/components/icons/SubstackIcon";
+import BeRealIcon from "@/components/icons/BeRealIcon";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
+import TelegramIcon from "@/components/icons/TelegramIcon";
+import MediumIcon from "@/components/icons/MediumIcon";
+import PatreonIcon from "@/components/icons/PatreonIcon";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -99,6 +170,161 @@ const socialPlatforms: SocialPlatform[] = [
     textColor: "text-yellow-500",
     comingSoon: true,
   },
+  { 
+    name: "Twitch", 
+    icon: TwitchIcon, 
+    color: "bg-[#9146FF]", 
+    textColor: "text-[#9146FF]",
+    comingSoon: true,
+  },
+  { 
+    name: "Reddit", 
+    icon: RedditIcon, 
+    color: "bg-[#FF4500]", 
+    textColor: "text-[#FF4500]",
+    comingSoon: true,
+  },
+  { 
+    name: "Tumblr", 
+    icon: TumblrIcon, 
+    color: "bg-[#36465D]", 
+    textColor: "text-[#36465D]",
+    comingSoon: true,
+  },
+  { 
+    name: "Threads", 
+    icon: ThreadsIcon, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    comingSoon: true,
+  },
+  { 
+    name: "Substack", 
+    icon: SubstackIcon, 
+    color: "bg-[#FF6719]", 
+    textColor: "text-[#FF6719]",
+    comingSoon: true,
+  },
+  { 
+    name: "BeReal", 
+    icon: BeRealIcon, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    comingSoon: true,
+  },
+  { 
+    name: "WhatsApp Business", 
+    icon: WhatsAppIcon, 
+    color: "bg-[#25D366]", 
+    textColor: "text-[#25D366]",
+    comingSoon: true,
+  },
+  { 
+    name: "Telegram", 
+    icon: TelegramIcon, 
+    color: "bg-[#0088CC]", 
+    textColor: "text-[#0088CC]",
+    comingSoon: true,
+  },
+  { 
+    name: "Medium", 
+    icon: MediumIcon, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    comingSoon: true,
+  },
+  { 
+    name: "Patreon", 
+    icon: PatreonIcon, 
+    color: "bg-[#FF424D]", 
+    textColor: "text-[#FF424D]",
+    comingSoon: true,
+  },
+];
+
+interface ToolItem {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  bgColor: string;
+  iconColor?: string;
+  hasBorder?: boolean;
+  isConnectable?: boolean;
+}
+
+const socialTools: ToolItem[] = [
+  { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
+  { name: "Asana", icon: AsanaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Final Cut Pro", icon: FinalCutProIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Loom", icon: LoomIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Google Photos", icon: GooglePhotosIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Google Calendar", icon: GoogleCalendarIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Google Sheets", icon: GoogleSheetsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Google Docs", icon: GoogleDocsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Hootsuite", icon: HootsuiteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Buffer", icon: BufferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Zoom", icon: ZoomIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Microsoft Teams", icon: MicrosoftTeamsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]" },
+  { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black" },
+  { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true },
+  { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white" },
+  { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black" },
+  { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]" },
+  { name: "Dropbox", icon: DropboxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
+  { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
+];
+
+const crmTools: ToolItem[] = [
+  { name: "Salesforce", icon: SalesforceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "HubSpot", icon: HubSpotIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Zoho CRM", icon: ZohoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Pipedrive", icon: PipedriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Keap / Infusionsoft", icon: KeapIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "ActiveCampaign", icon: ActiveCampaignIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Microsoft Dynamics 365", icon: MicrosoftDynamicsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Copper CRM", icon: CopperIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Freshsales", icon: FreshsalesIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Close CRM", icon: CloseIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Monday CRM", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Nutshell CRM", icon: NutshellIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "SugarCRM", icon: SugarCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Agile CRM", icon: AgileCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+];
+
+const ecommerceTools: ToolItem[] = [
+  { name: "Shopify", icon: ShopifyIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "WooCommerce", icon: WooCommerceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "BigCommerce", icon: BigCommerceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Magento", icon: MagentoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "SamCart", icon: SamCartIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "ClickFunnels", icon: ClickFunnelsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Kajabi", icon: KajabiIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Squarespace Commerce", icon: SquarespaceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Wix Stores", icon: WixIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Stripe CRM", icon: StripeIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Square CRM", icon: SquareIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
 ];
 
 const ImportBrandSources = () => {
@@ -123,7 +349,6 @@ const ImportBrandSources = () => {
   } | null>(null);
 
   useEffect(() => {
-    // Handle OAuth callback messages
     const success = searchParams.get("success");
     const youtubeSuccess = searchParams.get("youtube_success");
     const youtubeError = searchParams.get("youtube_error");
@@ -177,7 +402,6 @@ const ImportBrandSources = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
@@ -186,7 +410,6 @@ const ImportBrandSources = () => {
       setIsAuthLoading(false);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
@@ -244,7 +467,6 @@ const ImportBrandSources = () => {
       });
     }
 
-    // Check Google Drive connection
     const { data: driveConn } = await supabase
       .from("google_drive_connections")
       .select("id, folder_url, assets_sheet_url, last_sync_at, connection_status")
@@ -334,7 +556,6 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // Handle Google Drive separately
     if (platform.isGoogleDrive) {
       await handleConnectGoogleDrive();
       return;
@@ -444,6 +665,63 @@ const ImportBrandSources = () => {
     }
   };
 
+  const renderToolGrid = (tools: ToolItem[], showGoogleDrive = false) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {showGoogleDrive && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+              <GoogleDriveIcon className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-medium text-foreground">Google Drive</span>
+            {connectionStatus['Google Drive'] === 'connected' && (
+              <Check className="w-4 h-4 text-purple-500" />
+            )}
+          </div>
+          <Button 
+            variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
+            size="sm" 
+            className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+            onClick={handleConnectGoogleDrive}
+            disabled={connectionStatus['Google Drive'] === 'connecting'}
+          >
+            {connectionStatus['Google Drive'] === 'connecting' ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Connecting...
+              </>
+            ) : connectionStatus['Google Drive'] === 'connected' ? (
+              <>
+                <Check className="w-3 h-3" />
+                Connected
+              </>
+            ) : (
+              'Connect'
+            )}
+          </Button>
+        </div>
+      )}
+      {tools.map((tool) => (
+        <div key={tool.name} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
+              <tool.icon className={`w-5 h-5 ${tool.iconColor || ''}`} />
+            </div>
+            <span className="text-sm font-medium text-foreground truncate">{tool.name}</span>
+          </div>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="w-full opacity-50"
+            disabled
+          >
+            Coming Soon
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -499,9 +777,9 @@ const ImportBrandSources = () => {
               />
             </div>
             <Button 
-              onClick={handleScanWebsite}
+              onClick={handleScanWebsite} 
               disabled={!websiteUrl || isScanning}
-              className="w-full sm:w-auto bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white"
+              className="w-full sm:w-auto"
             >
               {isScanning ? (
                 <>
@@ -509,41 +787,42 @@ const ImportBrandSources = () => {
                   Scanning...
                 </>
               ) : (
-                "⚡ Scan Website"
+                "Scan Website"
               )}
             </Button>
           </div>
 
           {scanResult && (
-            <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-3">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="font-medium">Scan Complete!</span>
+            <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                <span className="font-medium text-green-600 dark:text-green-400">Scan Complete!</span>
               </div>
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div className="text-center">
-                  <span className="block text-lg font-bold text-foreground">{scanResult.colors}</span>
-                  <span className="text-muted-foreground">Colors</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Colors:</span>
+                  <span className="ml-2 font-medium">{scanResult.colors}</span>
                 </div>
-                <div className="text-center">
-                  <span className="block text-lg font-bold text-foreground">{scanResult.fonts}</span>
-                  <span className="text-muted-foreground">Fonts</span>
+                <div>
+                  <span className="text-muted-foreground">Fonts:</span>
+                  <span className="ml-2 font-medium">{scanResult.fonts}</span>
                 </div>
-                <div className="text-center">
-                  <span className="block text-lg font-bold text-foreground">{scanResult.images}</span>
-                  <span className="text-muted-foreground">Images</span>
+                <div>
+                  <span className="text-muted-foreground">Images:</span>
+                  <span className="ml-2 font-medium">{scanResult.images}</span>
                 </div>
-                <div className="text-center">
-                  <span className="block text-lg font-bold text-foreground">{scanResult.copy}</span>
-                  <span className="text-muted-foreground">Copy</span>
+                <div>
+                  <span className="text-muted-foreground">Copy:</span>
+                  <span className="ml-2 font-medium">{scanResult.copy}</span>
                 </div>
               </div>
               <Button 
-                variant="link" 
-                className="mt-3 p-0 h-auto text-primary"
+                variant="outline" 
+                size="sm" 
+                className="mt-3"
                 onClick={() => navigate("/profile/library")}
               >
-                View in Brand Library →
+                View in Brand Library
               </Button>
             </div>
           )}
@@ -577,9 +856,9 @@ const ImportBrandSources = () => {
                     <div className={`w-8 h-8 rounded-lg ${platform.color} flex items-center justify-center`}>
                       <platform.icon className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-foreground">{platform.name}</span>
+                    <span className="text-sm font-medium text-foreground truncate">{platform.name}</span>
                     {isConnected && (
-                      <Check className="w-4 h-4 text-purple-500" />
+                      <Check className="w-4 h-4 text-purple-500 flex-shrink-0" />
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -628,224 +907,40 @@ const ImportBrandSources = () => {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground">Social Tools</h2>
-              <p className="text-sm text-muted-foreground">Creative and AI-powered tools</p>
+              <p className="text-sm text-muted-foreground">Creative and productivity tools</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {/* Google Drive */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
-                  <GoogleDriveIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Google Drive</span>
-                {connectionStatus['Google Drive'] === 'connected' && (
-                  <Check className="w-4 h-4 text-purple-500" />
-                )}
+          {renderToolGrid(socialTools, true)}
+        </Card>
+
+        {/* CRM Tools Section */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">CRM Tools</h2>
+              <p className="text-sm text-muted-foreground">Customer relationship management platforms</p>
+            </div>
+          </div>
+
+          {renderToolGrid(crmTools)}
+
+          {/* E-commerce CRM Subsection */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-green-500" />
               </div>
-              <Button 
-                variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
-                size="sm" 
-                className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
-                onClick={handleConnectGoogleDrive}
-                disabled={connectionStatus['Google Drive'] === 'connecting'}
-              >
-                {connectionStatus['Google Drive'] === 'connecting' ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Connecting...
-                  </>
-                ) : connectionStatus['Google Drive'] === 'connected' ? (
-                  <>
-                    <Check className="w-3 h-3" />
-                    Connected
-                  </>
-                ) : (
-                  'Connect'
-                )}
-              </Button>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">E-commerce CRM</h3>
+                <p className="text-sm text-muted-foreground">E-commerce and checkout platforms</p>
+              </div>
             </div>
 
-            {/* Canva */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#00C4CC] flex items-center justify-center">
-                  <CanvaIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Canva</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* ElevenLabs */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center">
-                  <ElevenLabsIcon className="w-4 h-4 text-white dark:text-black" />
-                </div>
-                <span className="text-sm font-medium text-foreground">ElevenLabs</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Slack */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#4A154B] flex items-center justify-center border border-border">
-                  <SlackIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Slack</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Discord */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#5865F2] flex items-center justify-center">
-                  <DiscordIcon className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Discord</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* CapCut */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
-                  <CapCutIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">CapCut</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Riverside */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center">
-                  <RiversideIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Riverside</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Dropbox */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
-                  <DropboxIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Dropbox</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Google Drive */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
-                  <GoogleDriveIcon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Google Drive</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Bazaart */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                  <BazaartIcon className="w-8 h-8" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Bazaart</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
-
-            {/* Videoleap */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                  <VideoleapIcon className="w-8 h-8" />
-                </div>
-                <span className="text-sm font-medium text-foreground">Videoleap</span>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
-            </div>
+            {renderToolGrid(ecommerceTools)}
           </div>
         </Card>
 
