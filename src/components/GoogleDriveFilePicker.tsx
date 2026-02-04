@@ -198,61 +198,63 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col min-h-0">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <GoogleDriveIcon className="w-6 h-6" />
-            Select Files from Google Drive
-          </DialogTitle>
-          <DialogDescription>
-            Choose files and folders to import into your asset library
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl h-[85vh] !grid-rows-[auto_1fr_auto] p-0">
+        <div className="p-6 pb-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GoogleDriveIcon className="w-6 h-6" />
+              Select Files from Google Drive
+            </DialogTitle>
+            <DialogDescription>
+              Choose files and folders to import into your asset library
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-sm border-b pb-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={navigateBack}
-            disabled={folderHistory.length === 0 || loading}
-            className="h-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          
-          <button 
-            className="hover:text-primary cursor-pointer font-medium"
-            onClick={() => {
-              setFolderHistory([]);
-              loadFiles("root");
-            }}
-          >
-            My Drive
-          </button>
-          
-          {folderHistory.map((folder, index) => (
-            <span key={index} className="flex items-center gap-1 text-muted-foreground">
-              <ChevronRight className="w-4 h-4" />
-              <span className={index === folderHistory.length - 1 ? "text-foreground font-medium" : ""}>
-                {folder.name}
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 text-sm border-b pb-2 mt-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={navigateBack}
+              disabled={folderHistory.length === 0 || loading}
+              className="h-8"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            
+            <button 
+              className="hover:text-primary cursor-pointer font-medium"
+              onClick={() => {
+                setFolderHistory([]);
+                loadFiles("root");
+              }}
+            >
+              My Drive
+            </button>
+            
+            {folderHistory.map((folder, index) => (
+              <span key={index} className="flex items-center gap-1 text-muted-foreground">
+                <ChevronRight className="w-4 h-4" />
+                <span className={index === folderHistory.length - 1 ? "text-foreground font-medium" : ""}>
+                  {folder.name}
+                </span>
               </span>
-            </span>
-          ))}
+            ))}
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => loadFiles(currentFolderId)}
-            disabled={loading}
-            className="h-8 w-8 ml-auto"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => loadFiles(currentFolderId)}
+              disabled={loading}
+              className="h-8 w-8 ml-auto"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
 
-        {/* File List */}
-        <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
+        {/* File List - Scrollable area with fixed height */}
+        <div className="overflow-y-auto border-y mx-6">
           {loading ? (
             <div className="flex items-center justify-center h-full py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -329,7 +331,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
         </div>
 
         {/* Actions */}
-        <div className="flex justify-between items-center pt-2 border-t">
+        <div className="flex justify-between items-center p-6 pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
