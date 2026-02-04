@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import AppHeader from "@/components/AppHeader";
+import AddClientDialog from "@/components/AddClientDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { WebsiteAnalyticsSummary } from "@/components/WebsiteAnalyticsSummary";
 import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSummary";
 
 const Home = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [addClientOpen, setAddClientOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,14 +39,20 @@ const Home = () => {
   };
 
   const handleConnectGA = () => {
-    // Keep the URL free of query params so Google OAuth redirect_uri can match exactly.
-    // The analytics tab can be restored client-side after the callback.
     navigate("/profile/company");
+  };
+
+  const handleClientAdded = () => {
+    // Refresh client list - trigger re-fetch by dispatching storage event
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "clientListUpdated",
+      newValue: Date.now().toString(),
+    }));
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader user={user} />
+      <AppHeader user={user} onAddClient={() => setAddClientOpen(true)} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {/* Website Analytics */}
@@ -74,6 +82,12 @@ const Home = () => {
           </Card>
         </div>
       </main>
+
+      <AddClientDialog
+        open={addClientOpen}
+        onOpenChange={setAddClientOpen}
+        onClientAdded={handleClientAdded}
+      />
     </div>
   );
 };

@@ -16,6 +16,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useClientContext } from "@/contexts/ClientContext";
 import { useToast } from "@/hooks/use-toast";
+import AddClientDialog from "@/components/AddClientDialog";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface Client {
@@ -38,38 +39,51 @@ const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppH
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
+  const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
 
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("marketer_clients")
+        .select("*")
+        .eq("status", "active")
+        .order("client_name");
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error loading clients",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
   // Fetch clients on mount
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("marketer_clients")
-          .select("*")
-          .eq("status", "active")
-          .order("client_name");
-
-        if (error) throw error;
-        setClients(data || []);
-      } catch (error: any) {
-        toast({
-          title: "Error loading clients",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingClients(false);
-      }
-    };
-
     fetchClients();
   }, [toast]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const handleAddClientClick = () => {
+    if (onAddClient) {
+      onAddClient();
+    } else {
+      setAddClientDialogOpen(true);
+    }
+  };
+
+  const handleClientAdded = () => {
+    fetchClients();
   };
 
 const navItems = [
@@ -158,7 +172,7 @@ const navItems = [
           ))
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onAddClient} className="text-primary">
+        <DropdownMenuItem onClick={handleAddClientClick} className="text-primary">
           <Plus className="w-4 h-4 mr-2" />
           Add New Client
         </DropdownMenuItem>
@@ -220,47 +234,56 @@ const navItems = [
   );
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-4 md:gap-6">
-          <Logo />
-          {!isMobile && <NavButtons />}
-        </div>
+    <>
+      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4 md:gap-6">
+            <Logo />
+            {!isMobile && <NavButtons />}
+          </div>
 
-        {isMobile ? (
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 p-6">
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <Logo />
-                </div>
-                {!isDefaultClient && selectedClientName && (
-                  <div className="mb-4 pb-4 border-b border-border">
-                    <p className="text-xs text-muted-foreground mb-1">Current Client</p>
-                    <p className="font-semibold text-primary">{selectedClientName}</p>
+          {isMobile ? (
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 p-6">
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-6">
+                    <Logo />
                   </div>
-                )}
-                {businessName && (
-                  <p className="text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
-                    Working on: <span className="font-medium text-foreground">{businessName}</span>
-                  </p>
-                )}
-                <NavButtons mobile />
-                <div className="flex-1" />
-                <ActionButtons mobile />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <ActionButtons />
-        )}
-      </div>
-    </header>
+                  {!isDefaultClient && selectedClientName && (
+                    <div className="mb-4 pb-4 border-b border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Current Client</p>
+                      <p className="font-semibold text-primary">{selectedClientName}</p>
+                    </div>
+                  )}
+                  {businessName && (
+                    <p className="text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
+                      Working on: <span className="font-medium text-foreground">{businessName}</span>
+                    </p>
+                  )}
+                  <NavButtons mobile />
+                  <div className="flex-1" />
+                  <ActionButtons mobile />
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <ActionButtons />
+          )}
+        </div>
+      </header>
+
+      {/* Internal Add Client Dialog - used when no onAddClient prop is provided */}
+      <AddClientDialog
+        open={addClientDialogOpen}
+        onOpenChange={setAddClientDialogOpen}
+        onClientAdded={handleClientAdded}
+      />
+    </>
   );
 };
 
