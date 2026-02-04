@@ -236,9 +236,9 @@ const ClientProfile = () => {
                 {allConnections.map((conn) => (
                   <div 
                     key={conn.platform}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/5 border border-green-500/20"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <CheckCircle2 className="w-4 h-4 text-purple-500" />
                     <span className="text-sm text-foreground">
                       {platformLabels[conn.platform.toLowerCase()] || conn.platform}
                     </span>
