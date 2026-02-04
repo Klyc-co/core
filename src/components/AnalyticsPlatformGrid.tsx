@@ -230,7 +230,9 @@ export function AnalyticsPlatformGrid() {
       setConnectionStatus(prev => ({ ...prev, [platform.id]: 'connecting' }));
       
       try {
-        const redirectUri = `${window.location.origin}/profile/company?tab=analytics`;
+        // Keep redirect_uri stable (no query params) so it matches Google Console exactly.
+        // We restore the analytics tab client-side after callback handling.
+        const redirectUri = `${window.location.origin}/profile/company`;
         
         const { data, error } = await supabase.functions.invoke('google-analytics-auth-url', {
           body: { redirectUri }
@@ -258,13 +260,14 @@ export function AnalyticsPlatformGrid() {
 
       if (code && state && storedState === state) {
         sessionStorage.removeItem('ga_oauth_state');
+        // Remove OAuth params from the URL and restore the analytics tab.
         window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
         
         try {
           const { data, error } = await supabase.functions.invoke('google-analytics-oauth-callback', {
             body: {
               code,
-              redirectUri: `${window.location.origin}/profile/company?tab=analytics`
+              redirectUri: `${window.location.origin}/profile/company`
             }
           });
 
