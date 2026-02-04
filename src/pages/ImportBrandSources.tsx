@@ -371,6 +371,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "dropbox") {
+      toast.success("Dropbox connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Dropbox: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -515,6 +521,33 @@ const ImportBrandSources = () => {
       console.error("Google Drive init error:", err);
       toast.error("Failed to initialize Google Drive connection");
       setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
+    }
+  };
+
+  const handleConnectDropbox = async () => {
+    if (!user) {
+      toast.error("Please log in first");
+      return;
+    }
+
+    setConnectionStatus(prev => ({ ...prev, "Dropbox": 'connecting' }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("dropbox-auth-url");
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error("No auth URL returned");
+      }
+    } catch (err) {
+      console.error("Dropbox connect error:", err);
+      toast.error("Failed to connect to Dropbox");
+      setConnectionStatus(prev => ({ ...prev, "Dropbox": 'disconnected' }));
     }
   };
 
@@ -667,12 +700,38 @@ const ImportBrandSources = () => {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       {showStorageTools && user && (
         <>
-          {/* Dropbox with full connection card */}
-          <div className="col-span-2 sm:col-span-1">
-            <DropboxConnectionCard
-              userId={user.id}
-              onConnectionChange={() => user && checkConnectedAccounts(user)}
-            />
+          {/* Dropbox */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#0061FF] flex items-center justify-center">
+                <DropboxIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Dropbox</span>
+              {connectionStatus['Dropbox'] === 'connected' && (
+                <Check className="w-4 h-4 text-purple-500" />
+              )}
+            </div>
+            <Button 
+              variant={connectionStatus['Dropbox'] === 'connected' ? "outline" : "secondary"} 
+              size="sm" 
+              className={`w-full ${connectionStatus['Dropbox'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+              onClick={handleConnectDropbox}
+              disabled={connectionStatus['Dropbox'] === 'connecting'}
+            >
+              {connectionStatus['Dropbox'] === 'connecting' ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Connecting...
+                </>
+              ) : connectionStatus['Dropbox'] === 'connected' ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Connected
+                </>
+              ) : (
+                'Connect'
+              )}
+            </Button>
           </div>
           {/* Google Drive */}
           <div className="space-y-2">
