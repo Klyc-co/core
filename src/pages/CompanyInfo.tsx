@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3, Wand2 } from "lucide-react";
+import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3, Wand2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import CanvaIcon from "@/components/icons/CanvaIcon";
@@ -47,6 +47,7 @@ import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
 import InforIcon from "@/components/icons/InforIcon";
 import InsightlyIcon from "@/components/icons/InsightlyIcon";
 import { useClientContext } from "@/contexts/ClientContext";
+import { WebsiteAnalyticsWidget } from "@/components/WebsiteAnalyticsWidget";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -393,7 +394,7 @@ const CompanyInfo = () => {
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="company" className="gap-2 text-xs sm:text-sm px-2">
                 <Building2 className="w-4 h-4 hidden sm:block" />
                 Company
@@ -409,6 +410,10 @@ const CompanyInfo = () => {
               <TabsTrigger value="import" className="gap-2 text-xs sm:text-sm px-2">
                 <Globe className="w-4 h-4 hidden sm:block" />
                 Import
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="gap-2 text-xs sm:text-sm px-2">
+                <TrendingUp className="w-4 h-4 hidden sm:block" />
+                Analytics
               </TabsTrigger>
             </TabsList>
 
@@ -1153,6 +1158,11 @@ const CompanyInfo = () => {
                   </div>
                 </div>
               </Card>
+            </TabsContent>
+
+            {/* Website Analytics Tab */}
+            <TabsContent value="analytics" className="space-y-6">
+              <WebsiteAnalyticsWidget />
             </TabsContent>
           </Tabs>
 
