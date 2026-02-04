@@ -49,6 +49,7 @@ import InforIcon from "@/components/icons/InforIcon";
 import InsightlyIcon from "@/components/icons/InsightlyIcon";
 import { useClientContext } from "@/contexts/ClientContext";
 import { WebsiteAnalyticsWidget } from "@/components/WebsiteAnalyticsWidget";
+import { AnalyticsPlatformGrid } from "@/components/AnalyticsPlatformGrid";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -1157,6 +1158,7 @@ const CompanyInfo = () => {
 
             {/* Website Analytics Tab */}
             <TabsContent value="analytics" className="space-y-6">
+              <AnalyticsPlatformGrid />
               <WebsiteAnalyticsWidget />
             </TabsContent>
           </Tabs>
