@@ -265,18 +265,41 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub;
     
-    const { action, propertyId, startDate, endDate } = await req.json();
+    const { action, propertyId, startDate, endDate, targetUserId } = await req.json();
 
-    // Get the stored connection
+    // Create admin client for database access
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Determine which user's connection to use
+    // If targetUserId is provided, verify the caller has access (is the marketer for that client)
+    let connectionUserId = userId;
+    
+    if (targetUserId && targetUserId !== userId) {
+      // Verify the caller is a marketer for this client
+      const { data: clientLink, error: linkError } = await supabaseAdmin
+        .from('marketer_clients')
+        .select('id')
+        .eq('marketer_id', userId)
+        .eq('client_id', targetUserId)
+        .maybeSingle();
+      
+      if (linkError || !clientLink) {
+        return new Response(JSON.stringify({ error: 'Access denied to this client' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      connectionUserId = targetUserId;
+    }
+
     const { data: connection, error: connError } = await supabaseAdmin
       .from('social_connections')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', connectionUserId)
       .eq('platform', 'google_analytics')
       .single();
 
