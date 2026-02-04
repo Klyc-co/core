@@ -26,7 +26,7 @@ import NewProject from "./pages/NewProject";
 import Processing from "./pages/Processing";
 import ProjectEdit from "./pages/ProjectEdit";
 import Settings from "./pages/Settings";
-import Profile from "./pages/Profile";
+import ProfileOverview from "./pages/ProfileOverview";
 import CompanyInfo from "./pages/CompanyInfo";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
@@ -100,7 +100,7 @@ const App = () => (
             <Route path="/projects/:id/processing" element={<WithSidebar><Processing /></WithSidebar>} />
             <Route path="/projects/:id/edit" element={<WithSidebar><ProjectEdit /></WithSidebar>} />
             <Route path="/settings" element={<WithSidebar><Settings /></WithSidebar>} />
-            <Route path="/profile" element={<WithSidebar><Profile /></WithSidebar>} />
+            <Route path="/profile" element={<WithSidebar><ProfileOverview /></WithSidebar>} />
             <Route path="/profile/company" element={<WithSidebar><CompanyInfo /></WithSidebar>} />
             <Route path="/profile/audience" element={<WithSidebar><TargetAudience /></WithSidebar>} />
             <Route path="/profile/value" element={<WithSidebar><ValueProposition /></WithSidebar>} />

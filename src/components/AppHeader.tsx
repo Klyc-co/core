@@ -72,8 +72,8 @@ const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppH
     navigate("/auth");
   };
 
-  const navItems = [
-    { label: "Profile", path: "/profile/company" },
+const navItems = [
+  { label: "Profile", path: "/profile" },
     { label: "Campaigns", path: "/campaigns" },
     { label: "Library", path: "/profile/library" },
     { label: "Strategy", path: "/brand-strategy" },
