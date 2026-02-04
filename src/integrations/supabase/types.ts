@@ -500,6 +500,186 @@ export type Database = {
           },
         ]
       }
+      post_analytics: {
+        Row: {
+          clicks: number | null
+          comments: number | null
+          created_at: string
+          engagement_rate: number | null
+          fetched_at: string
+          id: string
+          impressions: number | null
+          likes: number | null
+          platform: string
+          platform_post_id: string | null
+          post_queue_id: string
+          raw_metrics: Json | null
+          reach: number | null
+          saves: number | null
+          shares: number | null
+          views: number | null
+        }
+        Insert: {
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          fetched_at?: string
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          platform: string
+          platform_post_id?: string | null
+          post_queue_id: string
+          raw_metrics?: Json | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          views?: number | null
+        }
+        Update: {
+          clicks?: number | null
+          comments?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          fetched_at?: string
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          platform?: string
+          platform_post_id?: string | null
+          post_queue_id?: string
+          raw_metrics?: Json | null
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_analytics_post_queue_id_fkey"
+            columns: ["post_queue_id"]
+            isOneToOne: false
+            referencedRelation: "post_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_platform_targets: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          platform: string
+          platform_post_id: string | null
+          post_queue_id: string
+          published_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          platform: string
+          platform_post_id?: string | null
+          post_queue_id: string
+          published_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          platform?: string
+          platform_post_id?: string | null
+          post_queue_id?: string
+          published_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_platform_targets_post_queue_id_fkey"
+            columns: ["post_queue_id"]
+            isOneToOne: false
+            referencedRelation: "post_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_queue: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          campaign_draft_id: string | null
+          client_id: string | null
+          content_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          image_url: string | null
+          media_urls: string[] | null
+          post_text: string | null
+          published_at: string | null
+          retry_count: number | null
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_draft_id?: string | null
+          client_id?: string | null
+          content_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          media_urls?: string[] | null
+          post_text?: string | null
+          published_at?: string | null
+          retry_count?: number | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_draft_id?: string | null
+          client_id?: string | null
+          content_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          media_urls?: string[] | null
+          post_text?: string | null
+          published_at?: string | null
+          retry_count?: number | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_queue_campaign_draft_id_fkey"
+            columns: ["campaign_draft_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_lines: {
         Row: {
           created_at: string
