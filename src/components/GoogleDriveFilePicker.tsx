@@ -197,7 +197,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col min-h-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GoogleDriveIcon className="w-6 h-6" />
@@ -251,7 +251,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
         </div>
 
         {/* File List */}
-        <ScrollArea className="flex-1 min-h-[300px] max-h-[50vh] border rounded-lg overflow-hidden">
+        <ScrollArea className="flex-1 min-h-0 border rounded-lg overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-full py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
