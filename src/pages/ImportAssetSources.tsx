@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
+import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 
 // Storage & Tool Icons
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
@@ -173,6 +174,7 @@ const ImportAssetSources = () => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({});
   const [selectedPlatform, setSelectedPlatform] = useState<StoragePlatform | null>(null);
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
+  const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -199,14 +201,15 @@ const ImportAssetSources = () => {
       
       connections["dropbox"] = dropboxData?.connection_status === "connected";
 
-      // Check Google Drive connection
+      // Check Google Drive OAuth connection (stored in social_connections)
       const { data: gdriveData } = await supabase
-        .from("google_drive_connections")
-        .select("id, connection_status")
+        .from("social_connections")
+        .select("id")
         .eq("user_id", userId)
+        .eq("platform", "google_drive")
         .maybeSingle();
       
-      connections["google-drive"] = gdriveData?.connection_status === "connected";
+      connections["google-drive"] = !!gdriveData;
 
       setConnectionStatus(connections);
     } catch (error) {
@@ -235,13 +238,13 @@ const ImportAssetSources = () => {
     if (platform.id === "dropbox") {
       setShowDropboxPicker(true);
     } else if (platform.id === "google-drive") {
-      // TODO: Implement Google Drive file picker
-      toast.info("Google Drive file picker coming soon!");
+      setShowGoogleDrivePicker(true);
     }
   };
 
   const handleImportComplete = () => {
     setShowDropboxPicker(false);
+    setShowGoogleDrivePicker(false);
     toast.success("Assets imported successfully!");
   };
 
@@ -347,6 +350,13 @@ const ImportAssetSources = () => {
       <DropboxFilePicker
         open={showDropboxPicker}
         onOpenChange={setShowDropboxPicker}
+        onImportComplete={handleImportComplete}
+      />
+
+      {/* Google Drive File Picker */}
+      <GoogleDriveFilePicker
+        open={showGoogleDrivePicker}
+        onOpenChange={setShowGoogleDrivePicker}
         onImportComplete={handleImportComplete}
       />
     </div>
