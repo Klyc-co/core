@@ -161,16 +161,19 @@ const ClientSwitcher = ({ onAddClient }: ClientSwitcherProps) => {
               <DropdownMenuItem
                 key={client.id}
                 onClick={() => handleClientChange(client.client_id, client.client_name)}
-                className="flex items-center justify-between group"
+                className="flex items-center justify-between"
               >
-                <span className="truncate flex-1">{client.client_name}</span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{client.client_name}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   {selectedClientId === client.client_id && (
                     <Check className="w-4 h-4 text-primary" />
                   )}
                   <button
                     onClick={(e) => handleDeleteClick(e, client)}
-                    className="p-1 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1 rounded hover:bg-destructive/10 transition-colors"
                     title="Delete client"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
