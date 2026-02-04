@@ -241,7 +241,25 @@ export function AnalyticsPlatformGrid() {
         if (error) throw error;
 
         sessionStorage.setItem('ga_oauth_state', data.state);
-        window.location.href = data.url;
+        
+        // Use popup window for OAuth to avoid iframe restrictions in Lovable preview
+        // Google blocks OAuth in iframes for security, so we open a new window
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          data.url,
+          'google_analytics_oauth',
+          `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+        );
+        
+        if (!popup) {
+          // Popup blocked - fall back to redirect
+          toast.info('Popup blocked. Redirecting to Google...');
+          window.location.href = data.url;
+        }
       } catch (error) {
         console.error('Failed to start OAuth:', error);
         toast.error('Failed to connect Google Analytics');
@@ -250,7 +268,7 @@ export function AnalyticsPlatformGrid() {
     }
   };
 
-  // Handle OAuth callback - runs on any page with code param, not just analytics tab
+  // Handle OAuth callback - runs on any page with code param (including popup window)
   useEffect(() => {
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
@@ -292,15 +310,45 @@ export function AnalyticsPlatformGrid() {
 
           toast.success(`Connected to Google Analytics as ${data.email}`);
           setConnectionStatus(prev => ({ ...prev, google_analytics: 'connected' }));
+          
+          // If we're in a popup, notify the opener and close
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'ga_oauth_success', email: data.email }, window.location.origin);
+            window.close();
+          }
         } catch (error) {
           console.error('OAuth callback error:', error);
           toast.error('Failed to complete Google Analytics connection');
           setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
+          
+          // If we're in a popup, notify the opener of failure and close
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'ga_oauth_error' }, window.location.origin);
+            window.close();
+          }
         }
       }
     };
 
     handleCallback();
+  }, []);
+
+  // Listen for OAuth success message from popup window
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === 'ga_oauth_success') {
+        toast.success(`Connected to Google Analytics as ${event.data.email}`);
+        setConnectionStatus(prev => ({ ...prev, google_analytics: 'connected' }));
+      } else if (event.data?.type === 'ga_oauth_error') {
+        toast.error('Failed to complete Google Analytics connection');
+        setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   if (isLoading) {
