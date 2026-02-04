@@ -194,6 +194,10 @@ export function AnalyticsPlatformGrid() {
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
 
+  const GA_OAUTH_STATE_KEY = 'ga_oauth_state';
+  const GA_OAUTH_STARTED_AT_KEY = 'ga_oauth_started_at';
+  const GA_OAUTH_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+
   useEffect(() => {
     checkConnections();
   }, []);
@@ -240,7 +244,10 @@ export function AnalyticsPlatformGrid() {
 
         if (error) throw error;
 
-        sessionStorage.setItem('ga_oauth_state', data.state);
+        // IMPORTANT: use localStorage (shared across windows) not sessionStorage (per-window)
+        // so the popup callback can validate state.
+        localStorage.setItem(GA_OAUTH_STATE_KEY, data.state);
+        localStorage.setItem(GA_OAUTH_STARTED_AT_KEY, String(Date.now()));
         
         // Use popup window for OAuth to avoid iframe restrictions in Lovable preview
         // Google blocks OAuth in iframes for security, so we open a new window
@@ -260,6 +267,19 @@ export function AnalyticsPlatformGrid() {
           toast.info('Popup blocked. Redirecting to Google...');
           window.location.href = data.url;
         }
+
+        // Safety: if callback never arrives, reset UI so it doesn't spin forever.
+        window.setTimeout(() => {
+          const startedAt = Number(localStorage.getItem(GA_OAUTH_STARTED_AT_KEY) || '0');
+          const stillCurrent = Date.now() - startedAt < GA_OAUTH_MAX_AGE_MS;
+          const stateStillThere = !!localStorage.getItem(GA_OAUTH_STATE_KEY);
+
+          // If state is still present after 60s, assume flow got blocked/abandoned.
+          if (stillCurrent && stateStillThere) {
+            setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+            toast.error('Google Analytics connection timed out. Please try again.');
+          }
+        }, 60_000);
       } catch (error) {
         console.error('Failed to start OAuth:', error);
         toast.error('Failed to connect Google Analytics');
@@ -274,7 +294,14 @@ export function AnalyticsPlatformGrid() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       const state = params.get('state');
-      const storedState = sessionStorage.getItem('ga_oauth_state');
+      const storedState = localStorage.getItem(GA_OAUTH_STATE_KEY);
+      const startedAt = Number(localStorage.getItem(GA_OAUTH_STARTED_AT_KEY) || '0');
+
+      // Expire stale states (prevents weird stuck UI after navigating around)
+      if (storedState && startedAt && Date.now() - startedAt > GA_OAUTH_MAX_AGE_MS) {
+        localStorage.removeItem(GA_OAUTH_STATE_KEY);
+        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
+      }
 
       console.log('GA OAuth callback check:', { hasCode: !!code, hasState: !!state, hasStoredState: !!storedState, statesMatch: storedState === state });
 
@@ -286,10 +313,17 @@ export function AnalyticsPlatformGrid() {
           // Still try to clean up URL
           window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
           toast.error('OAuth session expired. Please try connecting again.');
+
+          // If we're in a popup, notify the opener of failure and close.
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'ga_oauth_error' }, window.location.origin);
+            window.close();
+          }
           return;
         }
 
-        sessionStorage.removeItem('ga_oauth_state');
+        localStorage.removeItem(GA_OAUTH_STATE_KEY);
+        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
         // Remove OAuth params from the URL and restore the analytics tab.
         window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
         
@@ -320,6 +354,10 @@ export function AnalyticsPlatformGrid() {
           console.error('OAuth callback error:', error);
           toast.error('Failed to complete Google Analytics connection');
           setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
+
+          // Make sure we don't leave stale state behind on error.
+          localStorage.removeItem(GA_OAUTH_STATE_KEY);
+          localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
           
           // If we're in a popup, notify the opener of failure and close
           if (window.opener && !window.opener.closed) {
@@ -341,9 +379,15 @@ export function AnalyticsPlatformGrid() {
       if (event.data?.type === 'ga_oauth_success') {
         toast.success(`Connected to Google Analytics as ${event.data.email}`);
         setConnectionStatus(prev => ({ ...prev, google_analytics: 'connected' }));
+
+        // Re-check persisted connection so Home/other pages reflect it.
+        checkConnections();
       } else if (event.data?.type === 'ga_oauth_error') {
         toast.error('Failed to complete Google Analytics connection');
         setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
+
+        localStorage.removeItem(GA_OAUTH_STATE_KEY);
+        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
       }
     };
 
