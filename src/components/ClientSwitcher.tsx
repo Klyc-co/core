@@ -49,6 +49,12 @@ const ClientSwitcher = ({ onAddClient }: ClientSwitcherProps) => {
 
   const fetchClients = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setClients([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("marketer_clients")
         .select("*")
