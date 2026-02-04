@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Klyc <noreply@klyc.ai>",
+        from: "Klyc <onboarding@resend.dev>",
         to: [clientEmail],
         subject: `${marketerName || "Your marketer"} has invited you to Klyc`,
         html: `
