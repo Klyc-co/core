@@ -540,7 +540,9 @@ const ImportBrandSources = () => {
       }
 
       if (data.authUrl) {
-        window.location.href = data.authUrl;
+        // Use top-level navigation to avoid iframe restrictions
+        const targetWindow = window.top || window;
+        targetWindow.location.href = data.authUrl;
       } else {
         throw new Error("No auth URL returned");
       }
