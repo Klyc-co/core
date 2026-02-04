@@ -84,7 +84,7 @@ import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import TelegramIcon from "@/components/icons/TelegramIcon";
 import MediumIcon from "@/components/icons/MediumIcon";
 import PatreonIcon from "@/components/icons/PatreonIcon";
-
+import DropboxConnectionCard from "@/components/DropboxConnectionCard";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface SocialPlatform {
@@ -245,6 +245,8 @@ interface ToolItem {
 }
 
 const socialTools: ToolItem[] = [
+  { name: "Dropbox", icon: DropboxIcon, bgColor: "bg-[#0061FF]", iconColor: "text-white", isConnectable: true },
+  { name: "Google Drive", icon: GoogleDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
   { name: "Asana", icon: AsanaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -277,7 +279,6 @@ const socialTools: ToolItem[] = [
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white" },
   { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black" },
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]" },
-  { name: "Dropbox", icon: DropboxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
 ];
@@ -467,6 +468,17 @@ const ImportBrandSources = () => {
         last_sync_at: driveConn.last_sync_at,
       });
     }
+
+    // Check Dropbox connection
+    const { data: dropboxConn } = await supabase
+      .from("dropbox_connections")
+      .select("id, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (dropboxConn && dropboxConn.connection_status === 'connected') {
+      newStatus['Dropbox'] = 'connected';
+    }
     
     setConnectionStatus(newStatus);
   };
@@ -651,43 +663,53 @@ const ImportBrandSources = () => {
     }
   };
 
-  const renderToolGrid = (tools: ToolItem[], showGoogleDrive = false) => (
+  const renderToolGrid = (tools: ToolItem[], showStorageTools = false) => (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {showGoogleDrive && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
-              <GoogleDriveIcon className="w-5 h-5" />
-            </div>
-            <span className="text-sm font-medium text-foreground">Google Drive</span>
-            {connectionStatus['Google Drive'] === 'connected' && (
-              <Check className="w-4 h-4 text-purple-500" />
-            )}
+      {showStorageTools && user && (
+        <>
+          {/* Dropbox with full connection card */}
+          <div className="col-span-2 sm:col-span-1">
+            <DropboxConnectionCard
+              userId={user.id}
+              onConnectionChange={() => user && checkConnectedAccounts(user)}
+            />
           </div>
-          <Button 
-            variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
-            size="sm" 
-            className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
-            onClick={handleConnectGoogleDrive}
-            disabled={connectionStatus['Google Drive'] === 'connecting'}
-          >
-            {connectionStatus['Google Drive'] === 'connecting' ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Connecting...
-              </>
-            ) : connectionStatus['Google Drive'] === 'connected' ? (
-              <>
-                <Check className="w-3 h-3" />
-                Connected
-              </>
-            ) : (
-              'Connect'
-            )}
-          </Button>
-        </div>
+          {/* Google Drive */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                <GoogleDriveIcon className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Google Drive</span>
+              {connectionStatus['Google Drive'] === 'connected' && (
+                <Check className="w-4 h-4 text-purple-500" />
+              )}
+            </div>
+            <Button 
+              variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
+              size="sm" 
+              className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+              onClick={handleConnectGoogleDrive}
+              disabled={connectionStatus['Google Drive'] === 'connecting'}
+            >
+              {connectionStatus['Google Drive'] === 'connecting' ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Connecting...
+                </>
+              ) : connectionStatus['Google Drive'] === 'connected' ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Connected
+                </>
+              ) : (
+                'Connect'
+              )}
+            </Button>
+          </div>
+        </>
       )}
-      {tools.map((tool) => (
+      {tools.filter(tool => tool.name !== 'Dropbox' && tool.name !== 'Google Drive').map((tool) => (
         <div key={tool.name} className="space-y-2">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
