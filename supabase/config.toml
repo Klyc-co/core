@@ -89,3 +89,18 @@ verify_jwt = false
 
 [functions.google-analytics-data]
 verify_jwt = false
+
+[functions.dropbox-auth-url]
+verify_jwt = false
+
+[functions.dropbox-oauth-callback]
+verify_jwt = false
+
+[functions.dropbox-list-files]
+verify_jwt = false
+
+[functions.dropbox-import-files]
+verify_jwt = false
+
+[functions.dropbox-disconnect]
+verify_jwt = false

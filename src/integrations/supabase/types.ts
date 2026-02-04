@@ -319,6 +319,137 @@ export type Database = {
         }
         Relationships: []
       }
+      dropbox_assets: {
+        Row: {
+          asset_name: string
+          asset_type: string | null
+          created_at: string
+          dropbox_connection_id: string | null
+          dropbox_created_at: string | null
+          dropbox_file_id: string
+          dropbox_modified_at: string | null
+          dropbox_path: string
+          file_size: number | null
+          id: string
+          is_folder: boolean | null
+          local_storage_path: string | null
+          metadata: Json | null
+          mime_type: string | null
+          parent_folder_path: string | null
+          synced_at: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_name: string
+          asset_type?: string | null
+          created_at?: string
+          dropbox_connection_id?: string | null
+          dropbox_created_at?: string | null
+          dropbox_file_id: string
+          dropbox_modified_at?: string | null
+          dropbox_path: string
+          file_size?: number | null
+          id?: string
+          is_folder?: boolean | null
+          local_storage_path?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          parent_folder_path?: string | null
+          synced_at?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_name?: string
+          asset_type?: string | null
+          created_at?: string
+          dropbox_connection_id?: string | null
+          dropbox_created_at?: string | null
+          dropbox_file_id?: string
+          dropbox_modified_at?: string | null
+          dropbox_path?: string
+          file_size?: number | null
+          id?: string
+          is_folder?: boolean | null
+          local_storage_path?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          parent_folder_path?: string | null
+          synced_at?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dropbox_assets_dropbox_connection_id_fkey"
+            columns: ["dropbox_connection_id"]
+            isOneToOne: false
+            referencedRelation: "dropbox_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dropbox_connections: {
+        Row: {
+          access_token: string
+          account_display_name: string | null
+          account_email: string | null
+          account_id: string | null
+          auto_sync_enabled: boolean | null
+          auto_sync_folder_path: string | null
+          connection_status: string | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          refresh_token: string | null
+          root_folder_path: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          account_display_name?: string | null
+          account_email?: string | null
+          account_id?: string | null
+          auto_sync_enabled?: boolean | null
+          auto_sync_folder_path?: string | null
+          connection_status?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          root_folder_path?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          account_display_name?: string | null
+          account_email?: string | null
+          account_id?: string | null
+          auto_sync_enabled?: boolean | null
+          auto_sync_folder_path?: string | null
+          connection_status?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          root_folder_path?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       google_drive_assets: {
         Row: {
           asset_name: string

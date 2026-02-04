@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import DropboxConnectionCard from "@/components/DropboxConnectionCard";
 import type { User } from "@supabase/supabase-js";
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
@@ -22,9 +23,17 @@ interface SocialPlatform {
   comingSoon?: boolean;
   customOAuth?: boolean;
   isGoogleDrive?: boolean;
+  isDropbox?: boolean;
 }
 
 const socialPlatforms: SocialPlatform[] = [
+  { 
+    name: "Dropbox", 
+    icon: HardDrive, 
+    color: "bg-[#0061FF]", 
+    textColor: "text-[#0061FF]",
+    isDropbox: true,
+  },
   { 
     name: "Google Drive", 
     icon: HardDrive, 
@@ -118,6 +127,12 @@ const ClientSocialAssets = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "dropbox") {
+      toast.success("Dropbox connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Dropbox: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (error) {
       toast.error(`Connection failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -203,6 +218,17 @@ const ClientSocialAssets = () => {
         last_sync_at: driveConn.last_sync_at,
       });
     }
+
+    // Check Dropbox connection
+    const { data: dropboxConn } = await supabase
+      .from("dropbox_connections")
+      .select("id, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (dropboxConn && dropboxConn.connection_status === 'connected') {
+      newStatus['Dropbox'] = 'connected';
+    }
     
     setConnectionStatus(newStatus);
   };
@@ -255,6 +281,11 @@ const ClientSocialAssets = () => {
     if (platform.comingSoon) {
       toast.info(`${platform.name} integration coming soon!`);
       return;
+    }
+
+    // Handle Dropbox separately - it uses its own card component
+    if (platform.isDropbox) {
+      return; // Handled by DropboxConnectionCard
     }
 
     // Handle Google Drive separately
@@ -408,6 +439,17 @@ const ClientSocialAssets = () => {
         {/* Social Platforms Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {socialPlatforms.map((platform) => {
+            // Use DropboxConnectionCard for Dropbox
+            if (platform.isDropbox && user) {
+              return (
+                <DropboxConnectionCard
+                  key={platform.name}
+                  userId={user.id}
+                  onConnectionChange={() => user && checkConnectedAccounts(user)}
+                />
+              );
+            }
+
             const status = connectionStatus[platform.name] || 'disconnected';
             const isConnected = status === 'connected';
             const isConnecting = status === 'connecting';
