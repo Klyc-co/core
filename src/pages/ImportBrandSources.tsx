@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { User } from "@supabase/supabase-js";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
+import SnapchatIcon from "@/components/icons/SnapchatIcon";
 import CanvaIcon from "@/components/icons/CanvaIcon";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import SlackIcon from "@/components/icons/SlackIcon";
@@ -42,13 +43,6 @@ interface ScanResult {
 }
 
 const socialPlatforms: SocialPlatform[] = [
-  { 
-    name: "Google Drive", 
-    icon: GoogleDriveIcon, 
-    color: "bg-white dark:bg-gray-800", 
-    textColor: "text-green-600",
-    isGoogleDrive: true,
-  },
   { 
     name: "YouTube", 
     icon: Youtube, 
@@ -96,6 +90,13 @@ const socialPlatforms: SocialPlatform[] = [
     icon: CircleDot, 
     color: "bg-red-600", 
     textColor: "text-red-600",
+    comingSoon: true,
+  },
+  { 
+    name: "Snapchat", 
+    icon: SnapchatIcon, 
+    color: "bg-[#FFFC00]", 
+    textColor: "text-yellow-500",
     comingSoon: true,
   },
 ];
@@ -632,6 +633,40 @@ const ImportBrandSources = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Google Drive */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+                  <GoogleDriveIcon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Google Drive</span>
+                {connectionStatus['Google Drive'] === 'connected' && (
+                  <Check className="w-4 h-4 text-purple-500" />
+                )}
+              </div>
+              <Button 
+                variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
+                size="sm" 
+                className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+                onClick={handleConnectGoogleDrive}
+                disabled={connectionStatus['Google Drive'] === 'connecting'}
+              >
+                {connectionStatus['Google Drive'] === 'connecting' ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Connecting...
+                  </>
+                ) : connectionStatus['Google Drive'] === 'connected' ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    Connected
+                  </>
+                ) : (
+                  'Connect'
+                )}
+              </Button>
+            </div>
+
             {/* Canva */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
