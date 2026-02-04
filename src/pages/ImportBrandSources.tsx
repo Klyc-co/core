@@ -28,16 +28,11 @@ import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import FigmaIcon from "@/components/icons/FigmaIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
-import FinalCutProIcon from "@/components/icons/FinalCutProIcon";
 import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
 import DescriptIcon from "@/components/icons/DescriptIcon";
 import VeedIcon from "@/components/icons/VeedIcon";
 import LoomIcon from "@/components/icons/LoomIcon";
 import FrameioIcon from "@/components/icons/FrameioIcon";
-import GooglePhotosIcon from "@/components/icons/GooglePhotosIcon";
-import GoogleCalendarIcon from "@/components/icons/GoogleCalendarIcon";
-import GoogleSheetsIcon from "@/components/icons/GoogleSheetsIcon";
-import GoogleDocsIcon from "@/components/icons/GoogleDocsIcon";
 import MiroIcon from "@/components/icons/MiroIcon";
 import MilanoteIcon from "@/components/icons/MilanoteIcon";
 import ZapierIcon from "@/components/icons/ZapierIcon";
@@ -52,8 +47,6 @@ import WeTransferIcon from "@/components/icons/WeTransferIcon";
 import StreamYardIcon from "@/components/icons/StreamYardIcon";
 import RestreamIcon from "@/components/icons/RestreamIcon";
 import OBSStudioIcon from "@/components/icons/OBSStudioIcon";
-import ZoomIcon from "@/components/icons/ZoomIcon";
-import MicrosoftTeamsIcon from "@/components/icons/MicrosoftTeamsIcon";
 // CRM Icons
 import SalesforceIcon from "@/components/icons/SalesforceIcon";
 import HubSpotIcon from "@/components/icons/HubSpotIcon";
@@ -259,16 +252,11 @@ const socialTools: ToolItem[] = [
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Final Cut Pro", icon: FinalCutProIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Google Photos", icon: GooglePhotosIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Google Calendar", icon: GoogleCalendarIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Google Sheets", icon: GoogleSheetsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Google Docs", icon: GoogleDocsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -283,8 +271,6 @@ const socialTools: ToolItem[] = [
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Zoom", icon: ZoomIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Microsoft Teams", icon: MicrosoftTeamsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]" },
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black" },
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true },
