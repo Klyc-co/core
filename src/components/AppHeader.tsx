@@ -69,6 +69,12 @@ const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppH
 
   const fetchClients = async () => {
     try {
+      const { data: { user: authedUser } } = await supabase.auth.getUser();
+      if (!authedUser) {
+        setClients([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("marketer_clients")
         .select("*")

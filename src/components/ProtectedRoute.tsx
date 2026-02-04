@@ -5,9 +5,24 @@ import { User } from "@supabase/supabase-js";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /**
+   * If set, enforces portal separation:
+   * - requiredRole="client" => user_metadata.role must be "client"
+   * - requiredRole="marketer" => redirects clients away from marketer routes
+   */
+  requiredRole?: "client" | "marketer";
+  /** Where to send unauthenticated users */
+  unauthRedirectTo?: string;
+  /** Where to send users who are authenticated but in the wrong portal */
+  wrongRoleRedirectTo?: string;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children,
+  requiredRole,
+  unauthRedirectTo = "/auth",
+  wrongRoleRedirectTo,
+}: ProtectedRouteProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
@@ -40,7 +55,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!user) {
     // Redirect to auth page, preserving the intended destination
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to={unauthRedirectTo} state={{ from: location }} replace />;
+  }
+
+  // Enforce portal separation.
+  const role = (user.user_metadata as any)?.role as string | undefined;
+  if (requiredRole === "client" && role !== "client") {
+    return <Navigate to={wrongRoleRedirectTo ?? "/home"} replace />;
+  }
+  if (requiredRole === "marketer" && role === "client") {
+    return <Navigate to={wrongRoleRedirectTo ?? "/client/dashboard"} replace />;
   }
 
   return <>{children}</>;

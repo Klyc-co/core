@@ -60,8 +60,14 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 const queryClient = new QueryClient();
 
 const WithSidebar = ({ children }: { children: React.ReactNode }) => (
-  <ProtectedRoute>
+  <ProtectedRoute requiredRole="marketer" unauthRedirectTo="/auth" wrongRoleRedirectTo="/client/dashboard">
     <AppLayout showSidebar={true}>{children}</AppLayout>
+  </ProtectedRoute>
+);
+
+const ClientProtected = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute requiredRole="client" unauthRedirectTo="/client/auth" wrongRoleRedirectTo="/home">
+    {children}
   </ProtectedRoute>
 );
 
@@ -81,17 +87,17 @@ const App = () => (
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
-            <Route path="/client/dashboard" element={<ClientDashboard />} />
-            <Route path="/client/profile" element={<ClientProfile />} />
-            <Route path="/client/profile/social" element={<ClientSocialAssets />} />
-            <Route path="/client/campaigns" element={<ClientCampaigns />} />
-            <Route path="/client/approvals" element={<ClientApprovals />} />
-            <Route path="/client/insights" element={<ClientInsights />} />
-            <Route path="/client/settings" element={<ClientSettings />} />
-            <Route path="/client/strategy" element={<ClientStrategy />} />
-            <Route path="/client/strategy/trends" element={<ClientTrendMonitor />} />
-            <Route path="/client/strategy/competitors" element={<ClientCompetitorAnalysis />} />
-            <Route path="/client/messages" element={<Messages portalType="client" />} />
+            <Route path="/client/dashboard" element={<ClientProtected><ClientDashboard /></ClientProtected>} />
+            <Route path="/client/profile" element={<ClientProtected><ClientProfile /></ClientProtected>} />
+            <Route path="/client/profile/social" element={<ClientProtected><ClientSocialAssets /></ClientProtected>} />
+            <Route path="/client/campaigns" element={<ClientProtected><ClientCampaigns /></ClientProtected>} />
+            <Route path="/client/approvals" element={<ClientProtected><ClientApprovals /></ClientProtected>} />
+            <Route path="/client/insights" element={<ClientProtected><ClientInsights /></ClientProtected>} />
+            <Route path="/client/settings" element={<ClientProtected><ClientSettings /></ClientProtected>} />
+            <Route path="/client/strategy" element={<ClientProtected><ClientStrategy /></ClientProtected>} />
+            <Route path="/client/strategy/trends" element={<ClientProtected><ClientTrendMonitor /></ClientProtected>} />
+            <Route path="/client/strategy/competitors" element={<ClientProtected><ClientCompetitorAnalysis /></ClientProtected>} />
+            <Route path="/client/messages" element={<ClientProtected><Messages portalType="client" /></ClientProtected>} />
             
             {/* Marketer routes with sidebar */}
             <Route path="/home" element={<WithSidebar><Home /></WithSidebar>} />
