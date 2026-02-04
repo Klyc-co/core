@@ -51,6 +51,7 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
   };
 
   const navItems = [
+    { label: "Profile", path: "/profile" },
     { label: "Campaigns", path: "/campaigns" },
     { label: "Library", path: "/profile/library" },
     { label: "Strategy", path: "/brand-strategy" },
@@ -100,18 +101,6 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
             {unreadMessages > 9 ? "9+" : unreadMessages}
           </span>
         )}
-      </Button>
-      <Button 
-        variant="ghost" 
-        size={mobile ? "default" : "icon"}
-        onClick={() => {
-          navigate("/profile");
-          if (mobile) setMobileMenuOpen(false);
-        }}
-        className={mobile ? "justify-start w-full h-12" : ""}
-      >
-        <User className="w-4 h-4" />
-        {mobile && <span className="ml-2">Profile</span>}
       </Button>
       <Button 
         variant="ghost" 
