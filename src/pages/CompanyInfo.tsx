@@ -16,6 +16,7 @@ import type { User } from "@supabase/supabase-js";
 import { useClientContext } from "@/contexts/ClientContext";
 import { WebsiteAnalyticsWidget } from "@/components/WebsiteAnalyticsWidget";
 import { AnalyticsPlatformGrid } from "@/components/AnalyticsPlatformGrid";
+import { useGoogleAnalyticsOAuthCallback } from "@/hooks/useGoogleAnalyticsOAuthCallback";
 
 const industries = [
   "Technology", "Healthcare", "Finance", "E-commerce", "Education",
@@ -41,6 +42,11 @@ const CompanyInfo = () => {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { getEffectiveUserId, selectedClientId, isDefaultClient } = useClientContext();
+
+  // Handle Google Analytics OAuth callback (works even when Analytics tab isn't active)
+  // This is critical for popup OAuth flow - the popup lands on /profile/company
+  // and this hook processes the callback, notifies opener, and closes the popup
+  useGoogleAnalyticsOAuthCallback();
 
   // Company Info state
   const [companyData, setCompanyData] = useState({

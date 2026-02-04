@@ -288,88 +288,10 @@ export function AnalyticsPlatformGrid() {
     }
   };
 
-  // Handle OAuth callback - runs on any page with code param (including popup window)
-  useEffect(() => {
-    const handleCallback = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      const state = params.get('state');
-      const storedState = localStorage.getItem(GA_OAUTH_STATE_KEY);
-      const startedAt = Number(localStorage.getItem(GA_OAUTH_STARTED_AT_KEY) || '0');
-
-      // Expire stale states (prevents weird stuck UI after navigating around)
-      if (storedState && startedAt && Date.now() - startedAt > GA_OAUTH_MAX_AGE_MS) {
-        localStorage.removeItem(GA_OAUTH_STATE_KEY);
-        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
-      }
-
-      console.log('GA OAuth callback check:', { hasCode: !!code, hasState: !!state, hasStoredState: !!storedState, statesMatch: storedState === state });
-
-      // If we have a code and state from Google, process the callback
-      if (code && state) {
-        // Verify CSRF state
-        if (storedState !== state) {
-          console.error('GA OAuth state mismatch - possible CSRF or stale session');
-          // Still try to clean up URL
-          window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
-          toast.error('OAuth session expired. Please try connecting again.');
-
-          // If we're in a popup, notify the opener of failure and close.
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage({ type: 'ga_oauth_error' }, window.location.origin);
-            window.close();
-          }
-          return;
-        }
-
-        localStorage.removeItem(GA_OAUTH_STATE_KEY);
-        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
-        // Remove OAuth params from the URL and restore the analytics tab.
-        window.history.replaceState({}, '', window.location.pathname + '?tab=analytics');
-        
-        setConnectionStatus(prev => ({ ...prev, google_analytics: 'connecting' }));
-        
-        try {
-          console.log('Invoking GA OAuth callback function...');
-          const { data, error } = await supabase.functions.invoke('google-analytics-oauth-callback', {
-            body: {
-              code,
-              redirectUri: `${window.location.origin}/profile/company`
-            }
-          });
-
-          console.log('GA OAuth callback response:', { data, error });
-
-          if (error) throw error;
-
-          toast.success(`Connected to Google Analytics as ${data.email}`);
-          setConnectionStatus(prev => ({ ...prev, google_analytics: 'connected' }));
-          
-          // If we're in a popup, notify the opener and close
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage({ type: 'ga_oauth_success', email: data.email }, window.location.origin);
-            window.close();
-          }
-        } catch (error) {
-          console.error('OAuth callback error:', error);
-          toast.error('Failed to complete Google Analytics connection');
-          setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
-
-          // Make sure we don't leave stale state behind on error.
-          localStorage.removeItem(GA_OAUTH_STATE_KEY);
-          localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
-          
-          // If we're in a popup, notify the opener of failure and close
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage({ type: 'ga_oauth_error' }, window.location.origin);
-            window.close();
-          }
-        }
-      }
-    };
-
-    handleCallback();
-  }, []);
+  // NOTE: The actual OAuth callback processing is now handled by
+  // useGoogleAnalyticsOAuthCallback hook in CompanyInfo.tsx.
+  // This ensures the callback works even when the Analytics tab isn't active.
+  // The hook detects code/state params, exchanges tokens, notifies opener, and closes popup.
 
   // Listen for OAuth success message from popup window
   useEffect(() => {
