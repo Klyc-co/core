@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+// Optional: set this to something like "Klyc <noreply@klyc.ai>" after verifying your domain in Resend.
+// If not set, we fall back to Resend's testing sender.
+const RESEND_FROM = Deno.env.get("RESEND_FROM") || "Klyc <onboarding@resend.dev>";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +24,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    if (!RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Missing RESEND_API_KEY configuration. Add it in backend secrets and retry.",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Verify auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -56,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Klyc <onboarding@resend.dev>",
+        from: RESEND_FROM,
         to: [clientEmail],
         subject: `${marketerName || "Your marketer"} has invited you to Klyc`,
         html: `
@@ -109,7 +125,28 @@ const handler = async (req: Request): Promise<Response> => {
     const emailData = await emailResponse.json();
     
     if (!emailResponse.ok) {
-      throw new Error(emailData.message || "Failed to send email");
+      const resendMsg = emailData?.message || emailData?.error || "Failed to send email";
+
+      // Common Resend restriction: accounts without a verified domain can only send to the account owner's email.
+      // Return a clearer error and a non-500 status so the frontend can show a helpful toast.
+      if (
+        typeof resendMsg === "string" &&
+        resendMsg.toLowerCase().includes("only send testing emails")
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Email sending is currently in Resend testing mode. Verify your sending domain in Resend and set RESEND_FROM (e.g. 'Klyc <noreply@klyc.ai>') to send invites to other recipients.",
+            details: resendMsg,
+          }),
+          {
+            status: 422,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+
+      throw new Error(resendMsg);
     }
 
     console.log("Invitation email sent successfully:", emailData);
