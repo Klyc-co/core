@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useClientContext } from "@/contexts/ClientContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, Eye, Users, Clock, TrendingDown, ExternalLink, Loader2, Link2 } from "lucide-react";
-import { toast } from "sonner";
 
 interface WebsiteAnalyticsSummaryProps {
   showFullButton?: boolean;
@@ -23,39 +23,48 @@ export function WebsiteAnalyticsSummary({
   onFullClick,
   onConnectClick 
 }: WebsiteAnalyticsSummaryProps) {
+  const { getEffectiveUserId, selectedClientId } = useClientContext();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [metrics, setMetrics] = useState<QuickMetrics | null>(null);
 
+  // Re-check connection when client changes
   useEffect(() => {
     checkConnection();
-  }, []);
+  }, [selectedClientId]);
 
   const checkConnection = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const effectiveUserId = getEffectiveUserId();
+    if (!effectiveUserId) {
+      setIsConnected(false);
+      setMetrics(null);
+      return;
+    }
 
     // Use maybeSingle() instead of single() to avoid 406 error when no rows exist
     const { data } = await supabase
       .from('social_connections')
       .select('id')
       .eq('platform', 'google_analytics')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .maybeSingle();
 
     setIsConnected(!!data);
 
     if (data) {
-      fetchQuickMetrics();
+      fetchQuickMetrics(effectiveUserId);
+    } else {
+      setMetrics(null);
     }
   };
 
-  const fetchQuickMetrics = async () => {
+  const fetchQuickMetrics = async (userId: string) => {
     setIsLoading(true);
+    setMetrics(null);
     try {
-      // First get properties to find the first one
+      // First get properties to find the first one - pass userId for client context
       const { data: propsData } = await supabase.functions.invoke('google-analytics-data', {
-        body: { action: 'listProperties' }
+        body: { action: 'listProperties', targetUserId: userId }
       });
 
       if (propsData?.properties?.length > 0) {
@@ -66,7 +75,8 @@ export function WebsiteAnalyticsSummary({
             action: 'getData',
             propertyId,
             startDate: '7daysAgo',
-            endDate: 'today'
+            endDate: 'today',
+            targetUserId: userId
           }
         });
 
