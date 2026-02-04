@@ -2,48 +2,70 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User, MessageSquare, Menu, X } from "lucide-react";
+import { LogOut, Settings, MessageSquare, Menu, UserCog, Users, Plus, Check, Briefcase } from "lucide-react";
 import Logo from "@/components/Logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientContext } from "@/contexts/ClientContext";
+import { useToast } from "@/hooks/use-toast";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+interface Client {
+  id: string;
+  client_id: string;
+  client_name: string;
+  client_email: string | null;
+}
 
 interface AppHeaderProps {
   user: SupabaseUser | null;
   businessName?: string;
   unreadMessages?: number;
+  onAddClient?: () => void;
 }
 
-const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) => {
+const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppHeaderProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentClientName, setCurrentClientName] = useState<string | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
+  const { toast } = useToast();
+  const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
 
-  // Read current client from localStorage
+  // Fetch clients on mount
   useEffect(() => {
-    const loadClient = () => {
-      const savedClientName = localStorage.getItem("currentClientName");
-      setCurrentClientName(savedClientName);
-    };
-    
-    loadClient();
+    const fetchClients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("marketer_clients")
+          .select("*")
+          .eq("status", "active")
+          .order("client_name");
 
-    // Listen for storage changes
-    const handleStorageChange = () => {
-      loadClient();
+        if (error) throw error;
+        setClients(data || []);
+      } catch (error: any) {
+        toast({
+          title: "Error loading clients",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingClients(false);
+      }
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    
-    // Also poll for changes within the same tab (localStorage events don't fire in same tab)
-    const interval = setInterval(loadClient, 1000);
-    
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+    fetchClients();
+  }, [toast]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -75,16 +97,84 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
     </div>
   );
 
+  const handleClientChange = (clientId: string | null, clientName: string | null) => {
+    setSelectedClient(clientId, clientName);
+  };
+
+  const ClientSwitcherDropdown = ({ mobile = false }: { mobile?: boolean }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size={mobile ? "default" : "icon"}
+          className={`relative ${mobile ? "justify-start w-full h-12" : ""}`}
+        >
+          <UserCog className="w-4 h-4" />
+          {mobile && <span className="ml-2">Switch Profile</span>}
+          {!isDefaultClient && !mobile && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[250px]">
+        <DropdownMenuLabel>Switch Profile</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        {/* Default "My Business" option */}
+        <DropdownMenuItem
+          onClick={() => handleClientChange("default", "My Business")}
+          className="flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-primary" />
+            <span>My Business</span>
+          </div>
+          {isDefaultClient && (
+            <Check className="w-4 h-4 text-primary" />
+          )}
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        {loadingClients ? (
+          <DropdownMenuItem disabled>Loading clients...</DropdownMenuItem>
+        ) : clients.length === 0 ? (
+          <DropdownMenuItem disabled className="text-muted-foreground">No clients yet</DropdownMenuItem>
+        ) : (
+          clients.map((client) => (
+            <DropdownMenuItem
+              key={client.id}
+              onClick={() => handleClientChange(client.client_id, client.client_name)}
+              className="flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="truncate">{client.client_name}</span>
+              </div>
+              {selectedClientId === client.client_id && (
+                <Check className="w-4 h-4 text-primary" />
+              )}
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onAddClient} className="text-primary">
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Client
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const ActionButtons = ({ mobile = false }: { mobile?: boolean }) => (
     <div className={mobile ? "flex flex-col gap-2 pt-4 border-t border-border" : "flex items-center gap-1"}>
       {businessName && !mobile && (
         <span className="text-sm text-muted-foreground mr-2 hidden lg:block">{businessName}</span>
       )}
-      {currentClientName && !mobile && (
-        <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-          <span className="text-sm font-medium text-primary">{currentClientName}</span>
-        </div>
-      )}
+      
+      {/* Client Switcher */}
+      <ClientSwitcherDropdown mobile={mobile} />
+      
       <Button 
         variant="ghost" 
         size={mobile ? "default" : "icon"}
@@ -149,10 +239,10 @@ const AppHeader = ({ user, businessName, unreadMessages = 0 }: AppHeaderProps) =
                 <div className="flex items-center justify-between mb-6">
                   <Logo />
                 </div>
-                {currentClientName && (
+                {!isDefaultClient && selectedClientName && (
                   <div className="mb-4 pb-4 border-b border-border">
                     <p className="text-xs text-muted-foreground mb-1">Current Client</p>
-                    <p className="font-semibold text-primary">{currentClientName}</p>
+                    <p className="font-semibold text-primary">{selectedClientName}</p>
                   </div>
                 )}
                 {businessName && (
