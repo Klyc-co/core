@@ -125,8 +125,23 @@ const Messages = ({ portalType }: MessagesProps) => {
         // Determine if current user is marketer or client in this relationship
         const isMarketer = rel.marketer_id === userId;
         const partnerId = isMarketer ? rel.client_id : rel.marketer_id;
-        const partnerName = isMarketer ? rel.client_name : "Your Marketer";
+        
+        // For clients viewing their marketer, try to get marketer's business name
+        let partnerName = isMarketer ? rel.client_name : "Your Marketer";
         const partnerEmail = isMarketer ? rel.client_email : null;
+        
+        // If current user is a client, try to fetch the marketer's profile/business name
+        if (!isMarketer) {
+          const { data: marketerProfile } = await supabase
+            .from("client_profiles")
+            .select("business_name")
+            .eq("user_id", rel.marketer_id)
+            .maybeSingle();
+          
+          if (marketerProfile?.business_name) {
+            partnerName = marketerProfile.business_name;
+          }
+        }
         
         contactMap.set(partnerId, {
           id: rel.id,
