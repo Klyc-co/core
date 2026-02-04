@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, User, MessageSquare, Lightbulb } from "lucide-react";
+import { LogOut, Settings, MessageSquare } from "lucide-react";
 import Logo from "@/components/Logo";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -76,9 +76,6 @@ const ClientHeader = ({ user, unreadMessages = 0 }: ClientHeaderProps) => {
                 {unreadMessages > 9 ? "9+" : unreadMessages}
               </span>
             )}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/client/profile")}>
-            <User className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => navigate("/client/settings")}>
             <Settings className="w-4 h-4" />
