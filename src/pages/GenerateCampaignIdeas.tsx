@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap, Wand2, Download } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap, Wand2, Download, Upload, ImageIcon } from "lucide-react";
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -52,7 +52,9 @@ const GenerateCampaignIdeas = () => {
   const [campaignObjective, setCampaignObjective] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus">("nano-banana");
+  const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus" | "style-transfer">("nano-banana");
+  const [inspirationImage, setInspirationImage] = useState<string | null>(null);
+  const [inspirationImageName, setInspirationImageName] = useState<string | null>(null);
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -145,12 +147,23 @@ const GenerateCampaignIdeas = () => {
       return;
     }
 
+    // For style-transfer, inspiration image is required
+    if (selectedImageModel === "style-transfer" && !inspirationImage) {
+      toast({
+        title: "No inspiration image",
+        description: "Please upload an inspiration image for Style Transfer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGeneratingImage(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-image', {
         body: { 
           prompt: imagePrompt,
-          model: selectedImageModel 
+          model: selectedImageModel,
+          inspirationImageUrl: selectedImageModel === "style-transfer" ? inspirationImage : undefined
         },
       });
 
@@ -161,7 +174,9 @@ const GenerateCampaignIdeas = () => {
       
       toast({
         title: "Image generated!",
-        description: "Your AI-generated image is ready.",
+        description: selectedImageModel === "style-transfer" 
+          ? "Your style-transferred image is ready." 
+          : "Your AI-generated image is ready.",
       });
     } catch (error) {
       console.error("Error generating image:", error);
@@ -173,6 +188,45 @@ const GenerateCampaignIdeas = () => {
     } finally {
       setIsGeneratingImage(false);
     }
+  };
+
+  const handleInspirationImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, GIF, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setInspirationImage(base64);
+      setInspirationImageName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearInspirationImage = () => {
+    setInspirationImage(null);
+    setInspirationImageName(null);
   };
 
   const handleDownloadImage = () => {
@@ -549,7 +603,7 @@ const GenerateCampaignIdeas = () => {
                   {/* Model Selection */}
                   <div className="mt-4 mb-4">
                     <p className="text-sm font-medium text-foreground mb-2">Select AI Model:</p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <button
                         onClick={() => setSelectedImageModel("nano-banana")}
                         className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
@@ -561,6 +615,18 @@ const GenerateCampaignIdeas = () => {
                         <span className="text-lg mb-1">🍌</span>
                         <span className="text-xs font-medium text-foreground">Nano Banana</span>
                         <span className="text-[10px] text-muted-foreground">Fast & Free</span>
+                      </button>
+                      <button
+                        onClick={() => setSelectedImageModel("style-transfer")}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                          selectedImageModel === "style-transfer"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      >
+                        <ImageIcon className="w-5 h-5 mb-1 text-foreground" />
+                        <span className="text-xs font-medium text-foreground">Style Transfer</span>
+                        <span className="text-[10px] text-muted-foreground">From Reference</span>
                       </button>
                       <button
                         onClick={() => setSelectedImageModel("runway")}
@@ -589,20 +655,76 @@ const GenerateCampaignIdeas = () => {
                     </div>
                   </div>
 
+                  {/* Inspiration Image Upload (for Style Transfer) */}
+                  {selectedImageModel === "style-transfer" && (
+                    <div className="mb-4 p-4 rounded-lg border border-dashed border-border bg-muted/30">
+                      <p className="text-sm font-medium text-foreground mb-2">Upload Inspiration Image:</p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        The AI will adapt the style, colors, and aesthetic from your reference image.
+                      </p>
+                      
+                      {inspirationImage ? (
+                        <div className="space-y-3">
+                          <div className="relative inline-block">
+                            <img 
+                              src={inspirationImage} 
+                              alt="Inspiration" 
+                              className="w-32 h-32 object-cover rounded-lg border border-border"
+                            />
+                            <button
+                              onClick={clearInspirationImage}
+                              className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:opacity-80"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate max-w-xs">
+                            {inspirationImageName}
+                          </p>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all">
+                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                          <span className="text-sm text-muted-foreground">Click to upload image</span>
+                          <span className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF (max 5MB)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleInspirationImageUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
+
                   <Button 
                     className="w-full gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-90"
                     onClick={handleGenerateImage}
-                    disabled={isGeneratingImage || !imagePrompt.trim() || selectedImageModel === "fooocus"}
+                    disabled={
+                      isGeneratingImage || 
+                      !imagePrompt.trim() || 
+                      selectedImageModel === "fooocus" ||
+                      (selectedImageModel === "style-transfer" && !inspirationImage)
+                    }
                   >
                     {isGeneratingImage ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating with {selectedImageModel === "nano-banana" ? "Nano Banana" : "Runway"}...
+                        Generating with {
+                          selectedImageModel === "nano-banana" ? "Nano Banana" : 
+                          selectedImageModel === "style-transfer" ? "Style Transfer" :
+                          selectedImageModel === "runway" ? "Runway" : "Fooocus"
+                        }...
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4" />
-                        Generate Image with {selectedImageModel === "nano-banana" ? "Nano Banana" : selectedImageModel === "runway" ? "Runway" : "Fooocus"}
+                        Generate Image with {
+                          selectedImageModel === "nano-banana" ? "Nano Banana" : 
+                          selectedImageModel === "style-transfer" ? "Style Transfer" :
+                          selectedImageModel === "runway" ? "Runway" : "Fooocus"
+                        }
                       </>
                     )}
                   </Button>

@@ -6,8 +6,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-async function generateWithNanoBanana(prompt: string, apiKey: string): Promise<string> {
-  console.log("Generating with Nano Banana model...");
+async function generateWithNanoBanana(prompt: string, apiKey: string, inspirationImageUrl?: string): Promise<string> {
+  console.log("Generating with Nano Banana model...", inspirationImageUrl ? "with inspiration image" : "text-only");
+  
+  // Build the message content - either text-only or with inspiration image
+  let messageContent: any;
+  
+  if (inspirationImageUrl) {
+    // Image-to-image: use inspiration image as reference
+    messageContent = [
+      {
+        type: "text",
+        text: `Using this image as style inspiration and reference, create a new high-quality marketing image based on this description: ${prompt}. 
+        
+Adapt the visual style, color palette, mood, and aesthetic from the reference image while creating something new that matches the prompt. Make it professional, visually appealing, and suitable for social media marketing.`
+      },
+      {
+        type: "image_url",
+        image_url: {
+          url: inspirationImageUrl
+        }
+      }
+    ];
+  } else {
+    // Text-to-image: standard generation
+    messageContent = `Generate a high-quality marketing image based on this description: ${prompt}. Make it professional, visually appealing, and suitable for social media marketing.`;
+  }
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -20,7 +44,7 @@ async function generateWithNanoBanana(prompt: string, apiKey: string): Promise<s
       messages: [
         {
           role: "user",
-          content: `Generate a high-quality marketing image based on this description: ${prompt}. Make it professional, visually appealing, and suitable for social media marketing.`
+          content: messageContent
         }
       ],
       modalities: ["image", "text"]
@@ -191,7 +215,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, model = "nano-banana" } = await req.json();
+    const { prompt, model = "nano-banana", inspirationImageUrl } = await req.json();
     
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -200,7 +224,15 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Generating image for user: ${user.id}, Model: ${model}, Prompt: ${prompt.substring(0, 100)}...`);
+    // For style-transfer model, inspiration image is required
+    if (model === "style-transfer" && !inspirationImageUrl) {
+      return new Response(JSON.stringify({ error: 'Inspiration image is required for Style Transfer model' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Generating image for user: ${user.id}, Model: ${model}, Prompt: ${prompt.substring(0, 100)}...`, inspirationImageUrl ? "with inspiration image" : "");
 
     let imageUrl: string;
 
@@ -218,8 +250,15 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    } else if (model === "style-transfer") {
+      // Style transfer uses Nano Banana with inspiration image
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) {
+        throw new Error("LOVABLE_API_KEY is not configured");
+      }
+      imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY, inspirationImageUrl);
     } else {
-      // Default to Nano Banana
+      // Default to Nano Banana (text-to-image)
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) {
         throw new Error("LOVABLE_API_KEY is not configured");
