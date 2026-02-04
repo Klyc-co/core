@@ -7,20 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
-  Folder, 
-  File, 
-  Image, 
-  Video, 
-  FileText, 
-  FileSpreadsheet, 
   ChevronRight, 
-  ChevronDown, 
   Loader2,
   ArrowLeft,
   RefreshCw,
   Download
 } from "lucide-react";
 import DropboxIcon from "@/components/icons/DropboxIcon";
+import DropboxFileItem from "@/components/dropbox/DropboxFileItem";
 
 interface DropboxFile {
   id: string;
@@ -39,29 +33,6 @@ interface DropboxFilePickerProps {
   onImportComplete?: () => void;
 }
 
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-};
-
-const getFileIcon = (file: DropboxFile) => {
-  if (file.isFolder) return <Folder className="w-5 h-5 text-yellow-500" />;
-  switch (file.assetType) {
-    case "image":
-      return <Image className="w-5 h-5 text-green-500" />;
-    case "video":
-      return <Video className="w-5 h-5 text-purple-500" />;
-    case "document":
-      return <FileText className="w-5 h-5 text-blue-500" />;
-    case "spreadsheet":
-      return <FileSpreadsheet className="w-5 h-5 text-emerald-500" />;
-    default:
-      return <File className="w-5 h-5 text-muted-foreground" />;
-  }
-};
 
 const DropboxFilePicker = ({ open, onOpenChange, onImportComplete }: DropboxFilePickerProps) => {
   const [files, setFiles] = useState<DropboxFile[]>([]);
@@ -278,43 +249,13 @@ const DropboxFilePicker = ({ open, onOpenChange, onImportComplete }: DropboxFile
 
               {/* File Items */}
               {files.map((file) => (
-                <div
+                <DropboxFileItem
                   key={file.id}
-                  className={`flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors ${
-                    selectedFiles.has(file.id) ? "bg-primary/5" : ""
-                  }`}
-                >
-                  <Checkbox
-                    checked={selectedFiles.has(file.id)}
-                    onCheckedChange={() => toggleFileSelection(file)}
-                  />
-                  
-                  {getFileIcon(file)}
-                  
-                  <div 
-                    className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => file.isFolder ? navigateToFolder(file) : toggleFileSelection(file)}
-                  >
-                    <div className="font-medium truncate">{file.name}</div>
-                    <div className="text-xs text-muted-foreground flex gap-2">
-                      {file.size && <span>{formatFileSize(file.size)}</span>}
-                      {file.modifiedAt && (
-                        <span>{new Date(file.modifiedAt).toLocaleDateString()}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {file.isFolder && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => navigateToFolder(file)}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
+                  file={file}
+                  isSelected={selectedFiles.has(file.id)}
+                  onToggleSelection={() => toggleFileSelection(file)}
+                  onNavigateToFolder={() => navigateToFolder(file)}
+                />
               ))}
             </div>
           )}
