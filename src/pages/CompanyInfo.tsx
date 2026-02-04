@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3, Wand2, TrendingUp } from "lucide-react";
+import { Building2, Users, Lightbulb, Loader2, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Check, CheckCircle2, BarChart3, Wand2, TrendingUp } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import CanvaIcon from "@/components/icons/CanvaIcon";
@@ -380,15 +381,9 @@ const CompanyInfo = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppHeader user={user} />
+      
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-        <button 
-          onClick={() => navigate("/profile")}
-          className="flex items-center gap-2 text-primary hover:underline mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Profile
-        </button>
-
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Business Profile</h1>
         <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">Tell us about your business, audience, and import your brand sources</p>
 
@@ -1166,12 +1161,8 @@ const CompanyInfo = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="button" variant="outline" onClick={() => navigate("/profile")} className="gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-            <Button type="submit" disabled={saving} className="flex-1 bg-gradient-to-r from-primary to-purple-500 hover:opacity-90">
+          <div className="flex justify-end pt-6">
+            <Button type="submit" disabled={saving} className="bg-gradient-to-r from-primary to-purple-500 hover:opacity-90 px-8">
               {saving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>) : "Save Profile"}
             </Button>
           </div>
