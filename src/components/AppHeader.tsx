@@ -2,7 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, MessageSquare, Menu, UserCog, Users, Plus, Check, Briefcase } from "lucide-react";
+import {
+  LogOut,
+  Settings,
+  MessageSquare,
+  Menu,
+  UserCog,
+  Users,
+  Plus,
+  Check,
+  Briefcase,
+  Trash2,
+} from "lucide-react";
 import Logo from "@/components/Logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -13,6 +24,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useClientContext } from "@/contexts/ClientContext";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +61,9 @@ const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppH
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
 
@@ -86,6 +110,49 @@ const AppHeader = ({ user, businessName, unreadMessages = 0, onAddClient }: AppH
     fetchClients();
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, client: Client) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setClientToDelete(client);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!clientToDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("marketer_clients")
+        .delete()
+        .eq("id", clientToDelete.id);
+
+      if (error) throw error;
+
+      // If the deleted client was selected, switch back to default
+      if (selectedClientId === clientToDelete.client_id) {
+        setSelectedClient("default", "My Business");
+      }
+
+      toast({
+        title: "Client deleted",
+        description: `${clientToDelete.client_name} has been removed.`,
+      });
+
+      fetchClients();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting client",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+    }
+  };
+
 const navItems = [
   { label: "Profile", path: "/profile" },
     { label: "Campaigns", path: "/campaigns" },
@@ -130,7 +197,7 @@ const navItems = [
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[250px]">
+      <DropdownMenuContent align="end" className="w-[280px] bg-popover z-50">
         <DropdownMenuLabel>Switch Profile</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -161,13 +228,25 @@ const navItems = [
               onClick={() => handleClientChange(client.client_id, client.client_name)}
               className="flex items-center justify-between"
             >
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Users className="w-4 h-4 shrink-0" />
                 <span className="truncate">{client.client_name}</span>
               </div>
-              {selectedClientId === client.client_id && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
+
+              <div className="flex items-center gap-2 shrink-0">
+                {selectedClientId === client.client_id && (
+                  <Check className="w-4 h-4 text-primary" />
+                )}
+
+                <button
+                  onClick={(e) => handleDeleteClick(e, client)}
+                  className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                  title="Delete client"
+                  aria-label={`Delete ${client.client_name}`}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </button>
+              </div>
             </DropdownMenuItem>
           ))
         )}
@@ -283,6 +362,27 @@ const navItems = [
         onOpenChange={setAddClientDialogOpen}
         onClientAdded={handleClientAdded}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{clientToDelete?.client_name}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>No, Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Yes, Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
