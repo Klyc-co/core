@@ -1142,6 +1142,53 @@ export type Database = {
           },
         ]
       }
+      product_assets: {
+        Row: {
+          asset_name: string
+          asset_type: string | null
+          asset_url: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          product_id: string
+          source: string | null
+          thumbnail_url: string | null
+          user_id: string
+        }
+        Insert: {
+          asset_name: string
+          asset_type?: string | null
+          asset_url: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          product_id: string
+          source?: string | null
+          thumbnail_url?: string | null
+          user_id: string
+        }
+        Update: {
+          asset_name?: string
+          asset_type?: string | null
+          asset_url?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          product_id?: string
+          source?: string | null
+          thumbnail_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_assets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_lines: {
         Row: {
           created_at: string
