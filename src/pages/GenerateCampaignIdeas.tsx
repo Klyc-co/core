@@ -11,6 +11,12 @@ import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, File
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
+import { useClientContext } from "@/contexts/ClientContext";
+
+interface Product {
+  id: string;
+  name: string;
+}
 
 const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
@@ -54,9 +60,9 @@ const GenerateCampaignIdeas = () => {
   const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus" | "style-transfer">("nano-banana");
   const [referenceImages, setReferenceImages] = useState<Array<{ url: string; name: string }>>([]);
   const [isSavingToLibrary, setIsSavingToLibrary] = useState(false);
-
-  // Placeholder for products - will be fetched from database when products table exists
-  const products: { id: string; name: string }[] = [];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const { getEffectiveUserId } = useClientContext();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -67,6 +73,32 @@ const GenerateCampaignIdeas = () => {
       }
     });
   }, [navigate]);
+
+  // Fetch products from database
+  useEffect(() => {
+    const loadProducts = async () => {
+      const effectiveUserId = getEffectiveUserId();
+      if (!effectiveUserId) return;
+      
+      setLoadingProducts(true);
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, name")
+          .eq("user_id", effectiveUserId)
+          .order("created_at", { ascending: false });
+        
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (err) {
+        console.error("Failed to load products:", err);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    
+    loadProducts();
+  }, [getEffectiveUserId]);
 
   const handleGenerate = async () => {
     if (!selectedContentType) return;
@@ -362,24 +394,24 @@ const GenerateCampaignIdeas = () => {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold text-foreground mb-4">Products</h2>
-              <Select value={selectedProduct || ""} onValueChange={setSelectedProduct}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a product (optional)" />
+              <Select value={selectedProduct || "none"} onValueChange={(val) => setSelectedProduct(val === "none" ? null : val)}>
+                <SelectTrigger className="w-full" disabled={loadingProducts}>
+                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product (optional)"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.length === 0 ? (
-                    <SelectItem value="none" disabled>No products available</SelectItem>
-                  ) : (
-                    products.map((product) => (
+                  <SelectItem value="none">None</SelectItem>
+                  {products.length === 0 && !loadingProducts && (
+                    <SelectItem value="_empty" disabled>No products saved yet</SelectItem>
+                  )}
+                  {products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
                       </SelectItem>
-                    ))
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground mt-2">
-                Add product details from your profile to enrich the campaign idea.
+                Select a product from your library to enrich the campaign idea.
               </p>
             </CardContent>
           </Card>
