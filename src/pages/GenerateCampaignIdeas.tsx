@@ -54,8 +54,7 @@ const GenerateCampaignIdeas = () => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus" | "style-transfer">("nano-banana");
-  const [inspirationImage, setInspirationImage] = useState<string | null>(null);
-  const [inspirationImageName, setInspirationImageName] = useState<string | null>(null);
+  const [referenceImages, setReferenceImages] = useState<Array<{ url: string; name: string }>>([]);
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -149,10 +148,10 @@ const GenerateCampaignIdeas = () => {
     }
 
     // For style-transfer, inspiration image is required
-    if (selectedImageModel === "style-transfer" && !inspirationImage) {
+    if (selectedImageModel === "style-transfer" && referenceImages.length === 0) {
       toast({
-        title: "No inspiration image",
-        description: "Please upload an inspiration image for Style Transfer.",
+        title: "No reference image",
+        description: "Please add at least one reference image for Style Transfer.",
         variant: "destructive",
       });
       return;
@@ -164,7 +163,8 @@ const GenerateCampaignIdeas = () => {
         body: { 
           prompt: imagePrompt,
           model: selectedImageModel,
-          inspirationImageUrl: selectedImageModel === "style-transfer" ? inspirationImage : undefined
+          inspirationImageUrl: referenceImages.length > 0 ? referenceImages[0].url : undefined,
+          referenceImages: referenceImages.map(img => img.url)
         },
       });
 
@@ -189,45 +189,6 @@ const GenerateCampaignIdeas = () => {
     } finally {
       setIsGeneratingImage(false);
     }
-  };
-
-  const handleInspirationImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, GIF, etc.)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setInspirationImage(base64);
-      setInspirationImageName(file.name);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const clearInspirationImage = () => {
-    setInspirationImage(null);
-    setInspirationImageName(null);
   };
 
   const handleDownloadImage = () => {
@@ -594,15 +555,11 @@ const GenerateCampaignIdeas = () => {
                   {/* Reference Image Section - Always visible */}
                   <div className="mb-4 p-4 rounded-lg border border-dashed border-border bg-muted/30">
                     <ImageSourcePicker
-                      label="Reference Image (Optional)"
-                      description="Add a reference image to guide the AI. Select from your device, Google Drive, or Klyc library."
-                      currentImage={inspirationImage}
-                      currentImageName={inspirationImageName}
-                      onImageSelected={(url, name) => {
-                        setInspirationImage(url);
-                        setInspirationImageName(name);
-                      }}
-                      onClearImage={clearInspirationImage}
+                      label="Reference Images (Optional)"
+                      description="Add reference images to guide the AI"
+                      images={referenceImages}
+                      onImagesChange={setReferenceImages}
+                      maxImages={10}
                     />
                   </div>
 
