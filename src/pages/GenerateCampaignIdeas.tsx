@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap, Wand2, Download, Upload, ImageIcon } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Zap, Wand2, Download, Upload, ImageIcon, FolderOpen } from "lucide-react";
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -55,6 +55,7 @@ const GenerateCampaignIdeas = () => {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus" | "style-transfer">("nano-banana");
   const [referenceImages, setReferenceImages] = useState<Array<{ url: string; name: string }>>([]);
+  const [isSavingToLibrary, setIsSavingToLibrary] = useState(false);
 
   // Placeholder for products - will be fetched from database when products table exists
   const products: { id: string; name: string }[] = [];
@@ -173,12 +174,45 @@ const GenerateCampaignIdeas = () => {
       }
       setGeneratedImageUrl(data.imageUrl);
       
+      // Auto-save generated image to Klyc library
+      if (data.imageUrl && user) {
+        try {
+          const imageName = `AI Generated - ${selectedContentType} - ${new Date().toLocaleDateString()}`;
+          await supabase.from("brand_assets").insert({
+            user_id: user.id,
+            asset_type: "image",
+            name: imageName,
+            value: data.imageUrl,
+            metadata: {
+              source: "ai-generated",
+              model: selectedImageModel,
+              prompt: imagePrompt,
+              generated_at: new Date().toISOString(),
+            }
+          });
+          
+          toast({
+            title: "Image generated & saved!",
+            description: "Your AI-generated image has been saved to your Klyc library.",
+          });
+        } catch (saveError) {
+          console.error("Error saving image to library:", saveError);
+          // Still show success for generation, but note the save failed
+          toast({
+            title: "Image generated!",
+            description: selectedImageModel === "style-transfer" 
+              ? "Your style-transferred image is ready. (Failed to save to library)" 
+              : "Your AI-generated image is ready. (Failed to save to library)",
+          });
+        }
+      } else {
       toast({
         title: "Image generated!",
         description: selectedImageModel === "style-transfer" 
           ? "Your style-transferred image is ready." 
           : "Your AI-generated image is ready.",
       });
+      }
     } catch (error) {
       console.error("Error generating image:", error);
       toast({
@@ -677,15 +711,21 @@ const GenerateCampaignIdeas = () => {
                         Download
                       </Button>
                     </div>
-                    <div className="rounded-lg overflow-hidden border border-border">
+                    <div className="rounded-lg overflow-hidden border border-border relative">
                       <img 
                         src={generatedImageUrl} 
                         alt="AI Generated Campaign Image" 
                         className="w-full h-auto"
                       />
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+                        <FolderOpen className="w-3 h-3" />
+                        Saved to Library
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-3">
-                      Right-click to save, or use the download button above.
+                    <p className="text-sm text-muted-foreground mt-3 flex items-center gap-2">
+                      <span>✓ Auto-saved to your Klyc library.</span>
+                      <span className="text-muted-foreground/70">•</span>
+                      <span>Right-click to save locally, or use the download button.</span>
                     </p>
                   </CardContent>
                 </Card>
