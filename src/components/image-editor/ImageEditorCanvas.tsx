@@ -24,12 +24,15 @@
    ChevronDown,
    Image as ImageIcon,
    Loader2,
+  Wand2,
+  Send,
  } from "lucide-react";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
  import { toast } from "sonner";
  import { supabase } from "@/integrations/supabase/client";
  import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { Textarea } from "@/components/ui/textarea";
  
  interface ImageEditorCanvasProps {
    initialImage?: string | null;
@@ -83,6 +86,8 @@
    const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
    const [zoom, setZoom] = useState(1);
    const [isSaving, setIsSaving] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
  
    const allFonts = [...new Set([...defaultFonts, ...brandFonts])];
    const allColors = [...new Set([...defaultColors, ...brandColors])];
@@ -286,6 +291,79 @@
      fabricRef.current?.renderAll();
    }, [fontSize, fontFamily, textColor, isBold, isItalic, textAlign, selectedObject]);
  
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim() || !fabricRef.current) return;
+    
+    setIsGenerating(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-canvas-elements", {
+        body: {
+          prompt: aiPrompt,
+          canvasWidth: fabricRef.current.width,
+          canvasHeight: fabricRef.current.height,
+          brandFonts: allFonts,
+          brandColors: allColors,
+        },
+      });
+      
+      if (error) throw error;
+      
+      const elements = data?.elements || [];
+      
+      for (const element of elements) {
+        if (element.type === "text") {
+          const text = new IText(element.content || "Text", {
+            left: element.left || 100,
+            top: element.top || 100,
+            fontSize: element.fontSize || 32,
+            fontFamily: element.fontFamily || allFonts[0] || "Arial",
+            fill: element.fill || allColors[0] || "#000000",
+            fontWeight: element.bold ? "bold" : "normal",
+            fontStyle: element.italic ? "italic" : "normal",
+            textAlign: element.textAlign || "center",
+          });
+          fabricRef.current.add(text);
+        } else if (element.type === "rect") {
+          const rect = new Rect({
+            left: element.left || 100,
+            top: element.top || 100,
+            width: element.width || 200,
+            height: element.height || 100,
+            fill: element.fill || allColors[1] || "#3B82F6",
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth || 0,
+            rx: element.rx || 0,
+            ry: element.ry || 0,
+          });
+          fabricRef.current.add(rect);
+          if (element.sendToBack) {
+            fabricRef.current.sendObjectToBack(rect);
+          }
+        } else if (element.type === "circle") {
+          const circle = new Circle({
+            left: element.left || 100,
+            top: element.top || 100,
+            radius: element.radius || 50,
+            fill: element.fill || allColors[1] || "#3B82F6",
+            stroke: element.stroke,
+            strokeWidth: element.strokeWidth || 0,
+          });
+          fabricRef.current.add(circle);
+        }
+      }
+      
+      fabricRef.current.renderAll();
+      setAiPrompt("");
+      toast.success("Elements added to canvas!");
+    } catch (error) {
+      console.error("AI generation failed:", error);
+      toast.error("Failed to generate elements");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
    const handleExport = async () => {
      if (!fabricRef.current) return;
      
@@ -365,6 +443,33 @@
      <div className="flex flex-col lg:flex-row gap-4 h-full">
        {/* Toolbar */}
        <div className="lg:w-64 space-y-4 order-2 lg:order-1">
+          {/* AI Prompt */}
+          <div className="bg-card rounded-lg border p-4 space-y-3">
+            <h3 className="font-medium text-sm text-foreground flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" />
+              AI Assistant
+            </h3>
+            <Textarea
+              placeholder="Describe what you want... e.g., 'Add bold headline at top saying SALE 50% OFF in red, make it look like a flyer'"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              className="min-h-[80px] text-sm resize-none"
+            />
+            <Button
+              onClick={handleAiGenerate}
+              disabled={isGenerating || !aiPrompt.trim()}
+              className="w-full"
+              size="sm"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Generate
+            </Button>
+          </div>
+
          {/* Add Elements */}
          <div className="bg-card rounded-lg border p-4 space-y-3">
            <h3 className="font-medium text-sm text-foreground">Add Elements</h3>
