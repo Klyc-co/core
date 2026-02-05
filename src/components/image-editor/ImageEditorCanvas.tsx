@@ -22,12 +22,13 @@
    Layers,
    ChevronUp,
    ChevronDown,
-   Image as ImageIcon,
-   Loader2,
-  Wand2,
-  Send,
- } from "lucide-react";
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+    Image as ImageIcon,
+    Loader2,
+    Wand2,
+    Send,
+    Sparkles,
+  } from "lucide-react";
+  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
  import { toast } from "sonner";
  import { supabase } from "@/integrations/supabase/client";
@@ -85,10 +86,12 @@ import { Textarea } from "@/components/ui/textarea";
    const [isItalic, setIsItalic] = useState(false);
    const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
    const [zoom, setZoom] = useState(1);
-   const [isSaving, setIsSaving] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
- 
+    const [isSaving, setIsSaving] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiImagePrompt, setAiImagePrompt] = useState("");
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
    const allFonts = [...new Set([...defaultFonts, ...brandFonts])];
    const allColors = [...new Set([...defaultColors, ...brandColors])];
  
@@ -364,6 +367,59 @@ import { Textarea } from "@/components/ui/textarea";
     }
   };
 
+  const handleAiImageGenerate = async () => {
+    if (!aiImagePrompt.trim() || !fabricRef.current) return;
+    
+    setIsGeneratingImage(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-image", {
+        body: {
+          prompt: aiImagePrompt,
+          model: "nano-banana",
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (!data?.imageUrl) {
+        throw new Error("No image was generated");
+      }
+      
+      // Load the generated image onto the canvas
+      const img = await FabricImage.fromURL(data.imageUrl, { crossOrigin: "anonymous" });
+      const canvas = fabricRef.current;
+      
+      // Scale image to fit nicely on canvas (max 50% of canvas size)
+      const maxWidth = canvas.width! * 0.5;
+      const maxHeight = canvas.height! * 0.5;
+      const scaleX = maxWidth / img.width!;
+      const scaleY = maxHeight / img.height!;
+      const scale = Math.min(scaleX, scaleY, 1);
+      
+      img.scale(scale);
+      img.set({
+        left: (canvas.width! - img.width! * scale) / 2,
+        top: (canvas.height! - img.height! * scale) / 2,
+        selectable: true,
+        evented: true,
+      });
+      
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      
+      setAiImagePrompt("");
+      toast.success("AI image added to canvas!");
+    } catch (error) {
+      console.error("AI image generation failed:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate image";
+      toast.error(message);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
    const handleExport = async () => {
      if (!fabricRef.current) return;
      
@@ -466,8 +522,44 @@ import { Textarea } from "@/components/ui/textarea";
               ) : (
                 <Send className="w-4 h-4 mr-2" />
               )}
-              Generate
+              Generate Layout
             </Button>
+          </div>
+
+          {/* AI Image Generation */}
+          <div className="bg-card rounded-lg border p-4 space-y-3">
+            <h3 className="font-medium text-sm text-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              AI Image Generator
+            </h3>
+            <Textarea
+              placeholder="Describe the image you want to generate... e.g., 'A professional product photo of a coffee cup on a wooden table with morning light'"
+              value={aiImagePrompt}
+              onChange={(e) => setAiImagePrompt(e.target.value)}
+              className="min-h-[80px] text-sm resize-none"
+            />
+            <Button
+              onClick={handleAiImageGenerate}
+              disabled={isGeneratingImage || !aiImagePrompt.trim()}
+              className="w-full"
+              size="sm"
+              variant="secondary"
+            >
+              {isGeneratingImage ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Image
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Uses AI to create images from your description
+            </p>
           </div>
 
          {/* Add Elements */}
