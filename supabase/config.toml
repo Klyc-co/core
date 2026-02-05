@@ -104,3 +104,18 @@ verify_jwt = false
 
 [functions.dropbox-disconnect]
 verify_jwt = false
+
+[functions.hubspot-crm-auth-url]
+verify_jwt = false
+
+[functions.hubspot-crm-oauth-callback]
+verify_jwt = false
+
+[functions.shopify-crm-auth-url]
+verify_jwt = false
+
+[functions.shopify-crm-oauth-callback]
+verify_jwt = false
+
+[functions.crm-sync]
+verify_jwt = false

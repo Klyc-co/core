@@ -319,6 +319,337 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_companies: {
+        Row: {
+          connection_id: string
+          contact_count: number | null
+          created_at: string
+          domain: string | null
+          external_id: string
+          id: string
+          industry: string | null
+          name: string
+          raw_data: Json | null
+          size: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_id: string
+          contact_count?: number | null
+          created_at?: string
+          domain?: string | null
+          external_id: string
+          id?: string
+          industry?: string | null
+          name: string
+          raw_data?: Json | null
+          size?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string
+          contact_count?: number | null
+          created_at?: string
+          domain?: string | null
+          external_id?: string
+          id?: string
+          industry?: string | null
+          name?: string
+          raw_data?: Json | null
+          size?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_companies_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_connections: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          display_name: string
+          id: string
+          last_sync_at: string | null
+          metadata: Json | null
+          provider: string
+          refresh_token: string | null
+          status: string
+          sync_frequency_minutes: number
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          provider: string
+          refresh_token?: string | null
+          status?: string
+          sync_frequency_minutes?: number
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          last_sync_at?: string | null
+          metadata?: Json | null
+          provider?: string
+          refresh_token?: string | null
+          status?: string
+          sync_frequency_minutes?: number
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crm_contacts: {
+        Row: {
+          company_name: string | null
+          connection_id: string
+          created_at: string
+          email: string | null
+          external_id: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          lifecycle_stage: string | null
+          phone: string | null
+          raw_data: Json | null
+          source: string
+          tags: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          connection_id: string
+          created_at?: string
+          email?: string | null
+          external_id: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          lifecycle_stage?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          source: string
+          tags?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          connection_id?: string
+          created_at?: string
+          email?: string | null
+          external_id?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          lifecycle_stage?: string | null
+          phone?: string | null
+          raw_data?: Json | null
+          source?: string
+          tags?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_deals: {
+        Row: {
+          associated_contact_external_id: string | null
+          close_date: string | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          external_id: string
+          id: string
+          name: string
+          owner: string | null
+          raw_data: Json | null
+          stage: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          associated_contact_external_id?: string | null
+          close_date?: string | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          external_id: string
+          id?: string
+          name: string
+          owner?: string | null
+          raw_data?: Json | null
+          stage?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          associated_contact_external_id?: string | null
+          close_date?: string | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          external_id?: string
+          id?: string
+          name?: string
+          owner?: string | null
+          raw_data?: Json | null
+          stage?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deals_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_orders: {
+        Row: {
+          associated_contact_external_id: string | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          customer_name: string | null
+          external_id: string
+          id: string
+          items: Json | null
+          order_date: string | null
+          order_number: string
+          raw_data: Json | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          associated_contact_external_id?: string | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          external_id: string
+          id?: string
+          items?: Json | null
+          order_date?: string | null
+          order_number: string
+          raw_data?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          associated_contact_external_id?: string | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          external_id?: string
+          id?: string
+          items?: Json | null
+          order_date?: string | null
+          order_number?: string
+          raw_data?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_orders_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_sync_logs: {
+        Row: {
+          connection_id: string
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          connection_id: string
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          connection_id?: string
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_sync_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "crm_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dropbox_assets: {
         Row: {
           asset_name: string
