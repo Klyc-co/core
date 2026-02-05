@@ -17,7 +17,8 @@ import {
   Eye,
   ExternalLink,
   Users,
-  Menu
+  Menu,
+  Palette
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -500,6 +501,19 @@ const BrandStrategy = () => {
         <div className="text-left">
           <div className="text-sm font-medium">Trend Monitor</div>
           <div className="text-xs text-muted-foreground">Track social media trends</div>
+        </div>
+      </button>
+      <button 
+        onClick={() => {
+          setMobileMenuOpen(false);
+          navigate("/image-editor");
+        }}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted text-foreground"
+      >
+        <Palette className="w-4 h-4" />
+        <div className="text-left">
+          <div className="text-sm font-medium">Image Editor</div>
+          <div className="text-xs text-muted-foreground">Create visual content</div>
         </div>
       </button>
     </nav>
