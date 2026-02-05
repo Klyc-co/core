@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package } from "lucide-react";
+import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { useClientContext } from "@/contexts/ClientContext";
 import ProductsContent from "@/components/ProductsContent";
+import CrmContent from "@/components/crm/CrmContent";
 
 interface BrandAsset {
   id: string;
@@ -305,6 +306,10 @@ const Library = () => {
               <Package className="w-4 h-4" />
               Products
             </TabsTrigger>
+            <TabsTrigger value="crm" className="gap-2">
+              <Database className="w-4 h-4" />
+              CRM
+            </TabsTrigger>
           </TabsList>
 
           {/* Assets Tab */}
@@ -441,6 +446,11 @@ const Library = () => {
           {/* Products Tab */}
           <TabsContent value="products">
             <ProductsContent />
+          </TabsContent>
+
+          {/* CRM Tab */}
+          <TabsContent value="crm">
+            <CrmContent />
           </TabsContent>
         </Tabs>
       </main>
