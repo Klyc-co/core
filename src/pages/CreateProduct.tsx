@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
  import ProductAssetPicker, { SelectedAsset } from "@/components/ProductAssetPicker";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { syncProductImagesToLibrary } from "@/lib/productAssetLibrarySync";
 
 interface ProductLine {
   id: string;
@@ -140,20 +141,17 @@ const CreateProduct = () => {
         // Continue anyway - product was created
       }
 
-      // Also save to brand_assets for the Library
-      for (const asset of persistedAssets) {
-        await supabase.from("brand_assets").insert({
-          user_id: user.id,
-          asset_type: "image",
-          name: `${productName} - ${asset.name}`,
-          value: asset.url,
-          metadata: {
-            source: "product",
-            product_id: productData.id,
-            product_name: productName,
-            original_source: asset.source,
-          }
+      // Also save to brand_assets for the Library (deduped)
+      try {
+        await syncProductImagesToLibrary({
+          userId: user.id,
+          productId: productData.id,
+          productName,
+          assets: persistedAssets.map((a) => ({ name: a.name, url: a.url, source: a.source })),
         });
+      } catch (e) {
+        console.error("Failed to sync product images to Assets:", e);
+        toast.error("Product saved, but failed to save image into Assets");
       }
     }
 

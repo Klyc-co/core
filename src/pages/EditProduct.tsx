@@ -14,6 +14,7 @@
  import type { User } from "@supabase/supabase-js";
  import ProductAssetPicker, { SelectedAsset } from "@/components/ProductAssetPicker";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { syncProductImagesToLibrary } from "@/lib/productAssetLibrarySync";
  
  interface ProductLine {
    id: string;
@@ -190,25 +191,17 @@ import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
          console.error("Error saving product assets:", assetsError);
        }
 
-      // Also save to brand_assets so the image shows up under Assets
-      for (const asset of persistedAssets) {
-        try {
-          await supabase.from("brand_assets").insert({
-            user_id: user.id,
-            asset_type: "image",
-            name: `${productName} - ${asset.name}`,
-            value: asset.url,
-            metadata: {
-              source: "product",
-              product_id: productId,
-              product_name: productName,
-              original_source: asset.source,
-            },
-          });
-        } catch (e) {
-          // Non-blocking: product save should still succeed
-          console.error("Error saving product image to library:", e);
-        }
+      // Also save to brand_assets so the image shows up under Assets (deduped)
+      try {
+        await syncProductImagesToLibrary({
+          userId: user.id,
+          productId,
+          productName,
+          assets: persistedAssets.map((a) => ({ name: a.name, url: a.url, source: a.source })),
+        });
+      } catch (e) {
+        console.error("Failed to sync product images to Assets:", e);
+        toast.error("Product saved, but failed to save image into Assets");
       }
      }
  
