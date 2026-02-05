@@ -39,6 +39,9 @@ interface GoogleDriveFilePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete?: () => void;
+  onFilesSelected?: (files: Array<{ id: string; name: string; path: string; thumbnailUrl?: string }>) => void;
+  fileTypeFilter?: "image" | "video" | "document" | "all";
+  selectionMode?: "import" | "select";
 }
 
 const formatFileSize = (bytes?: number): string => {
@@ -65,7 +68,14 @@ const getFileIcon = (file: DriveFile) => {
   }
 };
 
-const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleDriveFilePickerProps) => {
+const GoogleDriveFilePicker = ({ 
+  open, 
+  onOpenChange, 
+  onImportComplete,
+  onFilesSelected,
+  fileTypeFilter = "all",
+  selectionMode = "import"
+}: GoogleDriveFilePickerProps) => {
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -133,31 +143,44 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
   };
 
   const toggleSelectAll = () => {
-    if (selectedFiles.size === files.length) {
+    const selectableFiles = filteredFiles.filter(f => !f.isFolder);
+    if (selectedFiles.size === selectableFiles.length) {
       setSelectedFiles(new Set());
     } else {
-      setSelectedFiles(new Set(files.map((f) => f.id)));
+      setSelectedFiles(new Set(selectableFiles.map((f) => f.id)));
     }
   };
 
   const handleImport = async () => {
     if (selectedFiles.size === 0) {
-      toast.error("Please select files to import");
+      toast.error("Please select at least one file");
       return;
     }
 
     setImporting(true);
 
     try {
-      const filesToImport = files.filter((f) => selectedFiles.has(f.id));
+      const filesToImport = filteredFiles.filter((f) => selectedFiles.has(f.id));
       
-      // TODO: Implement google-drive-import-files edge function
-      // For now, just show a success message
-      toast.success(`Selected ${filesToImport.length} files for import. Import functionality coming soon!`);
-      
-      setSelectedFiles(new Set());
-      onOpenChange(false);
-      onImportComplete?.();
+      // If in select mode with callback, use that
+      if (selectionMode === "select" && onFilesSelected) {
+        onFilesSelected(filesToImport.map(f => ({
+          id: f.id,
+          name: f.name,
+          path: f.path,
+          thumbnailUrl: f.thumbnailUrl
+        })));
+        setSelectedFiles(new Set());
+        onOpenChange(false);
+      } else {
+        // TODO: Implement google-drive-import-files edge function
+        // For now, just show a success message
+        toast.success(`Selected ${filesToImport.length} files for import. Import functionality coming soon!`);
+        
+        setSelectedFiles(new Set());
+        onOpenChange(false);
+        onImportComplete?.();
+      }
     } catch (err) {
       console.error("Import failed:", err);
       const errorMessage = err instanceof Error ? err.message : "Import failed";
@@ -166,6 +189,13 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
       setImporting(false);
     }
   };
+
+  // Filter files based on fileTypeFilter
+  const filteredFiles = files.filter(file => {
+    if (file.isFolder) return true; // Always show folders for navigation
+    if (fileTypeFilter === "all") return true;
+    return file.assetType === fileTypeFilter;
+  });
 
   const renderThumbnail = (file: DriveFile) => {
     if (file.isFolder) {
@@ -266,16 +296,19 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
                 Try Again
               </Button>
             </div>
-          ) : files.length === 0 ? (
+          ) : filteredFiles.length === 0 ? (
             <div className="flex items-center justify-center h-full py-12 text-muted-foreground">
-              This folder is empty
+              {fileTypeFilter !== "all" 
+                ? `No ${fileTypeFilter} files in this folder` 
+                : "This folder is empty"
+              }
             </div>
           ) : (
             <div className="divide-y">
               {/* Select All Header */}
               <div className="flex items-center gap-3 p-3 bg-muted/50 sticky top-0">
                 <Checkbox
-                  checked={selectedFiles.size === files.length && files.length > 0}
+                  checked={selectedFiles.size === filteredFiles.filter(f => !f.isFolder).length && filteredFiles.filter(f => !f.isFolder).length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
@@ -287,17 +320,21 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
               </div>
 
               {/* File Items */}
-              {files.map((file) => (
+              {filteredFiles.map((file) => (
                 <div
                   key={file.id}
                   className={`flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors ${
                     selectedFiles.has(file.id) ? "bg-primary/5" : ""
                   }`}
                 >
-                  <Checkbox
-                    checked={selectedFiles.has(file.id)}
-                    onCheckedChange={() => toggleFileSelection(file)}
-                  />
+                  {!file.isFolder ? (
+                    <Checkbox
+                      checked={selectedFiles.has(file.id)}
+                      onCheckedChange={() => toggleFileSelection(file)}
+                    />
+                  ) : (
+                    <div className="w-4" />
+                  )}
                   
                   {renderThumbnail(file)}
                   
@@ -348,7 +385,7 @@ const GoogleDriveFilePicker = ({ open, onOpenChange, onImportComplete }: GoogleD
             ) : (
               <>
                 <Download className="w-4 h-4" />
-                Import {selectedFiles.size > 0 ? `(${selectedFiles.size})` : ""}
+                {selectionMode === "select" ? "Select" : "Import"} {selectedFiles.size > 0 ? `(${selectedFiles.size})` : ""}
               </>
             )}
           </Button>

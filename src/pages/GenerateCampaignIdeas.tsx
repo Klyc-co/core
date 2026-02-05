@@ -11,6 +11,7 @@ import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, File
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
+import ImageSourcePicker from "@/components/ImageSourcePicker";
 
 const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
@@ -658,43 +659,17 @@ const GenerateCampaignIdeas = () => {
                   {/* Inspiration Image Upload (for Style Transfer) */}
                   {selectedImageModel === "style-transfer" && (
                     <div className="mb-4 p-4 rounded-lg border border-dashed border-border bg-muted/30">
-                      <p className="text-sm font-medium text-foreground mb-2">Upload Inspiration Image:</p>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        The AI will adapt the style, colors, and aesthetic from your reference image.
-                      </p>
-                      
-                      {inspirationImage ? (
-                        <div className="space-y-3">
-                          <div className="relative inline-block">
-                            <img 
-                              src={inspirationImage} 
-                              alt="Inspiration" 
-                              className="w-32 h-32 object-cover rounded-lg border border-border"
-                            />
-                            <button
-                              onClick={clearInspirationImage}
-                              className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:opacity-80"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate max-w-xs">
-                            {inspirationImageName}
-                          </p>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all">
-                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                          <span className="text-sm text-muted-foreground">Click to upload image</span>
-                          <span className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF (max 5MB)</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleInspirationImageUpload}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
+                      <ImageSourcePicker
+                        label="Inspiration Image"
+                        description="The AI will adapt the style, colors, and aesthetic from your reference image. Select from device, Google Drive, or your Klyc library."
+                        currentImage={inspirationImage}
+                        currentImageName={inspirationImageName}
+                        onImageSelected={(url, name) => {
+                          setInspirationImage(url);
+                          setInspirationImageName(name);
+                        }}
+                        onClearImage={clearInspirationImage}
+                      />
                     </div>
                   )}
 
