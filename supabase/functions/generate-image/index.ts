@@ -17,9 +17,7 @@ async function generateWithNanoBanana(prompt: string, apiKey: string, inspiratio
     messageContent = [
       {
         type: "text",
-        text: `Using this image as style inspiration and reference, create a new high-quality marketing image based on this description: ${prompt}. 
-        
-Adapt the visual style, color palette, mood, and aesthetic from the reference image while creating something new that matches the prompt. Make it professional, visually appealing, and suitable for social media marketing.`
+        text: `Generate an image now. Using this image as style inspiration, create: ${prompt}. Output only the generated image, no text.`
       },
       {
         type: "image_url",
@@ -30,7 +28,7 @@ Adapt the visual style, color palette, mood, and aesthetic from the reference im
     ];
   } else {
     // Text-to-image: standard generation
-    messageContent = `Generate a high-quality marketing image based on this description: ${prompt}. Make it professional, visually appealing, and suitable for social media marketing.`;
+    messageContent = `Generate an image now: ${prompt}. Output only the generated image, no text.`;
   }
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -65,11 +63,49 @@ Adapt the visual style, color palette, mood, and aesthetic from the reference im
   }
 
   const data = await response.json();
+  console.log("Nano Banana raw response:", JSON.stringify(data).substring(0, 500));
+  
   const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
   if (!imageUrl) {
     console.error("No image in Nano Banana response:", JSON.stringify(data));
-    throw new Error("No image was generated. Please try with a different prompt.");
+    
+    // Check if there's text content that might explain why
+    const textContent = data.choices?.[0]?.message?.content || "";
+    
+    // Sometimes the model returns a refusal or just text - retry with simpler prompt
+    if (textContent && !inspirationImageUrl) {
+      console.log("Model returned text instead of image, retrying with simpler prompt...");
+      
+      // Retry with a very direct prompt
+      const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [
+            {
+              role: "user",
+              content: `Create this image: ${prompt}`
+            }
+          ],
+          modalities: ["image", "text"]
+        }),
+      });
+      
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json();
+        const retryImageUrl = retryData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        if (retryImageUrl) {
+          return retryImageUrl;
+        }
+      }
+    }
+    
+    throw new Error("Image generation failed. The AI returned text instead of an image. Try a simpler, more concrete prompt.");
   }
 
   return imageUrl;
