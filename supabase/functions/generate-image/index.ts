@@ -258,12 +258,12 @@ serve(async (req) => {
       }
       imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY, inspirationImageUrl);
     } else {
-      // Default to Nano Banana (text-to-image)
+      // Default to Nano Banana (text-to-image OR image-to-image when inspirationImageUrl is provided)
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) {
         throw new Error("LOVABLE_API_KEY is not configured");
       }
-      imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY);
+      imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY, inspirationImageUrl);
     }
 
     return new Response(JSON.stringify({ 

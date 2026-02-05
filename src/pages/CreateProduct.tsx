@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
  import ProductAssetPicker, { SelectedAsset } from "@/components/ProductAssetPicker";
+import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 
 interface ProductLine {
   id: string;
@@ -95,7 +96,32 @@ const CreateProduct = () => {
 
     // Save product assets
     if (selectedAssets.length > 0 && productData) {
-      const assetsToInsert = selectedAssets.map(asset => ({
+      // Ensure device uploads are persisted in backend storage (blob: URLs are not durable)
+      const persistedAssets: SelectedAsset[] = [];
+      for (const asset of selectedAssets) {
+        if (asset.source === "upload" && asset.file) {
+          try {
+            const { publicUrl } = await uploadBrandAssetImage({
+              userId: user.id,
+              file: asset.file,
+              folder: `products/${productData.id}`,
+            });
+            persistedAssets.push({
+              ...asset,
+              url: publicUrl,
+              thumbnailUrl: asset.thumbnailUrl || publicUrl,
+            });
+          } catch (uploadErr) {
+            console.error("Failed to upload product asset:", uploadErr);
+            // Keep the existing URL so the user can see what failed; DB insert will likely be useless for blob URLs
+            persistedAssets.push(asset);
+          }
+        } else {
+          persistedAssets.push(asset);
+        }
+      }
+
+      const assetsToInsert = persistedAssets.map(asset => ({
         product_id: productData.id,
         user_id: user.id,
         asset_name: asset.name,
@@ -115,7 +141,7 @@ const CreateProduct = () => {
       }
 
       // Also save to brand_assets for the Library
-      for (const asset of selectedAssets) {
+      for (const asset of persistedAssets) {
         await supabase.from("brand_assets").insert({
           user_id: user.id,
           asset_type: "image",

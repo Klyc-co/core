@@ -13,6 +13,7 @@
  import { toast } from "sonner";
  import type { User } from "@supabase/supabase-js";
  import ProductAssetPicker, { SelectedAsset } from "@/components/ProductAssetPicker";
+import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
  
  interface ProductLine {
    id: string;
@@ -140,14 +141,38 @@
        return;
      }
  
-     // Delete existing product assets and re-insert
+    // Delete existing product assets and re-insert
      await supabase
        .from("product_assets")
        .delete()
        .eq("product_id", productId);
  
      if (selectedAssets.length > 0) {
-       const assetsToInsert = selectedAssets.map(asset => ({
+      // Ensure device uploads are persisted in backend storage
+      const persistedAssets: SelectedAsset[] = [];
+      for (const asset of selectedAssets) {
+        if (asset.source === "upload" && asset.file) {
+          try {
+            const { publicUrl } = await uploadBrandAssetImage({
+              userId: user.id,
+              file: asset.file,
+              folder: `products/${productId}`,
+            });
+            persistedAssets.push({
+              ...asset,
+              url: publicUrl,
+              thumbnailUrl: asset.thumbnailUrl || publicUrl,
+            });
+          } catch (uploadErr) {
+            console.error("Failed to upload product asset:", uploadErr);
+            persistedAssets.push(asset);
+          }
+        } else {
+          persistedAssets.push(asset);
+        }
+      }
+
+      const assetsToInsert = persistedAssets.map(asset => ({
          product_id: productId,
          user_id: user.id,
          asset_name: asset.name,
@@ -164,6 +189,27 @@
        if (assetsError) {
          console.error("Error saving product assets:", assetsError);
        }
+
+      // Also save to brand_assets so the image shows up under Assets
+      for (const asset of persistedAssets) {
+        try {
+          await supabase.from("brand_assets").insert({
+            user_id: user.id,
+            asset_type: "image",
+            name: `${productName} - ${asset.name}`,
+            value: asset.url,
+            metadata: {
+              source: "product",
+              product_id: productId,
+              product_name: productName,
+              original_source: asset.source,
+            },
+          });
+        } catch (e) {
+          // Non-blocking: product save should still succeed
+          console.error("Error saving product image to library:", e);
+        }
+      }
      }
  
      setSaving(false);

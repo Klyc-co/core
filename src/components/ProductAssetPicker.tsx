@@ -20,6 +20,8 @@
    url: string;
    source: "upload" | "library" | "google-drive" | "dropbox";
    thumbnailUrl?: string;
+  /** Present only for device uploads; used to upload to backend storage on save */
+  file?: File;
  }
  
  interface ProductAssetPickerProps {
@@ -64,11 +66,12 @@
      const remainingSlots = maxAssets - selectedAssets.length;
      const filesToProcess = files.slice(0, remainingSlots);
  
-     const newAssets: SelectedAsset[] = filesToProcess.map((file) => ({
+    const newAssets: SelectedAsset[] = filesToProcess.map((file) => ({
        id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
        name: file.name,
        url: URL.createObjectURL(file),
        source: "upload" as const,
+      file,
      }));
  
      onAssetsChange([...selectedAssets, ...newAssets]);
