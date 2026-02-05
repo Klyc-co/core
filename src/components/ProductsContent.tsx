@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Package, Layers, Loader2, Trash2 } from "lucide-react";
+import { Plus, Package, Layers, Loader2, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useClientContext } from "@/contexts/ClientContext";
 
@@ -162,14 +162,24 @@ const ProductsContent = () => {
                         Created {new Date(product.created_at).toLocaleDateString()}
                       </p>
                     </div>
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => navigate(`/profile/products/edit/${product.id}`)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleDeleteProduct(product.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                  </div>
                   </CardContent>
                 </Card>
               ))}

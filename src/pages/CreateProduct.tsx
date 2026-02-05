@@ -72,7 +72,7 @@ const CreateProduct = () => {
 
     setSaving(true);
 
-    const { error } = await supabase
+    const { data: productData, error } = await supabase
       .from("products")
       .insert({
         user_id: user.id,
@@ -82,17 +82,58 @@ const CreateProduct = () => {
         value_propositions: valuePropositions || null,
         target_audience: targetAudience || null,
         product_line_id: productLineId && productLineId !== "none" ? productLineId : null
-      });
-
-    setSaving(false);
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error("Error creating product:", error);
       toast.error("Failed to create product");
-    } else {
-      toast.success("Product created successfully!");
-      navigate("/profile/products");
+      setSaving(false);
+      return;
     }
+
+    // Save product assets
+    if (selectedAssets.length > 0 && productData) {
+      const assetsToInsert = selectedAssets.map(asset => ({
+        product_id: productData.id,
+        user_id: user.id,
+        asset_name: asset.name,
+        asset_url: asset.url,
+        asset_type: 'image',
+        source: asset.source,
+        thumbnail_url: asset.thumbnailUrl || null,
+      }));
+
+      const { error: assetsError } = await supabase
+        .from("product_assets")
+        .insert(assetsToInsert);
+
+      if (assetsError) {
+        console.error("Error saving product assets:", assetsError);
+        // Continue anyway - product was created
+      }
+
+      // Also save to brand_assets for the Library
+      for (const asset of selectedAssets) {
+        await supabase.from("brand_assets").insert({
+          user_id: user.id,
+          asset_type: "image",
+          name: `${productName} - ${asset.name}`,
+          value: asset.url,
+          metadata: {
+            source: "product",
+            product_id: productData.id,
+            product_name: productName,
+            original_source: asset.source,
+          }
+        });
+      }
+    }
+
+    setSaving(false);
+    toast.success("Product created successfully!");
+    navigate("/profile/library");
   };
 
   return (

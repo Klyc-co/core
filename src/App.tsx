@@ -37,6 +37,7 @@ import SocialMediaAssets from "./pages/SocialMediaAssets";
 import Products from "./pages/Products";
 import CreateProduct from "./pages/CreateProduct";
 import CreateProductLine from "./pages/CreateProductLine";
+import EditProduct from "./pages/EditProduct";
 import Campaigns from "./pages/Campaigns";
 import NewCampaign from "./pages/NewCampaign";
 import Schedule from "./pages/Schedule";
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/profile/products" element={<WithSidebar><Products /></WithSidebar>} />
             <Route path="/profile/products/create" element={<WithSidebar><CreateProduct /></WithSidebar>} />
             <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
+            <Route path="/profile/products/edit/:productId" element={<WithSidebar><EditProduct /></WithSidebar>} />
             <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
             <Route path="/campaigns/new" element={<WithSidebar><NewCampaign /></WithSidebar>} />
             <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />

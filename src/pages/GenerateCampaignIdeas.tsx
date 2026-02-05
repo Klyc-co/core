@@ -100,6 +100,49 @@ const GenerateCampaignIdeas = () => {
     loadProducts();
   }, [getEffectiveUserId]);
 
+  // Auto-load product images when a product is selected
+  useEffect(() => {
+    const loadProductAssets = async () => {
+      if (!selectedProduct || selectedProduct === "none") {
+        return;
+      }
+
+      try {
+        const { data: assets, error } = await supabase
+          .from("product_assets")
+          .select("asset_name, asset_url, thumbnail_url")
+          .eq("product_id", selectedProduct);
+
+        if (error) throw error;
+
+        if (assets && assets.length > 0) {
+          const productImages = assets.map(asset => ({
+            url: asset.asset_url,
+            name: asset.asset_name,
+          }));
+          
+          // Add product images to reference images (avoid duplicates)
+          setReferenceImages(prev => {
+            const existingUrls = new Set(prev.map(img => img.url));
+            const newImages = productImages.filter(img => !existingUrls.has(img.url));
+            return [...prev, ...newImages];
+          });
+          
+          if (productImages.length > 0) {
+            toast({
+              title: "Product images loaded",
+              description: `Added ${productImages.length} image(s) from product to reference images.`,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load product assets:", err);
+      }
+    };
+
+    loadProductAssets();
+  }, [selectedProduct]);
+
   const handleGenerate = async () => {
     if (!selectedContentType) return;
     
