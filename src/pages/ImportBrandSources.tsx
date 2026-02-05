@@ -285,7 +285,7 @@ const socialTools: ToolItem[] = [
 
 const crmTools: ToolItem[] = [
   { name: "Salesforce", icon: SalesforceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "HubSpot", icon: HubSpotIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "HubSpot", icon: HubSpotIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Zoho CRM", icon: ZohoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Pipedrive", icon: PipedriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Keap / Infusionsoft", icon: KeapIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -301,7 +301,7 @@ const crmTools: ToolItem[] = [
 ];
 
 const ecommerceTools: ToolItem[] = [
-  { name: "Shopify", icon: ShopifyIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Shopify", icon: ShopifyIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "WooCommerce", icon: WooCommerceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "BigCommerce", icon: BigCommerceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Magento", icon: MagentoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -369,6 +369,18 @@ const ImportBrandSources = () => {
     if (success === "google_drive") {
       toast.success("Google Drive connected successfully!");
       setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "hubspot") {
+      toast.success("HubSpot connected successfully! Initial sync started.");
+      setConnectionStatus(prev => ({ ...prev, HubSpot: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "shopify") {
+      toast.success("Shopify connected successfully! Initial sync started.");
+      setConnectionStatus(prev => ({ ...prev, Shopify: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -537,6 +549,48 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectCrmTool = async (toolName: string) => {
+    if (!user) {
+      toast.error("Please log in first");
+      return;
+    }
+
+    setConnectionStatus(prev => ({ ...prev, [toolName]: 'connecting' }));
+
+    try {
+      let functionName = '';
+      
+      if (toolName === 'HubSpot') {
+        functionName = 'hubspot-crm-auth-url';
+      } else if (toolName === 'Shopify') {
+        functionName = 'shopify-crm-auth-url';
+      } else {
+        toast.error(`${toolName} integration coming soon`);
+        setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { displayName: toolName }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.authUrl) {
+        window.open(data.authUrl, '_blank');
+        toast.info(`Complete ${toolName} authorization in the new window`);
+      } else {
+        throw new Error("No auth URL returned");
+      }
+    } catch (err) {
+      console.error(`${toolName} connect error:`, err);
+      toast.error(`Failed to connect to ${toolName}`);
+      setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+    }
+  };
+
   const handleScanWebsite = async () => {
     if (!websiteUrl) return;
     
@@ -694,13 +748,13 @@ const ImportBrandSources = () => {
               </div>
               <span className="text-sm font-medium text-foreground">Dropbox</span>
               {connectionStatus['Dropbox'] === 'connected' && (
-                <Check className="w-4 h-4 text-purple-500" />
+                <Check className="w-4 h-4 text-primary" />
               )}
             </div>
             <Button 
               variant={connectionStatus['Dropbox'] === 'connected' ? "outline" : "secondary"} 
               size="sm" 
-              className={`w-full ${connectionStatus['Dropbox'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+              className={`w-full ${connectionStatus['Dropbox'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
               onClick={handleConnectDropbox}
               disabled={connectionStatus['Dropbox'] === 'connecting'}
             >
@@ -722,18 +776,18 @@ const ImportBrandSources = () => {
           {/* Google Drive */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800 border border-border flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center">
                 <GoogleDriveIcon className="w-5 h-5" />
               </div>
               <span className="text-sm font-medium text-foreground">Google Drive</span>
               {connectionStatus['Google Drive'] === 'connected' && (
-                <Check className="w-4 h-4 text-purple-500" />
+                <Check className="w-4 h-4 text-primary" />
               )}
             </div>
             <Button 
               variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
               size="sm" 
-              className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-purple-500/50 text-purple-600 dark:text-purple-400' : ''}`}
+              className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
               onClick={handleConnectGoogleDrive}
               disabled={connectionStatus['Google Drive'] === 'connecting'}
             >
@@ -754,24 +808,58 @@ const ImportBrandSources = () => {
           </div>
         </>
       )}
-      {tools.filter(tool => tool.name !== 'Dropbox' && tool.name !== 'Google Drive').map((tool) => (
-        <div key={tool.name} className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
-              <tool.icon className={`w-5 h-5 ${tool.iconColor || ''}`} />
+      {tools.filter(tool => tool.name !== 'Dropbox' && tool.name !== 'Google Drive').map((tool) => {
+        const isConnectable = tool.isConnectable;
+        const status = connectionStatus[tool.name] || 'disconnected';
+        const isConnected = status === 'connected';
+        const isConnecting = status === 'connecting';
+        
+        return (
+          <div key={tool.name} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
+                <tool.icon className={`w-5 h-5 ${tool.iconColor || ''}`} />
+              </div>
+              <span className="text-sm font-medium text-foreground truncate">{tool.name}</span>
+              {isConnected && (
+                <Check className="w-4 h-4 text-primary flex-shrink-0" />
+              )}
             </div>
-            <span className="text-sm font-medium text-foreground truncate">{tool.name}</span>
+            {isConnectable ? (
+              <Button 
+                variant={isConnected ? "outline" : "secondary"} 
+                size="sm" 
+                className={`w-full ${isConnected ? 'border-primary/50 text-primary' : ''}`}
+                onClick={() => handleConnectCrmTool(tool.name)}
+                disabled={isConnecting}
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Connecting...
+                  </>
+                ) : isConnected ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    Connected
+                  </>
+                ) : (
+                  'Connect'
+                )}
+              </Button>
+            ) : (
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full opacity-50"
+                disabled
+              >
+                Coming Soon
+              </Button>
+            )}
           </div>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="w-full opacity-50"
-            disabled
-          >
-            Coming Soon
-          </Button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 
