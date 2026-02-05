@@ -114,6 +114,9 @@ async function generateWithNanoBanana(prompt: string, apiKey: string, inspiratio
 async function generateWithRunway(prompt: string, apiKey: string): Promise<string> {
   console.log("Generating with Runway model...");
   
+  // Valid Runway ratios: 1024:1024, 1080:1080, 1168:880, 1360:768, 1440:1080, 1080:1440, 1808:768, 1920:1080, 1080:1920, 2112:912, 1280:720, 720:1280, 720:720, 960:720, 720:960, 1680:720
+  const runwayRatio = "1024:1024"; // Square format for consistent marketing images
+  
   // Start the image generation task
   const createResponse = await fetch("https://api.dev.runwayml.com/v1/image_to_image", {
     method: "POST",
@@ -125,7 +128,7 @@ async function generateWithRunway(prompt: string, apiKey: string): Promise<strin
     body: JSON.stringify({
       model: "gen4_image",
       promptText: prompt,
-      ratio: "1:1",
+      ratio: runwayRatio,
     }),
   });
 
@@ -143,7 +146,7 @@ async function generateWithRunway(prompt: string, apiKey: string): Promise<strin
       body: JSON.stringify({
         model: "gen4_image",
         promptText: prompt,
-        ratio: "1:1",
+        ratio: runwayRatio,
       }),
     });
 
