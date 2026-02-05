@@ -118,8 +118,131 @@ import { decryptToken } from "../_shared/encryption.ts";
      };
   } catch (error: unknown) {
     return { success: false, error: (error as Error).message };
-   }
- }
+  }
+}
+
+async function syncSalesforce(
+  supabase: any,
+  connection: any,
+  accessToken: string,
+  logId: string
+) {
+  let contactsImported = 0;
+  let accountsImported = 0;
+  let opportunitiesImported = 0;
+
+  const instanceUrl = (connection.metadata as { instance_url?: string })?.instance_url;
+  if (!instanceUrl) {
+    return { success: false, error: "Salesforce instance URL not found in metadata" };
+  }
+
+  try {
+    // Fetch Contacts
+    const contactsResponse = await fetch(
+      `${instanceUrl}/services/data/v59.0/query?q=${encodeURIComponent(
+        "SELECT Id, Email, FirstName, LastName, Phone, Account.Name, LeadSource FROM Contact LIMIT 100"
+      )}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (contactsResponse.ok) {
+      const contactsData = await contactsResponse.json();
+      for (const contact of contactsData.records || []) {
+        await supabase.from("crm_contacts").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: contact.Id,
+            email: contact.Email,
+            first_name: contact.FirstName,
+            last_name: contact.LastName,
+            phone: contact.Phone,
+            company_name: contact.Account?.Name,
+            source: "salesforce",
+            raw_data: contact,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        contactsImported++;
+      }
+    }
+
+    // Fetch Accounts (Companies)
+    const accountsResponse = await fetch(
+      `${instanceUrl}/services/data/v59.0/query?q=${encodeURIComponent(
+        "SELECT Id, Name, Website, Industry, NumberOfEmployees FROM Account LIMIT 100"
+      )}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (accountsResponse.ok) {
+      const accountsData = await accountsResponse.json();
+      for (const account of accountsData.records || []) {
+        await supabase.from("crm_companies").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: account.Id,
+            name: account.Name || "Unknown",
+            domain: account.Website,
+            industry: account.Industry,
+            size: account.NumberOfEmployees ? String(account.NumberOfEmployees) : null,
+            raw_data: account,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        accountsImported++;
+      }
+    }
+
+    // Fetch Opportunities (Deals)
+    const opportunitiesResponse = await fetch(
+      `${instanceUrl}/services/data/v59.0/query?q=${encodeURIComponent(
+        "SELECT Id, Name, StageName, Amount, CloseDate, OwnerId FROM Opportunity LIMIT 100"
+      )}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (opportunitiesResponse.ok) {
+      const opportunitiesData = await opportunitiesResponse.json();
+      for (const opp of opportunitiesData.records || []) {
+        await supabase.from("crm_deals").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: opp.Id,
+            name: opp.Name || "Untitled Opportunity",
+            stage: opp.StageName,
+            value: opp.Amount ? parseFloat(opp.Amount) : null,
+            close_date: opp.CloseDate,
+            owner: opp.OwnerId,
+            raw_data: opp,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        opportunitiesImported++;
+      }
+    }
+
+    return {
+      success: true,
+      summary: `Imported ${contactsImported} contacts, ${accountsImported} accounts, ${opportunitiesImported} opportunities`,
+      stats: {
+        contacts_count: contactsImported,
+        companies_count: accountsImported,
+        deals_count: opportunitiesImported,
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: (error as Error).message };
+  }
+}
  
  async function syncShopify(
    supabase: any,
@@ -265,13 +388,15 @@ import { decryptToken } from "../_shared/encryption.ts";
  
      let result;
  
-     if (connection.provider === "hubspot") {
-       result = await syncHubSpot(supabase, connection, accessToken, logId);
-     } else if (connection.provider === "shopify") {
-       result = await syncShopify(supabase, connection, accessToken, logId);
-     } else {
-       result = { success: false, error: `Unknown provider: ${connection.provider}` };
-     }
+    if (connection.provider === "hubspot") {
+      result = await syncHubSpot(supabase, connection, accessToken, logId);
+    } else if (connection.provider === "shopify") {
+      result = await syncShopify(supabase, connection, accessToken, logId);
+    } else if (connection.provider === "salesforce") {
+      result = await syncSalesforce(supabase, connection, accessToken, logId);
+    } else {
+      result = { success: false, error: `Unknown provider: ${connection.provider}` };
+    }
  
      // Update sync log
      await supabase
