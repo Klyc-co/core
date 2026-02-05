@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { BarChart3, Users, TrendingUp } from "lucide-react";
+import { BarChart3, Users, TrendingUp, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const modules = [
@@ -20,6 +20,12 @@ const modules = [
     label: "Trends", 
     fullLabel: "Trend Monitor",
     icon: TrendingUp 
+  },
+  { 
+    path: "/image-editor", 
+    label: "Editor", 
+    fullLabel: "Image Editor",
+    icon: Palette 
   },
 ];
 
