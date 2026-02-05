@@ -590,6 +590,22 @@ const GenerateCampaignIdeas = () => {
                       Copy
                     </Button>
                   </div>
+
+                  {/* Reference Image Section - Always visible */}
+                  <div className="mb-4 p-4 rounded-lg border border-dashed border-border bg-muted/30">
+                    <ImageSourcePicker
+                      label="Reference Image (Optional)"
+                      description="Add a reference image to guide the AI. Select from your device, Google Drive, or Klyc library."
+                      currentImage={inspirationImage}
+                      currentImageName={inspirationImageName}
+                      onImageSelected={(url, name) => {
+                        setInspirationImage(url);
+                        setInspirationImageName(name);
+                      }}
+                      onClearImage={clearInspirationImage}
+                    />
+                  </div>
+
                   <p className="text-sm text-muted-foreground mb-3">
                     Edit the prompt below, select an AI model, and click "Generate Image":
                   </p>
@@ -656,31 +672,13 @@ const GenerateCampaignIdeas = () => {
                     </div>
                   </div>
 
-                  {/* Inspiration Image Upload (for Style Transfer) */}
-                  {selectedImageModel === "style-transfer" && (
-                    <div className="mb-4 p-4 rounded-lg border border-dashed border-border bg-muted/30">
-                      <ImageSourcePicker
-                        label="Inspiration Image"
-                        description="The AI will adapt the style, colors, and aesthetic from your reference image. Select from device, Google Drive, or your Klyc library."
-                        currentImage={inspirationImage}
-                        currentImageName={inspirationImageName}
-                        onImageSelected={(url, name) => {
-                          setInspirationImage(url);
-                          setInspirationImageName(name);
-                        }}
-                        onClearImage={clearInspirationImage}
-                      />
-                    </div>
-                  )}
-
                   <Button 
                     className="w-full gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:opacity-90"
                     onClick={handleGenerateImage}
                     disabled={
                       isGeneratingImage || 
-                      !imagePrompt.trim() || 
-                      selectedImageModel === "fooocus" ||
-                      (selectedImageModel === "style-transfer" && !inspirationImage)
+                      !imagePrompt.trim() ||
+                      selectedImageModel === "fooocus"
                     }
                   >
                     {isGeneratingImage ? (
