@@ -49,13 +49,13 @@
      available: true,
      description: "Customers and orders",
    },
-   {
-     id: "salesforce",
-     name: "Salesforce",
-     icon: SalesforceIcon,
-     available: false,
-     description: "Enterprise CRM",
-   },
+  {
+    id: "salesforce",
+    name: "Salesforce",
+    icon: SalesforceIcon,
+    available: true,
+    description: "Contacts, accounts, and opportunities",
+  },
    {
      id: "zoho",
      name: "Zoho CRM",
