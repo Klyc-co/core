@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Upload, Loader2 } from "lucide-react";
+ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+ import ProductAssetPicker, { SelectedAsset } from "@/components/ProductAssetPicker";
 
 interface ProductLine {
   id: string;
@@ -30,6 +31,7 @@ const CreateProduct = () => {
   const [valuePropositions, setValuePropositions] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [productLineId, setProductLineId] = useState("");
+   const [selectedAssets, setSelectedAssets] = useState<SelectedAsset[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -165,32 +167,13 @@ const CreateProduct = () => {
               />
             </div>
 
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Upload Assets</Label>
-              <p className="text-sm text-muted-foreground">Photos, videos, audio, PDFs/specs, testimonials</p>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-muted-foreground">Drag and drop files here or click to upload</p>
-                <p className="text-sm text-muted-foreground">Supports all file types</p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Add from library</Label>
-              <p className="text-sm text-muted-foreground">Select images and videos from your library</p>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select from library..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No items in library</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+             <Separator />
+ 
+             <ProductAssetPicker
+               selectedAssets={selectedAssets}
+               onAssetsChange={setSelectedAssets}
+               maxAssets={20}
+             />
 
             <Separator />
 
