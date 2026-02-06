@@ -323,6 +323,8 @@ const ImportBrandSources = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
+  const [shopifyModalOpen, setShopifyModalOpen] = useState(false);
+  const [shopifyDomain, setShopifyDomain] = useState("");
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -555,6 +557,12 @@ const ImportBrandSources = () => {
       return;
     }
 
+    // For Shopify, open the modal to get shop domain
+    if (toolName === 'Shopify') {
+      setShopifyModalOpen(true);
+      return;
+    }
+
     setConnectionStatus(prev => ({ ...prev, [toolName]: 'connecting' }));
 
     try {
@@ -562,8 +570,6 @@ const ImportBrandSources = () => {
       
       if (toolName === 'HubSpot') {
         functionName = 'hubspot-crm-auth-url';
-      } else if (toolName === 'Shopify') {
-        functionName = 'shopify-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
@@ -588,6 +594,42 @@ const ImportBrandSources = () => {
       console.error(`${toolName} connect error:`, err);
       toast.error(`Failed to connect to ${toolName}`);
       setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+    }
+  };
+
+  const handleShopifyConnect = async () => {
+    if (!shopifyDomain.trim()) {
+      toast.error("Please enter your shop domain");
+      return;
+    }
+
+    setShopifyModalOpen(false);
+    setConnectionStatus(prev => ({ ...prev, Shopify: 'connecting' }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('shopify-crm-auth-url', {
+        body: { 
+          displayName: 'Shopify',
+          shopDomain: shopifyDomain.trim()
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.authUrl) {
+        window.open(data.authUrl, '_blank');
+        toast.info("Complete Shopify authorization in the new window");
+      } else {
+        throw new Error("No auth URL returned");
+      }
+    } catch (err) {
+      console.error("Shopify connect error:", err);
+      toast.error("Failed to connect to Shopify");
+      setConnectionStatus(prev => ({ ...prev, Shopify: 'disconnected' }));
+    } finally {
+      setShopifyDomain("");
     }
   };
 
@@ -1098,6 +1140,46 @@ const ImportBrandSources = () => {
           </div>
         </Card>
       </main>
+
+      {/* Shopify Domain Modal */}
+      <Dialog open={shopifyModalOpen} onOpenChange={setShopifyModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Shopify</DialogTitle>
+            <DialogDescription>
+              Enter your Shopify store subdomain to connect.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="shopDomain" className="text-sm font-medium">
+                Shop Domain
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="shopDomain"
+                  value={shopifyDomain}
+                  onChange={(e) => setShopifyDomain(e.target.value)}
+                  placeholder="your-store"
+                  className="flex-1"
+                />
+                <span className="text-muted-foreground text-sm">.myshopify.com</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter just the store name, not the full URL.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShopifyModalOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleShopifyConnect} disabled={!shopifyDomain.trim()} className="flex-1">
+                Connect
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
