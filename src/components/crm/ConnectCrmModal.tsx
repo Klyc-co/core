@@ -232,7 +232,11 @@
                <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
                  Back
                </Button>
-               <Button onClick={handleConnect} disabled={isConnecting} className="flex-1 gap-2">
+                <Button 
+                  onClick={handleConnect} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim())} 
+                  className="flex-1 gap-2"
+                >
                  {isConnecting ? (
                    <>
                      <Loader2 className="w-4 h-4 animate-spin" />
