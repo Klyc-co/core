@@ -13,6 +13,7 @@ import { useClientContext } from "@/contexts/ClientContext";
 import ProductsContent from "@/components/ProductsContent";
 import CrmContent from "@/components/crm/CrmContent";
 import SocialToolsContent from "@/components/library/SocialToolsContent";
+import SocialMediaContent from "@/components/library/SocialMediaContent";
 
 interface BrandAsset {
   id: string;
@@ -421,31 +422,7 @@ const Library = () => {
 
           {/* Social Tab */}
           <TabsContent value="social">
-            <Tabs defaultValue="posts" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="posts">Posts</TabsTrigger>
-                <TabsTrigger value="images">Images</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="posts">
-                <Card className="p-6">
-                  <SocialEmptyState icon={FileText} title="No posts yet" description="Connect your social media accounts in Business Profile to see your posts here." />
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="images">
-                <Card className="p-6">
-                  <SocialEmptyState icon={Image} title="No images yet" description="Images from your social media posts will appear here after connecting your accounts." />
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="analytics">
-                <Card className="p-6">
-                  <SocialEmptyState icon={BarChart3} title="No analytics yet" description="Campaign metrics and performance data will be displayed here to show what worked and what didn't." />
-                </Card>
-              </TabsContent>
-            </Tabs>
+            <SocialMediaContent />
           </TabsContent>
 
           {/* Products Tab */}
