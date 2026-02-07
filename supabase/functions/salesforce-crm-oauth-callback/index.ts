@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { encrypt } from "../_shared/encryption.ts";
+import { encryptToken } from "../_shared/encryption.ts";
 
 serve(async (req) => {
   try {
@@ -28,13 +28,32 @@ serve(async (req) => {
       );
     }
 
-    // Decode state
-    let stateData: { userId: string; displayName: string };
-    try {
-      stateData = JSON.parse(atob(state));
-    } catch {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Retrieve the PKCE state from database
+    const { data: pkceState, error: pkceError } = await supabase
+      .from("oauth_pkce_states")
+      .select("*")
+      .eq("state", state)
+      .eq("provider", "salesforce")
+      .maybeSingle();
+
+    if (pkceError || !pkceState) {
+      console.error("PKCE state not found:", pkceError);
       return Response.redirect(
-        `${origin}/profile/import?error=Invalid+state+parameter`,
+        `${origin}/profile/import?error=Invalid+or+expired+state+parameter`,
+        302
+      );
+    }
+
+    // Check if the state has expired
+    if (new Date(pkceState.expires_at) < new Date()) {
+      // Clean up expired state
+      await supabase.from("oauth_pkce_states").delete().eq("id", pkceState.id);
+      return Response.redirect(
+        `${origin}/profile/import?error=Authorization+session+expired`,
         302
       );
     }
@@ -49,10 +68,9 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const redirectUri = `${supabaseUrl}/functions/v1/salesforce-crm-oauth-callback`;
 
-    // Exchange code for tokens
+    // Exchange code for tokens with PKCE code_verifier
     const tokenResponse = await fetch(
       "https://login.salesforce.com/services/oauth2/token",
       {
@@ -66,9 +84,13 @@ serve(async (req) => {
           client_id: clientId,
           client_secret: clientSecret,
           redirect_uri: redirectUri,
+          code_verifier: pkceState.code_verifier,
         }),
       }
     );
+
+    // Clean up the PKCE state (one-time use)
+    await supabase.from("oauth_pkce_states").delete().eq("id", pkceState.id);
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
@@ -99,17 +121,14 @@ serve(async (req) => {
     }
 
     // Encrypt tokens
-    const encryptedAccessToken = encrypt(access_token);
-    const encryptedRefreshToken = refresh_token ? encrypt(refresh_token) : null;
+    const encryptedAccessToken = await encryptToken(access_token);
+    const encryptedRefreshToken = refresh_token ? await encryptToken(refresh_token) : null;
 
     // Store in database
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const { error: insertError } = await supabase.from("crm_connections").insert({
-      user_id: stateData.userId,
+      user_id: pkceState.user_id,
       provider: "salesforce",
-      display_name: stateData.displayName || "Salesforce",
+      display_name: pkceState.display_name || "Salesforce",
       status: "connected",
       access_token: encryptedAccessToken,
       refresh_token: encryptedRefreshToken,
