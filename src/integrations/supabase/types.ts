@@ -962,6 +962,39 @@ export type Database = {
           },
         ]
       }
+      oauth_pkce_states: {
+        Row: {
+          code_verifier: string
+          created_at: string
+          display_name: string
+          expires_at: string
+          id: string
+          provider: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier: string
+          created_at?: string
+          display_name: string
+          expires_at?: string
+          id?: string
+          provider: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string
+          created_at?: string
+          display_name?: string
+          expires_at?: string
+          id?: string
+          provider?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_analytics: {
         Row: {
           clicks: number | null
