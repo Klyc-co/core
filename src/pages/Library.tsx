@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database } from "lucide-react";
+import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +12,7 @@ import type { User } from "@supabase/supabase-js";
 import { useClientContext } from "@/contexts/ClientContext";
 import ProductsContent from "@/components/ProductsContent";
 import CrmContent from "@/components/crm/CrmContent";
+import SocialToolsContent from "@/components/library/SocialToolsContent";
 
 interface BrandAsset {
   id: string;
@@ -310,6 +311,10 @@ const Library = () => {
               <Database className="w-4 h-4" />
               CRM
             </TabsTrigger>
+            <TabsTrigger value="social-tools" className="gap-2">
+              <Wrench className="w-4 h-4" />
+              Social Tools
+            </TabsTrigger>
           </TabsList>
 
           {/* Assets Tab */}
@@ -451,6 +456,18 @@ const Library = () => {
           {/* CRM Tab */}
           <TabsContent value="crm">
             <CrmContent />
+          </TabsContent>
+
+          {/* Social Tools Tab */}
+          <TabsContent value="social-tools">
+            <SocialToolsContent 
+              onImportComplete={() => {
+                const effectiveUserId = getEffectiveUserId();
+                if (effectiveUserId) {
+                  fetchAssets(effectiveUserId);
+                }
+              }}
+            />
           </TabsContent>
         </Tabs>
       </main>
