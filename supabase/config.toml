@@ -119,3 +119,9 @@ verify_jwt = false
 
 [functions.crm-sync]
 verify_jwt = false
+
+[functions.salesforce-crm-auth-url]
+verify_jwt = false
+
+[functions.salesforce-crm-oauth-callback]
+verify_jwt = false
