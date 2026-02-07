@@ -8,12 +8,14 @@ import { useNavigate } from "react-router-dom";
 import { useClientContext } from "@/contexts/ClientContext";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import DropboxIcon from "@/components/icons/DropboxIcon";
+import NotionIcon from "@/components/icons/NotionIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
+import NotionFilePicker from "@/components/NotionFilePicker";
 
 interface ToolConnection {
   id: string;
-  type: "dropbox" | "google_drive";
+  type: "dropbox" | "google_drive" | "notion";
   name: string;
   email?: string;
   connected: boolean;
@@ -31,6 +33,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
   const [connections, setConnections] = useState<ToolConnection[]>([]);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
+  const [showNotionPicker, setShowNotionPicker] = useState(false);
   const [importingFromTool, setImportingFromTool] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +61,14 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         .eq("platform", "google_drive")
         .maybeSingle();
 
+      // Fetch Notion connection from social_connections
+      const { data: notionConn } = await supabase
+        .from("social_connections")
+        .select("id, platform_username, updated_at")
+        .eq("user_id", userId)
+        .eq("platform", "notion")
+        .maybeSingle();
+
       const toolConnections: ToolConnection[] = [];
 
       // Always show Dropbox option
@@ -80,6 +91,16 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         lastSync: driveConn?.updated_at,
       });
 
+      // Always show Notion option
+      toolConnections.push({
+        id: notionConn?.id || "notion",
+        type: "notion",
+        name: "Notion",
+        email: notionConn?.platform_username || undefined,
+        connected: !!notionConn,
+        lastSync: notionConn?.updated_at,
+      });
+
       setConnections(toolConnections);
     } catch (error) {
       console.error("Failed to fetch connections:", error);
@@ -100,6 +121,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       setShowDropboxPicker(true);
     } else if (tool.type === "google_drive") {
       setShowGoogleDrivePicker(true);
+    } else if (tool.type === "notion") {
+      setShowNotionPicker(true);
     }
   };
 
@@ -165,6 +188,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         return <DropboxIcon className="w-10 h-10" />;
       case "google_drive":
         return <GoogleDriveIcon className="w-10 h-10" />;
+      case "notion":
+        return <NotionIcon className="w-10 h-10" />;
       default:
         return <FolderOpen className="w-10 h-10 text-muted-foreground" />;
     }
@@ -294,6 +319,12 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         open={showDropboxPicker}
         onOpenChange={setShowDropboxPicker}
         onImportComplete={handleDropboxImportComplete}
+      />
+
+      <NotionFilePicker
+        open={showNotionPicker}
+        onOpenChange={setShowNotionPicker}
+        onImportComplete={onImportComplete}
       />
 
       {/* Loading overlay during import */}
