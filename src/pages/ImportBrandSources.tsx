@@ -284,7 +284,7 @@ const socialTools: ToolItem[] = [
 ];
 
 const crmTools: ToolItem[] = [
-  { name: "Salesforce", icon: SalesforceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Salesforce", icon: SalesforceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "HubSpot", icon: HubSpotIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Zoho CRM", icon: ZohoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Pipedrive", icon: PipedriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -570,6 +570,8 @@ const ImportBrandSources = () => {
       
       if (toolName === 'HubSpot') {
         functionName = 'hubspot-crm-auth-url';
+      } else if (toolName === 'Salesforce') {
+        functionName = 'salesforce-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
