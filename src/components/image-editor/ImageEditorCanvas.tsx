@@ -1,39 +1,40 @@
- import { useRef, useEffect, useState, useCallback } from "react";
- import { Canvas, FabricImage, IText, Rect, Circle } from "fabric";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Label } from "@/components/ui/label";
- import { Slider } from "@/components/ui/slider";
- import {
-   Type,
-   Square,
-   Circle as CircleIcon,
-   Download,
-   Trash2,
-   RotateCcw,
-   ZoomIn,
-   ZoomOut,
-   Palette,
-   Bold,
-   Italic,
-   AlignLeft,
-   AlignCenter,
-   AlignRight,
-   Layers,
-   ChevronUp,
-   ChevronDown,
-    Image as ImageIcon,
-    Loader2,
-    Wand2,
-    Send,
-    Sparkles,
-  } from "lucide-react";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
- import { toast } from "sonner";
- import { supabase } from "@/integrations/supabase/client";
- import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { Canvas, FabricImage, IText, Rect, Circle } from "fabric";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Type,
+  Square,
+  Circle as CircleIcon,
+  Download,
+  Trash2,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Palette,
+  Bold,
+  Italic,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Layers,
+  ChevronUp,
+  ChevronDown,
+  Image as ImageIcon,
+  Loader2,
+  Wand2,
+  Send,
+  Sparkles,
+} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import { Textarea } from "@/components/ui/textarea";
+import TemplateFusionPanel from "./TemplateFusionPanel";
  
  interface ImageEditorCanvasProps {
    initialImage?: string | null;
@@ -561,6 +562,13 @@ import { Textarea } from "@/components/ui/textarea";
               Uses AI to create images from your description
             </p>
           </div>
+
+          {/* AI Template Fusion */}
+          <TemplateFusionPanel
+            brandFonts={allFonts}
+            brandColors={allColors}
+            onImageGenerated={(imageUrl) => loadBackgroundImage(imageUrl)}
+          />
 
          {/* Add Elements */}
          <div className="bg-card rounded-lg border p-4 space-y-3">
