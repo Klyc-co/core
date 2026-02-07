@@ -155,19 +155,19 @@ export default function SourceSelector({
 
         {/* Secondary sources */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Figma Templates */}
+          {/* Social Templates */}
           <button
             onClick={onShowFigmaTemplates}
             className="flex items-center gap-4 p-4 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/50 transition-all text-left group"
           >
             <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
-              <FigmaIcon className="w-6 h-6" />
+              <Layout className="w-6 h-6 text-primary" />
             </div>
             <div className="flex-1">
-              <span className="text-sm font-medium block">Figma Templates</span>
+              <span className="text-sm font-medium block">Social Templates</span>
               <span className="text-xs text-muted-foreground">Professional social layouts</span>
             </div>
-            <Layout className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </button>
 
           {/* Campaign Drafts */}
