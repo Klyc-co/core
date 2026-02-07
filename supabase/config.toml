@@ -125,3 +125,12 @@ verify_jwt = false
 
 [functions.salesforce-crm-oauth-callback]
 verify_jwt = false
+
+[functions.notion-auth-url]
+verify_jwt = false
+
+[functions.notion-oauth-callback]
+verify_jwt = false
+
+[functions.notion-fetch-content]
+verify_jwt = false
