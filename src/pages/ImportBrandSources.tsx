@@ -247,7 +247,7 @@ interface ToolItem {
 const socialTools: ToolItem[] = [
   { name: "Dropbox", icon: DropboxIcon, bgColor: "bg-[#0061FF]", iconColor: "text-white", isConnectable: true },
   { name: "Google Drive", icon: GoogleDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
   { name: "Asana", icon: AsanaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -386,6 +386,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "notion") {
+      toast.success("Notion connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Notion: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -465,6 +471,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "linkedin") {
           newStatus['LinkedIn'] = 'connected';
+        }
+        if (conn.platform === "notion") {
+          newStatus['Notion'] = 'connected';
         }
       });
     }
@@ -572,6 +581,8 @@ const ImportBrandSources = () => {
         functionName = 'hubspot-crm-auth-url';
       } else if (toolName === 'Salesforce') {
         functionName = 'salesforce-crm-auth-url';
+      } else if (toolName === 'Notion') {
+        functionName = 'notion-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
