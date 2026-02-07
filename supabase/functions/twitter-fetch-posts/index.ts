@@ -1,21 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decryptToken } from "../_shared/encryption.ts";
-import { createHmac } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// OAuth 1.0a signature helper
-function generateOAuthSignature(
+// OAuth 1.0a signature helper using Web Crypto API
+async function generateOAuthSignature(
   method: string,
   url: string,
   params: Record<string, string>,
   consumerSecret: string,
   tokenSecret: string
-): string {
+): Promise<string> {
   const sortedParams = Object.keys(params)
     .sort()
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
@@ -30,14 +30,20 @@ function generateOAuthSignature(
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
 
   const encoder = new TextEncoder();
-  const key = encoder.encode(signingKey);
-  const data = encoder.encode(signatureBaseString);
+  const keyData = encoder.encode(signingKey);
+  const messageData = encoder.encode(signatureBaseString);
 
-  // Use crypto subtle for HMAC-SHA1
-  const hmac = createHmac("sha1", key);
-  hmac.update(data);
-  const signature = hmac.digest();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
   
+  // Convert to base64
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
@@ -122,7 +128,7 @@ serve(async (req) => {
     };
 
     const allParams = { ...oauthParams, ...userParams };
-    const signature = generateOAuthSignature(
+    const signature = await generateOAuthSignature(
       "GET",
       userUrl,
       allParams,
@@ -182,7 +188,7 @@ serve(async (req) => {
     };
 
     const tweetAllParams = { ...tweetOauthParams, ...tweetsParams };
-    const tweetSignature = generateOAuthSignature(
+    const tweetSignature = await generateOAuthSignature(
       "GET",
       tweetsUrl,
       tweetAllParams,
