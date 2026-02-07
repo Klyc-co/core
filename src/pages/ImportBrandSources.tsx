@@ -597,8 +597,9 @@ const ImportBrandSources = () => {
         throw new Error(error.message);
       }
 
-      if (data.authUrl) {
-        window.open(data.authUrl, '_blank');
+      const authUrl = data.authUrl || data.url;
+      if (authUrl) {
+        window.open(authUrl, '_blank');
         toast.info(`Complete ${toolName} authorization in the new window`);
       } else {
         throw new Error("No auth URL returned");
