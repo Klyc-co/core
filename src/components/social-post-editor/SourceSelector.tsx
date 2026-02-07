@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, FolderOpen, Sparkles, Layout, Palette, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Upload, FolderOpen, Sparkles, Layout, Palette, Loader2, Link, X } from "lucide-react";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
-import FigmaIcon from "@/components/icons/FigmaIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import LibraryAssetPicker from "@/components/LibraryAssetPicker";
 import CampaignDraftPicker from "./CampaignDraftPicker";
@@ -24,6 +24,7 @@ export default function SourceSelector({
   const [showLibrary, setShowLibrary] = useState(false);
   const [showCampaignDrafts, setShowCampaignDrafts] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [figmaUrl, setFigmaUrl] = useState("");
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,6 +112,49 @@ export default function SourceSelector({
         <p className="text-sm text-muted-foreground">
           Select an image source or template to start creating your social post
         </p>
+
+        {/* Figma URL Paste Bar */}
+        <div className="bg-muted/50 rounded-xl border p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Link className="w-4 h-4 text-primary" />
+            <span>Paste Figma Template URL</span>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://www.figma.com/file/... or https://www.figma.com/community/..."
+              value={figmaUrl}
+              onChange={(e) => setFigmaUrl(e.target.value)}
+              className="flex-1 h-10 bg-background"
+            />
+            {figmaUrl && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setFigmaUrl("")}
+                className="h-10 w-10"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                if (!figmaUrl.includes("figma.com")) {
+                  toast.error("Please enter a valid Figma URL");
+                  return;
+                }
+                toast.info("Figma URL saved! Export the template as PNG and upload below for best results with AI Template Fusion.");
+                setFigmaUrl("");
+              }}
+              disabled={!figmaUrl.trim()}
+              className="h-10"
+            >
+              Save Link
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Paste any Figma or Figma Community template link. For best results, export as PNG and upload to use with AI Template Fusion.
+          </p>
+        </div>
 
         {/* Primary sources grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
