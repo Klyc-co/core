@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Palette, Type, Square, Sparkles, FileText } from "lucide-react";
+import { ArrowLeft, Palette, Type, Square, Sparkles, FileText, Layout } from "lucide-react";
 import { EditorSource, FigmaTemplate, CampaignDraft } from "./types";
 import SourceSelector from "./SourceSelector";
-import FigmaTemplateGallery from "./FigmaTemplateGallery";
+import SocialTemplateGallery from "./SocialTemplateGallery";
 import ImageEditorCanvas from "@/components/image-editor/ImageEditorCanvas";
 import { supabase } from "@/integrations/supabase/client";
-
 interface SocialPostEditorMainProps {
   brandColors: string[];
   brandFonts: string[];
@@ -98,7 +97,7 @@ export default function SocialPostEditorMain({
               <h2 className="text-lg font-semibold">Choose a Template</h2>
             </div>
             <div className="max-w-xl mx-auto">
-              <FigmaTemplateGallery
+              <SocialTemplateGallery
                 onSelectTemplate={handleTemplateSelect}
                 selectedTemplateId={selectedTemplate?.id}
               />
