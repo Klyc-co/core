@@ -22,7 +22,7 @@ export interface CampaignDraft {
 }
 
 export interface EditorSource {
-  type: "upload" | "library" | "google-drive" | "figma" | "campaign-draft" | "blank";
+  type: "upload" | "library" | "google-drive" | "dropbox" | "figma" | "campaign-draft" | "blank";
   data?: any;
 }
 
@@ -54,3 +54,45 @@ export const TEMPLATE_CATEGORIES = [
   { id: "edgy", name: "Edgy" },
   { id: "youth", name: "Youth" },
 ] as const;
+
+// Wizard state for the new multi-step flow
+export interface SelectedAsset {
+  id: string;
+  name: string;
+  url: string;
+  thumbnailUrl?: string;
+  type: "image" | "logo" | "font" | "color" | "template";
+  source: "upload" | "library" | "google-drive" | "dropbox";
+}
+
+export interface WizardState {
+  step: 1 | 2 | 3 | 4;
+  // Step 1: Template
+  selectedTemplate: FigmaTemplate | null;
+  templateImageUrl: string | null;
+  figmaUrl: string | null;
+  // Step 2: Campaign + Assets
+  selectedCampaignDraft: CampaignDraft | null;
+  selectedAssets: SelectedAsset[];
+  selectedFonts: string[];
+  selectedColors: string[];
+  // Step 3: Review
+  generatedPrompt: string;
+  // Step 4: Result
+  generatedImageUrl: string | null;
+  isGenerating: boolean;
+}
+
+export const initialWizardState: WizardState = {
+  step: 1,
+  selectedTemplate: null,
+  templateImageUrl: null,
+  figmaUrl: null,
+  selectedCampaignDraft: null,
+  selectedAssets: [],
+  selectedFonts: [],
+  selectedColors: [],
+  generatedPrompt: "",
+  generatedImageUrl: null,
+  isGenerating: false,
+};

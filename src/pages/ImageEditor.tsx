@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import SocialPostEditorMain from "@/components/social-post-editor/SocialPostEditorMain";
+import SocialPostWizard from "@/components/social-post-editor/SocialPostWizard";
 
 const ImageEditor = () => {
   const navigate = useNavigate();
@@ -112,8 +112,8 @@ const ImageEditor = () => {
       <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-2 border-primary">
         <Share2 className="w-4 h-4" />
         <div className="text-left">
-          <div className="text-sm font-medium">Social Post Editor</div>
-          <div className="text-xs text-muted-foreground">Create visual content</div>
+          <div className="text-sm font-medium">Social Post</div>
+          <div className="text-xs text-muted-foreground">Create branded posts</div>
         </div>
       </button>
     </nav>
@@ -153,9 +153,9 @@ const ImageEditor = () => {
               </Sheet>
             )}
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Social Post Editor</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Social Post</h1>
               <p className="text-sm text-muted-foreground mt-1 hidden sm:block">
-                Create social posts with Figma templates, campaign drafts, and your brand assets.
+                Create professional social posts with templates, campaign drafts, and brand assets
               </p>
             </div>
           </div>
@@ -184,10 +184,9 @@ const ImageEditor = () => {
           <div className="flex-1">
             <Card>
               <CardContent className="pt-6">
-                <SocialPostEditorMain
+                <SocialPostWizard
                   brandColors={brandColors}
                   brandFonts={brandFonts}
-                  onSave={handleSave}
                 />
               </CardContent>
             </Card>

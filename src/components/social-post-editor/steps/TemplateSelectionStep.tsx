@@ -1,0 +1,352 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link, Upload, Layout, Check, Loader2, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { toast } from "sonner";
+import { FigmaTemplate, TEMPLATE_CATEGORIES, WizardState } from "../types";
+
+interface TemplateSelectionStepProps {
+  wizardState: WizardState;
+  onUpdate: (updates: Partial<WizardState>) => void;
+  onNext: () => void;
+}
+
+export default function TemplateSelectionStep({
+  wizardState,
+  onUpdate,
+  onNext,
+}: TemplateSelectionStepProps) {
+  const [figmaUrl, setFigmaUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<FigmaTemplate[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+
+  // Load saved templates from library
+  useEffect(() => {
+    const loadTemplates = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("brand_assets")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("asset_type", "social-template")
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        const templates: FigmaTemplate[] = data.map((asset) => ({
+          id: asset.id,
+          name: asset.name || "Untitled Template",
+          category: (asset.metadata as any)?.category || "custom",
+          previewUrl: asset.value,
+          width: 1080,
+          height: 1080,
+          colors: (asset.metadata as any)?.colors || [],
+          fonts: (asset.metadata as any)?.fonts || [],
+          layoutData: null,
+        }));
+        setSavedTemplates(templates);
+      }
+      setIsLoadingTemplates(false);
+    };
+    loadTemplates();
+  }, []);
+
+  const handleSaveFigmaUrl = async () => {
+    if (!figmaUrl.includes("figma.com")) {
+      toast.error("Please enter a valid Figma URL");
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please sign in first");
+      return;
+    }
+
+    // Save the Figma URL as a reference
+    await supabase.from("brand_assets").insert({
+      user_id: user.id,
+      asset_type: "figma-link",
+      name: `Figma Template - ${new Date().toLocaleDateString()}`,
+      value: figmaUrl,
+      metadata: { source: "figma-url-paste" },
+    });
+
+    toast.success("Figma URL saved! Now upload the PNG export to use as template.");
+    onUpdate({ figmaUrl });
+    setFigmaUrl("");
+  };
+
+  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in first");
+        return;
+      }
+
+      // Upload to storage
+      const { publicUrl } = await uploadBrandAssetImage({
+        userId: user.id,
+        file,
+        folder: "social-templates",
+      });
+
+      // Save to brand_assets
+      const { data: asset } = await supabase
+        .from("brand_assets")
+        .insert({
+          user_id: user.id,
+          asset_type: "social-template",
+          name: file.name.replace(/\.[^.]+$/, ""),
+          value: publicUrl,
+          metadata: { 
+            source: "upload", 
+            category: "custom",
+            uploadedAt: new Date().toISOString(),
+          },
+        })
+        .select()
+        .single();
+
+      // Create template object
+      const newTemplate: FigmaTemplate = {
+        id: asset?.id || crypto.randomUUID(),
+        name: file.name.replace(/\.[^.]+$/, ""),
+        category: "custom",
+        previewUrl: publicUrl,
+        width: 1080,
+        height: 1080,
+        colors: [],
+        fonts: [],
+        layoutData: null,
+      };
+
+      setSavedTemplates((prev) => [newTemplate, ...prev]);
+      onUpdate({ 
+        selectedTemplate: newTemplate, 
+        templateImageUrl: publicUrl 
+      });
+      
+      toast.success("Template uploaded and selected!");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload template");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleSelectTemplate = (template: FigmaTemplate) => {
+    onUpdate({ 
+      selectedTemplate: template, 
+      templateImageUrl: template.previewUrl 
+    });
+  };
+
+  const filteredTemplates = selectedCategory === "all"
+    ? savedTemplates
+    : savedTemplates.filter((t) => t.category === selectedCategory);
+
+  const canProceed = wizardState.selectedTemplate !== null;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Choose Your Template</h2>
+        <p className="text-muted-foreground mt-1">
+          Paste a Figma URL, upload a PNG template, or select from your saved templates
+        </p>
+      </div>
+
+      {/* Figma URL Paste */}
+      <div className="bg-muted/50 rounded-xl border p-4 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Link className="w-4 h-4 text-primary" />
+          <span>Paste Figma Template URL</span>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="https://www.figma.com/file/... or https://www.figma.com/community/..."
+            value={figmaUrl}
+            onChange={(e) => setFigmaUrl(e.target.value)}
+            className="flex-1 h-10 bg-background"
+          />
+          {figmaUrl && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setFigmaUrl("")}
+              className="h-10 w-10"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+          <Button
+            onClick={handleSaveFigmaUrl}
+            disabled={!figmaUrl.trim()}
+            className="h-10"
+          >
+            Save Link
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          After saving the link, export the Figma design as PNG and upload it below.
+        </p>
+      </div>
+
+      {/* Upload Template */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all group">
+          {isUploading ? (
+            <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
+          ) : (
+            <Upload className="w-10 h-10 text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
+          )}
+          <span className="text-base font-medium">Upload Template PNG</span>
+          <span className="text-sm text-muted-foreground mt-1">Export from Figma and upload</span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleTemplateUpload}
+            className="hidden"
+            disabled={isUploading}
+          />
+        </label>
+
+        {/* Selected Template Preview */}
+        {wizardState.selectedTemplate && (
+          <div className="relative border-2 border-primary rounded-xl overflow-hidden">
+            <img
+              src={wizardState.selectedTemplate.previewUrl}
+              alt={wizardState.selectedTemplate.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+              <div className="bg-primary text-primary-foreground rounded-full p-2">
+                <Check className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+              <p className="text-white text-sm font-medium truncate">
+                {wizardState.selectedTemplate.name}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Saved Templates Gallery */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Layout className="w-5 h-5 text-primary" />
+            Social Templates
+          </h3>
+        </div>
+
+        {/* Category Filter */}
+        <ScrollArea className="w-full">
+          <div className="flex gap-2 pb-2">
+            <Button
+              size="sm"
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              onClick={() => setSelectedCategory("all")}
+            >
+              All
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedCategory === "custom" ? "default" : "outline"}
+              onClick={() => setSelectedCategory("custom")}
+            >
+              My Uploads
+            </Button>
+            {TEMPLATE_CATEGORIES.map((cat) => (
+              <Button
+                key={cat.id}
+                size="sm"
+                variant={selectedCategory === cat.id ? "default" : "outline"}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Templates Grid */}
+        {isLoadingTemplates ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Layout className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">No templates yet. Upload your first template above!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {filteredTemplates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template)}
+                className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                  wizardState.selectedTemplate?.id === template.id
+                    ? "border-primary ring-2 ring-primary/30"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <img
+                  src={template.previewUrl}
+                  alt={template.name}
+                  className="w-full h-full object-cover"
+                />
+                {wizardState.selectedTemplate?.id === template.id && (
+                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                    <div className="bg-primary text-primary-foreground rounded-full p-1.5">
+                      <Check className="w-4 h-4" />
+                    </div>
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                  <p className="text-white text-xs truncate">{template.name}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Next Button */}
+      <div className="flex justify-end pt-4 border-t">
+        <Button
+          size="lg"
+          onClick={onNext}
+          disabled={!canProceed}
+          className="min-w-[200px]"
+        >
+          Continue to Assets
+        </Button>
+      </div>
+    </div>
+  );
+}
