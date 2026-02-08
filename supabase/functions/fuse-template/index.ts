@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encodeBase64 } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const corsHeaders = {
@@ -20,15 +21,30 @@ const dataUrlToBytes = (dataUrl: string): Uint8Array | null => {
   return bytes;
 };
 
-const getImageSize = async (imageUrl: string): Promise<{ width: number; height: number } | null> => {
-  try {
-    const bytes = dataUrlToBytes(imageUrl);
-    if (!bytes) return null;
-    const img = await Image.decode(bytes);
-    return { width: img.width, height: img.height };
-  } catch {
-    return null;
+const fetchImageBytes = async (imageUrl: string): Promise<Uint8Array> => {
+  const dataBytes = dataUrlToBytes(imageUrl);
+  if (dataBytes) return dataBytes;
+
+  const resp = await fetch(imageUrl);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch image for resizing (${resp.status})`);
   }
+  const ab = await resp.arrayBuffer();
+  return new Uint8Array(ab);
+};
+
+const forceExactDimensions = async (
+  imageUrl: string,
+  outputFormat: OutputFormat
+): Promise<string> => {
+  const bytes = await fetchImageBytes(imageUrl);
+  const img = await Image.decode(bytes);
+
+  // Deterministic center-crop resize that ALWAYS returns exact dimensions
+  img.cover(outputFormat.width, outputFormat.height);
+
+  const pngBytes = await img.encode(1);
+  return `data:image/png;base64,${encodeBase64(pngBytes)}`;
 };
 
 const editImageToExactDimensions = async ({
@@ -411,10 +427,11 @@ SIMPLIFIED MODE:
         if (retryImages?.length > 0) {
           const generatedImageUrl = retryImages[0]?.image_url?.url;
           if (generatedImageUrl) {
+            const finalUrl = await forceExactDimensions(generatedImageUrl, outputFormat);
             return new Response(
-              JSON.stringify({ 
-                imageUrl: generatedImageUrl,
-                message: "Social post generated (simplified mode)"
+              JSON.stringify({
+                imageUrl: finalUrl,
+                message: "Social post generated (simplified mode)",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
@@ -430,52 +447,10 @@ SIMPLIFIED MODE:
       throw new Error("Failed to extract generated image URL");
     }
 
-    // Reliability: if the model ignores the requested dimensions, do iterative edit passes to force exact size.
-    const enforceExactSize = async (initialUrl: string): Promise<string> => {
-      let currentUrl = initialUrl;
+    // Deterministically force exact dimensions (portrait/square/landscape) regardless of what the model returns.
+    // This guarantees we never return horizontal when portrait is selected.
+    generatedImageUrl = await forceExactDimensions(generatedImageUrl, outputFormat);
 
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        const size = await getImageSize(currentUrl);
-        if (size && size.width === outputFormat.width && size.height === outputFormat.height) {
-          if (attempt > 1) console.log("Size fixed after", attempt - 1, "resize pass(es)");
-          return currentUrl;
-        }
-
-        if (size) {
-          console.warn(
-            "Generated image size mismatch (attempt", attempt + "):",
-            `${size.width}x${size.height} (got) vs ${outputFormat.width}x${outputFormat.height} (wanted)`
-          );
-        } else {
-          console.warn("Could not read image size; attempting resize pass", attempt);
-        }
-
-        const resized = await editImageToExactDimensions({
-          LOVABLE_API_KEY,
-          imageUrl: currentUrl,
-          outputFormat,
-        });
-
-        if (!resized) {
-          console.warn("Resize pass failed (no image returned)");
-          break;
-        }
-
-        currentUrl = resized;
-      }
-
-      // Final check; if still wrong, fail loudly so we don't keep returning horizontal for portrait.
-      const finalSize = await getImageSize(currentUrl);
-      if (finalSize && (finalSize.width !== outputFormat.width || finalSize.height !== outputFormat.height)) {
-        throw new Error(
-          `Generation returned ${finalSize.width}x${finalSize.height} but ${outputFormat.width}x${outputFormat.height} is required. Please try Generate again.`
-        );
-      }
-
-      return currentUrl;
-    };
-
-    generatedImageUrl = await enforceExactSize(generatedImageUrl);
 
 
     return new Response(
