@@ -212,7 +212,8 @@ export default function TemplateSelectionStep({
 
   const handleSelectTemplate = async (template: FigmaTemplate) => {
     // Always store the selected template for UI highlighting
-    onUpdate({ selectedTemplate: template });
+    // Clear any previous templateImageUrl so the user cannot continue until the new one is ready.
+    onUpdate({ selectedTemplate: template, templateImageUrl: null });
 
     // The AI API needs a fetchable URL or base64, not a local/relative path.
     // Universal templates are bundled assets; convert them to base64 in the browser.
