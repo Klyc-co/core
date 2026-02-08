@@ -55,6 +55,15 @@ export const TEMPLATE_CATEGORIES = [
   { id: "youth", name: "Youth" },
 ] as const;
 
+// Aspect ratio options for generated images
+export type AspectRatio = "landscape" | "portrait" | "square";
+
+export const ASPECT_RATIO_OPTIONS: { value: AspectRatio; label: string; description: string; dimensions: string }[] = [
+  { value: "portrait", label: "Vertical", description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920" },
+  { value: "square", label: "Square", description: "Best for Feed posts", dimensions: "1080×1080" },
+  { value: "landscape", label: "Horizontal", description: "Best for YouTube, LinkedIn", dimensions: "1920×1080" },
+];
+
 // Wizard state for the new multi-step flow
 export interface SelectedAsset {
   id: string;
@@ -71,6 +80,7 @@ export interface WizardState {
   selectedTemplate: FigmaTemplate | null;
   templateImageUrl: string | null;
   figmaUrl: string | null;
+  aspectRatio: AspectRatio;
   // Step 2: Campaign + Assets
   selectedCampaignDraft: CampaignDraft | null;
   selectedAssets: SelectedAsset[];
@@ -88,6 +98,7 @@ export const initialWizardState: WizardState = {
   selectedTemplate: null,
   templateImageUrl: null,
   figmaUrl: null,
+  aspectRatio: "portrait",
   selectedCampaignDraft: null,
   selectedAssets: [],
   selectedFonts: [],
