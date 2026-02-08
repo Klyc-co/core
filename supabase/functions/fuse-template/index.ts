@@ -63,22 +63,56 @@ serve(async (req) => {
     
     let fusionPrompt: string;
     
+    // Count total images being sent
+    let totalImages = 1; // template
+    if (campaignImageUrl) totalImages++;
+    if (additionalAssets?.length > 0) totalImages += additionalAssets.length;
+    
+    // CRITICAL: Always enforce output dimensions at the START of the prompt
+    const dimensionInstructions = `
+**CRITICAL OUTPUT FORMAT REQUIREMENTS:**
+- OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels
+- ASPECT RATIO: ${outputFormat.label} (${outputFormat.width}:${outputFormat.height})
+- The generated image MUST be ${outputFormat.label} format, NOT any other orientation
+- For ${outputFormat.label}: width=${outputFormat.width}px, height=${outputFormat.height}px
+${outputFormat.label === "Vertical/Portrait" ? "- This is a TALL image for mobile/Stories - height > width" : ""}
+${outputFormat.label === "Horizontal/Landscape" ? "- This is a WIDE image for desktop - width > height" : ""}
+${outputFormat.label === "Square" ? "- This is a SQUARE image - width = height" : ""}
+
+`;
+
+    // Build image reference instructions
+    const imageInstructions = `
+**IMAGES PROVIDED (${totalImages} total):**
+- IMAGE #1: TEMPLATE - Use this as your design reference/style guide
+${campaignImageUrl ? "- IMAGE #2: MAIN CAMPAIGN/PRODUCT IMAGE - Incorporate this prominently as the hero visual" : ""}
+${additionalAssets?.length > 0 ? `- IMAGES #${campaignImageUrl ? "3" : "2"}+: ${additionalAssets.length} additional asset(s) - logos, secondary images, brand elements to incorporate` : ""}
+
+YOU MUST USE ALL PROVIDED IMAGES IN THE FINAL DESIGN.
+`;
+
     if (isEditMode) {
       // Edit mode - modify existing generated image
-      fusionPrompt = `Edit this social media post image with the following changes: ${postText || customPrompt}
+      fusionPrompt = dimensionInstructions + `Edit this social media post image with the following changes: ${postText || customPrompt}
 
 IMPORTANT: 
 - Make the requested changes while maintaining the overall design quality
 - Keep text readable and colors consistent
+- Maintain the ${outputFormat.label} (${outputFormat.width}x${outputFormat.height}) dimensions
 - Output only the edited image, no additional text`;
     } else if (customPrompt) {
-      // Use custom prompt from review step
-      fusionPrompt = customPrompt;
+      // Use custom prompt from review step, but PREPEND dimension requirements
+      fusionPrompt = dimensionInstructions + imageInstructions + `
+CUSTOM INSTRUCTIONS:
+${customPrompt}
+
+REMINDER: Output image MUST be ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label}).
+Use ALL ${totalImages} provided image(s) in the design.`;
     } else {
       // Standard fusion prompt with aspect ratio
-      fusionPrompt = `Create a professional social media post image in ${outputFormat.label} format (${outputFormat.width}x${outputFormat.height} pixels) using the following content:
+      fusionPrompt = dimensionInstructions + `Create a professional social media post image using the following content:
 
-OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label})
+${imageInstructions}
 
 TEMPLATE (IMAGE #1):
 The first image is the TEMPLATE - use it as the primary design reference. Recreate its layout, composition, visual hierarchy, and style, adapted to the ${outputFormat.label} ${outputFormat.width}x${outputFormat.height} dimensions.
@@ -87,14 +121,14 @@ The first image is the TEMPLATE - use it as the primary design reference. Recrea
       
       if (campaignImageUrl) {
         fusionPrompt += `MAIN CAMPAIGN IMAGE (IMAGE #2):
-This is the main product/campaign image to incorporate into the template design. Place it prominently as the hero image.
+This is the main product/campaign image - YOU MUST incorporate this prominently as the hero image in the design.
 
 `;
       }
       
       if (additionalAssets?.length > 0) {
-        fusionPrompt += `ADDITIONAL ASSETS (IMAGES #3+):
-${additionalAssets.length} additional asset(s) provided - these may include logos, secondary images, or brand elements. Incorporate them appropriately:
+        fusionPrompt += `ADDITIONAL ASSETS (IMAGES #${campaignImageUrl ? "3" : "2"}+):
+${additionalAssets.length} additional asset(s) provided - incorporate ALL of them:
 - Logos should be placed in corners or footer areas
 - Secondary images can support the main design
 - Brand elements should enhance the overall composition
@@ -126,14 +160,19 @@ Ensure the design appeals to this demographic.
 - Typography: Use fonts similar to ${fontsList}
 - Color palette: Incorporate these colors: ${colorsList}
 
-CRITICAL INSTRUCTIONS:
-1. The first image is the TEMPLATE - recreate its layout and style
-2. Subsequent images are ASSETS to incorporate into that layout
-3. Maintain professional social media post aesthetics
-4. Ensure all text is legible with proper contrast
-5. Create a cohesive, polished final design ready for posting
-6. OUTPUT ONLY THE GENERATED IMAGE - no additional text or descriptions`;
+CRITICAL FINAL INSTRUCTIONS:
+1. OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label}) - THIS IS MANDATORY
+2. USE ALL ${totalImages} PROVIDED IMAGES in the final design
+3. The first image is the TEMPLATE - recreate its layout and style
+4. All other images are ASSETS that MUST appear in the final design
+5. Maintain professional social media post aesthetics
+6. Ensure all text is legible with proper contrast
+7. Create a cohesive, polished final design ready for posting
+8. OUTPUT ONLY THE GENERATED IMAGE - no additional text or descriptions`;
     }
+
+    console.log("Aspect ratio:", aspectRatio, "->", outputFormat.label, outputFormat.width + "x" + outputFormat.height);
+    console.log("Total images to process:", totalImages);
 
     // Build message content with images
     const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
