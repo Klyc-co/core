@@ -196,11 +196,35 @@ export default function TemplateSelectionStep({
     }
   };
 
-  const handleSelectTemplate = (template: FigmaTemplate) => {
-    onUpdate({ 
-      selectedTemplate: template, 
-      templateImageUrl: template.previewUrl 
-    });
+  const handleSelectTemplate = async (template: FigmaTemplate) => {
+    // For universal templates (local imports), convert to base64
+    // The AI API needs full URLs or base64, not relative paths
+    if (template.id.startsWith("universal-")) {
+      try {
+        const response = await fetch(template.previewUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        reader.onload = () => {
+          const base64Url = reader.result as string;
+          onUpdate({ 
+            selectedTemplate: template, 
+            templateImageUrl: base64Url 
+          });
+        };
+        
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error("Failed to convert template to base64:", error);
+        toast.error("Failed to load template");
+      }
+    } else {
+      // For user-uploaded templates, the URL is already a full public URL
+      onUpdate({ 
+        selectedTemplate: template, 
+        templateImageUrl: template.previewUrl 
+      });
+    }
   };
 
   // Combine universal templates with user's saved templates
