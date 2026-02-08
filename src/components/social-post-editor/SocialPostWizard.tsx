@@ -77,6 +77,7 @@ export default function SocialPostWizard({
           brandFonts: wizardState.selectedFonts,
           brandColors: wizardState.selectedColors,
           customPrompt: wizardState.generatedPrompt,
+          aspectRatio: wizardState.aspectRatio,
         },
       });
 

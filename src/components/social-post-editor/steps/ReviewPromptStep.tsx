@@ -12,7 +12,7 @@ import {
   Loader2,
   Wand2,
 } from "lucide-react";
-import { WizardState } from "../types";
+import { WizardState, ASPECT_RATIO_OPTIONS } from "../types";
 
 interface ReviewPromptStepProps {
   wizardState: WizardState;
@@ -34,12 +34,17 @@ export default function ReviewPromptStep({
     const generatePrompt = () => {
       const parts: string[] = [];
 
-      parts.push("Create a professional social media post image with the following specifications:");
+      // Get aspect ratio info
+      const aspectInfo = ASPECT_RATIO_OPTIONS.find((o) => o.value === wizardState.aspectRatio);
+      const aspectLabel = aspectInfo?.label || "Portrait";
+      const aspectDimensions = aspectInfo?.dimensions || "1080×1920";
+
+      parts.push(`Create a professional social media post image in ${aspectLabel.toUpperCase()} format (${aspectDimensions}) with the following specifications:`);
       parts.push("");
 
       // Template reference
       if (wizardState.selectedTemplate) {
-        parts.push(`TEMPLATE STYLE: Use the uploaded template image as the primary design reference. Recreate its layout, composition, and visual hierarchy.`);
+        parts.push(`TEMPLATE STYLE: Use the uploaded template image as the primary design reference. Recreate its layout, composition, and visual hierarchy, adapted to ${aspectLabel} ${aspectDimensions} dimensions.`);
         parts.push("");
       }
 

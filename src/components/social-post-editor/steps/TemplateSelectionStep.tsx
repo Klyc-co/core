@@ -6,7 +6,8 @@ import { Link, Upload, Layout, Check, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import { toast } from "sonner";
-import { FigmaTemplate, TEMPLATE_CATEGORIES, WizardState } from "../types";
+import { FigmaTemplate, TEMPLATE_CATEGORIES, WizardState, ASPECT_RATIO_OPTIONS, AspectRatio } from "../types";
+import { Smartphone, Monitor, Square } from "lucide-react";
 
 // Import universal templates
 import modernHiringTemplate from "@/assets/templates/modern-hiring.png";
@@ -245,14 +246,57 @@ export default function TemplateSelectionStep({
   // Require the actual image payload/URL to be ready before allowing Continue
   const canProceed = Boolean(wizardState.selectedTemplate && wizardState.templateImageUrl);
 
+  const aspectIcons: Record<AspectRatio, typeof Smartphone> = {
+    portrait: Smartphone,
+    square: Square,
+    landscape: Monitor,
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground">Choose Your Template</h2>
         <p className="text-muted-foreground mt-1">
-          Paste a Figma URL, upload a PNG template, or select from your saved templates
+          Select your post size, paste a Figma URL, upload a PNG, or choose from templates
         </p>
+      </div>
+
+      {/* Aspect Ratio Selector */}
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20 p-4 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Monitor className="w-4 h-4 text-primary" />
+          <span>Output Size</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {ASPECT_RATIO_OPTIONS.map((option) => {
+            const Icon = aspectIcons[option.value];
+            const isSelected = wizardState.aspectRatio === option.value;
+            return (
+              <button
+                key={option.value}
+                onClick={() => onUpdate({ aspectRatio: option.value })}
+                className={`relative flex flex-col items-center p-4 rounded-lg border-2 transition-all ${
+                  isSelected
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                }`}
+              >
+                <Icon className={`w-8 h-8 mb-2 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                <span className={`font-medium text-sm ${isSelected ? "text-primary" : ""}`}>
+                  {option.label}
+                </span>
+                <span className="text-xs text-muted-foreground mt-1">{option.dimensions}</span>
+                <span className="text-xs text-muted-foreground text-center mt-1">{option.description}</span>
+                {isSelected && (
+                  <div className="absolute top-2 right-2">
+                    <Check className="w-4 h-4 text-primary" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Figma URL Paste */}

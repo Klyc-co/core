@@ -22,8 +22,17 @@ serve(async (req) => {
       brandFonts, 
       brandColors,
       customPrompt,
-      isEditMode
+      isEditMode,
+      aspectRatio,
     } = await req.json();
+
+    // Determine output dimensions based on aspect ratio
+    const aspectDimensions: Record<string, { width: number; height: number; label: string }> = {
+      portrait: { width: 1080, height: 1920, label: "Vertical/Portrait" },
+      square: { width: 1080, height: 1080, label: "Square" },
+      landscape: { width: 1920, height: 1080, label: "Horizontal/Landscape" },
+    };
+    const outputFormat = aspectDimensions[aspectRatio] || aspectDimensions.portrait;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -66,11 +75,13 @@ IMPORTANT:
       // Use custom prompt from review step
       fusionPrompt = customPrompt;
     } else {
-      // Standard fusion prompt
-      fusionPrompt = `Create a professional social media post image using the following content:
+      // Standard fusion prompt with aspect ratio
+      fusionPrompt = `Create a professional social media post image in ${outputFormat.label} format (${outputFormat.width}x${outputFormat.height} pixels) using the following content:
+
+OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label})
 
 TEMPLATE (IMAGE #1):
-The first image is the TEMPLATE - use it as the primary design reference. Recreate its layout, composition, visual hierarchy, and style.
+The first image is the TEMPLATE - use it as the primary design reference. Recreate its layout, composition, visual hierarchy, and style, adapted to the ${outputFormat.label} ${outputFormat.width}x${outputFormat.height} dimensions.
 
 `;
       
