@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
@@ -11,6 +10,7 @@ import {
   Save,
   Check,
   Share2,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -92,11 +92,9 @@ export default function EditResultStep({
         return;
       }
 
-      // Convert base64 to blob if needed
       let imageUrl = wizardState.generatedImageUrl;
       
       if (imageUrl.startsWith("data:")) {
-        // Upload base64 to storage
         const base64Data = imageUrl.split(",")[1];
         const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
@@ -122,7 +120,6 @@ export default function EditResultStep({
         imageUrl = urlData.publicUrl;
       }
 
-      // Save to brand_assets
       await supabase.from("brand_assets").insert({
         user_id: user.id,
         asset_type: "image",
@@ -159,126 +156,137 @@ export default function EditResultStep({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Your Social Post</h2>
-        <p className="text-muted-foreground mt-1">
-          Edit, refine, or save your generated social post
-        </p>
-      </div>
-
-      {/* Generated Image */}
-      <div className="flex justify-center">
-        <div className="relative max-w-lg w-full">
+    <div className="h-full flex flex-col">
+      {/* Main content area - side by side layout */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+        {/* Left side: Generated Image - constrained to viewport height */}
+        <div className="flex-1 flex items-center justify-center min-h-0">
           {wizardState.generatedImageUrl ? (
-            <div className="relative rounded-xl overflow-hidden border-2 border-border shadow-lg">
-              <img
-                src={wizardState.generatedImageUrl}
-                alt="Generated social post"
-                className="w-full h-auto"
-              />
-              {savedToLibrary && (
-                <div className="absolute top-3 right-3 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Saved to Library
-                </div>
-              )}
+            <div className="relative h-full max-h-[calc(100vh-200px)] flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden border-2 border-border shadow-lg">
+                <img
+                  src={wizardState.generatedImageUrl}
+                  alt="Generated social post"
+                  className="max-h-[calc(100vh-220px)] w-auto object-contain"
+                />
+                {savedToLibrary && (
+                  <div className="absolute top-3 right-3 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Saved
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="aspect-square bg-muted rounded-xl flex items-center justify-center">
+            <div className="aspect-[9/16] max-h-[calc(100vh-220px)] w-auto bg-muted rounded-xl flex items-center justify-center">
               <p className="text-muted-foreground">No image generated yet</p>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Edit Section */}
-      {wizardState.generatedImageUrl && (
-        <div className="bg-muted/50 rounded-xl border p-4 space-y-3">
-          <div className="flex items-center gap-2 font-semibold">
-            <Wand2 className="w-5 h-5 text-primary" />
-            Edit with AI
+        {/* Right side: Actions panel */}
+        {wizardState.generatedImageUrl && (
+          <div className="lg:w-72 xl:w-80 flex flex-col gap-4 shrink-0">
+            {/* Edit with AI */}
+            <div className="bg-muted/50 rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2 font-semibold text-sm">
+                <Wand2 className="w-4 h-4 text-primary" />
+                Edit with AI
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Describe changes to make
+              </p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="e.g., Make the background darker..."
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  className="text-sm"
+                  onKeyDown={(e) => e.key === "Enter" && handleEditImage()}
+                />
+                <Button
+                  onClick={handleEditImage}
+                  disabled={isEditing || !editPrompt.trim()}
+                  className="w-full"
+                  size="sm"
+                >
+                  {isEditing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Applying...
+                    </>
+                  ) : (
+                    "Apply Edit"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Action buttons - stacked vertically */}
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={handleDownload}
+                className="w-full justify-start gap-3"
+                size="sm"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={handleSaveToLibrary}
+                disabled={isSaving || savedToLibrary}
+                className="w-full justify-start gap-3"
+                size="sm"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : savedToLibrary ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {savedToLibrary ? "Saved to Library" : "Save to Library"}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={onRegenerate}
+                disabled={wizardState.isGenerating}
+                className="w-full justify-start gap-3"
+                size="sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Regenerate
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => window.open("/profile/library", "_blank")}
+                className="w-full justify-start gap-3"
+                size="sm"
+              >
+                <Share2 className="w-4 h-4" />
+                View in Library
+              </Button>
+            </div>
+
+            {/* Start Over */}
+            <div className="pt-4 border-t mt-auto">
+              <Button 
+                variant="ghost" 
+                onClick={onStartOver}
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+                size="sm"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Start Over
+              </Button>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Describe the changes you'd like to make to the image
-          </p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="e.g., Make the background darker, add more contrast, change the text color..."
-              value={editPrompt}
-              onChange={(e) => setEditPrompt(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => e.key === "Enter" && handleEditImage()}
-            />
-            <Button
-              onClick={handleEditImage}
-              disabled={isEditing || !editPrompt.trim()}
-            >
-              {isEditing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Apply"
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      {wizardState.generatedImageUrl && (
-        <div className="flex flex-wrap gap-3 justify-center">
-          <Button
-            variant="outline"
-            onClick={handleDownload}
-            className="gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleSaveToLibrary}
-            disabled={isSaving || savedToLibrary}
-            className="gap-2"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : savedToLibrary ? (
-              <Check className="w-4 h-4" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {savedToLibrary ? "Saved" : "Save to Library"}
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={onRegenerate}
-            disabled={wizardState.isGenerating}
-            className="gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Regenerate
-          </Button>
-        </div>
-      )}
-
-      {/* Navigation */}
-      <div className="flex justify-between pt-4 border-t">
-        <Button variant="outline" onClick={onStartOver}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Start Over
-        </Button>
-        <Button
-          variant="default"
-          onClick={() => window.open("/profile/library", "_blank")}
-          className="gap-2"
-        >
-          <Share2 className="w-4 h-4" />
-          View in Library
-        </Button>
+        )}
       </div>
     </div>
   );
