@@ -108,6 +108,7 @@ export default function ReviewPromptStep({
     setPrompt(generatedPrompt);
     onUpdate({ generatedPrompt: generatedPrompt });
   }, [
+    wizardState.aspectRatio,
     wizardState.selectedTemplate,
     wizardState.selectedCampaignDraft,
     wizardState.selectedAssets,
