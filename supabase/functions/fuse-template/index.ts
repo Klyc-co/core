@@ -1,9 +1,84 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+type OutputFormat = { width: number; height: number; label: string };
+
+const dataUrlToBytes = (dataUrl: string): Uint8Array | null => {
+  if (typeof dataUrl !== "string") return null;
+  const match = dataUrl.match(/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/i);
+  if (!match) return null;
+  const base64 = match[3];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+const getImageSize = async (imageUrl: string): Promise<{ width: number; height: number } | null> => {
+  try {
+    const bytes = dataUrlToBytes(imageUrl);
+    if (!bytes) return null;
+    const img = await Image.decode(bytes);
+    return { width: img.width, height: img.height };
+  } catch {
+    return null;
+  }
+};
+
+const editImageToExactDimensions = async ({
+  LOVABLE_API_KEY,
+  imageUrl,
+  outputFormat,
+}: {
+  LOVABLE_API_KEY: string;
+  imageUrl: string;
+  outputFormat: OutputFormat;
+}): Promise<string | null> => {
+  const prompt = `
+You are editing an existing social media image.
+
+CRITICAL OUTPUT FORMAT REQUIREMENTS:
+- OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels
+- OUTPUT MUST BE EXACTLY THIS SIZE.
+
+INSTRUCTIONS:
+- Convert this image to the exact dimensions above.
+- Preserve the design, text, and composition as much as possible.
+- If cropping is needed, crop minimally and keep the main subject centered.
+- If extension is needed, extend the background in a natural way.
+- Output only the edited image (no text).
+`;
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-image",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
 };
 
 serve(async (req) => {
@@ -70,105 +145,132 @@ serve(async (req) => {
     
     // CRITICAL: Always enforce output dimensions at the START of the prompt
     const dimensionInstructions = `
-**CRITICAL OUTPUT FORMAT REQUIREMENTS:**
-- OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels
-- ASPECT RATIO: ${outputFormat.label} (${outputFormat.width}:${outputFormat.height})
-- The generated image MUST be ${outputFormat.label} format, NOT any other orientation
-- For ${outputFormat.label}: width=${outputFormat.width}px, height=${outputFormat.height}px
-${outputFormat.label === "Vertical/Portrait" ? "- This is a TALL image for mobile/Stories - height > width" : ""}
-${outputFormat.label === "Horizontal/Landscape" ? "- This is a WIDE image for desktop - width > height" : ""}
-${outputFormat.label === "Square" ? "- This is a SQUARE image - width = height" : ""}
+**CRITICAL OUTPUT FORMAT REQUIREMENTS (NON-NEGOTIABLE):**
+- OUTPUT MUST BE EXACTLY: ${outputFormat.width}x${outputFormat.height} pixels
+- ORIENTATION: ${outputFormat.label}
+- Do NOT output any other size or orientation.
 
 `;
 
     // Build image reference instructions
     const imageInstructions = `
 **IMAGES PROVIDED (${totalImages} total):**
-- IMAGE #1: TEMPLATE - Use this as your design reference/style guide
-${campaignImageUrl ? "- IMAGE #2: MAIN CAMPAIGN/PRODUCT IMAGE - Incorporate this prominently as the hero visual" : ""}
-${additionalAssets?.length > 0 ? `- IMAGES #${campaignImageUrl ? "3" : "2"}+: ${additionalAssets.length} additional asset(s) - logos, secondary images, brand elements to incorporate` : ""}
+- IMAGE #1: TEMPLATE (layout/style reference ONLY)
+${campaignImageUrl ? "- IMAGE #2: HERO ASSET (MUST be the main photo/product/subject)" : ""}
+${additionalAssets?.length > 0 ? `- IMAGES #${campaignImageUrl ? "3" : "2"}+: ${additionalAssets.length} additional asset(s) (ALL MUST appear)` : ""}
 
-YOU MUST USE ALL PROVIDED IMAGES IN THE FINAL DESIGN.
+**TEMPLATE IMAGE RULE (VERY IMPORTANT):**
+- The TEMPLATE may contain its own photos/logos/illustrations.
+- You MUST NOT reuse/copy any of the template's embedded photos/logos.
+- Use the template ONLY for: layout, typography style, spacing, shapes, and overall aesthetic.
+- Replace EVERY image/photo/logo area from the template with the provided asset images.
+- If the template has more image slots than provided assets, fill remaining slots with abstract shapes/gradients/textures (NOT random stock photos).
+
+**ASSET USAGE RULE (VERY IMPORTANT):**
+- You MUST use ALL provided asset images (hero + additional assets) in the final design.
+- Do NOT introduce any new photos not provided by the user.
+
 `;
+
+    const placementInstructions = campaignImageUrl
+      ? `
+ASSET PLACEMENT REQUIREMENTS:
+- The HERO ASSET (IMAGE #2) must replace the template's main photo area and be the dominant visual.
+- Additional assets must be visible (logos can go in corners/footer; secondary images can be smaller).
+`
+      : "";
+
 
     if (isEditMode) {
       // Edit mode - modify existing generated image
-      fusionPrompt = dimensionInstructions + `Edit this social media post image with the following changes: ${postText || customPrompt}
+      fusionPrompt =
+        dimensionInstructions +
+        `Edit this social media post image with the following changes: ${postText || customPrompt}
 
-IMPORTANT: 
+IMPORTANT:
 - Make the requested changes while maintaining the overall design quality
 - Keep text readable and colors consistent
 - Maintain the ${outputFormat.label} (${outputFormat.width}x${outputFormat.height}) dimensions
 - Output only the edited image, no additional text`;
     } else if (customPrompt) {
-      // Use custom prompt from review step, but PREPEND dimension requirements
-      fusionPrompt = dimensionInstructions + imageInstructions + `
+      // Use custom prompt from review step, but PREPEND mandatory format + asset rules
+      fusionPrompt =
+        dimensionInstructions +
+        imageInstructions +
+        placementInstructions +
+        `
 CUSTOM INSTRUCTIONS:
 ${customPrompt}
 
-REMINDER: Output image MUST be ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label}).
-Use ALL ${totalImages} provided image(s) in the design.`;
+REMINDERS:
+- Output image MUST be exactly ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label}).
+- Use ALL provided asset images.
+- Do NOT copy any embedded photos/logos from the template.
+- Do NOT introduce any new photos not provided by the user.
+`;
     } else {
       // Standard fusion prompt with aspect ratio
-      fusionPrompt = dimensionInstructions + `Create a professional social media post image using the following content:
+      fusionPrompt =
+        dimensionInstructions +
+        `Create a professional social media post image using the following content:
 
 ${imageInstructions}
+${placementInstructions}
 
 TEMPLATE (IMAGE #1):
-The first image is the TEMPLATE - use it as the primary design reference. Recreate its layout, composition, visual hierarchy, and style, adapted to the ${outputFormat.label} ${outputFormat.width}x${outputFormat.height} dimensions.
+The first image is the TEMPLATE. Use it ONLY as the layout/style reference (typography style, spacing, shapes, and composition).
+Do NOT reuse any photos/logos/illustrations visible in the template.
+Replace every photo/logo area with the provided asset images.
 
 `;
-      
+
       if (campaignImageUrl) {
-        fusionPrompt += `MAIN CAMPAIGN IMAGE (IMAGE #2):
-This is the main product/campaign image - YOU MUST incorporate this prominently as the hero image in the design.
+        fusionPrompt += `HERO ASSET (IMAGE #2):
+This is the main product/campaign image. It MUST be the dominant hero photo and replace the template's main photo area.
 
 `;
       }
-      
+
       if (additionalAssets?.length > 0) {
         fusionPrompt += `ADDITIONAL ASSETS (IMAGES #${campaignImageUrl ? "3" : "2"}+):
-${additionalAssets.length} additional asset(s) provided - incorporate ALL of them:
-- Logos should be placed in corners or footer areas
-- Secondary images can support the main design
-- Brand elements should enhance the overall composition
+${additionalAssets.length} additional asset(s) provided. ALL must appear visibly in the final design:
+- Logos: corners/footer
+- Secondary images: smaller supporting visuals
 
 `;
       }
-      
+
       if (campaignIdea) {
         fusionPrompt += `CAMPAIGN THEME: ${campaignIdea}
 
 `;
       }
-      
+
       if (postText) {
         fusionPrompt += `POST TEXT/CAPTION: "${postText}"
 Include this text prominently in the design using appropriate typography.
 
 `;
       }
-      
+
       if (targetAudience) {
         fusionPrompt += `TARGET AUDIENCE: ${targetAudience}
 Ensure the design appeals to this demographic.
 
 `;
       }
-      
+
       fusionPrompt += `BRAND STYLING:
 - Typography: Use fonts similar to ${fontsList}
 - Color palette: Incorporate these colors: ${colorsList}
 
 CRITICAL FINAL INSTRUCTIONS:
-1. OUTPUT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label}) - THIS IS MANDATORY
-2. USE ALL ${totalImages} PROVIDED IMAGES in the final design
-3. The first image is the TEMPLATE - recreate its layout and style
-4. All other images are ASSETS that MUST appear in the final design
-5. Maintain professional social media post aesthetics
-6. Ensure all text is legible with proper contrast
-7. Create a cohesive, polished final design ready for posting
-8. OUTPUT ONLY THE GENERATED IMAGE - no additional text or descriptions`;
+1. OUTPUT MUST BE EXACTLY ${outputFormat.width}x${outputFormat.height} pixels (${outputFormat.label})
+2. Use ONLY the provided asset images for photos/logos (do not copy photos/logos from the template)
+3. Use ALL provided asset images (hero + additional assets)
+4. Do NOT introduce any new photos not provided by the user
+5. Ensure all text is legible with proper contrast
+6. Output ONLY the generated image - no additional text or descriptions`;
     }
 
     console.log("Aspect ratio:", aspectRatio, "->", outputFormat.label, outputFormat.width + "x" + outputFormat.height);
@@ -301,15 +403,35 @@ CRITICAL FINAL INSTRUCTIONS:
       throw new Error("AI did not generate an image. Please try with a different template or fewer assets.");
     }
 
-    const generatedImageUrl = images[0]?.image_url?.url;
+    let generatedImageUrl = images[0]?.image_url?.url;
     if (!generatedImageUrl) {
       throw new Error("Failed to extract generated image URL");
     }
 
-    return new Response(
-      JSON.stringify({ 
+    // Reliability: if the model ignores the requested dimensions, do a second pass edit to force exact size.
+    const size = await getImageSize(generatedImageUrl);
+    if (size && (size.width !== outputFormat.width || size.height !== outputFormat.height)) {
+      console.warn(
+        "Generated image size mismatch:",
+        `${size.width}x${size.height} (got) vs ${outputFormat.width}x${outputFormat.height} (wanted)`
+      );
+      const resized = await editImageToExactDimensions({
+        LOVABLE_API_KEY,
         imageUrl: generatedImageUrl,
-        message: data.choices?.[0]?.message?.content || "Social post generated successfully!"
+        outputFormat,
+      });
+      if (resized) {
+        const resizedSize = await getImageSize(resized);
+        if (!resizedSize || (resizedSize.width === outputFormat.width && resizedSize.height === outputFormat.height)) {
+          generatedImageUrl = resized;
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        imageUrl: generatedImageUrl,
+        message: data.choices?.[0]?.message?.content || "Social post generated successfully!",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
