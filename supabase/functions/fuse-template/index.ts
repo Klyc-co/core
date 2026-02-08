@@ -33,17 +33,62 @@ const fetchImageBytes = async (imageUrl: string): Promise<Uint8Array> => {
   return new Uint8Array(ab);
 };
 
+/**
+ * FIT (letterbox) instead of CROP:
+ * Scales the image so that the ENTIRE source image fits inside the target
+ * dimensions, then places it on a canvas of exactly target size.
+ * Any remaining space is filled with a sampled/blurred background color
+ * so we never cut off content.
+ */
 const forceExactDimensions = async (
   imageUrl: string,
   outputFormat: OutputFormat
 ): Promise<string> => {
   const bytes = await fetchImageBytes(imageUrl);
-  const img = await Image.decode(bytes);
+  const src = await Image.decode(bytes);
 
-  // Deterministic center-crop resize that ALWAYS returns exact dimensions
-  img.cover(outputFormat.width, outputFormat.height);
+  const tW = outputFormat.width;
+  const tH = outputFormat.height;
 
-  const pngBytes = await img.encode(1);
+  // If already correct, return immediately
+  if (src.width === tW && src.height === tH) {
+    const pngBytes = await src.encode(1);
+    return `data:image/png;base64,${encodeBase64(pngBytes)}`;
+  }
+
+  // Calculate scale to FIT entire image inside target
+  const scale = Math.min(tW / src.width, tH / src.height);
+  const scaledW = Math.round(src.width * scale);
+  const scaledH = Math.round(src.height * scale);
+
+  // Scale down source image
+  src.resize(scaledW, scaledH);
+
+  // Sample average color from edges for background fill
+  const sampleColor = (img: InstanceType<typeof Image>): [number, number, number] => {
+    let r = 0, g = 0, b = 0, count = 0;
+    for (let x = 0; x < img.width; x++) {
+      const topPixel = img.getPixelAt(x + 1, 1);
+      const botPixel = img.getPixelAt(x + 1, img.height);
+      r += ((topPixel >> 24) & 0xFF) + ((botPixel >> 24) & 0xFF);
+      g += ((topPixel >> 16) & 0xFF) + ((botPixel >> 16) & 0xFF);
+      b += ((topPixel >> 8) & 0xFF) + ((botPixel >> 8) & 0xFF);
+      count += 2;
+    }
+    return [Math.round(r / count), Math.round(g / count), Math.round(b / count)];
+  };
+  const [bgR, bgG, bgB] = sampleColor(src);
+
+  // Create target canvas with background color
+  const canvas = new Image(tW, tH);
+  canvas.fill(Image.rgbaToColor(bgR, bgG, bgB, 255));
+
+  // Center the scaled image on the canvas
+  const offsetX = Math.round((tW - scaledW) / 2);
+  const offsetY = Math.round((tH - scaledH) / 2);
+  canvas.composite(src, offsetX, offsetY);
+
+  const pngBytes = await canvas.encode(1);
   return `data:image/png;base64,${encodeBase64(pngBytes)}`;
 };
 
@@ -163,8 +208,10 @@ serve(async (req) => {
     const dimensionInstructions = `
 **CRITICAL OUTPUT FORMAT REQUIREMENTS (NON-NEGOTIABLE):**
 - OUTPUT MUST BE EXACTLY: ${outputFormat.width}x${outputFormat.height} pixels
-- ORIENTATION: ${outputFormat.label}
-- Do NOT output any other size or orientation.
+- ORIENTATION: ${outputFormat.label} (9:16 aspect ratio for iPhone)
+- This image will be displayed full-screen on an iPhone. Design it to look amazing on a vertical mobile screen.
+- Do NOT output any other size or orientation. Generate natively in vertical format.
+- SAFE AREA: Keep all important text and logos at least 80px from the top edge and 100px from the bottom edge to avoid iOS UI overlays.
 
 `;
 
