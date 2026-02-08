@@ -205,13 +205,42 @@ serve(async (req) => {
     if (additionalAssets?.length > 0) totalImages += additionalAssets.length;
     
     // CRITICAL: Always enforce output dimensions at the START of the prompt
-    const dimensionInstructions = `
+    const dimensionInstructions = outputFormat.label.includes("Vertical") || outputFormat.label.includes("Portrait") ? `
+**🚨 CRITICAL: VERTICAL IPHONE DESIGN (NON-NEGOTIABLE) 🚨**
+
+YOU ARE DESIGNING FOR A FULL-SCREEN IPHONE. THIS IS NOT A HORIZONTAL/LANDSCAPE IMAGE.
+
+OUTPUT SPECIFICATIONS:
+- EXACT DIMENSIONS: ${outputFormat.width}x${outputFormat.height} pixels (9:16 vertical aspect ratio)
+- This will display FULL-SCREEN on an iPhone in portrait mode
+- The design MUST fill the ENTIRE vertical canvas from top to bottom
+- NO horizontal letterboxing or dead space allowed
+
+VERTICAL LAYOUT REQUIREMENTS:
+- Stack content VERTICALLY (top to bottom), NOT horizontally
+- Use the FULL HEIGHT of the canvas - spread content from near the top to near the bottom
+- Think like Instagram Stories, TikTok, or iPhone wallpapers - TALL and NARROW
+- Hero images should be tall/vertical or cropped to fill vertical space
+- Text blocks should stack vertically with generous spacing between sections
+- Use vertical rhythm: header at top → main content in middle → footer/CTA at bottom
+
+SAFE MARGINS FOR iOS:
+- Top safe area: Keep important content at least 80px from the top edge
+- Bottom safe area: Keep important content at least 100px from the bottom edge
+- These margins prevent iOS UI elements from overlapping your content
+
+WHAT TO AVOID:
+- Do NOT create a horizontal/landscape composition and shrink it to fit
+- Do NOT leave large empty areas at top or bottom
+- Do NOT center a small horizontal design in the middle of a tall canvas
+
+EXAMPLE MENTAL MODEL: Imagine you're designing an Instagram Story or a TikTok thumbnail that fills the entire phone screen beautifully.
+
+` : `
 **CRITICAL OUTPUT FORMAT REQUIREMENTS (NON-NEGOTIABLE):**
 - OUTPUT MUST BE EXACTLY: ${outputFormat.width}x${outputFormat.height} pixels
-- ORIENTATION: ${outputFormat.label} (9:16 aspect ratio for iPhone)
-- This image will be displayed full-screen on an iPhone. Design it to look amazing on a vertical mobile screen.
-- Do NOT output any other size or orientation. Generate natively in vertical format.
-- SAFE AREA: Keep all important text and logos at least 80px from the top edge and 100px from the bottom edge to avoid iOS UI overlays.
+- ORIENTATION: ${outputFormat.label}
+- Do NOT output any other size or orientation.
 
 `;
 
