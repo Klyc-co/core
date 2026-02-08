@@ -408,25 +408,53 @@ CRITICAL FINAL INSTRUCTIONS:
       throw new Error("Failed to extract generated image URL");
     }
 
-    // Reliability: if the model ignores the requested dimensions, do a second pass edit to force exact size.
-    const size = await getImageSize(generatedImageUrl);
-    if (size && (size.width !== outputFormat.width || size.height !== outputFormat.height)) {
-      console.warn(
-        "Generated image size mismatch:",
-        `${size.width}x${size.height} (got) vs ${outputFormat.width}x${outputFormat.height} (wanted)`
-      );
-      const resized = await editImageToExactDimensions({
-        LOVABLE_API_KEY,
-        imageUrl: generatedImageUrl,
-        outputFormat,
-      });
-      if (resized) {
-        const resizedSize = await getImageSize(resized);
-        if (!resizedSize || (resizedSize.width === outputFormat.width && resizedSize.height === outputFormat.height)) {
-          generatedImageUrl = resized;
+    // Reliability: if the model ignores the requested dimensions, do iterative edit passes to force exact size.
+    const enforceExactSize = async (initialUrl: string): Promise<string> => {
+      let currentUrl = initialUrl;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const size = await getImageSize(currentUrl);
+        if (size && size.width === outputFormat.width && size.height === outputFormat.height) {
+          if (attempt > 1) console.log("Size fixed after", attempt - 1, "resize pass(es)");
+          return currentUrl;
         }
+
+        if (size) {
+          console.warn(
+            "Generated image size mismatch (attempt", attempt + "):",
+            `${size.width}x${size.height} (got) vs ${outputFormat.width}x${outputFormat.height} (wanted)`
+          );
+        } else {
+          console.warn("Could not read image size; attempting resize pass", attempt);
+        }
+
+        const resized = await editImageToExactDimensions({
+          LOVABLE_API_KEY,
+          imageUrl: currentUrl,
+          outputFormat,
+        });
+
+        if (!resized) {
+          console.warn("Resize pass failed (no image returned)");
+          break;
+        }
+
+        currentUrl = resized;
       }
-    }
+
+      // Final check; if still wrong, fail loudly so we don't keep returning horizontal for portrait.
+      const finalSize = await getImageSize(currentUrl);
+      if (finalSize && (finalSize.width !== outputFormat.width || finalSize.height !== outputFormat.height)) {
+        throw new Error(
+          `Generation returned ${finalSize.width}x${finalSize.height} but ${outputFormat.width}x${outputFormat.height} is required. Please try Generate again.`
+        );
+      }
+
+      return currentUrl;
+    };
+
+    generatedImageUrl = await enforceExactSize(generatedImageUrl);
+
 
     return new Response(
       JSON.stringify({

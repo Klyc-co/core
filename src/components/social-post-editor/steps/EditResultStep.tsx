@@ -57,6 +57,7 @@ export default function EditResultStep({
           brandFonts: wizardState.selectedFonts,
           brandColors: wizardState.selectedColors,
           isEditMode: true,
+          aspectRatio: wizardState.aspectRatio,
         },
       });
 
