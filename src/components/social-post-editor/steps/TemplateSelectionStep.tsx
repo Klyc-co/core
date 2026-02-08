@@ -8,6 +8,48 @@ import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import { toast } from "sonner";
 import { FigmaTemplate, TEMPLATE_CATEGORIES, WizardState } from "../types";
 
+// Import universal templates
+import modernHiringTemplate from "@/assets/templates/modern-hiring.png";
+import modernRestaurantTemplate from "@/assets/templates/modern-restaurant.png";
+import modernWebinarTemplate from "@/assets/templates/modern-webinar.png";
+
+// Universal templates available to all users
+const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
+  {
+    id: "universal-modern-hiring",
+    name: "Modern Hiring Post",
+    category: "modern",
+    previewUrl: modernHiringTemplate,
+    width: 1080,
+    height: 1350,
+    colors: ["#3d1a78", "#f5a3d4", "#b8f5c0"],
+    fonts: ["Inter", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-modern-restaurant",
+    name: "Restaurant Announcement",
+    category: "modern",
+    previewUrl: modernRestaurantTemplate,
+    width: 1080,
+    height: 1350,
+    colors: ["#f5f5f5", "#e63f23", "#000000"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-modern-webinar",
+    name: "Webinar Promo Story",
+    category: "modern",
+    previewUrl: modernWebinarTemplate,
+    width: 1080,
+    height: 1920,
+    colors: ["#c7b8ea", "#e63f23", "#f5a31a"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+];
+
 interface TemplateSelectionStepProps {
   wizardState: WizardState;
   onUpdate: (updates: Partial<WizardState>) => void;
@@ -161,9 +203,14 @@ export default function TemplateSelectionStep({
     });
   };
 
+  // Combine universal templates with user's saved templates
+  const allTemplates = [...UNIVERSAL_TEMPLATES, ...savedTemplates];
+  
   const filteredTemplates = selectedCategory === "all"
-    ? savedTemplates
-    : savedTemplates.filter((t) => t.category === selectedCategory);
+    ? allTemplates
+    : selectedCategory === "custom"
+      ? savedTemplates // Only show user uploads for "My Uploads"
+      : allTemplates.filter((t) => t.category === selectedCategory);
 
   const canProceed = wizardState.selectedTemplate !== null;
 
