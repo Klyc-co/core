@@ -66,7 +66,7 @@ export default function SocialPostWizard({
       }
 
       // Call the fuse-template function with all content
-      const response = await supabase.functions.invoke("fuse-template", {
+      const invokePromise = supabase.functions.invoke("fuse-template", {
         body: {
           templateImageUrl: wizardState.templateImageUrl,
           campaignImageUrl: imageUrls.length > 1 ? imageUrls[1] : null,
@@ -80,6 +80,14 @@ export default function SocialPostWizard({
           aspectRatio: wizardState.aspectRatio,
         },
       });
+
+      const timeoutMs = 120_000;
+      const response = (await Promise.race([
+        invokePromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Generation is taking too long. Please try again.")), timeoutMs)
+        ),
+      ])) as Awaited<typeof invokePromise>;
 
       if (response.error) {
         throw new Error(response.error.message);
@@ -97,7 +105,8 @@ export default function SocialPostWizard({
       }
     } catch (error) {
       console.error("Generation failed:", error);
-      toast.error("Failed to generate social post. Please try again.");
+      const message = error instanceof Error ? error.message : "Failed to generate social post. Please try again.";
+      toast.error(message);
       updateState({ isGenerating: false });
     }
   };

@@ -357,8 +357,35 @@ CRITICAL FINAL INSTRUCTIONS:
       const textContent = data.choices?.[0]?.message?.content;
       console.error("No image generated, got text:", textContent?.substring(0, 200));
       
-      // Retry with a simpler prompt
+      // Retry with a simpler prompt (still must enforce dimensions + asset rules)
       console.log("Retrying with simplified prompt...");
+
+      const retryContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+        {
+          type: "text",
+          text:
+            dimensionInstructions +
+            imageInstructions +
+            placementInstructions +
+            `
+SIMPLIFIED MODE:
+- Recreate the template's layout and style.
+- Do NOT reuse any photos/logos embedded in the template.
+- Use ONLY the provided asset images for photos/logos.
+- Output only the generated image.`,
+        },
+        { type: "image_url", image_url: { url: templateImageUrl } },
+      ];
+
+      if (campaignImageUrl) {
+        retryContent.push({ type: "image_url", image_url: { url: campaignImageUrl } });
+      }
+      if (additionalAssets?.length > 0) {
+        for (const assetUrl of additionalAssets) {
+          if (assetUrl) retryContent.push({ type: "image_url", image_url: { url: assetUrl } });
+        }
+      }
+
       const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -370,18 +397,13 @@ CRITICAL FINAL INSTRUCTIONS:
           messages: [
             {
               role: "user",
-              content: [
-                { 
-                  type: "text", 
-                  text: "Recreate this template design as a social media post. Use the same layout and style. Output only the generated image." 
-                },
-                { type: "image_url", image_url: { url: templateImageUrl } }
-              ]
-            }
+              content: retryContent,
+            },
           ],
-          modalities: ["image", "text"]
+          modalities: ["image", "text"],
         }),
       });
+
 
       if (retryResponse.ok) {
         const retryData = await retryResponse.json();
@@ -465,12 +487,12 @@ CRITICAL FINAL INSTRUCTIONS:
     );
   } catch (error) {
     console.error("Error in fuse-template:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.startsWith("Generation returned") ? 422 : 500;
+
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
