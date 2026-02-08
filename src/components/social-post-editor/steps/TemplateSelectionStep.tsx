@@ -196,47 +196,53 @@ export default function TemplateSelectionStep({
     }
   };
 
+  const imageUrlToDataUrl = async (url: string): Promise<string> => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image (${response.status})`);
+    }
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const handleSelectTemplate = async (template: FigmaTemplate) => {
-    // For universal templates (local imports), convert to base64
-    // The AI API needs full URLs or base64, not relative paths
+    // Always store the selected template for UI highlighting
+    onUpdate({ selectedTemplate: template });
+
+    // The AI API needs a fetchable URL or base64, not a local/relative path.
+    // Universal templates are bundled assets; convert them to base64 in the browser.
     if (template.id.startsWith("universal-")) {
       try {
-        const response = await fetch(template.previewUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        
-        reader.onload = () => {
-          const base64Url = reader.result as string;
-          onUpdate({ 
-            selectedTemplate: template, 
-            templateImageUrl: base64Url 
-          });
-        };
-        
-        reader.readAsDataURL(blob);
+        const dataUrl = await imageUrlToDataUrl(template.previewUrl);
+        onUpdate({ templateImageUrl: dataUrl });
       } catch (error) {
         console.error("Failed to convert template to base64:", error);
-        toast.error("Failed to load template");
+        toast.error("Failed to load template. Please try again.");
+        onUpdate({ templateImageUrl: null, selectedTemplate: null });
       }
-    } else {
-      // For user-uploaded templates, the URL is already a full public URL
-      onUpdate({ 
-        selectedTemplate: template, 
-        templateImageUrl: template.previewUrl 
-      });
+      return;
     }
+
+    // For user-uploaded templates, the URL is already a full public URL
+    onUpdate({ templateImageUrl: template.previewUrl });
   };
 
   // Combine universal templates with user's saved templates
   const allTemplates = [...UNIVERSAL_TEMPLATES, ...savedTemplates];
-  
+
   const filteredTemplates = selectedCategory === "all"
     ? allTemplates
     : selectedCategory === "custom"
       ? savedTemplates // Only show user uploads for "My Uploads"
       : allTemplates.filter((t) => t.category === selectedCategory);
 
-  const canProceed = wizardState.selectedTemplate !== null;
+  // Require the actual image payload/URL to be ready before allowing Continue
+  const canProceed = Boolean(wizardState.selectedTemplate && wizardState.templateImageUrl);
 
   return (
     <div className="space-y-6">

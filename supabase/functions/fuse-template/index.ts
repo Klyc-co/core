@@ -34,6 +34,20 @@ serve(async (req) => {
       throw new Error("Template image is required");
     }
 
+    // The AI gateway/provider needs a fetchable URL (https://... or data:...) for images.
+    // If a relative path slips through, fail fast with a helpful client-visible error.
+    if (typeof templateImageUrl === "string" && templateImageUrl.startsWith("/")) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Invalid template image URL. Please re-select the template (it must be a public URL or base64 data URL).",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
     // Build a detailed prompt for fusion
     const fontsList = brandFonts?.length ? brandFonts.join(", ") : "modern sans-serif fonts";
     const colorsList = brandColors?.length ? brandColors.join(", ") : "vibrant brand colors";
