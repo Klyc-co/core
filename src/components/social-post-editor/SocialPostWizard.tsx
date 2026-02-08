@@ -41,6 +41,15 @@ export default function SocialPostWizard({
         return;
       }
 
+      // Safety check: the backend/AI provider cannot use relative paths like /src/...
+      if (wizardState.templateImageUrl?.startsWith("/")) {
+        toast.error("Please re-select your template (it must load as a public URL or base64).", {
+          description: "This template URL looks like a local path. Click the template again, wait a moment, then Generate.",
+        });
+        updateState({ isGenerating: false, step: 1 });
+        return;
+      }
+
       // Prepare images to send to the AI
       const imageUrls: string[] = [];
 
