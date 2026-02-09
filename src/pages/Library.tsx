@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database, Wrench } from "lucide-react";
+import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database, Wrench, X, Download } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +42,7 @@ const Library = () => {
   const [activeMainTab, setActiveMainTab] = useState("assets");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lightboxAsset, setLightboxAsset] = useState<BrandAsset | null>(null);
   const { getEffectiveUserId, selectedClientId } = useClientContext();
 
   useEffect(() => {
@@ -205,14 +207,17 @@ const Library = () => {
             className="bg-white/90 border-gray-300"
           />
         </div>
-        <div className="aspect-video bg-muted relative">
+        <div 
+          className="aspect-video bg-muted relative cursor-pointer"
+          onClick={() => setLightboxAsset(asset)}
+        >
           <img src={asset.value} alt={asset.name || 'Brand image'} className="w-full h-full object-contain"
             onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }} />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <a href={asset.value} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1" />Open</a>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setLightboxAsset(asset); }}>
+              <ExternalLink className="w-3.5 h-3.5 mr-1" />View
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => handleDeleteAsset(asset.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
           </div>
         </div>
         <div className="p-2"><p className="text-xs font-medium text-foreground truncate">{asset.name || 'Image'}</p></div>
@@ -448,6 +453,43 @@ const Library = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Lightbox Dialog */}
+      <Dialog open={!!lightboxAsset} onOpenChange={(open) => !open && setLightboxAsset(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] p-0 bg-background/95 backdrop-blur-sm border-border overflow-hidden">
+          <div className="relative flex flex-col">
+            {/* Image */}
+            <div className="flex items-center justify-center min-h-[300px] max-h-[75vh] bg-muted/30 p-4">
+              <img
+                src={lightboxAsset?.value}
+                alt={lightboxAsset?.name || "Asset"}
+                className="max-w-full max-h-[70vh] object-contain rounded"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.svg'; }}
+              />
+            </div>
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-t border-border">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground truncate">{lightboxAsset?.name || "Image"}</p>
+                <p className="text-xs text-muted-foreground truncate">{lightboxAsset?.asset_type}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={() => lightboxAsset && handleCopyValue(lightboxAsset.value)}>
+                  <Copy className="w-3.5 h-3.5 mr-1" />Copy URL
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={lightboxAsset?.value} target="_blank" rel="noopener noreferrer">
+                    <Download className="w-3.5 h-3.5 mr-1" />Open Original
+                  </a>
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => { if (lightboxAsset) { handleDeleteAsset(lightboxAsset.id); setLightboxAsset(null); } }}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
