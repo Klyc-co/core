@@ -33,6 +33,11 @@ import funBbqFestivity from "@/assets/templates/fun-bbq-festivity.jpg";
 import luxuryTravelDiary from "@/assets/templates/luxury-travel-diary.png";
 import luxuryTravelCollage from "@/assets/templates/luxury-travel-collage.png";
 import luxuryModernListing from "@/assets/templates/luxury-modern-listing.png";
+import youthPolaroidCollage from "@/assets/templates/youth-polaroid-collage.png";
+import youthYardSale from "@/assets/templates/youth-yard-sale.png";
+import youthBoldBusiness from "@/assets/templates/youth-bold-business.png";
+import youthHiringAnnouncement from "@/assets/templates/youth-hiring-announcement.png";
+import youthAdventureHike from "@/assets/templates/youth-adventure-hike.png";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -286,6 +291,61 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     width: 1080,
     height: 1920,
     colors: ["#b0bec5", "#1a1a1a", "#e8b4a0"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-youth-polaroid-collage",
+    name: "Polaroid Collage Post",
+    category: "youth",
+    previewUrl: youthPolaroidCollage,
+    width: 1080,
+    height: 1080,
+    colors: ["#1a1a1a", "#4a90d9", "#c8e6ff"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-youth-yard-sale",
+    name: "Playful Yard Sale Flyer",
+    category: "youth",
+    previewUrl: youthYardSale,
+    width: 1080,
+    height: 1350,
+    colors: ["#f5f0e8", "#e63946", "#f5a623", "#4a4de7", "#2d9c4a"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-youth-bold-business",
+    name: "Bold Business Story",
+    category: "youth",
+    previewUrl: youthBoldBusiness,
+    width: 1080,
+    height: 1920,
+    colors: ["#d4a0f5", "#e85d2a", "#4a1a6b"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-youth-hiring-announcement",
+    name: "Colorful Hiring Story",
+    category: "youth",
+    previewUrl: youthHiringAnnouncement,
+    width: 1080,
+    height: 1920,
+    colors: ["#f5f0e0", "#c8e626", "#b8a0d4", "#e86b2a", "#f5a0c8"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-youth-adventure-hike",
+    name: "Adventure Hike Story",
+    category: "youth",
+    previewUrl: youthAdventureHike,
+    width: 1080,
+    height: 1920,
+    colors: ["#e8a020", "#c8d432", "#8bb4d4"],
     fonts: ["Sans-serif"],
     layoutData: null,
   },
