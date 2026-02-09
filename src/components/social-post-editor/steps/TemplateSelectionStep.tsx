@@ -23,6 +23,9 @@ import boldMeetTeamBw from "@/assets/templates/bold-meet-team-bw.png";
 import boldMeetTeamColorful from "@/assets/templates/bold-meet-team-colorful.png";
 import minimalInstaStories from "@/assets/templates/minimal-insta-stories.jpg";
 import minimalAestheticQuotes from "@/assets/templates/minimal-aesthetic-quotes.avif";
+import creativeBirthdayInvitation from "@/assets/templates/creative-birthday-invitation.png";
+import creativeSaveTheDate from "@/assets/templates/creative-save-the-date.png";
+import creativePolaroidReel from "@/assets/templates/creative-polaroid-reel.png";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -167,6 +170,39 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     height: 1080,
     colors: ["#faf9f6", "#e8e4de", "#2c2c2c"],
     fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-creative-birthday-invitation",
+    name: "Birthday Invitation Story",
+    category: "creative",
+    previewUrl: creativeBirthdayInvitation,
+    width: 1080,
+    height: 1920,
+    colors: ["#8fb8de", "#e87c2a", "#e88ba8"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-creative-save-the-date",
+    name: "Save The Date Story",
+    category: "creative",
+    previewUrl: creativeSaveTheDate,
+    width: 1080,
+    height: 1920,
+    colors: ["#f5ebe0", "#8b2020", "#333333"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-creative-polaroid-reel",
+    name: "Nostalgic Polaroid Reel",
+    category: "creative",
+    previewUrl: creativePolaroidReel,
+    width: 1080,
+    height: 1920,
+    colors: ["#c8b84d", "#2a3d6b", "#ffffff"],
+    fonts: ["Script", "Sans-serif"],
     layoutData: null,
   },
 ];
