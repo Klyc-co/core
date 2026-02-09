@@ -68,6 +68,13 @@ const ClientAuth = () => {
         });
         if (error) throw error;
         
+        // Ensure client role metadata is set (may be missing if they signed up via marketer auth)
+        if (data.user && data.user.user_metadata?.role !== "client") {
+          await supabase.auth.updateUser({
+            data: { role: "client" },
+          });
+        }
+        
         // Link client to marketer on login (in case they signed up before being invited)
         if (data.user) {
           await linkClientToMarketer(data.user.id, email.toLowerCase());
