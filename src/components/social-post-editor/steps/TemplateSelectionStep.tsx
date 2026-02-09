@@ -30,6 +30,9 @@ import funBbqMenuPoster from "@/assets/templates/fun-bbq-menu-poster.avif";
 import funFoodBanner from "@/assets/templates/fun-food-banner.avif";
 import funBbqParty from "@/assets/templates/fun-bbq-party.jpg";
 import funBbqFestivity from "@/assets/templates/fun-bbq-festivity.jpg";
+import luxuryTravelDiary from "@/assets/templates/luxury-travel-diary.png";
+import luxuryTravelCollage from "@/assets/templates/luxury-travel-collage.png";
+import luxuryModernListing from "@/assets/templates/luxury-modern-listing.png";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -251,6 +254,39 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     height: 1080,
     colors: ["#1a1a1a", "#f5a623", "#ffffff"],
     fonts: ["Script", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-luxury-travel-diary",
+    name: "Luxury Travel Diary",
+    category: "luxury",
+    previewUrl: luxuryTravelDiary,
+    width: 1080,
+    height: 1920,
+    colors: ["#6b7c3e", "#f5f0c8", "#e8c4b8"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-luxury-travel-collage",
+    name: "Travel Collage Story",
+    category: "luxury",
+    previewUrl: luxuryTravelCollage,
+    width: 1080,
+    height: 1920,
+    colors: ["#e8f0f0", "#8b6914", "#d4c5a0"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-luxury-modern-listing",
+    name: "Modern City Listing",
+    category: "luxury",
+    previewUrl: luxuryModernListing,
+    width: 1080,
+    height: 1920,
+    colors: ["#b0bec5", "#1a1a1a", "#e8b4a0"],
+    fonts: ["Sans-serif"],
     layoutData: null,
   },
 ];
