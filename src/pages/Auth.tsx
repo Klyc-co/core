@@ -20,14 +20,24 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
       if (session) {
-          navigate("/home");
+          const role = session.user.user_metadata?.role;
+          if (role === "client") {
+            navigate("/client/dashboard");
+          } else {
+            navigate("/home");
+          }
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/home");
+        const role = session.user.user_metadata?.role;
+        if (role === "client") {
+          navigate("/client/dashboard");
+        } else {
+          navigate("/home");
+        }
       }
     });
 
