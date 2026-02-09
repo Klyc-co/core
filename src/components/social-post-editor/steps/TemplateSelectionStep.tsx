@@ -23,6 +23,9 @@ import boldMeetTeamBw from "@/assets/templates/bold-meet-team-bw.png";
 import boldMeetTeamColorful from "@/assets/templates/bold-meet-team-colorful.png";
 import minimalInstaStories from "@/assets/templates/minimal-insta-stories.jpg";
 import minimalAestheticQuotes from "@/assets/templates/minimal-aesthetic-quotes.avif";
+import creativeBirthdayInvitation from "@/assets/templates/creative-birthday-invitation.png";
+import creativeSaveTheDate from "@/assets/templates/creative-save-the-date.png";
+import creativePolaroidReel from "@/assets/templates/creative-polaroid-reel.png";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
