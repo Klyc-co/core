@@ -14,8 +14,7 @@ import {
   Palette,
   BarChart3,
   Check,
-  Play,
-  Shield
+  Play
 } from "lucide-react";
 import klycLogo from "@/assets/klyc-logo.png";
 
@@ -136,16 +135,6 @@ const Index = () => {
             >
               <span className="hidden sm:inline">Marketer Login</span>
               <span className="sm:hidden">Login</span>
-            </Button>
-            <Button 
-              onClick={() => navigate("/admin/login")}
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs sm:text-sm"
-            >
-              <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Admin Login</span>
-              <span className="sm:hidden">Admin</span>
             </Button>
           </div>
         </div>
@@ -373,8 +362,10 @@ const Index = () => {
           <img src={klycLogo} alt="Klyc" className="h-5 sm:h-6 brightness-0 invert" />
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
             <a href="/terms" className="hover:text-gray-300 transition-colors">Terms</a>
-            <span className="hidden sm:inline">|</span>
+            <span>|</span>
             <a href="/privacy" className="hover:text-gray-300 transition-colors">Privacy</a>
+            <span>|</span>
+            <a href="/admin/login" className="hover:text-gray-300 transition-colors">Admin</a>
           </div>
           <p className="text-gray-500 text-xs sm:text-sm">
             © {new Date().getFullYear()} Klyc
