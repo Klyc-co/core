@@ -13,6 +13,14 @@ import { Smartphone, Monitor, Square } from "lucide-react";
 import modernHiringTemplate from "@/assets/templates/modern-hiring.png";
 import modernRestaurantTemplate from "@/assets/templates/modern-restaurant.png";
 import modernWebinarTemplate from "@/assets/templates/modern-webinar.png";
+import boldTestimonial from "@/assets/templates/bold-testimonial.png";
+import boldReleaseNotes from "@/assets/templates/bold-release-notes.png";
+import boldFashionReel from "@/assets/templates/bold-fashion-reel.png";
+import boldCollageAd from "@/assets/templates/bold-collage-ad.png";
+import boldTechConference from "@/assets/templates/bold-tech-conference.png";
+import boldOrganicModern from "@/assets/templates/bold-organic-modern.png";
+import boldMeetTeamBw from "@/assets/templates/bold-meet-team-bw.png";
+import boldMeetTeamColorful from "@/assets/templates/bold-meet-team-colorful.png";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -46,6 +54,94 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     width: 1080,
     height: 1920,
     colors: ["#c7b8ea", "#e63f23", "#f5a31a"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-testimonial",
+    name: "SaaS Testimonial Post",
+    category: "bold",
+    previewUrl: boldTestimonial,
+    width: 1080,
+    height: 1080,
+    colors: ["#1a1a2e", "#7b2ff7", "#e0a0ff"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-release-notes",
+    name: "Release Notes Announcement",
+    category: "bold",
+    previewUrl: boldReleaseNotes,
+    width: 1080,
+    height: 1350,
+    colors: ["#f5a623", "#e84393", "#a29bfe"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-fashion-reel",
+    name: "Fashion Reel Cover",
+    category: "bold",
+    previewUrl: boldFashionReel,
+    width: 1080,
+    height: 1920,
+    colors: ["#2d6a4f", "#333333", "#ffffff"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-collage-ad",
+    name: "Collage Style Ad",
+    category: "bold",
+    previewUrl: boldCollageAd,
+    width: 300,
+    height: 250,
+    colors: ["#ff6b35", "#ffd166", "#06d6a0"],
+    fonts: ["Script", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-tech-conference",
+    name: "Tech Conference Promo",
+    category: "bold",
+    previewUrl: boldTechConference,
+    width: 1080,
+    height: 1350,
+    colors: ["#1a0533", "#7c3aed", "#c4b5fd"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-organic-modern",
+    name: "Organic Modern Ad",
+    category: "bold",
+    previewUrl: boldOrganicModern,
+    width: 1000,
+    height: 1500,
+    colors: ["#4ade80", "#000000", "#ffffff"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-meet-team-bw",
+    name: "Meet Our Team (B&W)",
+    category: "bold",
+    previewUrl: boldMeetTeamBw,
+    width: 1080,
+    height: 1080,
+    colors: ["#f5f5f5", "#000000", "#ffffff"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-bold-meet-team-colorful",
+    name: "Meet Our Team (Colorful)",
+    category: "bold",
+    previewUrl: boldMeetTeamColorful,
+    width: 1080,
+    height: 1350,
+    colors: ["#e84393", "#6c5ce7", "#00cec9", "#fdcb6e"],
     fonts: ["Serif", "Sans-serif"],
     layoutData: null,
   },
