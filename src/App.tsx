@@ -59,6 +59,8 @@ import FullAnalytics from "./pages/FullAnalytics";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +89,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
