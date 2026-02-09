@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
@@ -60,6 +60,7 @@ const GenerateCampaignIdeas = () => {
   const [selectedImageModel, setSelectedImageModel] = useState<"nano-banana" | "runway" | "fooocus" | "style-transfer">("nano-banana");
   const [referenceImages, setReferenceImages] = useState<Array<{ url: string; name: string }>>([]);
   const [isSavingToLibrary, setIsSavingToLibrary] = useState(false);
+  const [isRegeneratingPrompt, setIsRegeneratingPrompt] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const { getEffectiveUserId } = useClientContext();
@@ -208,6 +209,30 @@ const GenerateCampaignIdeas = () => {
       const formattedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
       setTags([...tags, formattedTag]);
       setNewTag("");
+    }
+  };
+
+  const handleRegenerateImagePrompt = async () => {
+    setIsRegeneratingPrompt(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-campaign-idea', {
+        body: {
+          contentType: 'visual-post',
+          targetAudience,
+          prompt: customPrompt,
+          productInfo: selectedProduct || null,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.imagePrompt) {
+        setImagePrompt(data.imagePrompt);
+        toast({ title: "Prompt regenerated", description: "A new image prompt has been generated for you." });
+      }
+    } catch (err) {
+      console.error("Error regenerating prompt:", err);
+      toast({ title: "Failed to regenerate", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setIsRegeneratingPrompt(false);
     }
   };
 
@@ -657,13 +682,29 @@ const GenerateCampaignIdeas = () => {
                   <p className="text-sm text-muted-foreground mb-3">
                     Edit the prompt below, select an AI model, and click "Generate Image":
                   </p>
-                  <Textarea
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    placeholder="Your AI-generated image prompt will appear here..."
-                    rows={5}
-                    className="resize-none bg-muted/50"
-                  />
+                  <div className="relative">
+                    <Textarea
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                      placeholder="Your AI-generated image prompt will appear here..."
+                      rows={5}
+                      className="resize-none bg-muted/50 pr-36"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="absolute top-2 right-2 gap-1.5 text-xs"
+                      onClick={handleRegenerateImagePrompt}
+                      disabled={isRegeneratingPrompt}
+                    >
+                      {isRegeneratingPrompt ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
+                      Regenerate Prompt
+                    </Button>
+                  </div>
                   
                   {/* Model Selection */}
                   <div className="mt-4 mb-4">
