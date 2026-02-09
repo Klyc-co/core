@@ -26,6 +26,10 @@ import minimalAestheticQuotes from "@/assets/templates/minimal-aesthetic-quotes.
 import creativeBirthdayInvitation from "@/assets/templates/creative-birthday-invitation.png";
 import creativeSaveTheDate from "@/assets/templates/creative-save-the-date.png";
 import creativePolaroidReel from "@/assets/templates/creative-polaroid-reel.png";
+import funBbqMenuPoster from "@/assets/templates/fun-bbq-menu-poster.avif";
+import funFoodBanner from "@/assets/templates/fun-food-banner.avif";
+import funBbqParty from "@/assets/templates/fun-bbq-party.jpg";
+import funBbqFestivity from "@/assets/templates/fun-bbq-festivity.jpg";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -202,6 +206,50 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     width: 1080,
     height: 1920,
     colors: ["#c8b84d", "#2a3d6b", "#ffffff"],
+    fonts: ["Script", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-fun-bbq-menu-poster",
+    name: "BBQ Menu Poster",
+    category: "fun",
+    previewUrl: funBbqMenuPoster,
+    width: 1080,
+    height: 1350,
+    colors: ["#8b0000", "#f5a623", "#ffffff"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-fun-food-banner",
+    name: "Food Social Banner",
+    category: "fun",
+    previewUrl: funFoodBanner,
+    width: 1080,
+    height: 1080,
+    colors: ["#e63946", "#f1faee", "#ffb703"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-fun-bbq-party",
+    name: "BBQ Party Flyer",
+    category: "fun",
+    previewUrl: funBbqParty,
+    width: 1080,
+    height: 1350,
+    colors: ["#1a1a1a", "#f5a623", "#e63946"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-fun-bbq-festivity",
+    name: "BBQ Festivity Post",
+    category: "fun",
+    previewUrl: funBbqFestivity,
+    width: 1080,
+    height: 1080,
+    colors: ["#1a1a1a", "#f5a623", "#ffffff"],
     fonts: ["Script", "Sans-serif"],
     layoutData: null,
   },
