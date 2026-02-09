@@ -21,6 +21,8 @@ import boldTechConference from "@/assets/templates/bold-tech-conference.png";
 import boldOrganicModern from "@/assets/templates/bold-organic-modern.png";
 import boldMeetTeamBw from "@/assets/templates/bold-meet-team-bw.png";
 import boldMeetTeamColorful from "@/assets/templates/bold-meet-team-colorful.png";
+import minimalInstaStories from "@/assets/templates/minimal-insta-stories.jpg";
+import minimalAestheticQuotes from "@/assets/templates/minimal-aesthetic-quotes.avif";
 
 // Universal templates available to all users
 const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
@@ -142,6 +144,28 @@ const UNIVERSAL_TEMPLATES: FigmaTemplate[] = [
     width: 1080,
     height: 1350,
     colors: ["#e84393", "#6c5ce7", "#00cec9", "#fdcb6e"],
+    fonts: ["Serif", "Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-minimal-insta-stories",
+    name: "Minimal Insta Stories",
+    category: "minimal",
+    previewUrl: minimalInstaStories,
+    width: 1080,
+    height: 1920,
+    colors: ["#ffffff", "#f5f5f5", "#333333"],
+    fonts: ["Sans-serif"],
+    layoutData: null,
+  },
+  {
+    id: "universal-minimal-aesthetic-quotes",
+    name: "Aesthetic Quotes Post",
+    category: "minimal",
+    previewUrl: minimalAestheticQuotes,
+    width: 1080,
+    height: 1080,
+    colors: ["#faf9f6", "#e8e4de", "#2c2c2c"],
     fonts: ["Serif", "Sans-serif"],
     layoutData: null,
   },
