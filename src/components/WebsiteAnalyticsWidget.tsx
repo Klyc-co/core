@@ -114,11 +114,29 @@ export function WebsiteAnalyticsWidget() {
 
       if (error) throw error;
 
-      // Store state for verification
-      sessionStorage.setItem('ga_oauth_state', data.state);
+      // Store state in localStorage for cross-window access
+      localStorage.setItem('ga_oauth_state', data.state);
+      localStorage.setItem('ga_oauth_started_at', String(Date.now()));
       
-      // Redirect to Google OAuth
-      window.location.href = data.url;
+      // Use popup window to avoid iframe restrictions
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const popup = window.open(
+        data.url,
+        'google_analytics_oauth',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+      );
+      
+      if (!popup) {
+        const fallback = window.open(data.url, '_blank');
+        if (!fallback) {
+          toast.error('Please allow popups for this site to connect Google Analytics');
+          setIsConnecting(false);
+        }
+      }
     } catch (error) {
       console.error('Failed to start OAuth:', error);
       toast.error('Failed to connect Google Analytics');
