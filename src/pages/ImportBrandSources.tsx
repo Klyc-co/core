@@ -182,7 +182,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: TumblrIcon, 
     color: "bg-[#36465D]", 
     textColor: "text-[#36465D]",
-    comingSoon: true,
+    customOAuth: true,
   },
   { 
     name: "Threads", 
@@ -404,6 +404,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "tumblr") {
+      toast.success("Tumblr connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Tumblr: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -492,6 +498,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "twitch") {
           newStatus['Twitch'] = 'connected';
+        }
+        if (conn.platform === "tumblr") {
+          newStatus['Tumblr'] = 'connected';
         }
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
@@ -748,6 +757,8 @@ const ImportBrandSources = () => {
           functionName = "patreon-auth-url";
         } else if (platform.name === "Twitch") {
           functionName = "twitch-auth-url";
+        } else if (platform.name === "Tumblr") {
+          functionName = "tumblr-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
@@ -760,7 +771,7 @@ const ImportBrandSources = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          if (platform.name === "Patreon" || platform.name === "Twitch") {
+          if (platform.name === "Patreon" || platform.name === "Twitch" || platform.name === "Tumblr") {
             window.open(authUrl, '_blank');
             toast.info(`Complete ${platform.name} authorization in the new window`);
           } else {

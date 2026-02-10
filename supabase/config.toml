@@ -182,3 +182,9 @@ verify_jwt = false
 
 [functions.twitch-oauth-callback]
 verify_jwt = false
+
+[functions.tumblr-auth-url]
+verify_jwt = false
+
+[functions.tumblr-oauth-callback]
+verify_jwt = false
