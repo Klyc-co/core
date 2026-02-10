@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, FolderOpen, Check, Plus } from "lucide-react";
+import { Loader2, FolderOpen, Check, Plus, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useClientContext } from "@/contexts/ClientContext";
@@ -10,18 +10,22 @@ import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import NotionIcon from "@/components/icons/NotionIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
+import AirtableIcon from "@/components/icons/AirtableIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import NotionFilePicker from "@/components/NotionFilePicker";
 import AdobeFilePicker from "@/components/AdobeFilePicker";
+import AirtableConnectModal from "@/components/AirtableConnectModal";
+import AirtableDrawer from "@/components/AirtableDrawer";
 
 interface ToolConnection {
   id: string;
-  type: "dropbox" | "google_drive" | "notion" | "adobe_cc";
+  type: "dropbox" | "google_drive" | "notion" | "adobe_cc" | "airtable";
   name: string;
   email?: string;
   connected: boolean;
   lastSync?: string;
+  summary?: string;
 }
 
 interface SocialToolsContentProps {
@@ -37,7 +41,10 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
   const [showNotionPicker, setShowNotionPicker] = useState(false);
   const [showAdobePicker, setShowAdobePicker] = useState(false);
+  const [showAirtableConnectModal, setShowAirtableConnectModal] = useState(false);
+  const [showAirtableDrawer, setShowAirtableDrawer] = useState(false);
   const [importingFromTool, setImportingFromTool] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConnections();
@@ -48,6 +55,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
     try {
       const userId = getEffectiveUserId();
       if (!userId) return;
+      setCurrentUserId(userId);
 
       // Fetch Dropbox connection
       const { data: dropboxConn } = await supabase
@@ -80,9 +88,29 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         .eq("platform", "adobe_cc")
         .maybeSingle();
 
+      // Fetch Airtable connection
+      const { data: airtableConn } = await supabase
+        .from("airtable_connections")
+        .select("id, connection_status, last_sync_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      // Get Airtable summary if connected
+      let airtableSummary = "";
+      if (airtableConn) {
+        const { data: mappings } = await supabase
+          .from("airtable_table_mappings")
+          .select("table_type, synced_record_count")
+          .eq("user_id", userId)
+          .eq("is_synced", true);
+        if (mappings && mappings.length > 0) {
+          const totalRecords = mappings.reduce((s, m) => s + ((m as any).synced_record_count || 0), 0);
+          airtableSummary = `${mappings.length} table${mappings.length > 1 ? "s" : ""} synced · ${totalRecords} records`;
+        }
+      }
+
       const toolConnections: ToolConnection[] = [];
 
-      // Always show Dropbox option
       toolConnections.push({
         id: dropboxConn?.id || "dropbox",
         type: "dropbox",
@@ -92,7 +120,6 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         lastSync: dropboxConn?.last_sync_at,
       });
 
-      // Always show Google Drive option
       toolConnections.push({
         id: driveConn?.id || "google_drive",
         type: "google_drive",
@@ -102,7 +129,6 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         lastSync: driveConn?.updated_at,
       });
 
-      // Always show Notion option
       toolConnections.push({
         id: notionConn?.id || "notion",
         type: "notion",
@@ -112,7 +138,6 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         lastSync: notionConn?.updated_at,
       });
 
-      // Always show Adobe CC option
       toolConnections.push({
         id: adobeConn?.id || "adobe_cc",
         type: "adobe_cc",
@@ -120,6 +145,15 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         email: adobeConn?.platform_username || undefined,
         connected: !!adobeConn,
         lastSync: adobeConn?.updated_at,
+      });
+
+      toolConnections.push({
+        id: airtableConn?.id || "airtable",
+        type: "airtable",
+        name: "Airtable",
+        connected: !!airtableConn,
+        lastSync: airtableConn?.last_sync_at,
+        summary: airtableSummary || undefined,
       });
 
       setConnections(toolConnections);
@@ -132,12 +166,15 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
 
   const handleToolClick = (tool: ToolConnection) => {
     if (!tool.connected) {
-      // Navigate to import page to connect
+      if (tool.type === "airtable") {
+        setShowAirtableConnectModal(true);
+        return;
+      }
       navigate("/profile/import");
       return;
     }
 
-    // Open the respective file picker
+    // Open the respective file picker / drawer
     if (tool.type === "dropbox") {
       setShowDropboxPicker(true);
     } else if (tool.type === "google_drive") {
@@ -146,6 +183,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       setShowNotionPicker(true);
     } else if (tool.type === "adobe_cc") {
       setShowAdobePicker(true);
+    } else if (tool.type === "airtable") {
+      setShowAirtableDrawer(true);
     }
   };
 
@@ -215,6 +254,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         return <NotionIcon className="w-10 h-10" />;
       case "adobe_cc":
         return <AdobeCreativeCloudIcon className="w-10 h-10" />;
+      case "airtable":
+        return <AirtableIcon className="w-10 h-10" />;
       default:
         return <FolderOpen className="w-10 h-10 text-muted-foreground" />;
     }
@@ -257,8 +298,11 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                       {tool.email && (
                         <p className="text-sm text-muted-foreground truncate">{tool.email}</p>
                       )}
+                      {tool.summary && (
+                        <p className="text-xs text-muted-foreground mt-1">{tool.summary}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Click to browse & import files
+                        {tool.type === "airtable" ? "Click to configure & browse mapped tables" : "Click to browse & import files"}
                       </p>
                     </div>
                   </div>
@@ -268,8 +312,11 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                       size="sm" 
                       className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                     >
-                      <FolderOpen className="w-4 h-4 mr-2" />
-                      Browse Files
+                      {tool.type === "airtable" ? (
+                        <><Settings className="w-4 h-4 mr-2" />Configure & Sync</>
+                      ) : (
+                        <><FolderOpen className="w-4 h-4 mr-2" />Browse Files</>
+                      )}
                     </Button>
                   </div>
                 </Card>
@@ -297,7 +344,11 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-foreground mb-1">{tool.name}</h4>
-                      <p className="text-sm text-muted-foreground">Not connected</p>
+                      <p className="text-sm text-muted-foreground">
+                        {tool.type === "airtable"
+                          ? "Pull in content calendars, briefs & social planning tables"
+                          : "Not connected"}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-border">
@@ -357,6 +408,22 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         onOpenChange={setShowAdobePicker}
         onImportComplete={onImportComplete}
       />
+
+      {/* Airtable Connect Modal */}
+      <AirtableConnectModal
+        open={showAirtableConnectModal}
+        onOpenChange={setShowAirtableConnectModal}
+        onConnected={() => fetchConnections()}
+      />
+
+      {/* Airtable Drawer */}
+      {currentUserId && (
+        <AirtableDrawer
+          open={showAirtableDrawer}
+          onOpenChange={setShowAirtableDrawer}
+          userId={currentUserId}
+        />
+      )}
 
       {/* Loading overlay during import */}
       {importingFromTool && (

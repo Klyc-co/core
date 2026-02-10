@@ -14,6 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
+      airtable_connections: {
+        Row: {
+          api_token: string
+          connection_status: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_sync_at: string | null
+          sync_frequency: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          connection_status?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          sync_frequency?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          connection_status?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          sync_frequency?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      airtable_synced_records: {
+        Row: {
+          airtable_base_id: string
+          airtable_record_id: string
+          airtable_table_id: string
+          created_at: string
+          id: string
+          mapped_data: Json
+          mapping_id: string
+          raw_record: Json | null
+          synced_at: string
+          table_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          airtable_base_id: string
+          airtable_record_id: string
+          airtable_table_id: string
+          created_at?: string
+          id?: string
+          mapped_data?: Json
+          mapping_id: string
+          raw_record?: Json | null
+          synced_at?: string
+          table_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          airtable_base_id?: string
+          airtable_record_id?: string
+          airtable_table_id?: string
+          created_at?: string
+          id?: string
+          mapped_data?: Json
+          mapping_id?: string
+          raw_record?: Json | null
+          synced_at?: string
+          table_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtable_synced_records_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "airtable_table_mappings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      airtable_table_mappings: {
+        Row: {
+          airtable_base_id: string
+          airtable_base_name: string | null
+          airtable_table_id: string
+          airtable_table_name: string | null
+          column_mappings: Json
+          connection_id: string
+          created_at: string
+          id: string
+          is_synced: boolean | null
+          last_sync_at: string | null
+          synced_record_count: number | null
+          table_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          airtable_base_id: string
+          airtable_base_name?: string | null
+          airtable_table_id: string
+          airtable_table_name?: string | null
+          column_mappings?: Json
+          connection_id: string
+          created_at?: string
+          id?: string
+          is_synced?: boolean | null
+          last_sync_at?: string | null
+          synced_record_count?: number | null
+          table_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          airtable_base_id?: string
+          airtable_base_name?: string | null
+          airtable_table_id?: string
+          airtable_table_name?: string | null
+          column_mappings?: Json
+          connection_id?: string
+          created_at?: string
+          id?: string
+          is_synced?: boolean | null
+          last_sync_at?: string | null
+          synced_record_count?: number | null
+          table_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtable_table_mappings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "airtable_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_assets: {
         Row: {
           asset_type: string

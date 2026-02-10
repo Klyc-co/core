@@ -121,7 +121,7 @@ const storagePlatforms: StoragePlatform[] = [
     icon: AirtableIcon,
     bgColor: "bg-[#FFBF00]",
     description: "Import from Airtable bases",
-    comingSoon: true,
+    connectionTable: "airtable_connections",
   },
   {
     id: "trello",
@@ -231,6 +231,15 @@ const ImportAssetSources = () => {
         .maybeSingle();
       
       connections["adobe-cc"] = !!adobeData;
+
+      // Check Airtable connection
+      const { data: airtableData } = await supabase
+        .from("airtable_connections")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      
+      connections["airtable"] = !!airtableData;
 
       setConnectionStatus(connections);
     } catch (error) {
