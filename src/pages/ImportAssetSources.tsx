@@ -9,16 +9,17 @@ import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
+import AdobeFilePicker from "@/components/AdobeFilePicker";
 
 // Storage & Tool Icons
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
+import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import NotionIcon from "@/components/icons/NotionIcon";
 import OneDriveIcon from "@/components/icons/OneDriveIcon";
 import BoxIcon from "@/components/icons/BoxIcon";
 import CanvaIcon from "@/components/icons/CanvaIcon";
 import FigmaIcon from "@/components/icons/FigmaIcon";
-import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import TrelloIcon from "@/components/icons/TrelloIcon";
 import AsanaIcon from "@/components/icons/AsanaIcon";
@@ -55,6 +56,15 @@ const storagePlatforms: StoragePlatform[] = [
     bgColor: "bg-white border border-gray-200",
     description: "Import files from Google Drive",
     connectionTable: "google_drive_connections",
+    hasFilePicker: true,
+  },
+  {
+    id: "adobe-cc",
+    name: "Adobe Creative Cloud",
+    icon: AdobeCreativeCloudIcon,
+    bgColor: "bg-[#FF0000]",
+    description: "Import assets from Adobe Creative Cloud",
+    connectionTable: "social_connections",
     hasFilePicker: true,
   },
   {
@@ -175,6 +185,7 @@ const ImportAssetSources = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<StoragePlatform | null>(null);
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
+  const [showAdobePicker, setShowAdobePicker] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -211,6 +222,16 @@ const ImportAssetSources = () => {
       
       connections["google-drive"] = !!gdriveData;
 
+      // Check Adobe CC connection
+      const { data: adobeData } = await supabase
+        .from("social_connections")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("platform", "adobe_cc")
+        .maybeSingle();
+      
+      connections["adobe-cc"] = !!adobeData;
+
       setConnectionStatus(connections);
     } catch (error) {
       console.error("Failed to check connections:", error);
@@ -239,6 +260,8 @@ const ImportAssetSources = () => {
       setShowDropboxPicker(true);
     } else if (platform.id === "google-drive") {
       setShowGoogleDrivePicker(true);
+    } else if (platform.id === "adobe-cc") {
+      setShowAdobePicker(true);
     }
   };
 
@@ -357,6 +380,13 @@ const ImportAssetSources = () => {
       <GoogleDriveFilePicker
         open={showGoogleDrivePicker}
         onOpenChange={setShowGoogleDrivePicker}
+        onImportComplete={handleImportComplete}
+      />
+
+      {/* Adobe CC File Picker */}
+      <AdobeFilePicker
+        open={showAdobePicker}
+        onOpenChange={setShowAdobePicker}
         onImportComplete={handleImportComplete}
       />
     </div>

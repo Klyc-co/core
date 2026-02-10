@@ -9,13 +9,15 @@ import { useClientContext } from "@/contexts/ClientContext";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import DropboxIcon from "@/components/icons/DropboxIcon";
 import NotionIcon from "@/components/icons/NotionIcon";
+import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import NotionFilePicker from "@/components/NotionFilePicker";
+import AdobeFilePicker from "@/components/AdobeFilePicker";
 
 interface ToolConnection {
   id: string;
-  type: "dropbox" | "google_drive" | "notion";
+  type: "dropbox" | "google_drive" | "notion" | "adobe_cc";
   name: string;
   email?: string;
   connected: boolean;
@@ -34,6 +36,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
   const [showNotionPicker, setShowNotionPicker] = useState(false);
+  const [showAdobePicker, setShowAdobePicker] = useState(false);
   const [importingFromTool, setImportingFromTool] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +72,14 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         .eq("platform", "notion")
         .maybeSingle();
 
+      // Fetch Adobe CC connection from social_connections
+      const { data: adobeConn } = await supabase
+        .from("social_connections")
+        .select("id, platform_username, updated_at")
+        .eq("user_id", userId)
+        .eq("platform", "adobe_cc")
+        .maybeSingle();
+
       const toolConnections: ToolConnection[] = [];
 
       // Always show Dropbox option
@@ -101,6 +112,16 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         lastSync: notionConn?.updated_at,
       });
 
+      // Always show Adobe CC option
+      toolConnections.push({
+        id: adobeConn?.id || "adobe_cc",
+        type: "adobe_cc",
+        name: "Adobe Creative Cloud",
+        email: adobeConn?.platform_username || undefined,
+        connected: !!adobeConn,
+        lastSync: adobeConn?.updated_at,
+      });
+
       setConnections(toolConnections);
     } catch (error) {
       console.error("Failed to fetch connections:", error);
@@ -123,6 +144,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       setShowGoogleDrivePicker(true);
     } else if (tool.type === "notion") {
       setShowNotionPicker(true);
+    } else if (tool.type === "adobe_cc") {
+      setShowAdobePicker(true);
     }
   };
 
@@ -190,6 +213,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         return <GoogleDriveIcon className="w-10 h-10" />;
       case "notion":
         return <NotionIcon className="w-10 h-10" />;
+      case "adobe_cc":
+        return <AdobeCreativeCloudIcon className="w-10 h-10" />;
       default:
         return <FolderOpen className="w-10 h-10 text-muted-foreground" />;
     }
@@ -324,6 +349,12 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       <NotionFilePicker
         open={showNotionPicker}
         onOpenChange={setShowNotionPicker}
+        onImportComplete={onImportComplete}
+      />
+
+      <AdobeFilePicker
+        open={showAdobePicker}
+        onOpenChange={setShowAdobePicker}
         onImportComplete={onImportComplete}
       />
 
