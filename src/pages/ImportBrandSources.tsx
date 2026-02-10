@@ -23,7 +23,7 @@ import BazaartIcon from "@/components/icons/BazaartIcon";
 import VideoleapIcon from "@/components/icons/VideoleapIcon";
 import NotionIcon from "@/components/icons/NotionIcon";
 import TrelloIcon from "@/components/icons/TrelloIcon";
-import AsanaIcon from "@/components/icons/AsanaIcon";
+
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import FigmaIcon from "@/components/icons/FigmaIcon";
@@ -249,7 +249,7 @@ const socialTools: ToolItem[] = [
   { name: "Google Drive", icon: GoogleDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
-  { name: "Asana", icon: AsanaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },

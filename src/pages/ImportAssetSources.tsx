@@ -22,7 +22,7 @@ import CanvaIcon from "@/components/icons/CanvaIcon";
 import FigmaIcon from "@/components/icons/FigmaIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import TrelloIcon from "@/components/icons/TrelloIcon";
-import AsanaIcon from "@/components/icons/AsanaIcon";
+
 import MiroIcon from "@/components/icons/MiroIcon";
 import FrameioIcon from "@/components/icons/FrameioIcon";
 import LoomIcon from "@/components/icons/LoomIcon";
@@ -129,14 +129,6 @@ const storagePlatforms: StoragePlatform[] = [
     icon: TrelloIcon,
     bgColor: "bg-[#0079BF]",
     description: "Import from Trello boards",
-    comingSoon: true,
-  },
-  {
-    id: "asana",
-    name: "Asana",
-    icon: AsanaIcon,
-    bgColor: "bg-[#F06A6A]",
-    description: "Import from Asana projects",
     comingSoon: true,
   },
   {
