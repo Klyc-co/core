@@ -231,7 +231,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: PatreonIcon, 
     color: "bg-[#FF424D]", 
     textColor: "text-[#FF424D]",
-    comingSoon: true,
+    customOAuth: true,
   },
 ];
 
@@ -392,6 +392,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "patreon") {
+      toast.success("Patreon connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Patreon: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -474,6 +480,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "notion") {
           newStatus['Notion'] = 'connected';
+        }
+        if (conn.platform === "patreon") {
+          newStatus['Patreon'] = 'connected';
         }
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
@@ -726,6 +735,8 @@ const ImportBrandSources = () => {
           functionName = "twitter-auth-url";
         } else if (platform.name === "LinkedIn") {
           functionName = "linkedin-auth-url";
+        } else if (platform.name === "Patreon") {
+          functionName = "patreon-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
