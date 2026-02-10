@@ -263,9 +263,12 @@ export function AnalyticsPlatformGrid() {
         );
         
         if (!popup) {
-          // Popup blocked - fall back to redirect
-          toast.info('Popup blocked. Redirecting to Google...');
-          window.location.href = data.url;
+          // Popup blocked - try window.open with _blank to escape iframe
+          const fallback = window.open(data.url, '_blank');
+          if (!fallback) {
+            toast.error('Please allow popups for this site to connect Google Analytics');
+            setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+          }
         }
 
         // Safety: if callback never arrives, reset UI so it doesn't spin forever.
