@@ -11,7 +11,7 @@ serve(async (req) => {
     const errorDescription = url.searchParams.get("error_description");
 
     // Get the origin for redirect
-    const origin = Deno.env.get("SITE_URL") || "https://klyc.ai";
+    const origin = Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app";
 
     if (error) {
       console.error("Salesforce OAuth error:", error, errorDescription);
@@ -146,10 +146,10 @@ serve(async (req) => {
       );
     }
 
-    return Response.redirect(`${origin}/profile/import?success=salesforce`, 302);
+    return Response.redirect(`${origin}/profile/library?tab=crm&connected=salesforce`, 302);
   } catch (error) {
     console.error("Salesforce OAuth callback error:", error);
-    const origin = Deno.env.get("SITE_URL") || "https://klyc.ai";
+    const origin = Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app";
     return Response.redirect(
       `${origin}/profile/import?error=${encodeURIComponent(error.message)}`,
       302
