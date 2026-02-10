@@ -51,10 +51,11 @@ serve(async (req) => {
     // Create state with user_id
     const state = btoa(JSON.stringify({ user_id: userId, timestamp: Date.now() }));
     
-    // YouTube OAuth scopes - readonly access to channel and video data
+    // YouTube OAuth scopes - read access + upload for autoposting
     const scopes = [
       "https://www.googleapis.com/auth/youtube.readonly",
-      "https://www.googleapis.com/auth/yt-analytics.readonly"
+      "https://www.googleapis.com/auth/yt-analytics.readonly",
+      "https://www.googleapis.com/auth/youtube.upload"
     ].join(" ");
     
     // Build Google OAuth URL for YouTube
