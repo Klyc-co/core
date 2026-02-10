@@ -176,3 +176,9 @@ verify_jwt = false
 
 [functions.patreon-oauth-callback]
 verify_jwt = false
+
+[functions.twitch-auth-url]
+verify_jwt = false
+
+[functions.twitch-oauth-callback]
+verify_jwt = false

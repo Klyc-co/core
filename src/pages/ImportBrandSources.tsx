@@ -168,7 +168,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: TwitchIcon, 
     color: "bg-[#9146FF]", 
     textColor: "text-[#9146FF]",
-    comingSoon: true,
+    customOAuth: true,
   },
   { 
     name: "Reddit", 
@@ -398,6 +398,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "twitch") {
+      toast.success("Twitch connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Twitch: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -483,6 +489,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "patreon") {
           newStatus['Patreon'] = 'connected';
+        }
+        if (conn.platform === "twitch") {
+          newStatus['Twitch'] = 'connected';
         }
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
@@ -737,6 +746,8 @@ const ImportBrandSources = () => {
           functionName = "linkedin-auth-url";
         } else if (platform.name === "Patreon") {
           functionName = "patreon-auth-url";
+        } else if (platform.name === "Twitch") {
+          functionName = "twitch-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
@@ -749,9 +760,9 @@ const ImportBrandSources = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          if (platform.name === "Patreon") {
+          if (platform.name === "Patreon" || platform.name === "Twitch") {
             window.open(authUrl, '_blank');
-            toast.info("Complete Patreon authorization in the new window");
+            toast.info(`Complete ${platform.name} authorization in the new window`);
           } else {
             window.location.href = authUrl;
           }
