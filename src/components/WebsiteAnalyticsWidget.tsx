@@ -144,42 +144,7 @@ export function WebsiteAnalyticsWidget() {
     }
   };
 
-  // Handle OAuth callback
-  useEffect(() => {
-    const handleCallback = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      const state = params.get('state');
-      const storedState = sessionStorage.getItem('ga_oauth_state');
-
-      if (code && state && storedState === state) {
-        sessionStorage.removeItem('ga_oauth_state');
-        
-        // Clear URL params
-        window.history.replaceState({}, '', window.location.pathname);
-        
-        try {
-          const { data, error } = await supabase.functions.invoke('google-analytics-oauth-callback', {
-            body: {
-              code,
-              redirectUri: `${window.location.origin}/profile/company`
-            }
-          });
-
-          if (error) throw error;
-
-          toast.success(`Connected to Google Analytics as ${data.email}`);
-          setIsConnected(true);
-          loadProperties();
-        } catch (error) {
-          console.error('OAuth callback error:', error);
-          toast.error('Failed to complete Google Analytics connection');
-        }
-      }
-    };
-
-    handleCallback();
-  }, []);
+  // OAuth callback is now handled by the opener window polling in AnalyticsPlatformGrid.
 
   const fetchAnalyticsData = useCallback(async () => {
     if (!selectedProperty) return;

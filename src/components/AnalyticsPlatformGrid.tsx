@@ -263,26 +263,88 @@ export function AnalyticsPlatformGrid() {
         );
         
         if (!popup) {
-          // Popup blocked - try window.open with _blank to escape iframe
           const fallback = window.open(data.url, '_blank');
           if (!fallback) {
             toast.error('Please allow popups for this site to connect Google Analytics');
             setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+            return;
           }
         }
 
-        // Safety: if callback never arrives, reset UI so it doesn't spin forever.
-        window.setTimeout(() => {
-          const startedAt = Number(localStorage.getItem(GA_OAUTH_STARTED_AT_KEY) || '0');
-          const stillCurrent = Date.now() - startedAt < GA_OAUTH_MAX_AGE_MS;
-          const stateStillThere = !!localStorage.getItem(GA_OAUTH_STATE_KEY);
+        // Poll the popup URL from the OPENER window.
+        // This avoids relying on React loading inside the popup.
+        const pollTarget = popup || undefined;
+        if (pollTarget) {
+          const pollInterval = setInterval(async () => {
+            try {
+              // This will throw while popup is on google.com (cross-origin).
+              // Once it redirects back to our origin, we can read the URL.
+              const popupUrl = pollTarget.location.href;
+              
+              if (popupUrl && popupUrl.includes('code=')) {
+                clearInterval(pollInterval);
+                const popupParams = new URLSearchParams(new URL(popupUrl).search);
+                const code = popupParams.get('code');
+                const returnedState = popupParams.get('state');
+                const storedState = localStorage.getItem(GA_OAUTH_STATE_KEY);
 
-          // If state is still present after 60s, assume flow got blocked/abandoned.
-          if (stillCurrent && stateStillThere) {
-            setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
-            toast.error('Google Analytics connection timed out. Please try again.');
-          }
-        }, 60_000);
+                pollTarget.close();
+                localStorage.removeItem(GA_OAUTH_STATE_KEY);
+                localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
+
+                if (!code || !returnedState || returnedState !== storedState) {
+                  toast.error('OAuth session invalid. Please try again.');
+                  setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+                  return;
+                }
+
+                try {
+                  const { data: cbData, error: cbError } = await supabase.functions.invoke('google-analytics-oauth-callback', {
+                    body: {
+                      code,
+                      redirectUri: `${window.location.origin}/profile/company`
+                    }
+                  });
+
+                  if (cbError) throw cbError;
+
+                  toast.success(`Connected to Google Analytics as ${cbData.email}`);
+                  setConnectionStatus(prev => ({ ...prev, [platform.id]: 'connected' }));
+                  checkConnections();
+                } catch (cbErr) {
+                  console.error('GA OAuth callback error:', cbErr);
+                  toast.error('Failed to complete Google Analytics connection');
+                  setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+                }
+              }
+            } catch {
+              // Expected: cross-origin error while popup is on google.com
+            }
+
+            // Check if popup was closed without completing
+            if (pollTarget.closed) {
+              clearInterval(pollInterval);
+              const stateStillThere = !!localStorage.getItem(GA_OAUTH_STATE_KEY);
+              if (stateStillThere) {
+                localStorage.removeItem(GA_OAUTH_STATE_KEY);
+                localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
+                setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+              }
+            }
+          }, 500);
+
+          // Safety timeout after 3 minutes
+          setTimeout(() => {
+            clearInterval(pollInterval);
+            const stateStillThere = !!localStorage.getItem(GA_OAUTH_STATE_KEY);
+            if (stateStillThere) {
+              localStorage.removeItem(GA_OAUTH_STATE_KEY);
+              localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
+              setConnectionStatus(prev => ({ ...prev, [platform.id]: 'disconnected' }));
+              toast.error('Google Analytics connection timed out. Please try again.');
+            }
+          }, 180_000);
+        }
       } catch (error) {
         console.error('Failed to start OAuth:', error);
         toast.error('Failed to connect Google Analytics');
@@ -291,34 +353,8 @@ export function AnalyticsPlatformGrid() {
     }
   };
 
-  // NOTE: The actual OAuth callback processing is now handled by
-  // useGoogleAnalyticsOAuthCallback hook in CompanyInfo.tsx.
-  // This ensures the callback works even when the Analytics tab isn't active.
-  // The hook detects code/state params, exchanges tokens, notifies opener, and closes popup.
-
-  // Listen for OAuth success message from popup window
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      
-      if (event.data?.type === 'ga_oauth_success') {
-        toast.success(`Connected to Google Analytics as ${event.data.email}`);
-        setConnectionStatus(prev => ({ ...prev, google_analytics: 'connected' }));
-
-        // Re-check persisted connection so Home/other pages reflect it.
-        checkConnections();
-      } else if (event.data?.type === 'ga_oauth_error') {
-        toast.error('Failed to complete Google Analytics connection');
-        setConnectionStatus(prev => ({ ...prev, google_analytics: 'disconnected' }));
-
-        localStorage.removeItem(GA_OAUTH_STATE_KEY);
-        localStorage.removeItem(GA_OAUTH_STARTED_AT_KEY);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  // OAuth callback is now handled via URL polling in handleConnect above.
+  // No postMessage listener needed.
 
   if (isLoading) {
     return (
