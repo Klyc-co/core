@@ -38,7 +38,7 @@ import MilanoteIcon from "@/components/icons/MilanoteIcon";
 import ZapierIcon from "@/components/icons/ZapierIcon";
 import IFTTTIcon from "@/components/icons/IFTTTIcon";
 import HootsuiteIcon from "@/components/icons/HootsuiteIcon";
-import BufferIcon from "@/components/icons/BufferIcon";
+
 import SproutSocialIcon from "@/components/icons/SproutSocialIcon";
 import MondayIcon from "@/components/icons/MondayIcon";
 import OneDriveIcon from "@/components/icons/OneDriveIcon";
@@ -264,7 +264,7 @@ const socialTools: ToolItem[] = [
   { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Hootsuite", icon: HootsuiteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Buffer", icon: BufferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  
   { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
