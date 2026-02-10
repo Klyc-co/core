@@ -146,3 +146,15 @@ verify_jwt = false
 
 [functions.adobe-cc-list-assets]
 verify_jwt = false
+
+[functions.airtable-connect]
+verify_jwt = false
+
+[functions.airtable-list-bases]
+verify_jwt = false
+
+[functions.airtable-save-mapping]
+verify_jwt = false
+
+[functions.airtable-sync]
+verify_jwt = false
