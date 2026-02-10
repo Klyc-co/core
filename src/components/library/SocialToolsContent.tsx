@@ -11,16 +11,19 @@ import DropboxIcon from "@/components/icons/DropboxIcon";
 import NotionIcon from "@/components/icons/NotionIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
+import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import NotionFilePicker from "@/components/NotionFilePicker";
 import AdobeFilePicker from "@/components/AdobeFilePicker";
 import AirtableConnectModal from "@/components/AirtableConnectModal";
 import AirtableDrawer from "@/components/AirtableDrawer";
+import ClickUpConnectModal from "@/components/ClickUpConnectModal";
+import ClickUpDrawer from "@/components/ClickUpDrawer";
 
 interface ToolConnection {
   id: string;
-  type: "dropbox" | "google_drive" | "notion" | "adobe_cc" | "airtable";
+  type: "dropbox" | "google_drive" | "notion" | "adobe_cc" | "airtable" | "clickup";
   name: string;
   email?: string;
   connected: boolean;
@@ -43,6 +46,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
   const [showAdobePicker, setShowAdobePicker] = useState(false);
   const [showAirtableConnectModal, setShowAirtableConnectModal] = useState(false);
   const [showAirtableDrawer, setShowAirtableDrawer] = useState(false);
+  const [showClickUpConnectModal, setShowClickUpConnectModal] = useState(false);
+  const [showClickUpDrawer, setShowClickUpDrawer] = useState(false);
   const [importingFromTool, setImportingFromTool] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -95,6 +100,13 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         .eq("user_id", userId)
         .maybeSingle();
 
+      // Fetch ClickUp connection
+      const { data: clickupConn } = await supabase
+        .from("clickup_connections")
+        .select("id, connection_status, last_sync_at, team_name")
+        .eq("user_id", userId)
+        .maybeSingle();
+
       // Get Airtable summary if connected
       let airtableSummary = "";
       if (airtableConn) {
@@ -107,6 +119,18 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
           const totalRecords = mappings.reduce((s, m) => s + ((m as any).synced_record_count || 0), 0);
           airtableSummary = `${mappings.length} table${mappings.length > 1 ? "s" : ""} synced · ${totalRecords} records`;
         }
+      }
+
+      // Get ClickUp summary if connected
+      let clickupSummary = "";
+      if (clickupConn) {
+        const { data: clickupLists } = await supabase
+          .from("clickup_lists")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("is_selected_for_sync", true);
+        const syncedCount = clickupLists?.length || 0;
+        clickupSummary = syncedCount > 0 ? `${syncedCount} list${syncedCount > 1 ? "s" : ""} synced` : "";
       }
 
       const toolConnections: ToolConnection[] = [];
@@ -156,6 +180,15 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         summary: airtableSummary || undefined,
       });
 
+      toolConnections.push({
+        id: clickupConn?.id || "clickup",
+        type: "clickup",
+        name: "ClickUp",
+        connected: !!clickupConn,
+        lastSync: clickupConn?.last_sync_at,
+        summary: clickupSummary || undefined,
+      });
+
       setConnections(toolConnections);
     } catch (error) {
       console.error("Failed to fetch connections:", error);
@@ -168,6 +201,10 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
     if (!tool.connected) {
       if (tool.type === "airtable") {
         setShowAirtableConnectModal(true);
+        return;
+      }
+      if (tool.type === "clickup") {
+        setShowClickUpConnectModal(true);
         return;
       }
       navigate("/profile/import");
@@ -185,6 +222,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       setShowAdobePicker(true);
     } else if (tool.type === "airtable") {
       setShowAirtableDrawer(true);
+    } else if (tool.type === "clickup") {
+      setShowClickUpDrawer(true);
     }
   };
 
@@ -256,6 +295,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         return <AdobeCreativeCloudIcon className="w-10 h-10" />;
       case "airtable":
         return <AirtableIcon className="w-10 h-10" />;
+      case "clickup":
+        return <ClickUpIcon className="w-10 h-10" />;
       default:
         return <FolderOpen className="w-10 h-10 text-muted-foreground" />;
     }
@@ -302,7 +343,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                         <p className="text-xs text-muted-foreground mt-1">{tool.summary}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {tool.type === "airtable" ? "Click to configure & browse mapped tables" : "Click to browse & import files"}
+                        {tool.type === "airtable" || tool.type === "clickup" ? "Click to configure & browse data" : "Click to browse & import files"}
                       </p>
                     </div>
                   </div>
@@ -312,7 +353,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                       size="sm" 
                       className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                     >
-                      {tool.type === "airtable" ? (
+                      {tool.type === "airtable" || tool.type === "clickup" ? (
                         <><Settings className="w-4 h-4 mr-2" />Configure & Sync</>
                       ) : (
                         <><FolderOpen className="w-4 h-4 mr-2" />Browse Files</>
@@ -347,6 +388,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                       <p className="text-sm text-muted-foreground">
                         {tool.type === "airtable"
                           ? "Pull in content calendars, briefs & social planning tables"
+                          : tool.type === "clickup"
+                          ? "Pull in content calendars, briefs & marketing tasks from ClickUp"
                           : "Not connected"}
                       </p>
                     </div>
@@ -421,6 +464,22 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         <AirtableDrawer
           open={showAirtableDrawer}
           onOpenChange={setShowAirtableDrawer}
+          userId={currentUserId}
+        />
+      )}
+
+      {/* ClickUp Connect Modal */}
+      <ClickUpConnectModal
+        open={showClickUpConnectModal}
+        onOpenChange={setShowClickUpConnectModal}
+        onConnected={() => fetchConnections()}
+      />
+
+      {/* ClickUp Drawer */}
+      {currentUserId && (
+        <ClickUpDrawer
+          open={showClickUpDrawer}
+          onOpenChange={setShowClickUpDrawer}
           userId={currentUserId}
         />
       )}
