@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap, Send } from "lucide-react";
+import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap, Send, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useClientContext } from "@/contexts/ClientContext";
@@ -84,6 +84,7 @@ const CampaignDraftView = () => {
   const [generatedCaptions, setGeneratedCaptions] = useState<GeneratedCaptions | null>(null);
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
   const [isSendingForApproval, setIsSendingForApproval] = useState(false);
+  const [isPostingToYouTube, setIsPostingToYouTube] = useState(false);
 
   const handleSendToZapier = async () => {
     if (!id) return;
@@ -131,6 +132,87 @@ const CampaignDraftView = () => {
       });
     } finally {
       setIsSendingForApproval(false);
+    }
+  };
+
+  const handlePostToYouTube = async () => {
+    if (!id || !user || !draft) return;
+
+    setIsPostingToYouTube(true);
+    try {
+      // Check YouTube connection
+      const { data: ytConnection } = await supabase
+        .from("social_connections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("platform", "youtube")
+        .maybeSingle();
+
+      if (!ytConnection) {
+        toast({
+          title: "YouTube not connected",
+          description: "Please connect your YouTube account first from the Import Brand Sources page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a post_queue entry
+      const { data: postEntry, error: postError } = await supabase
+        .from("post_queue")
+        .insert({
+          user_id: user.id,
+          campaign_draft_id: id,
+          content_type: draft.content_type || "text",
+          post_text: draft.campaign_idea || draft.post_caption || "",
+          video_url: null, // User will need video content
+          status: "publishing",
+        })
+        .select()
+        .single();
+
+      if (postError || !postEntry) throw postError || new Error("Failed to create post entry");
+
+      // Create YouTube platform target
+      const { error: targetError } = await supabase
+        .from("post_platform_targets")
+        .insert({
+          post_queue_id: postEntry.id,
+          platform: "youtube",
+          status: "pending",
+        });
+
+      if (targetError) throw targetError;
+
+      // Trigger the publish function
+      const { data: publishResult, error: publishError } = await supabase.functions.invoke("publish-post", {
+        body: { postQueueId: postEntry.id },
+      });
+
+      if (publishError) throw publishError;
+
+      if (publishResult?.success) {
+        toast({
+          title: "Posted to YouTube!",
+          description: "Your campaign has been published to YouTube successfully.",
+        });
+      } else {
+        const errorMsg = publishResult?.results?.[0]?.error || "Publishing failed";
+        toast({
+          title: "YouTube posting failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error posting to YouTube:", error);
+      toast({
+        title: "Failed to post to YouTube",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPostingToYouTube(false);
     }
   };
 
@@ -297,7 +379,16 @@ const CampaignDraftView = () => {
             Back to Campaign Drafts
           </Button>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={handlePostToYouTube}
+              disabled={isPostingToYouTube}
+              className="gap-2 border-red-600 text-red-600 hover:bg-red-600/10"
+            >
+              {isPostingToYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <Youtube className="w-4 h-4" />}
+              {isPostingToYouTube ? "Posting..." : "Post to YouTube"}
+            </Button>
             <Button
               variant="outline"
               onClick={handleSendToZapier}
