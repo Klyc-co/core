@@ -253,7 +253,7 @@ const socialTools: ToolItem[] = [
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -475,6 +475,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "notion") {
           newStatus['Notion'] = 'connected';
         }
+        if (conn.platform === "adobe_cc") {
+          newStatus['Adobe Creative Cloud'] = 'connected';
+        }
       });
     }
 
@@ -583,6 +586,21 @@ const ImportBrandSources = () => {
         functionName = 'salesforce-crm-auth-url';
       } else if (toolName === 'Notion') {
         functionName = 'notion-auth-url';
+      } else if (toolName === 'Adobe Creative Cloud') {
+        // Adobe CC uses API key auth, no OAuth needed - connect directly
+        try {
+          const { data, error } = await supabase.functions.invoke('adobe-cc-connect', {
+            body: { action: 'connect' }
+          });
+          if (error) throw error;
+          setConnectionStatus(prev => ({ ...prev, [toolName]: 'connected' }));
+          toast.success("Adobe Creative Cloud connected successfully!");
+        } catch (err) {
+          console.error("Adobe CC connect error:", err);
+          toast.error("Failed to connect Adobe Creative Cloud");
+          setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+        }
+        return;
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
