@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -269,9 +270,123 @@ async function publishToTikTok(post: any, connection: any): Promise<{ success: b
 }
 
 async function publishToYouTube(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
-  // YouTube Data API v3
   console.log("Publishing to YouTube:", post.post_text?.substring(0, 50));
-  
-  // TODO: Implement YouTube API call (video upload required)
-  return { success: false, error: "YouTube posting not yet implemented - copy content manually" };
+
+  try {
+    let accessToken = await decryptToken(connection.access_token);
+
+    // Check if token is expired and refresh if needed
+    if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+      if (!connection.refresh_token) {
+        return { success: false, error: "YouTube token expired and no refresh token available. Please reconnect YouTube." };
+      }
+
+      const refreshToken = await decryptToken(connection.refresh_token);
+      const clientId = Deno.env.get("YOUTUBE_CLIENT_ID");
+      const clientSecret = Deno.env.get("YOUTUBE_CLIENT_SECRET");
+
+      if (!clientId || !clientSecret) {
+        return { success: false, error: "YouTube client credentials not configured" };
+      }
+
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const errText = await tokenRes.text();
+        console.error("YouTube token refresh failed:", errText);
+        return { success: false, error: "Failed to refresh YouTube token. Please reconnect YouTube." };
+      }
+
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+    }
+
+    // YouTube requires a video file to upload. Check if we have a video URL.
+    const videoUrl = post.video_url;
+    if (!videoUrl) {
+      return { success: false, error: "No video URL found in post. YouTube requires a video to upload." };
+    }
+
+    // Download the video content
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) {
+      return { success: false, error: "Failed to download video for YouTube upload" };
+    }
+    const videoBlob = await videoRes.blob();
+
+    // Step 1: Start resumable upload
+    const title = post.post_text?.substring(0, 100) || "Uploaded via Klyc";
+    const description = post.post_text || "";
+
+    const metadata = {
+      snippet: {
+        title,
+        description,
+        categoryId: "22", // People & Blogs
+      },
+      status: {
+        privacyStatus: "public",
+        selfDeclaredMadeForKids: false,
+      },
+    };
+
+    const initiateRes = await fetch(
+      "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Length": String(videoBlob.size),
+          "X-Upload-Content-Type": videoBlob.type || "video/mp4",
+        },
+        body: JSON.stringify(metadata),
+      }
+    );
+
+    if (!initiateRes.ok) {
+      const errText = await initiateRes.text();
+      console.error("YouTube upload initiation failed:", errText);
+      return { success: false, error: `YouTube upload failed: ${initiateRes.status}` };
+    }
+
+    const uploadUrl = initiateRes.headers.get("Location");
+    if (!uploadUrl) {
+      return { success: false, error: "YouTube did not return an upload URL" };
+    }
+
+    // Step 2: Upload the video
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": videoBlob.type || "video/mp4",
+        "Content-Length": String(videoBlob.size),
+      },
+      body: videoBlob,
+    });
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      console.error("YouTube video upload failed:", errText);
+      return { success: false, error: `YouTube video upload failed: ${uploadRes.status}` };
+    }
+
+    const uploadData = await uploadRes.json();
+    const videoId = uploadData.id;
+
+    console.log("YouTube video uploaded successfully:", videoId);
+    return { success: true, postId: videoId };
+  } catch (error) {
+    console.error("YouTube publish error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown YouTube error" };
+  }
 }
