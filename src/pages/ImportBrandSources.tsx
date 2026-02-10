@@ -749,7 +749,12 @@ const ImportBrandSources = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          window.location.href = authUrl;
+          if (platform.name === "Patreon") {
+            window.open(authUrl, '_blank');
+            toast.info("Complete Patreon authorization in the new window");
+          } else {
+            window.location.href = authUrl;
+          }
         } else {
           throw new Error("No auth URL returned");
         }
