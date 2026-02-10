@@ -158,3 +158,15 @@ verify_jwt = false
 
 [functions.airtable-sync]
 verify_jwt = false
+
+[functions.clickup-connect]
+verify_jwt = false
+
+[functions.clickup-list-spaces]
+verify_jwt = false
+
+[functions.clickup-sync]
+verify_jwt = false
+
+[functions.clickup-update-selection]
+verify_jwt = false

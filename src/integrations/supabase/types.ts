@@ -344,6 +344,228 @@ export type Database = {
         }
         Relationships: []
       }
+      clickup_attachments: {
+        Row: {
+          clickup_task_id: string
+          connection_id: string
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          list_name: string | null
+          mime_type: string | null
+          size: number | null
+          task_title: string | null
+          user_id: string
+        }
+        Insert: {
+          clickup_task_id: string
+          connection_id: string
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          list_name?: string | null
+          mime_type?: string | null
+          size?: number | null
+          task_title?: string | null
+          user_id: string
+        }
+        Update: {
+          clickup_task_id?: string
+          connection_id?: string
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          list_name?: string | null
+          mime_type?: string | null
+          size?: number | null
+          task_title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_attachments_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "clickup_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clickup_connections: {
+        Row: {
+          api_token: string
+          connection_status: string | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          sync_frequency: string | null
+          team_id: string | null
+          team_name: string | null
+          updated_at: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          connection_status?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          sync_frequency?: string | null
+          team_id?: string | null
+          team_name?: string | null
+          updated_at?: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          connection_status?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          sync_frequency?: string | null
+          team_id?: string | null
+          team_name?: string | null
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      clickup_lists: {
+        Row: {
+          clickup_list_id: string
+          connection_id: string
+          created_at: string
+          folder_name: string | null
+          id: string
+          is_marketing_suggested: boolean | null
+          is_selected_for_sync: boolean | null
+          last_sync_at: string | null
+          name: string
+          space_name: string | null
+          task_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clickup_list_id: string
+          connection_id: string
+          created_at?: string
+          folder_name?: string | null
+          id?: string
+          is_marketing_suggested?: boolean | null
+          is_selected_for_sync?: boolean | null
+          last_sync_at?: string | null
+          name: string
+          space_name?: string | null
+          task_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clickup_list_id?: string
+          connection_id?: string
+          created_at?: string
+          folder_name?: string | null
+          id?: string
+          is_marketing_suggested?: boolean | null
+          is_selected_for_sync?: boolean | null
+          last_sync_at?: string | null
+          name?: string
+          space_name?: string | null
+          task_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_lists_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "clickup_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clickup_tasks: {
+        Row: {
+          assignees: Json | null
+          clickup_list_id: string
+          clickup_task_id: string
+          connection_id: string
+          created_at: string
+          date_created: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          list_name: string | null
+          priority: string | null
+          raw: Json | null
+          start_date: string | null
+          status: string | null
+          tags: Json | null
+          title: string
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          assignees?: Json | null
+          clickup_list_id: string
+          clickup_task_id: string
+          connection_id: string
+          created_at?: string
+          date_created?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_name?: string | null
+          priority?: string | null
+          raw?: Json | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          assignees?: Json | null
+          clickup_list_id?: string
+          clickup_task_id?: string
+          connection_id?: string
+          created_at?: string
+          date_created?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          list_name?: string | null
+          priority?: string | null
+          raw?: Json | null
+          start_date?: string | null
+          status?: string | null
+          tags?: Json | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_tasks_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "clickup_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles: {
         Row: {
           audience_data: Json | null
