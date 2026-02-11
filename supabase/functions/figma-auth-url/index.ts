@@ -51,7 +51,7 @@ serve(async (req) => {
 
     const redirectUri = `${SUPABASE_URL}/functions/v1/figma-oauth-callback`;
 
-    const scopes = "files:read";
+    const scopes = "file_content:read,file_metadata:read";
 
     const authUrl = new URL("https://www.figma.com/oauth");
     authUrl.searchParams.set("client_id", FIGMA_CLIENT_ID);
