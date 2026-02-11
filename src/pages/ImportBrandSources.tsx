@@ -27,6 +27,7 @@ import TrelloIcon from "@/components/icons/TrelloIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import AirtableConnectModal from "@/components/AirtableConnectModal";
+import TrelloConnectModal from "@/components/TrelloConnectModal";
 import FigmaIcon from "@/components/icons/FigmaIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
@@ -327,6 +328,7 @@ const ImportBrandSources = () => {
   const [shopifyModalOpen, setShopifyModalOpen] = useState(false);
   const [shopifyDomain, setShopifyDomain] = useState("");
   const [airtableModalOpen, setAirtableModalOpen] = useState(false);
+  const [trelloModalOpen, setTrelloModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -560,6 +562,17 @@ const ImportBrandSources = () => {
       newStatus['Airtable'] = 'connected';
     }
 
+    // Check Trello connection
+    const { data: trelloConn } = await supabase
+      .from("trello_connections")
+      .select("id, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (trelloConn && trelloConn.connection_status === 'connected') {
+      newStatus['Trello'] = 'connected';
+    }
+
     // Check Dropbox connection
     const { data: dropboxConn } = await supabase
       .from("dropbox_connections")
@@ -645,6 +658,12 @@ const ImportBrandSources = () => {
     // For Airtable, open the connect modal (uses Personal Access Token)
     if (toolName === 'Airtable') {
       setAirtableModalOpen(true);
+      return;
+    }
+
+    // For Trello, open the connect modal (uses API key + token)
+    if (toolName === 'Trello') {
+      setTrelloModalOpen(true);
       return;
     }
 
