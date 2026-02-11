@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
     });
     const encodedState = btoa(state);
 
-    // LinkedIn OAuth 2.0 scopes for OpenID Connect
-    const scopes = ["openid", "profile", "email"];
+    // LinkedIn OAuth 2.0 scopes for OpenID Connect + posting
+    const scopes = ["openid", "profile", "email", "w_member_social"];
 
     // Build the authorization URL
     const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");

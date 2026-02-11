@@ -85,6 +85,7 @@ const CampaignDraftView = () => {
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
   const [isSendingForApproval, setIsSendingForApproval] = useState(false);
   const [isPostingToYouTube, setIsPostingToYouTube] = useState(false);
+  const [isPostingToLinkedIn, setIsPostingToLinkedIn] = useState(false);
 
   const handleSendToZapier = async () => {
     if (!id) return;
@@ -213,6 +214,83 @@ const CampaignDraftView = () => {
       });
     } finally {
       setIsPostingToYouTube(false);
+    }
+  };
+
+  const handlePostToLinkedIn = async () => {
+    if (!id || !user || !draft) return;
+
+    setIsPostingToLinkedIn(true);
+    try {
+      const { data: liConnection } = await supabase
+        .from("social_connections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("platform", "linkedin")
+        .maybeSingle();
+
+      if (!liConnection) {
+        toast({
+          title: "LinkedIn not connected",
+          description: "Please connect your LinkedIn account first from the Import Brand Sources page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: postEntry, error: postError } = await supabase
+        .from("post_queue")
+        .insert({
+          user_id: user.id,
+          campaign_draft_id: id,
+          content_type: draft.content_type || "text",
+          post_text: draft.campaign_idea || draft.post_caption || "",
+          image_url: null,
+          status: "publishing",
+        })
+        .select()
+        .single();
+
+      if (postError || !postEntry) throw postError || new Error("Failed to create post entry");
+
+      const { error: targetError } = await supabase
+        .from("post_platform_targets")
+        .insert({
+          post_queue_id: postEntry.id,
+          platform: "linkedin",
+          status: "pending",
+        });
+
+      if (targetError) throw targetError;
+
+      const { data: publishResult, error: publishError } = await supabase.functions.invoke("publish-post", {
+        body: { postQueueId: postEntry.id },
+      });
+
+      if (publishError) throw publishError;
+
+      if (publishResult?.success) {
+        toast({
+          title: "Posted to LinkedIn!",
+          description: "Your campaign has been published to LinkedIn successfully.",
+        });
+      } else {
+        const errorMsg = publishResult?.results?.[0]?.error || "Publishing failed";
+        toast({
+          title: "LinkedIn posting failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error posting to LinkedIn:", error);
+      toast({
+        title: "Failed to post to LinkedIn",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPostingToLinkedIn(false);
     }
   };
 
@@ -380,6 +458,15 @@ const CampaignDraftView = () => {
           </Button>
           
           <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={handlePostToLinkedIn}
+              disabled={isPostingToLinkedIn}
+              className="gap-2 border-blue-700 text-blue-700 hover:bg-blue-700/10"
+            >
+              {isPostingToLinkedIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <LinkedInIcon className="w-4 h-4" />}
+              {isPostingToLinkedIn ? "Posting..." : "Post to LinkedIn"}
+            </Button>
             <Button
               variant="outline"
               onClick={handlePostToYouTube}

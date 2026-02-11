@@ -254,11 +254,112 @@ async function publishToInstagram(post: any, connection: any): Promise<{ success
 }
 
 async function publishToLinkedIn(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
-  // LinkedIn API posting
   console.log("Publishing to LinkedIn:", post.post_text?.substring(0, 50));
-  
-  // TODO: Implement LinkedIn API call
-  return { success: false, error: "LinkedIn posting not yet implemented - copy content manually" };
+
+  try {
+    let accessToken = await decryptToken(connection.access_token);
+
+    // Check if token is expired and refresh if needed
+    if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+      if (!connection.refresh_token) {
+        return { success: false, error: "LinkedIn token expired and no refresh token available. Please reconnect LinkedIn." };
+      }
+
+      const refreshToken = await decryptToken(connection.refresh_token);
+      const clientId = Deno.env.get("LINKEDIN_CLIENT_ID");
+      const clientSecret = Deno.env.get("LINKEDIN_CLIENT_SECRET");
+
+      if (!clientId || !clientSecret) {
+        return { success: false, error: "LinkedIn client credentials not configured" };
+      }
+
+      const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const errText = await tokenRes.text();
+        console.error("LinkedIn token refresh failed:", errText);
+        return { success: false, error: "Failed to refresh LinkedIn token. Please reconnect LinkedIn." };
+      }
+
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+    }
+
+    // Get the LinkedIn member URN via userinfo
+    const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!profileRes.ok) {
+      const errText = await profileRes.text();
+      console.error("LinkedIn profile fetch failed:", errText);
+      return { success: false, error: "Failed to fetch LinkedIn profile. Please reconnect LinkedIn." };
+    }
+
+    const profileData = await profileRes.json();
+    const personUrn = `urn:li:person:${profileData.sub}`;
+
+    // Build the post payload
+    const postText = post.post_text || post.campaign_idea || "";
+    const postBody: any = {
+      author: personUrn,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: {
+            text: postText,
+          },
+          shareMediaCategory: "NONE",
+        },
+      },
+      visibility: {
+        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+      },
+    };
+
+    // If there's an image URL, attach it as media
+    if (post.image_url) {
+      postBody.specificContent["com.linkedin.ugc.ShareContent"].shareMediaCategory = "ARTICLE";
+      postBody.specificContent["com.linkedin.ugc.ShareContent"].media = [
+        {
+          status: "READY",
+          originalUrl: post.image_url,
+        },
+      ];
+    }
+
+    const publishRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+      body: JSON.stringify(postBody),
+    });
+
+    if (!publishRes.ok) {
+      const errText = await publishRes.text();
+      console.error("LinkedIn post failed:", errText);
+      return { success: false, error: `LinkedIn post failed: ${publishRes.status}` };
+    }
+
+    const postId = publishRes.headers.get("x-restli-id") || "unknown";
+    console.log("LinkedIn post published successfully:", postId);
+    return { success: true, postId };
+  } catch (error) {
+    console.error("LinkedIn publish error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown LinkedIn error" };
+  }
 }
 
 async function publishToTikTok(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
