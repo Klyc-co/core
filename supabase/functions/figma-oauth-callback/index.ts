@@ -108,7 +108,7 @@ serve(async (req) => {
         token_expires_at: expiresAt,
         platform_user_id: figmaUserId,
         platform_username: figmaHandle,
-        scopes: ["files:read"],
+        scopes: ["file_content:read", "file_metadata:read"],
         updated_at: new Date().toISOString(),
       }, {
         onConflict: "user_id,platform",
