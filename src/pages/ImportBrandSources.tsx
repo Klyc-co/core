@@ -252,7 +252,7 @@ const socialTools: ToolItem[] = [
   
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -392,6 +392,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "figma") {
+      toast.success("Figma connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Figma: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (success === "patreon") {
       toast.success("Patreon connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Patreon: 'connected' }));
@@ -505,6 +511,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
         }
+        if (conn.platform === "figma") {
+          newStatus['Figma'] = 'connected';
+        }
       });
     }
 
@@ -613,6 +622,8 @@ const ImportBrandSources = () => {
         functionName = 'salesforce-crm-auth-url';
       } else if (toolName === 'Notion') {
         functionName = 'notion-auth-url';
+      } else if (toolName === 'Figma') {
+        functionName = 'figma-auth-url';
       } else if (toolName === 'Adobe Creative Cloud') {
         // Adobe CC uses API key auth, no OAuth needed - connect directly
         try {
