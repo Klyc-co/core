@@ -275,7 +275,7 @@ const socialTools: ToolItem[] = [
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]" },
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black" },
-  { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true },
+  { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white" },
   { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black" },
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]" },
@@ -398,6 +398,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "slack") {
+      toast.success("Slack connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Slack: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (success === "patreon") {
       toast.success("Patreon connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Patreon: 'connected' }));
@@ -514,6 +520,9 @@ const ImportBrandSources = () => {
         if (conn.platform === "figma") {
           newStatus['Figma'] = 'connected';
         }
+        if (conn.platform === "slack") {
+          newStatus['Slack'] = 'connected';
+        }
       });
     }
 
@@ -624,6 +633,8 @@ const ImportBrandSources = () => {
         functionName = 'notion-auth-url';
       } else if (toolName === 'Figma') {
         functionName = 'figma-auth-url';
+      } else if (toolName === 'Slack') {
+        functionName = 'slack-auth-url';
       } else if (toolName === 'Adobe Creative Cloud') {
         // Adobe CC uses API key auth, no OAuth needed - connect directly
         try {
