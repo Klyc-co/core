@@ -188,3 +188,9 @@ verify_jwt = false
 
 [functions.tumblr-oauth-callback]
 verify_jwt = false
+
+[functions.figma-auth-url]
+verify_jwt = false
+
+[functions.figma-oauth-callback]
+verify_jwt = false
