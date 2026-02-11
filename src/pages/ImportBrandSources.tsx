@@ -26,6 +26,7 @@ import TrelloIcon from "@/components/icons/TrelloIcon";
 
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
+import AirtableConnectModal from "@/components/AirtableConnectModal";
 import FigmaIcon from "@/components/icons/FigmaIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
@@ -325,6 +326,7 @@ const ImportBrandSources = () => {
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
   const [shopifyModalOpen, setShopifyModalOpen] = useState(false);
   const [shopifyDomain, setShopifyDomain] = useState("");
+  const [airtableModalOpen, setAirtableModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -547,6 +549,17 @@ const ImportBrandSources = () => {
       newStatus['Google Drive'] = 'connected';
     }
 
+    // Check Airtable connection
+    const { data: airtableConn } = await supabase
+      .from("airtable_connections")
+      .select("id, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (airtableConn && airtableConn.connection_status === 'connected') {
+      newStatus['Airtable'] = 'connected';
+    }
+
     // Check Dropbox connection
     const { data: dropboxConn } = await supabase
       .from("dropbox_connections")
@@ -626,6 +639,12 @@ const ImportBrandSources = () => {
     // For Shopify, open the modal to get shop domain
     if (toolName === 'Shopify') {
       setShopifyModalOpen(true);
+      return;
+    }
+
+    // For Airtable, open the connect modal (uses Personal Access Token)
+    if (toolName === 'Airtable') {
+      setAirtableModalOpen(true);
       return;
     }
 
@@ -1283,6 +1302,16 @@ const ImportBrandSources = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Airtable Connect Modal */}
+      <AirtableConnectModal
+        open={airtableModalOpen}
+        onOpenChange={setAirtableModalOpen}
+        onConnected={() => {
+          setConnectionStatus(prev => ({ ...prev, Airtable: 'connected' }));
+          toast.success("Airtable connected successfully!");
+        }}
+      />
     </div>
   );
 };
