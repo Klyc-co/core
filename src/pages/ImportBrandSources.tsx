@@ -271,7 +271,7 @@ const socialTools: ToolItem[] = [
   { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -416,6 +416,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "box") {
+      toast.success("Box connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Box: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (success === "patreon") {
       toast.success("Patreon connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Patreon: 'connected' }));
@@ -537,6 +543,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "discord") {
           newStatus['Discord'] = 'connected';
+        }
+        if (conn.platform === "box") {
+          newStatus['Box'] = 'connected';
         }
       });
     }
@@ -703,6 +712,8 @@ const ImportBrandSources = () => {
         functionName = 'slack-auth-url';
       } else if (toolName === 'Discord') {
         functionName = 'discord-auth-url';
+      } else if (toolName === 'Box') {
+        functionName = 'box-auth-url';
       } else if (toolName === 'Adobe Creative Cloud') {
         // Adobe CC uses API key auth, no OAuth needed - connect directly
         try {

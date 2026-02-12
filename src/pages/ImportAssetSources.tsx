@@ -89,7 +89,8 @@ const storagePlatforms: StoragePlatform[] = [
     icon: BoxIcon,
     bgColor: "bg-[#0061D5]",
     description: "Import files from Box",
-    comingSoon: true,
+    connectionTable: "social_connections",
+    hasFilePicker: false,
   },
   {
     id: "canva",
@@ -223,6 +224,16 @@ const ImportAssetSources = () => {
         .maybeSingle();
       
       connections["adobe-cc"] = !!adobeData;
+
+      // Check Box connection
+      const { data: boxData } = await supabase
+        .from("social_connections")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("platform", "box")
+        .maybeSingle();
+      
+      connections["box"] = !!boxData;
 
       // Check Airtable connection
       const { data: airtableData } = await supabase

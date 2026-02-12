@@ -206,3 +206,9 @@ verify_jwt = false
 
 [functions.discord-oauth-callback]
 verify_jwt = false
+
+[functions.box-auth-url]
+verify_jwt = false
+
+[functions.box-oauth-callback]
+verify_jwt = false
