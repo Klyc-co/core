@@ -564,12 +564,12 @@ const ImportBrandSources = () => {
 
     // Check Trello connection
     const { data: trelloConn } = await supabase
-      .from("trello_connections")
+      .from("trello_connections" as any)
       .select("id, connection_status")
       .eq("user_id", user.id)
       .maybeSingle();
     
-    if (trelloConn && trelloConn.connection_status === 'connected') {
+    if (trelloConn && (trelloConn as any).connection_status === 'connected') {
       newStatus['Trello'] = 'connected';
     }
 
@@ -1329,6 +1329,16 @@ const ImportBrandSources = () => {
         onConnected={() => {
           setConnectionStatus(prev => ({ ...prev, Airtable: 'connected' }));
           toast.success("Airtable connected successfully!");
+        }}
+      />
+
+      {/* Trello Connect Modal */}
+      <TrelloConnectModal
+        open={trelloModalOpen}
+        onOpenChange={setTrelloModalOpen}
+        onConnected={() => {
+          setConnectionStatus(prev => ({ ...prev, Trello: 'connected' }));
+          toast.success("Trello connected successfully!");
         }}
       />
     </div>
