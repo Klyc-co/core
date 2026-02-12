@@ -1979,6 +1979,45 @@ export type Database = {
         }
         Relationships: []
       }
+      trello_connections: {
+        Row: {
+          api_key: string
+          api_token: string
+          connection_status: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string
+          last_sync_at: string | null
+          member_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          api_token: string
+          connection_status?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          member_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          api_token?: string
+          connection_status?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          member_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
