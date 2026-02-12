@@ -1261,6 +1261,39 @@ export type Database = {
         }
         Relationships: []
       }
+      loom_connections: {
+        Row: {
+          api_token: string
+          connection_status: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string
+          last_sync_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          connection_status?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          connection_status?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketer_clients: {
         Row: {
           client_email: string | null
