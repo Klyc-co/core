@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic } from "lucide-react";
+import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
@@ -17,6 +18,15 @@ interface Product {
   id: string;
   name: string;
 }
+
+const voices = [
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", desc: "British, warm" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", desc: "American, soft" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", desc: "American, young" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", desc: "British, narration" },
+  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", desc: "American, deep" },
+  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", desc: "British, authoritative" },
+];
 
 const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
@@ -64,6 +74,14 @@ const GenerateCampaignIdeas = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const { getEffectiveUserId } = useClientContext();
+
+  // Voiceover state
+  const [voiceoverSource, setVoiceoverSource] = useState<"script" | "objective">("script");
+  const [selectedVoice, setSelectedVoice] = useState("JBFqnCBsd6RMkjVDRZzb");
+  const [isGeneratingVoiceover, setIsGeneratingVoiceover] = useState(false);
+  const [voiceoverAudioUrl, setVoiceoverAudioUrl] = useState<string | null>(null);
+  const [isPlayingVoiceover, setIsPlayingVoiceover] = useState(false);
+  const [voiceoverAudioRef] = useState<{ current: HTMLAudioElement | null }>({ current: null });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -371,6 +389,86 @@ const GenerateCampaignIdeas = () => {
     }
   };
 
+  const handleGenerateVoiceover = async () => {
+    const textToVoice = voiceoverSource === "script" ? videoScript : campaignObjective;
+    if (!textToVoice?.trim()) {
+      toast({
+        title: "No content to voice",
+        description: `Please generate a campaign idea first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingVoiceover(true);
+    setVoiceoverAudioUrl(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ text: textToVoice, voiceId: selectedVoice }),
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Request failed: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setVoiceoverAudioUrl(audioUrl);
+
+      toast({ title: "Voiceover generated!", description: "Your AI voiceover is ready to play." });
+    } catch (error) {
+      console.error("Error generating voiceover:", error);
+      toast({
+        title: "Failed to generate voiceover",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingVoiceover(false);
+    }
+  };
+
+  const handlePlayPauseVoiceover = () => {
+    if (!voiceoverAudioUrl) return;
+    if (voiceoverAudioRef.current) {
+      if (isPlayingVoiceover) {
+        voiceoverAudioRef.current.pause();
+        setIsPlayingVoiceover(false);
+      } else {
+        voiceoverAudioRef.current.play();
+        setIsPlayingVoiceover(true);
+      }
+    } else {
+      const audio = new Audio(voiceoverAudioUrl);
+      voiceoverAudioRef.current = audio;
+      audio.onended = () => setIsPlayingVoiceover(false);
+      audio.play();
+      setIsPlayingVoiceover(true);
+    }
+  };
+
+  const handleDownloadVoiceover = () => {
+    if (!voiceoverAudioUrl) return;
+    const link = document.createElement('a');
+    link.href = voiceoverAudioUrl;
+    link.download = `voiceover-${Date.now()}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
@@ -581,6 +679,96 @@ const GenerateCampaignIdeas = () => {
                   <p className="text-sm text-muted-foreground mt-4">
                     Use these prompts with AI video generation tools like Runway, Synthesia, or comparable video generation services to create each scene.
                   </p>
+                </CardContent>
+              </Card>
+
+              {/* Voiceover Generation */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ElevenLabsIcon className="w-5 h-5 text-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">AI Voiceover</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-2">Content to voice:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => { setVoiceoverSource("script"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "script" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                        >
+                          <Mic className="w-4 h-4 mx-auto mb-1" />
+                          Video Script
+                        </button>
+                        <button
+                          onClick={() => { setVoiceoverSource("objective"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "objective" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                        >
+                          <FileText className="w-4 h-4 mx-auto mb-1" />
+                          Campaign Objective
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-2">Select Voice:</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {voices.map((voice) => (
+                          <button
+                            key={voice.id}
+                            onClick={() => { setSelectedVoice(voice.id); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                            className={`p-2 rounded-lg border-2 text-center transition-all ${selectedVoice === voice.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                          >
+                            <span className="text-sm font-medium text-foreground block">{voice.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{voice.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full gap-2"
+                      onClick={handleGenerateVoiceover}
+                      disabled={isGeneratingVoiceover}
+                    >
+                      {isGeneratingVoiceover ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating Voiceover...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-4 h-4" />
+                          Generate Voiceover
+                        </>
+                      )}
+                    </Button>
+
+                    {voiceoverAudioUrl && (
+                      <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePlayPauseVoiceover}
+                          className="gap-2"
+                        >
+                          {isPlayingVoiceover ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          {isPlayingVoiceover ? "Stop" : "Play"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadVoiceover}
+                          className="gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download MP3
+                        </Button>
+                        <span className="text-xs text-muted-foreground ml-auto">Powered by ElevenLabs</span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1001,6 +1189,96 @@ const GenerateCampaignIdeas = () => {
                   <p className="text-sm text-muted-foreground mt-4">
                     Use these prompts with AI video generation tools like Runway, Synthesia, or comparable video generation services to create each scene.
                   </p>
+                </CardContent>
+              </Card>
+
+              {/* Voiceover Generation */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ElevenLabsIcon className="w-5 h-5 text-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground">AI Voiceover</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-2">Content to voice:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => { setVoiceoverSource("script"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "script" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                        >
+                          <Mic className="w-4 h-4 mx-auto mb-1" />
+                          Video Script
+                        </button>
+                        <button
+                          onClick={() => { setVoiceoverSource("objective"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "objective" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                        >
+                          <FileText className="w-4 h-4 mx-auto mb-1" />
+                          Campaign Objective
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-2">Select Voice:</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {voices.map((voice) => (
+                          <button
+                            key={voice.id}
+                            onClick={() => { setSelectedVoice(voice.id); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
+                            className={`p-2 rounded-lg border-2 text-center transition-all ${selectedVoice === voice.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                          >
+                            <span className="text-sm font-medium text-foreground block">{voice.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{voice.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full gap-2"
+                      onClick={handleGenerateVoiceover}
+                      disabled={isGeneratingVoiceover}
+                    >
+                      {isGeneratingVoiceover ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating Voiceover...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-4 h-4" />
+                          Generate Voiceover
+                        </>
+                      )}
+                    </Button>
+
+                    {voiceoverAudioUrl && (
+                      <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePlayPauseVoiceover}
+                          className="gap-2"
+                        >
+                          {isPlayingVoiceover ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          {isPlayingVoiceover ? "Stop" : "Play"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadVoiceover}
+                          className="gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download MP3
+                        </Button>
+                        <span className="text-xs text-muted-foreground ml-auto">Powered by ElevenLabs</span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
