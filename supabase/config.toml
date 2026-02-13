@@ -212,3 +212,9 @@ verify_jwt = false
 
 [functions.box-oauth-callback]
 verify_jwt = false
+
+[functions.monday-auth-url]
+verify_jwt = false
+
+[functions.monday-oauth-callback]
+verify_jwt = false
