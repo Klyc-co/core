@@ -218,3 +218,6 @@ verify_jwt = false
 
 [functions.monday-oauth-callback]
 verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
