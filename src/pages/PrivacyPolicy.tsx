@@ -19,86 +19,272 @@ const PrivacyPolicy = () => {
         </Button>
 
         <article className="prose prose-neutral dark:prose-invert max-w-none">
-          <h1 className="text-3xl font-bold text-foreground mb-2">PRIVACY POLICY</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">KLYC PRIVACY POLICY</h1>
           <p className="text-muted-foreground mb-8">Last Updated: January 6, 2026</p>
 
           <p>
-            Klyc, Inc. ("Klyc," "we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform, website, and services (collectively, the "Services").
+            Klyc, Inc. ("Klyc," "we," "us," or "our") respects your privacy and is committed to protecting personal information. This Privacy Policy describes how we collect, use, disclose, and safeguard information when you access or use our website, applications, APIs, AI systems, creator marketplace, and related services (collectively, the "Services").
+          </p>
+          <p>
+            By using the Services, you acknowledge that you have read and understood this Privacy Policy.
           </p>
 
-          <h2>1. Information We Collect</h2>
-          <p>
-            We collect information that you provide directly to us, as well as information generated automatically through your use of the Services.
-          </p>
+          <h2>1. Scope</h2>
+          <p>This Privacy Policy applies to:</p>
           <ul>
-            <li><strong>Account Information:</strong> Name, email address, password, company name, and professional profiles (e.g., LinkedIn or social media handles).</li>
-            <li><strong>User Content:</strong> Text, images, videos, audio, and other materials you upload or provide to our AI tools for processing.</li>
-            <li><strong>Payment Data:</strong> While we do not store credit card numbers (we use third-party processors like Stripe), we collect billing addresses and transaction history.</li>
-            <li><strong>Usage Data:</strong> IP addresses, browser type, device identifiers, and details on how you interact with our AI agents and marketplace.</li>
+            <li>Website visitors</li>
+            <li>Registered users</li>
+            <li>Creator marketplace participants</li>
+            <li>Individuals whose data is processed via third-party platform integrations</li>
+          </ul>
+          <p>It does not apply to third-party services you connect to Klyc.</p>
+
+          <h2>2. Information We Collect</h2>
+          <p>We collect information in the following categories:</p>
+
+          <h3>2.1 Information You Provide Directly</h3>
+
+          <p><strong>Account Information</strong></p>
+          <ul>
+            <li>Name</li>
+            <li>Email address</li>
+            <li>Company name</li>
+            <li>Password (encrypted)</li>
+            <li>Professional profile information</li>
           </ul>
 
-          <h2>2. How We Use Your Information</h2>
-          <p>We use the collected data to:</p>
+          <p><strong>User Content</strong></p>
           <ul>
-            <li><strong>Provide the Services:</strong> Including AI content generation, transcription, and marketplace matching.</li>
-            <li><strong>Improve AI Models:</strong> We may use anonymized or de-identified User Content to train and refine our proprietary algorithms and AI models.</li>
-            <li><strong>Communication:</strong> To send product updates, security alerts, and support messages.</li>
-            <li><strong>Analytics:</strong> To monitor platform performance and user trends to optimize the user experience.</li>
+            <li>Text</li>
+            <li>Images</li>
+            <li>Video</li>
+            <li>Audio</li>
+            <li>Campaign materials</li>
+            <li>Prompts submitted to AI systems</li>
           </ul>
 
-          <h2>3. Sharing of Information</h2>
-          <p>
-            We do not sell your personal information. We may share your data only in the following circumstances:
-          </p>
+          <p><strong>Billing Information</strong></p>
           <ul>
-            <li><strong>With Service Providers:</strong> Third-party vendors who provide cloud hosting (e.g., AWS/Google Cloud), payment processing, and customer support tools.</li>
-            <li><strong>Marketplace Interactions:</strong> If you are a User engaging a Creator, we share necessary contact info to facilitate the engagement.</li>
+            <li>Billing address</li>
+            <li>Transaction history</li>
+            <li>Subscription details</li>
+          </ul>
+          <p>(Payment card data is processed by third-party payment processors such as Stripe. We do not store full card numbers.)</p>
+
+          <p><strong>Communications</strong></p>
+          <ul>
+            <li>Support tickets</li>
+            <li>Emails</li>
+            <li>Feedback</li>
+            <li>Creator marketplace communications</li>
           </ul>
 
-          <h2>4. AI Training and Data Security</h2>
-          <p>Klyc takes the security of your content seriously.</p>
+          <h3>2.2 Information Collected Automatically</h3>
+
+          <p><strong>Usage Data</strong></p>
           <ul>
-            <li><strong>Data Minimization:</strong> We strive to collect only the data necessary to provide our AI-driven features.</li>
-            <li><strong>Security Measures:</strong> We implement industry-standard encryption (SSL/TLS) and administrative safeguards to protect your data.</li>
-            <li><strong>Model Training Opt-Out:</strong> If you wish to opt-out of having your User Content used for model training, please contact privacy@klyc.ai.</li>
+            <li>IP address</li>
+            <li>Browser type</li>
+            <li>Device identifiers</li>
+            <li>Session timestamps</li>
+            <li>Pages viewed</li>
+            <li>Feature usage</li>
+            <li>Interaction logs with AI systems</li>
           </ul>
 
-          <h2>5. Your Rights and Choices</h2>
-          <p>Depending on your location, you may have the right to:</p>
+          <p><strong>Log Data</strong></p>
           <ul>
-            <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
-            <li><strong>Correction:</strong> Update inaccurate or incomplete information.</li>
-            <li><strong>Deletion:</strong> Request that we delete your personal data (subject to legal or contractual obligations).</li>
-            <li><strong>Marketing Preferences:</strong> Opt-out of promotional emails at any time.</li>
+            <li>API requests</li>
+            <li>System events</li>
+            <li>Error logs</li>
+            <li>Performance data</li>
           </ul>
 
-          <h2>6. Third-Party Integrations</h2>
-          <p>
-            Our Services integrate with third-party platforms (e.g., YouTube, TikTok, Google). Klyc is not responsible for the privacy practices of these third parties. We recommend reviewing the privacy policies of any platform you link to your Klyc account.
-          </p>
+          <p><strong>Cookies and Similar Technologies</strong></p>
+          <p>We use cookies for:</p>
+          <ul>
+            <li>Authentication</li>
+            <li>Security</li>
+            <li>Analytics</li>
+            <li>Platform functionality</li>
+          </ul>
+          <p>You may disable cookies via browser settings.</p>
 
-          <h2>7. International Data Transfers</h2>
-          <p>
-            Klyc is based in the United States. By using our Services, you consent to the transfer and processing of your information in the U.S., where data protection laws may differ from those in your home jurisdiction.
-          </p>
+          <h3>2.3 Information from Third-Party Integrations</h3>
+          <p>If you connect a third-party platform (e.g., YouTube, TikTok, Meta, LinkedIn, ClickUp):</p>
+          <p>We may access:</p>
+          <ul>
+            <li>Account identifiers</li>
+            <li>Profile information</li>
+            <li>Post metadata</li>
+            <li>Performance analytics</li>
+            <li>Campaign metrics</li>
+            <li>Workspace data (for productivity integrations)</li>
+          </ul>
+          <p>We access only the data necessary to provide requested Services.</p>
+          <p>We do not access private messages unless explicitly authorized.</p>
+          <p>We do not sell third-party API data.</p>
 
-          <h2>8. Children's Privacy</h2>
-          <p>
-            Klyc is not intended for use by individuals under the age of 18. We do not knowingly collect personal information from children. If we become aware that a child has provided us with personal data, we will delete it immediately.
-          </p>
+          <h2>3. How We Use Information</h2>
+          <p>We process information to:</p>
 
-          <h2>9. Changes to This Policy</h2>
-          <p>
-            We may update this Privacy Policy periodically to reflect changes in our practices or for legal reasons. We will notify you of any material changes by updating the "Last Updated" date at the top of this policy.
-          </p>
+          <h3>3.1 Provide Services</h3>
+          <ul>
+            <li>Operate AI content generation</li>
+            <li>Publish content to connected platforms</li>
+            <li>Display analytics</li>
+            <li>Enable Creator marketplace functionality</li>
+            <li>Manage subscriptions</li>
+          </ul>
 
-          <h2>10. Contact Us</h2>
-          <p>
-            If you have questions or concerns about this Privacy Policy, please contact us at:
-          </p>
-          <p>
-            Klyc, Inc. Attn: Privacy Department
-          </p>
+          <h3>3.2 Improve the Platform</h3>
+          <ul>
+            <li>Enhance AI systems</li>
+            <li>Improve feature performance</li>
+            <li>Detect bugs</li>
+            <li>Optimize workflows</li>
+          </ul>
+
+          <h3>3.3 Security &amp; Fraud Prevention</h3>
+          <ul>
+            <li>Detect abuse</li>
+            <li>Monitor suspicious activity</li>
+            <li>Enforce Terms of Service</li>
+          </ul>
+
+          <h3>3.4 Communications</h3>
+          <ul>
+            <li>Send service updates</li>
+            <li>Respond to support inquiries</li>
+            <li>Send billing notices</li>
+          </ul>
+          <p>We do not sell personal information.</p>
+
+          <h2>4. AI Training &amp; Model Use</h2>
+          <p>Klyc may use:</p>
+          <ul>
+            <li>Aggregated</li>
+            <li>Anonymized</li>
+            <li>De-identified</li>
+          </ul>
+          <p>data to improve internal AI systems.</p>
+          <p>We do not:</p>
+          <ul>
+            <li>Publicly disclose user content</li>
+            <li>Sell user content to third parties</li>
+            <li>Use third-party platform data beyond permitted API terms</li>
+          </ul>
+          <p>Users may opt out of AI model training by contacting: <strong>privacy@klyc.ai</strong></p>
+          <p>Opt-out requests may limit certain features.</p>
+
+          <h2>5. Legal Bases for Processing (GDPR)</h2>
+          <p>For users in the European Economic Area (EEA), we process personal data under the following lawful bases:</p>
+          <ul>
+            <li>Performance of a contract</li>
+            <li>Legitimate interests (platform improvement, fraud prevention)</li>
+            <li>Legal compliance</li>
+            <li>Consent (where required)</li>
+          </ul>
+
+          <h2>6. Sharing of Information</h2>
+          <p>We may share information:</p>
+
+          <h3>6.1 Service Providers</h3>
+          <p>With trusted vendors for:</p>
+          <ul>
+            <li>Cloud hosting (e.g., AWS, Google Cloud)</li>
+            <li>Payment processing</li>
+            <li>Customer support tools</li>
+            <li>Security monitoring</li>
+          </ul>
+          <p>Vendors are contractually obligated to safeguard data.</p>
+
+          <h3>6.2 Creator Marketplace</h3>
+          <p>If you engage a Creator, we may share limited necessary information to facilitate the relationship.</p>
+
+          <h3>6.3 Legal Compliance</h3>
+          <p>If required by law, subpoena, or governmental request.</p>
+
+          <h3>6.4 Business Transfers</h3>
+          <p>In connection with mergers, acquisitions, or asset sales.</p>
+          <p>We do not sell personal information.</p>
+
+          <h2>7. Data Retention</h2>
+          <p>We retain personal data:</p>
+          <ul>
+            <li>As long as your account is active</li>
+            <li>As required for legal obligations</li>
+            <li>For legitimate business purposes</li>
+          </ul>
+          <p>Deleted accounts may have residual data retained for legal compliance or fraud prevention.</p>
+
+          <h2>8. Data Security</h2>
+          <p>We implement commercially reasonable security measures, including:</p>
+          <ul>
+            <li>Encrypted transmission (TLS)</li>
+            <li>Encrypted credential storage</li>
+            <li>Role-based access controls</li>
+            <li>Secure cloud infrastructure</li>
+            <li>Audit logging</li>
+          </ul>
+          <p>However, no method of transmission over the internet is 100% secure.</p>
+
+          <h2>9. Your Rights</h2>
+          <p>Depending on your location, you may have rights to:</p>
+          <ul>
+            <li>Access your personal data</li>
+            <li>Correct inaccurate data</li>
+            <li>Request deletion</li>
+            <li>Restrict processing</li>
+            <li>Object to processing</li>
+            <li>Request portability</li>
+            <li>Withdraw consent</li>
+            <li>Opt out of marketing communications</li>
+          </ul>
+          <p>To exercise rights, contact: <strong>privacy@klyc.ai</strong></p>
+          <p>We may verify identity before fulfilling requests.</p>
+
+          <h2>10. California Privacy Rights (CCPA)</h2>
+          <p>California residents may:</p>
+          <ul>
+            <li>Request disclosure of collected categories of data</li>
+            <li>Request deletion</li>
+            <li>Opt out of "sale" (we do not sell personal data)</li>
+            <li>Request non-discrimination</li>
+          </ul>
+          <p>Requests may be submitted to <strong>privacy@klyc.ai</strong>.</p>
+
+          <h2>11. International Transfers</h2>
+          <p>Klyc is headquartered in the United States.</p>
+          <p>By using the Services, you consent to the transfer of information to the U.S., where data protection laws may differ.</p>
+          <p>We implement safeguards consistent with applicable law.</p>
+
+          <h2>12. Children's Privacy</h2>
+          <p>The Services are not intended for individuals under 18.</p>
+          <p>We do not knowingly collect personal information from children.</p>
+          <p>If discovered, such information will be deleted.</p>
+
+          <h2>13. Third-Party Services</h2>
+          <p>When you connect external platforms:</p>
+          <ul>
+            <li>Their privacy policies apply</li>
+            <li>Their data processing practices are independent of Klyc</li>
+          </ul>
+          <p>We encourage reviewing their policies.</p>
+
+          <h2>14. Automated Decision Making</h2>
+          <p>Klyc may use AI-driven systems to:</p>
+          <ul>
+            <li>Generate content</li>
+            <li>Provide recommendations</li>
+            <li>Analyze performance</li>
+          </ul>
+          <p>These systems do not make legally binding automated decisions without human oversight.</p>
+
+          <h2>15. Changes to This Policy</h2>
+          <p>We may update this Privacy Policy periodically.</p>
+          <p>Material changes will be indicated by updating the "Last Updated" date.</p>
+          <p>Continued use constitutes acceptance.</p>
         </article>
       </main>
       <Footer />
