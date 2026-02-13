@@ -289,7 +289,7 @@ const socialTools: ToolItem[] = [
 const crmTools: ToolItem[] = [
   { name: "Salesforce", icon: SalesforceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "HubSpot", icon: HubSpotIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Zoho CRM", icon: ZohoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Zoho CRM", icon: ZohoIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Pipedrive", icon: PipedriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Keap / Infusionsoft", icon: KeapIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "ActiveCampaign", icon: ActiveCampaignIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
