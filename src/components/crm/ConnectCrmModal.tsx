@@ -57,12 +57,12 @@
     description: "Contacts, accounts, and opportunities",
   },
    {
-     id: "zoho",
-     name: "Zoho CRM",
-     icon: ZohoIcon,
-     available: false,
-     description: "Contacts and deals",
-   },
+    id: "zoho",
+    name: "Zoho CRM",
+    icon: ZohoIcon,
+    available: true,
+    description: "Contacts, accounts, and deals",
+  },
    {
      id: "pipedrive",
      name: "Pipedrive",
