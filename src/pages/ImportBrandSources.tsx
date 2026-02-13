@@ -740,6 +740,8 @@ const ImportBrandSources = () => {
           setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
         }
         return;
+      } else if (toolName === 'Zoho CRM') {
+        functionName = 'zoho-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
