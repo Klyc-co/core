@@ -315,6 +315,31 @@ const navItems = [
         <LogOut className="w-4 h-4" />
         {mobile && <span className="ml-2">Logout</span>}
       </Button>
+      {!mobile && (
+        <span className="mx-1 h-5 w-px bg-border" />
+      )}
+      <Button
+        variant="ghost"
+        size={mobile ? "default" : "sm"}
+        onClick={() => {
+          navigate("/terms");
+          if (mobile) setMobileMenuOpen(false);
+        }}
+        className={mobile ? "justify-start w-full h-12 text-muted-foreground" : "text-xs text-muted-foreground hover:text-foreground px-2"}
+      >
+        {mobile ? "Terms of Service" : "Terms"}
+      </Button>
+      <Button
+        variant="ghost"
+        size={mobile ? "default" : "sm"}
+        onClick={() => {
+          navigate("/privacy");
+          if (mobile) setMobileMenuOpen(false);
+        }}
+        className={mobile ? "justify-start w-full h-12 text-muted-foreground" : "text-xs text-muted-foreground hover:text-foreground px-2"}
+      >
+        Privacy
+      </Button>
     </div>
   );
 
