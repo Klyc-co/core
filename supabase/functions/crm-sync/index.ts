@@ -341,7 +341,122 @@ async function syncSalesforce(
    }
  }
  
- serve(async (req) => {
+async function syncZoho(
+  supabase: any,
+  connection: any,
+  accessToken: string,
+  logId: string
+) {
+  let contactsImported = 0;
+  let accountsImported = 0;
+  let dealsImported = 0;
+
+  const apiDomain = (connection.metadata as { api_domain?: string })?.api_domain || "www.zohoapis.com";
+
+  try {
+    // Fetch Contacts
+    const contactsResponse = await fetch(
+      `https://${apiDomain}/crm/v2/Contacts?per_page=200`,
+      {
+        headers: { Authorization: `Zoho-oauthtoken ${accessToken}` },
+      }
+    );
+
+    if (contactsResponse.ok) {
+      const contactsData = await contactsResponse.json();
+      for (const contact of contactsData.data || []) {
+        await supabase.from("crm_contacts").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: String(contact.id),
+            email: contact.Email,
+            first_name: contact.First_Name,
+            last_name: contact.Last_Name,
+            phone: contact.Phone,
+            company_name: contact.Account_Name?.name || null,
+            lifecycle_stage: contact.Lead_Source || null,
+            source: "zoho",
+            raw_data: contact,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        contactsImported++;
+      }
+    }
+
+    // Fetch Accounts (Companies)
+    const accountsResponse = await fetch(
+      `https://${apiDomain}/crm/v2/Accounts?per_page=200`,
+      {
+        headers: { Authorization: `Zoho-oauthtoken ${accessToken}` },
+      }
+    );
+
+    if (accountsResponse.ok) {
+      const accountsData = await accountsResponse.json();
+      for (const account of accountsData.data || []) {
+        await supabase.from("crm_companies").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: String(account.id),
+            name: account.Account_Name || "Unknown",
+            domain: account.Website || null,
+            industry: account.Industry || null,
+            size: account.Employees ? String(account.Employees) : null,
+            raw_data: account,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        accountsImported++;
+      }
+    }
+
+    // Fetch Deals
+    const dealsResponse = await fetch(
+      `https://${apiDomain}/crm/v2/Deals?per_page=200`,
+      {
+        headers: { Authorization: `Zoho-oauthtoken ${accessToken}` },
+      }
+    );
+
+    if (dealsResponse.ok) {
+      const dealsData = await dealsResponse.json();
+      for (const deal of dealsData.data || []) {
+        await supabase.from("crm_deals").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: String(deal.id),
+            name: deal.Deal_Name || "Untitled Deal",
+            stage: deal.Stage || null,
+            value: deal.Amount ? parseFloat(deal.Amount) : null,
+            close_date: deal.Closing_Date || null,
+            owner: deal.Owner?.name || null,
+            raw_data: deal,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        dealsImported++;
+      }
+    }
+
+    return {
+      success: true,
+      summary: `Imported ${contactsImported} contacts, ${accountsImported} accounts, ${dealsImported} deals`,
+      stats: {
+        contacts_count: contactsImported,
+        companies_count: accountsImported,
+        deals_count: dealsImported,
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+serve(async (req) => {
    if (req.method === "OPTIONS") {
      return new Response(null, { headers: corsHeaders });
    }
@@ -392,8 +507,10 @@ async function syncSalesforce(
       result = await syncHubSpot(supabase, connection, accessToken, logId);
     } else if (connection.provider === "shopify") {
       result = await syncShopify(supabase, connection, accessToken, logId);
-    } else if (connection.provider === "salesforce") {
+  } else if (connection.provider === "salesforce") {
       result = await syncSalesforce(supabase, connection, accessToken, logId);
+    } else if (connection.provider === "zoho") {
+      result = await syncZoho(supabase, connection, accessToken, logId);
     } else {
       result = { success: false, error: `Unknown provider: ${connection.provider}` };
     }
