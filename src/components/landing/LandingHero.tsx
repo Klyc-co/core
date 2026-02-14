@@ -12,7 +12,7 @@ const LandingHero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-background text-foreground overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white text-foreground overflow-hidden">
       <NetworkGraph />
       
       {/* Nav */}
@@ -41,7 +41,7 @@ const LandingHero = () => {
       </nav>
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
-        <img src={klycLogo} alt="Klyc" className="h-16 sm:h-20 md:h-28 mx-auto mb-8 sm:mb-12" />
+        <img src={klycLogo} alt="Klyc" className="h-32 sm:h-40 md:h-56 mx-auto mb-8 sm:mb-12" />
         
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6 text-foreground">
           Reach Like a 20-Person Team.
