@@ -59,7 +59,7 @@ const LandingHero = () => {
             onClick={() => navigate("/auth")}
             className="bg-primary text-primary-foreground px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium"
           >
-            Build My Visibility System
+            Activate Klyc
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <Button
