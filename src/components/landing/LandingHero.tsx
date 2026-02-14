@@ -41,14 +41,16 @@ const LandingHero = () => {
       </nav>
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
+        <img src={klycLogo} alt="Klyc" className="h-12 sm:h-16 md:h-20 mx-auto mb-10 sm:mb-14" />
+        
         <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] mb-6 sm:mb-8 text-foreground">
-          Marketing Doesn't Fail.
+          Reach Like a 20-Person Team.
           <br />
-          <span className="text-primary">Execution Does.</span>
+          <span className="text-primary">Operate Like a 3-Person One.</span>
         </h1>
 
         <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed font-light">
-          KLYC replaces fragmented marketing teams and tool stacks with an AI-powered visibility infrastructure — designed to generate, distribute, and scale attention automatically.
+          KLYC multiplies Marketing execution without multiplying complexity.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
