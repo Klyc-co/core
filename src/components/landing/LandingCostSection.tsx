@@ -39,8 +39,8 @@ const LandingCostSection = () => {
 
           {/* KLYC */}
           <AnimateOnScroll delay={200}>
-            <div className="bg-[#0e0e14] p-10 sm:p-12 md:p-16 h-full">
-              <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.3em] text-[#2dd4a8]/70 mb-10">With Klyc</p>
+            <div className="bg-gradient-to-br from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] p-10 sm:p-12 md:p-16 h-full rounded-r-2xl sm:rounded-r-2xl">
+              <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.3em] text-white/80 mb-10">With Klyc</p>
               <ul className="space-y-7">
                 {[
                   "Minutes from idea to distributed publish",
@@ -49,8 +49,8 @@ const LandingCostSection = () => {
                   "Near-zero marginal cost per post",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-4">
-                    <span className="mt-3 w-1.5 h-1.5 rounded-full bg-[#2dd4a8] flex-shrink-0" />
-                    <span className="text-lg sm:text-xl md:text-2xl text-white/80 leading-relaxed">{item}</span>
+                    <span className="mt-3 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
+                    <span className="text-lg sm:text-xl md:text-2xl text-white leading-relaxed">{item}</span>
                   </li>
                 ))}
               </ul>
