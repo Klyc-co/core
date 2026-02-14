@@ -46,7 +46,7 @@ const LandingHero = () => {
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6 text-foreground">
           Reach Like a 20-Person Team.
           <br />
-          <span className="text-primary">Operate Like a 3-Person One.</span>
+          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Operate Like a 3-Person Team.</span>
         </h1>
 
         <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-12 leading-relaxed font-light">
