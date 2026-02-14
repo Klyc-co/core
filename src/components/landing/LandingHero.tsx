@@ -12,19 +12,19 @@ const LandingHero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-foreground text-primary-foreground overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-background text-foreground overflow-hidden">
       <NetworkGraph />
       
       {/* Nav */}
       <nav className="absolute top-0 left-0 right-0 z-10 px-4 sm:px-6 py-5 sm:py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <img src={klycLogo} alt="Klyc" className="h-6 sm:h-7 brightness-0 invert" />
+          <img src={klycLogo} alt="Klyc" className="h-6 sm:h-7" />
           <div className="flex items-center gap-2 sm:gap-4">
             <Button
               onClick={() => navigate("/client/auth")}
               variant="ghost"
               size="sm"
-              className="text-primary-foreground/60 hover:text-primary-foreground hover:bg-primary-foreground/10 text-xs sm:text-sm"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted text-xs sm:text-sm"
             >
               Client Login
             </Button>
@@ -32,7 +32,7 @@ const LandingHero = () => {
               onClick={() => navigate("/auth")}
               variant="outline"
               size="sm"
-              className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10 text-xs sm:text-sm"
+              className="border-border text-foreground hover:bg-muted text-xs sm:text-sm"
             >
               Sign In
             </Button>
@@ -41,13 +41,13 @@ const LandingHero = () => {
       </nav>
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
-        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] mb-6 sm:mb-8">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] mb-6 sm:mb-8 text-foreground">
           Marketing Doesn't Fail.
           <br />
           <span className="text-primary">Execution Does.</span>
         </h1>
 
-        <p className="text-base sm:text-lg md:text-xl text-primary-foreground/60 max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed font-light">
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 sm:mb-14 leading-relaxed font-light">
           KLYC replaces fragmented marketing teams and tool stacks with an AI-powered visibility infrastructure — designed to generate, distribute, and scale attention automatically.
         </p>
 
@@ -64,7 +64,7 @@ const LandingHero = () => {
             size="lg"
             variant="ghost"
             onClick={scrollToHowItWorks}
-            className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/5 px-8 py-6 text-base sm:text-lg rounded-lg"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted px-8 py-6 text-base sm:text-lg rounded-lg"
           >
             See How It Works
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -74,7 +74,7 @@ const LandingHero = () => {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-        <div className="w-px h-10 bg-gradient-to-b from-transparent to-primary-foreground" />
+        <div className="w-px h-10 bg-gradient-to-b from-transparent to-foreground" />
       </div>
     </section>
   );

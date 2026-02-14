@@ -7,32 +7,32 @@ const LandingDistributed = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-background">
+    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-foreground text-primary-foreground">
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground tracking-tight leading-tight mb-6">
             One Brand Account Is Reach.
             <br />
-            <span className="text-muted-foreground">Distributed Accounts Are Force.</span>
+            <span className="text-primary-foreground/50">Distributed Accounts Are Force.</span>
           </h2>
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={100}>
-          <div className="my-12 sm:my-16 p-6 sm:p-10 rounded-xl border border-border bg-card">
-            <p className="text-lg sm:text-xl md:text-2xl text-foreground font-light leading-relaxed">
+          <div className="my-12 sm:my-16 p-6 sm:p-10 rounded-xl border border-primary-foreground/10">
+            <p className="text-lg sm:text-xl md:text-2xl text-primary-foreground font-light leading-relaxed">
               When <span className="font-semibold text-primary">100 employees</span> publish instead of 1 brand account:
             </p>
-            <p className="mt-4 text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-foreground">
+            <p className="mt-4 text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-primary-foreground">
               100 × 2,000 = <span className="text-primary">200,000</span>
             </p>
-            <p className="mt-2 text-sm text-muted-foreground font-mono">
+            <p className="mt-2 text-sm text-primary-foreground/40 font-mono">
               organic distribution nodes per cycle
             </p>
           </div>
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={150}>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-10 leading-relaxed">
+          <p className="text-base sm:text-lg text-primary-foreground/50 max-w-2xl mb-10 leading-relaxed">
             KLYC turns your company into a distributed media network.
           </p>
         </AnimateOnScroll>
@@ -64,7 +64,7 @@ const LandingDistributed = () => {
           <Button
             size="lg"
             onClick={() => navigate("/auth")}
-            className="bg-foreground text-background hover:bg-foreground/90 px-8 py-6 text-base rounded-lg font-medium"
+            className="bg-primary text-primary-foreground px-8 py-6 text-base rounded-lg font-medium"
           >
             Activate Distributed Publishing
             <ArrowRight className="ml-2 h-5 w-5" />

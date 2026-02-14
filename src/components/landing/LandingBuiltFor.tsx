@@ -10,22 +10,22 @@ const audiences = [
 
 const LandingBuiltFor = () => {
   return (
-    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-foreground text-primary-foreground">
+    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-background">
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight mb-16">
             Built for Teams That Want Scale —
             <br />
-            <span className="text-primary">Not Content.</span>
+            <span className="text-muted-foreground">Not Content.</span>
           </h2>
         </AnimateOnScroll>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-primary-foreground/10 rounded-xl overflow-hidden">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden">
           {audiences.map((a, i) => (
             <AnimateOnScroll key={i} delay={100 + i * 80}>
-              <div className="bg-foreground p-6 sm:p-8 h-full">
-                <h3 className="text-base sm:text-lg font-semibold text-primary-foreground mb-2">{a.title}</h3>
-                <p className="text-sm text-primary-foreground/50 font-light">{a.line}</p>
+              <div className="bg-background p-6 sm:p-8 h-full">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">{a.title}</h3>
+                <p className="text-sm text-muted-foreground font-light">{a.line}</p>
               </div>
             </AnimateOnScroll>
           ))}
