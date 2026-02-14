@@ -20,7 +20,7 @@ const LandingCostSection = () => {
           {/* Traditional */}
           <AnimateOnScroll delay={100}>
             <div className="bg-[#0e0e14] p-10 sm:p-12 md:p-16 h-full">
-              <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.3em] text-white/25 mb-10">Without infrastructure</p>
+              <p className="text-sm sm:text-base md:text-lg font-mono uppercase tracking-[0.3em] text-white/25 mb-10">Without infrastructure</p>
               <ul className="space-y-7">
                 {[
                   "Weeks between idea and publish",
@@ -40,7 +40,7 @@ const LandingCostSection = () => {
           {/* KLYC */}
           <AnimateOnScroll delay={200}>
             <div className="bg-gradient-to-br from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] p-10 sm:p-12 md:p-16 h-full rounded-r-2xl sm:rounded-r-2xl">
-              <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.3em] text-white/80 mb-10">With Klyc</p>
+              <p className="text-sm sm:text-base md:text-lg font-mono uppercase tracking-[0.3em] text-white/80 mb-10">With Klyc</p>
               <ul className="space-y-7">
                 {[
                   "Minutes from idea to distributed publish",
