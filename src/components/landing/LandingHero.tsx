@@ -46,14 +46,14 @@ const LandingHero = () => {
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6">
           <span className="text-foreground">Marketing, Operated by AI.</span>
           <br />
-          <span className="bg-gradient-to-r from-[#6b5ce7] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
+          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
           <Button
             size="lg"
             onClick={() => navigate("/auth")}
-            className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] text-white border-0 px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium hover:opacity-90"
+            className="bg-gradient-to-r from-[#6b5ce7] to-[#a855f7] text-white border-0 px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium hover:opacity-90"
           >
             Activate Klyc
             <ArrowRight className="ml-2 h-5 w-5" />
