@@ -2,17 +2,15 @@ import AnimateOnScroll from "./AnimateOnScroll";
 
 const LandingCostSection = () => {
   return (
-    <section className="py-28 sm:py-36 lg:py-44 px-4 sm:px-6 bg-[#08080c]">
+    <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 bg-[#08080c]">
       <div className="max-w-4xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-white mb-6">
-            The Hidden Cost Isn't
-            <br />
-            Your Budget.
-          </h2>
-          <p className="text-xl sm:text-2xl md:text-3xl font-medium text-white/30 mb-20 sm:mb-28">
-            It's lost momentum.
+          <p className="text-xl sm:text-2xl md:text-3xl font-medium text-white/30 mb-4">
+            The Hidden Cost Isn't Your Budget.
           </p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-white mb-14 sm:mb-20">
+            It's Lost Momentum.
+          </h2>
         </AnimateOnScroll>
 
         {/* Two-column contrast */}
