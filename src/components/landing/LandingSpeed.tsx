@@ -17,7 +17,7 @@ const klycTimeline = [
 
 const LandingSpeed = () => {
   return (
-    <section id="execution-speed" className="relative py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-white overflow-hidden">
+    <section id="execution-speed" className="relative py-16 sm:py-20 lg:py-24 px-4 sm:px-6 bg-white overflow-hidden">
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
@@ -97,14 +97,14 @@ const LandingSpeed = () => {
 
         {/* Footer lines */}
         <AnimateOnScroll delay={300}>
-          <div className="mt-16 sm:mt-20 space-y-2">
-            <p className="text-xl sm:text-2xl font-bold text-foreground">
+          <div className="mt-16 sm:mt-20 space-y-2 text-center">
+            <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
               Velocity compounds attention.
             </p>
-            <p className="text-base sm:text-lg text-muted-foreground font-light">
+            <p className="text-base sm:text-lg bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent font-light">
               The faster you publish, the faster you learn.
             </p>
-            <p className="text-base sm:text-lg text-muted-foreground font-light">
+            <p className="text-base sm:text-lg bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent font-light">
               The faster you learn, the faster you scale.
             </p>
           </div>
