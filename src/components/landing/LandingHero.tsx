@@ -47,8 +47,6 @@ const LandingHero = () => {
           <span className="text-foreground">Marketing, Operated by AI.</span>
           <br />
           <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
-          <br />
-          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Without the bottlenecks.</span>
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
