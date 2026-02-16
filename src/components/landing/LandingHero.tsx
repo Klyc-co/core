@@ -53,7 +53,7 @@ const LandingHero = () => {
           <Button
             size="lg"
             onClick={() => navigate("/auth")}
-            className="bg-primary text-primary-foreground px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium"
+            className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] text-white border-0 px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium hover:opacity-90"
           >
             Activate Klyc
             <ArrowRight className="ml-2 h-5 w-5" />
