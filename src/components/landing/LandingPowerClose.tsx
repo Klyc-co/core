@@ -10,7 +10,7 @@ const LandingPowerClose = () => {
     <>
       <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <img src={klycLogo} alt="Klyc" className="h-20 sm:h-24 mx-auto mb-10" />
+          <img src={klycLogo} alt="Klyc" className="h-56 sm:h-64 mx-auto mb-10" />
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight mb-10">
             Stop Managing Marketing.
             <br />
@@ -47,7 +47,7 @@ const LandingPowerClose = () => {
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-4 sm:px-6 bg-background border-t border-border">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src={klycLogo} alt="Klyc" className="h-14 sm:h-16" />
+          <img src={klycLogo} alt="Klyc" className="h-5 sm:h-6" />
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
             <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
             <span className="text-border">|</span>
