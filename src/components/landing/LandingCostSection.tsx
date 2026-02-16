@@ -59,7 +59,7 @@ const LandingCostSection = () => {
         {/* Closing line */}
         <AnimateOnScroll delay={300}>
           <p className="text-center text-lg sm:text-xl md:text-2xl font-medium text-white/60 leading-relaxed max-w-2xl mx-auto">
-            Every delay compounds. Every missed moment costs reach.
+            Every delay compounds. Every missed moment costs market reach.
           </p>
         </AnimateOnScroll>
       </div>
