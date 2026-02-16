@@ -43,15 +43,13 @@ const LandingHero = () => {
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
         <img src={klycLogo} alt="Klyc" className="h-32 sm:h-40 md:h-56 mx-auto mb-8 sm:mb-12" />
         
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6 text-foreground">
-          The AI System That Runs
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6">
+          <span className="text-foreground">Marketing, Operated by AI.</span>
           <br />
-          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Your Marketing End to End.</span>
+          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
+          <br />
+          <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Without the bottlenecks.</span>
         </h1>
-
-        <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-12 leading-relaxed font-light">
-          KLYC multiplies Marketing execution without multiplying complexity.
-        </p>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
           <Button
