@@ -7,8 +7,6 @@ import LandingInfrastructure from "@/components/landing/LandingInfrastructure";
 import LandingDistributed from "@/components/landing/LandingDistributed";
 import LandingSpeed from "@/components/landing/LandingSpeed";
 import LandingVirality from "@/components/landing/LandingVirality";
-import LandingBrandControl from "@/components/landing/LandingBrandControl";
-import LandingEconomic from "@/components/landing/LandingEconomic";
 import LandingBuiltFor from "@/components/landing/LandingBuiltFor";
 import LandingCategory from "@/components/landing/LandingCategory";
 import LandingPowerClose from "@/components/landing/LandingPowerClose";
@@ -32,8 +30,6 @@ const Index = () => {
       <LandingDistributed />
       <LandingSpeed />
       <LandingVirality />
-      <LandingBrandControl />
-      <LandingEconomic />
       <LandingBuiltFor />
       <LandingCategory />
       <LandingPowerClose />
