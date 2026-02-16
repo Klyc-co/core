@@ -18,7 +18,7 @@ const LandingCostSection = () => {
           {/* Traditional */}
           <AnimateOnScroll delay={100}>
             <div className="bg-[#0e0e14] p-10 sm:p-12 md:p-16 h-full">
-              <p className="text-sm sm:text-base md:text-lg font-mono uppercase tracking-[0.3em] text-white/25 mb-10">Without infrastructure</p>
+              <p className="text-sm sm:text-base md:text-lg font-mono uppercase tracking-[0.3em] text-white/25 mb-10">Without Klyc</p>
               <ul className="space-y-7">
                 {[
                   "Weeks between idea and publish",
