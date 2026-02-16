@@ -116,7 +116,7 @@ const LandingVirality = () => {
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={50}>
-          <p className="text-base sm:text-lg text-white/40 max-w-2xl mb-16 leading-relaxed font-light">
+          <p className="text-base sm:text-lg text-white/70 max-w-2xl mb-16 leading-relaxed font-light">
             After that, the algorithm moves on.
             <br />
             Momentum either compounds — or disappears.
@@ -125,7 +125,7 @@ const LandingVirality = () => {
 
         {/* Step 1 — Checkpoints */}
         <AnimateOnScroll delay={100}>
-          <p className="text-xs font-mono uppercase tracking-widest text-white/30 mb-4">
+          <p className="text-xs font-mono uppercase tracking-widest text-white/60 mb-4">
             The first 120 minutes determine reach velocity.
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
@@ -142,7 +142,7 @@ const LandingVirality = () => {
               </div>
             ))}
           </div>
-          <p className="text-sm text-white/30 max-w-xl leading-relaxed font-light mb-14">
+          <p className="text-sm text-white/60 max-w-xl leading-relaxed font-light mb-14">
             Most posts plateau because amplification happens too late.
             By the time teams "review performance," momentum is already gone.
           </p>
