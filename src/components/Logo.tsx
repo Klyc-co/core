@@ -13,9 +13,9 @@ const Logo = ({ className = "", size = "md", to = "/home" }: LogoProps) => {
   const { theme } = useTheme();
   
   const sizes = {
-    sm: "h-16",
-    md: "h-24",
-    lg: "h-28",
+    sm: "h-12",
+    md: "h-20",
+    lg: "h-24",
   };
 
   const logoSrc = theme === "dark" ? klycLogoDark : klycLogo;
