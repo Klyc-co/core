@@ -173,18 +173,13 @@ const LandingVirality = () => {
         {/* Step 3 — Decay Graph */}
         <AnimateOnScroll delay={200}>
           <div className="max-w-lg mb-14">
-            <div className="h-40 sm:h-48 mb-4">
+            <div className="h-40 sm:h-48">
               <DecayCurve />
             </div>
-            <p className="text-sm text-white/40 leading-relaxed font-light">
-              Visibility decays quickly.
-              <br />
-              Amplification must happen while acceleration is rising — not after it peaks.
-            </p>
           </div>
         </AnimateOnScroll>
 
-        {/* Step 4 — Close */}
+        {/* Close — moved up right after engagement section */}
         <AnimateOnScroll delay={250}>
           <div className="pt-6 border-t border-white/[0.06]">
             <p className="text-xl sm:text-2xl font-bold text-white">
