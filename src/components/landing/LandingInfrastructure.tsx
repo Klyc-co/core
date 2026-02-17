@@ -162,19 +162,15 @@ const LandingInfrastructure = () => {
 
       <div className="relative z-10 max-w-5xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-16 sm:mb-20">
             <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
-              Start Building Infrastructure with Klyc.
+              Start Building Infrastructure
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
+              with Klyc.
             </span>
           </h2>
-        </AnimateOnScroll>
-
-        <AnimateOnScroll delay={100}>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-16 sm:mb-20 leading-relaxed font-light">
-            Most companies scale marketing by adding people.
-            <br />
-            KLYC scales marketing by adding systems.
-          </p>
         </AnimateOnScroll>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
