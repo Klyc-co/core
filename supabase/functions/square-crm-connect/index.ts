@@ -49,8 +49,17 @@ serve(async (req) => {
       });
     }
 
+    // Detect sandbox vs production token
+    // Sandbox access tokens contain "sandbox" or start with "EAAASEAAAA" (sandbox pattern)
+    const isSandbox = accessToken.includes("sandbox") || accessToken.startsWith("EAAASEAAAA");
+    const baseUrl = isSandbox
+      ? "https://connect.squareupsandbox.com"
+      : "https://connect.squareup.com";
+
+    console.log(`Using Square ${isSandbox ? "sandbox" : "production"} endpoint`);
+
     // Verify the token works by fetching merchant info
-    const merchantResponse = await fetch("https://connect.squareup.com/v2/merchants/me", {
+    const merchantResponse = await fetch(`${baseUrl}/v2/merchants/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Square-Version": "2024-01-18",
@@ -60,12 +69,62 @@ serve(async (req) => {
 
     if (!merchantResponse.ok) {
       const errData = await merchantResponse.json();
+      console.error("Square merchant fetch failed:", JSON.stringify(errData));
+      // If production fails and we haven't tried sandbox yet, try sandbox
+      if (!isSandbox) {
+        const sandboxResponse = await fetch("https://connect.squareupsandbox.com/v2/merchants/me", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Square-Version": "2024-01-18",
+            "Content-Type": "application/json",
+          },
+        });
+        if (!sandboxResponse.ok) {
+          const sandboxErr = await sandboxResponse.json();
+          return new Response(
+            JSON.stringify({ error: `Invalid Square access token: ${sandboxErr?.errors?.[0]?.detail || errData?.errors?.[0]?.detail || "Unauthorized"}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // Sandbox worked — use sandbox merchant data
+        const sandboxData = await sandboxResponse.json();
+        const merchant = sandboxData.merchant;
+        const encryptedToken = await encryptToken(accessToken);
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+        const { data: connection, error: connError } = await supabaseAdmin
+          .from("crm_connections")
+          .upsert(
+            {
+              user_id: user.id,
+              provider: "square",
+              display_name: displayName || "Square (Sandbox)",
+              access_token: encryptedToken,
+              status: "connected",
+              metadata: {
+                merchant_id: merchant?.id,
+                business_name: merchant?.business_name,
+                country: merchant?.country,
+                currency: merchant?.currency,
+                application_id: applicationId || storedAppId || null,
+                environment: "sandbox",
+              },
+            },
+            { onConflict: "user_id,provider" }
+          )
+          .select()
+          .single();
+        if (connError) throw connError;
+        return new Response(
+          JSON.stringify({ success: true, connectionId: connection.id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: `Invalid Square access token: ${errData?.errors?.[0]?.detail || "Unauthorized"}` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
