@@ -20,7 +20,7 @@ const LandingPowerClose = () => {
             </span>
           </h2>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-6">
             <Button
               size="lg"
               onClick={() => navigate("/auth")}
