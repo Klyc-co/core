@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
-import klycLogo from "@/assets/klyc-logo.png";
+import klycLogo from "@/assets/klyc-logo-transparent.png";
 import klycLogoDark from "@/assets/klyc-logo-dark.png";
 
 interface LogoProps {
