@@ -1,6 +1,6 @@
 import AnimateOnScroll from "./AnimateOnScroll";
 import klycMascot from "@/assets/klyc-mascot.png";
-import { Network, Layers, Globe, Zap, Shield, Activity, Rocket, Fingerprint, TrendingUp, BarChart3 } from "lucide-react";
+import { Network, Layers, Globe, Zap, Shield, Activity, Rocket, Fingerprint } from "lucide-react";
 
 const features = [
   { icon: Network, bold: "Turn your company into a distributed media network", desc: "Activate employees, leadership, and sales to multiply organic reach instantly." },
@@ -11,8 +11,6 @@ const features = [
   { icon: Activity, bold: "Detect momentum in real time", desc: "Measure early engagement velocity within the first 2 hours." },
   { icon: Rocket, bold: "Trigger intelligent amplification at the right moment", desc: "Capture rising attention before it disappears in the feed." },
   { icon: Fingerprint, bold: "Prevent repetitive or redundant messaging", desc: "Built-in uniqueness engine ensures every post adds new signal." },
-  { icon: TrendingUp, bold: "Scale output without scaling headcount", desc: "Increase visibility without hiring more marketers." },
-  { icon: BarChart3, bold: "Create a measurable visibility infrastructure", desc: "Move from \"posting content\" to building compounding attention systems." },
 ];
 
 const LandingMeetKlyc = () => {
