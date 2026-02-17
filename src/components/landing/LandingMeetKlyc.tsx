@@ -12,7 +12,7 @@ const finalBullets = [
     parts: [
       { text: "\"I turn your goals into a weekly " },
       { text: "Plan", gradient: true },
-      { text: " — what to post, where to post, and why it matters.\"" },
+      { text: " - what to post, where to post, and why it matters.\"" },
     ],
   },
   {
@@ -20,7 +20,7 @@ const finalBullets = [
     parts: [
       { text: "\"I " },
       { text: "Create", gradient: true },
-      { text: " platform-native content that sounds like you — scripts, posts, captions, and creatives.\"" },
+      { text: " platform-native content that sounds like you - scripts, posts, captions, and creatives.\"" },
     ],
   },
   {
@@ -28,7 +28,7 @@ const finalBullets = [
     parts: [
       { text: "\"I " },
       { text: "Publish", gradient: true },
-      { text: " across every channel on schedule — so you stay consistent without manual work.\"" },
+      { text: " across every channel on schedule - so you stay consistent without manual work.\"" },
     ],
   },
   {
@@ -36,7 +36,7 @@ const finalBullets = [
     parts: [
       { text: "\"I track what's working, learn fast, and " },
       { text: "Optimize", gradient: true },
-      { text: " — so every week performs better than the last.\"" },
+      { text: " - so every week performs better than the last.\"" },
     ],
   },
 ];
