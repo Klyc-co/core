@@ -10,7 +10,7 @@ const LandingPowerClose = () => {
     <>
       <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <img src={klycLogo} alt="Klyc" className="h-[28rem] sm:h-[32rem] mx-auto mb-4" />
+          <img src={klycLogo} alt="Klyc" className="h-[28rem] sm:h-[32rem] mx-auto -mb-6" />
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-10">
             <span
               className="bg-clip-text text-transparent"
