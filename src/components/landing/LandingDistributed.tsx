@@ -32,11 +32,11 @@ const LandingDistributed = () => {
             <p className="text-sm sm:text-base text-primary-foreground/30 font-mono mb-10">
               organic distribution nodes per cycle
             </p>
-            <p className="text-base sm:text-lg text-primary-foreground/50 font-light">
-              Not 1 brand post.
+            <p className="text-lg sm:text-xl md:text-2xl text-primary-foreground/80 font-medium">
+              This isn't one post. It's network effect.
             </p>
-            <p className="text-lg sm:text-xl md:text-2xl text-primary-foreground/80 font-medium mt-4">
-              Now it's about <span className="text-primary-foreground">trust + frequency</span>, not multiplication.
+            <p className="text-base sm:text-lg text-primary-foreground/50 font-light mt-4">
+              Attention compounds when people publish — not logos.
             </p>
           </div>
         </AnimateOnScroll>
