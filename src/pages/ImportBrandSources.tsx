@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -314,7 +315,7 @@ const ecommerceTools: ToolItem[] = [
   { name: "Squarespace Commerce", icon: SquarespaceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Wix Stores", icon: WixIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Stripe CRM", icon: StripeIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Square CRM", icon: SquareIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Square CRM", icon: SquareIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
 ];
 
 const ImportBrandSources = () => {
@@ -331,6 +332,9 @@ const ImportBrandSources = () => {
   const [airtableModalOpen, setAirtableModalOpen] = useState(false);
   const [trelloModalOpen, setTrelloModalOpen] = useState(false);
   const [loomModalOpen, setLoomModalOpen] = useState(false);
+  const [squareModalOpen, setSquareModalOpen] = useState(false);
+  const [squareAccessToken, setSquareAccessToken] = useState("");
+  const [isConnectingSquare, setIsConnectingSquare] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -614,6 +618,18 @@ const ImportBrandSources = () => {
     if (dropboxConn && dropboxConn.connection_status === 'connected') {
       newStatus['Dropbox'] = 'connected';
     }
+
+    // Check Square CRM connection
+    const { data: squareConn } = await supabase
+      .from("crm_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("provider", "square")
+      .maybeSingle();
+
+    if (squareConn) {
+      newStatus['Square CRM'] = 'connected';
+    }
     
     setConnectionStatus(newStatus);
   };
@@ -674,6 +690,30 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectSquare = async () => {
+    if (!squareAccessToken.trim()) return;
+    setIsConnectingSquare(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("square-crm-connect", {
+        body: { displayName: "Square CRM", accessToken: squareAccessToken },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Square CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Square CRM": 'connected' }));
+        setSquareModalOpen(false);
+        setSquareAccessToken("");
+      } else {
+        toast.error(data?.error || "Failed to connect Square");
+      }
+    } catch (err) {
+      console.error("Square connect error:", err);
+      toast.error("Failed to connect Square CRM");
+    } finally {
+      setIsConnectingSquare(false);
+    }
+  };
+
   const handleConnectCrmTool = async (toolName: string) => {
     if (!user) {
       toast.error("Please log in first");
@@ -683,6 +723,12 @@ const ImportBrandSources = () => {
     // For Shopify, open the modal to get shop domain
     if (toolName === 'Shopify') {
       setShopifyModalOpen(true);
+      return;
+    }
+
+    // For Square CRM, open the Square modal
+    if (toolName === 'Square CRM') {
+      setSquareModalOpen(true);
       return;
     }
 
@@ -1394,6 +1440,49 @@ const ImportBrandSources = () => {
           toast.success("Loom connected successfully!");
         }}
       />
+
+      {/* Square CRM Connect Modal */}
+      <Dialog open={squareModalOpen} onOpenChange={setSquareModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Square CRM</DialogTitle>
+            <DialogDescription>
+              Enter your Square Access Token to sync customers and orders.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="squareToken">Access Token</Label>
+              <Input
+                id="squareToken"
+                type="password"
+                value={squareAccessToken}
+                onChange={(e) => setSquareAccessToken(e.target.value)}
+                placeholder="EAAAl..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Found in your Square Developer Dashboard under your app's credentials.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setSquareModalOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConnectSquare}
+                disabled={!squareAccessToken.trim() || isConnectingSquare}
+                className="flex-1"
+              >
+                {isConnectingSquare ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
+                ) : (
+                  "Connect Square"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
