@@ -8,7 +8,7 @@ const LandingHeader = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border/40">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
-        <img src={klycLogo} alt="Klyc" className="h-5 sm:h-6" />
+        <img src={klycLogo} alt="Klyc" className="h-12 sm:h-14" />
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
             onClick={() => navigate("/client/auth")}
