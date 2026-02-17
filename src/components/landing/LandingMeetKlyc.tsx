@@ -1,5 +1,5 @@
 import AnimateOnScroll from "./AnimateOnScroll";
-import klycMascot from "@/assets/klyc-mascot.png";
+import klycMascot from "@/assets/klyc-mascot-waving.png";
 import { Layers, LayoutDashboard, Globe, Send, Rocket } from "lucide-react";
 
 const bullets = [
