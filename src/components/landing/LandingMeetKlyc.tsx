@@ -1,16 +1,13 @@
 import AnimateOnScroll from "./AnimateOnScroll";
 import klycMascot from "@/assets/klyc-mascot.png";
-import { Network, Layers, Globe, Zap, Shield, Activity, Rocket, Fingerprint } from "lucide-react";
+import { Layers, LayoutDashboard, Globe, Send, Rocket } from "lucide-react";
 
-const features = [
-  { icon: Network, bold: "Turn your company into a distributed media network", desc: "Activate employees, leadership, and sales to multiply organic reach instantly." },
-  { icon: Layers, bold: "Replace fragmented marketing tools with one unified execution system", desc: "Strategy, content, publishing, and performance — connected." },
-  { icon: Globe, bold: "Generate platform-native content automatically", desc: "LinkedIn, X, Instagram, TikTok, YouTube — formatted correctly, every time." },
-  { icon: Zap, bold: "Eliminate planning bottlenecks", desc: "Go from campaign idea to live distribution in minutes, not weeks." },
-  { icon: Shield, bold: "Enforce brand consistency at scale", desc: "Tone, positioning, and constraints applied automatically across all outputs." },
-  { icon: Activity, bold: "Detect momentum in real time", desc: "Measure early engagement velocity within the first 2 hours." },
-  { icon: Rocket, bold: "Trigger intelligent amplification at the right moment", desc: "Capture rising attention before it disappears in the feed." },
-  { icon: Fingerprint, bold: "Prevent repetitive or redundant messaging", desc: "Built-in uniqueness engine ensures every post adds new signal." },
+const bullets = [
+  { icon: Layers, text: "Replace Marketing Chaos With One Execution Engine" },
+  { icon: LayoutDashboard, text: "Run Strategy, Creation, and Distribution From One System" },
+  { icon: Globe, text: "Generate Platform-Native Content at Scale" },
+  { icon: Send, text: "Publish Across Every Channel Automatically" },
+  { icon: Rocket, text: "Amplify What Works Before It Disappears" },
 ];
 
 const LandingMeetKlyc = () => {
@@ -29,30 +26,10 @@ const LandingMeetKlyc = () => {
           </h2>
         </AnimateOnScroll>
 
-        <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-16">
-          {/* Feature list */}
-          <div className="flex-1 space-y-6 order-2 lg:order-1">
-            {features.map((f, i) => (
-              <AnimateOnScroll key={i} delay={60 + i * 40}>
-                <div className="flex items-start gap-4">
-                  <div
-                    className="mt-1 flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, rgba(45,212,168,0.12), rgba(168,85,247,0.12))" }}
-                  >
-                    <f.icon className="w-4 h-4 text-[#6b8de3]" />
-                  </div>
-                  <div>
-                    <p className="text-base sm:text-lg font-semibold text-foreground leading-snug">{f.bold}</p>
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1 leading-relaxed">{f.desc}</p>
-                  </div>
-                </div>
-              </AnimateOnScroll>
-            ))}
-          </div>
-
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           {/* Mascot image */}
           <AnimateOnScroll delay={100}>
-            <div className="flex-shrink-0 order-1 lg:order-2 mx-auto lg:mx-0 lg:sticky lg:top-32">
+            <div className="flex-shrink-0 mx-auto lg:mx-0">
               <img
                 src={klycMascot}
                 alt="Klyc mascot"
@@ -60,6 +37,25 @@ const LandingMeetKlyc = () => {
               />
             </div>
           </AnimateOnScroll>
+
+          {/* Bullet points */}
+          <div className="flex-1 space-y-6">
+            {bullets.map((b, i) => (
+              <AnimateOnScroll key={i} delay={60 + i * 60}>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, rgba(45,212,168,0.12), rgba(168,85,247,0.12))" }}
+                  >
+                    <b.icon className="w-5 h-5 text-[#6b8de3]" />
+                  </div>
+                  <p className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground leading-snug">
+                    {b.text}
+                  </p>
+                </div>
+              </AnimateOnScroll>
+            ))}
+          </div>
         </div>
       </div>
     </section>
