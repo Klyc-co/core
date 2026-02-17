@@ -12,33 +12,8 @@ const LandingHero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white text-foreground overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white text-foreground overflow-hidden pt-14">
       <NetworkGraph />
-      
-      {/* Nav */}
-      <nav className="absolute top-0 left-0 right-0 z-10 px-4 sm:px-6 py-5 sm:py-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <img src={klycLogo} alt="Klyc" className="h-6 sm:h-7" />
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              onClick={() => navigate("/client/auth")}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted text-xs sm:text-sm"
-            >
-              Client Login
-            </Button>
-            <Button
-              onClick={() => navigate("/auth")}
-              variant="outline"
-              size="sm"
-              className="border-border text-foreground hover:bg-muted text-xs sm:text-sm"
-            >
-              Sign In
-            </Button>
-          </div>
-        </div>
-      </nav>
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
         <img src={klycLogo} alt="Klyc" className="h-32 sm:h-40 md:h-56 mx-auto mb-8 sm:mb-12" />
