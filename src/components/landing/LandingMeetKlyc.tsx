@@ -1,5 +1,5 @@
 import AnimateOnScroll from "./AnimateOnScroll";
-import klycLogo from "@/assets/klyc-logo.png";
+import klycMascot from "@/assets/klyc-mascot.png";
 import { Network, Layers, Globe, Zap, Shield, Activity, Rocket, Fingerprint, TrendingUp, BarChart3 } from "lucide-react";
 
 const features = [
@@ -56,7 +56,7 @@ const LandingMeetKlyc = () => {
           <AnimateOnScroll delay={100}>
             <div className="flex-shrink-0 order-1 lg:order-2 mx-auto lg:mx-0 lg:sticky lg:top-32">
               <img
-                src={klycLogo}
+                src={klycMascot}
                 alt="Klyc mascot"
                 className="w-64 sm:w-80 md:w-96 lg:w-[420px] drop-shadow-2xl"
               />
