@@ -21,6 +21,7 @@ import PipedriveIcon from "@/components/icons/PipedriveIcon";
 import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
 import SquareIcon from "@/components/icons/SquareIcon";
 import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
+import StripeIcon from "@/components/icons/StripeIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -81,6 +82,13 @@ const providers: CrmProvider[] = [
     available: true,
     description: "E-commerce & orders",
     useApiKey: true,
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    icon: StripeIcon,
+    available: true,
+    description: "Payments & customers",
   },
   {
     id: "pipedrive",
