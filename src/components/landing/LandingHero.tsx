@@ -1,15 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import NetworkGraph from "./NetworkGraph";
 import klycLogo from "@/assets/klyc-logo.png";
 
 const LandingHero = () => {
+  const [videoOpen, setVideoOpen] = useState(false);
   const navigate = useNavigate();
-
-  const scrollToHowItWorks = () => {
-    document.getElementById("execution-speed")?.scrollIntoView({ behavior: "smooth" });
-  };
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white overflow-hidden pt-14">
@@ -36,7 +35,7 @@ const LandingHero = () => {
           <Button
             size="lg"
             variant="ghost"
-            onClick={scrollToHowItWorks}
+            onClick={() => setVideoOpen(true)}
             className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] px-8 py-6 text-base sm:text-lg rounded-lg"
           >
             See How It Works
@@ -44,6 +43,22 @@ const LandingHero = () => {
           </Button>
         </div>
       </div>
+
+      {/* How It Works Video Dialog */}
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-3xl w-[95vw] p-0 bg-[#08080c] border-[#1a1a2e] rounded-2xl overflow-hidden">
+          <DialogClose className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 hover:bg-white/20 transition-colors">
+            <X className="h-5 w-5 text-white" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+          <div className="aspect-video flex flex-col items-center justify-center gap-4 p-8">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] flex items-center justify-center">
+              <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            </div>
+            <p className="text-white/70 text-lg font-medium tracking-wide">Video Coming Soon</p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
