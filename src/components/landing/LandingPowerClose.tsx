@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import klycMascot from "@/assets/klyc-mascot-thumbsup.png";
+import klycLogo from "@/assets/klyc-logo-transparent.png";
 
 const LandingPowerClose = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const LandingPowerClose = () => {
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-4 sm:px-6 bg-white border-t border-[#e2e5ea]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src={klycMascot} alt="Klyc" className="h-12 sm:h-14" />
+          <img src={klycLogo} alt="Klyc" className="h-12 sm:h-14" />
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#6b7280]">
             <a href="/terms" className="hover:text-[#191a1f] transition-colors">Terms</a>
             <span className="text-[#e2e5ea]">|</span>
