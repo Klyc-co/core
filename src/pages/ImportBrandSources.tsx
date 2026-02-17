@@ -691,18 +691,16 @@ const ImportBrandSources = () => {
   };
 
   const handleConnectSquare = async () => {
-    if (!squareAccessToken.trim()) return;
     setIsConnectingSquare(true);
     try {
       const { data, error } = await supabase.functions.invoke("square-crm-connect", {
-        body: { displayName: "Square CRM", accessToken: squareAccessToken },
+        body: { displayName: "Square CRM" },
       });
       if (error) throw error;
       if (data?.success) {
         toast.success("Square CRM connected successfully!");
         setConnectionStatus(prev => ({ ...prev, "Square CRM": 'connected' }));
         setSquareModalOpen(false);
-        setSquareAccessToken("");
       } else {
         toast.error(data?.error || "Failed to connect Square");
       }
@@ -1447,30 +1445,20 @@ const ImportBrandSources = () => {
           <DialogHeader>
             <DialogTitle>Connect Square CRM</DialogTitle>
             <DialogDescription>
-              Enter your Square Access Token to sync customers and orders.
+              Connect your Square account to sync customers and orders into Klyc.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="squareToken">Access Token</Label>
-              <Input
-                id="squareToken"
-                type="password"
-                value={squareAccessToken}
-                onChange={(e) => setSquareAccessToken(e.target.value)}
-                placeholder="EAAAl..."
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Found in your Square Developer Dashboard under your app's credentials.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Your Square credentials are already configured. Click below to connect your account.
+            </p>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setSquareModalOpen(false)} className="flex-1">
                 Cancel
               </Button>
               <Button
                 onClick={handleConnectSquare}
-                disabled={!squareAccessToken.trim() || isConnectingSquare}
+                disabled={isConnectingSquare}
                 className="flex-1"
               >
                 {isConnectingSquare ? (

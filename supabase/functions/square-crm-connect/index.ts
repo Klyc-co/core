@@ -35,7 +35,12 @@ serve(async (req) => {
       });
     }
 
-    const { displayName, accessToken, applicationId } = await req.json();
+    const body = await req.json();
+    const { displayName, applicationId } = body;
+
+    // Use provided token or fall back to stored secret
+    const accessToken = body.accessToken || Deno.env.get("SQUARE_ACCESS_TOKEN");
+    const storedAppId = Deno.env.get("SQUARE_APPLICATION_ID");
 
     if (!accessToken) {
       return new Response(JSON.stringify({ error: "Access token is required" }), {
@@ -90,7 +95,7 @@ serve(async (req) => {
             business_name: merchant?.business_name,
             country: merchant?.country,
             currency: merchant?.currency,
-            application_id: applicationId || null,
+            application_id: applicationId || storedAppId || null,
           },
         },
         { onConflict: "user_id,provider" }
