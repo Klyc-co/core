@@ -39,7 +39,7 @@ const LandingMeetKlyc = () => {
           </AnimateOnScroll>
 
           {/* Bullet points */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-10">
             {bullets.map((b, i) => (
               <AnimateOnScroll key={i} delay={60 + i * 60}>
                 <div className="flex items-center gap-4">
