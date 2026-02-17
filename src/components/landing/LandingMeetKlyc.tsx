@@ -24,8 +24,10 @@ const LandingMeetKlyc = () => {
               Klyc
             </span>
           </h2>
+          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light mt-4 mb-16 sm:mb-20 text-center">
+            Your Always-On Marketing Agent. I work 24/7 with you.
+          </p>
         </AnimateOnScroll>
-
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           {/* Mascot image */}
           <AnimateOnScroll delay={100}>
