@@ -20,6 +20,7 @@ import ZohoIcon from "@/components/icons/ZohoIcon";
 import PipedriveIcon from "@/components/icons/PipedriveIcon";
 import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
 import SquareIcon from "@/components/icons/SquareIcon";
+import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -74,6 +75,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "squarespace",
+    name: "Squarespace",
+    icon: SquarespaceIcon,
+    available: true,
+    description: "E-commerce & orders",
+    useApiKey: true,
+  },
+  {
     id: "pipedrive",
     name: "Pipedrive",
     icon: PipedriveIcon,
@@ -98,6 +107,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     shopDomain: "",
     squareAccessToken: "",
     squareApplicationId: "",
+    squarespaceApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -111,6 +121,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       shopDomain: "",
       squareAccessToken: "",
       squareApplicationId: "",
+      squarespaceApiKey: "",
     });
     setStep("configure");
   };
@@ -120,6 +131,25 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
 
     setIsConnecting(true);
     try {
+      // Squarespace uses direct API key — no OAuth redirect
+      if (selectedProvider.id === "squarespace") {
+        const { data, error } = await supabase.functions.invoke("squarespace-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            apiKey: formData.squarespaceApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Squarespace connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Squarespace");
+        }
+        return;
+      }
+
       // Square uses direct API token — no OAuth redirect
       if (selectedProvider.id === "square") {
         const { data, error } = await supabase.functions.invoke("square-crm-connect", {
@@ -170,7 +200,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "" });
     onOpenChange(false);
   };
 
@@ -282,17 +312,33 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                       placeholder="sq0idp-..."
                     />
                   </div>
-                </>
-              )}
-             </div>
- 
+                 </>
+               )}
+
+               {selectedProvider?.id === "squarespace" && (
+                 <div>
+                   <Label htmlFor="squarespaceApiKey">API Key</Label>
+                   <Input
+                     id="squarespaceApiKey"
+                     type="password"
+                     value={formData.squarespaceApiKey}
+                     onChange={(e) => setFormData((prev) => ({ ...prev, squarespaceApiKey: e.target.value }))}
+                     placeholder="Enter your Squarespace API key"
+                   />
+                   <p className="text-xs text-muted-foreground mt-1">
+                     Found in <strong>Settings → Advanced → API Keys</strong>. Create a key with Commerce read permissions.
+                   </p>
+                 </div>
+               )}
+              </div>
+  
              <div className="flex gap-3 pt-4">
                <Button variant="outline" onClick={() => setStep("select")} className="flex-1">
                  Back
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim())} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim())} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
