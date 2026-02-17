@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import klycLogo from "@/assets/klyc-logo.png";
+import klycLogo from "@/assets/klyc-logo-transparent.png";
 
 const LandingHeader = () => {
   const navigate = useNavigate();

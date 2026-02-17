@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import klycLogo from "@/assets/klyc-logo.png";
+import klycLogo from "@/assets/klyc-logo-transparent.png";
 
 const LandingPowerClose = () => {
   const navigate = useNavigate();
