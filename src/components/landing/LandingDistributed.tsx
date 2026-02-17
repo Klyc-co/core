@@ -10,23 +10,15 @@ const LandingDistributed = () => {
     <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-foreground text-primary-foreground">
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
-          <p className="text-xs sm:text-sm font-mono uppercase tracking-[0.3em] text-primary-foreground/30 mb-6">
-            Executives care about pipeline
-          </p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground tracking-tight leading-[1.1] mb-6">
-            One Company Page
-            <br />
-            Doesn't Move Markets.
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-16 sm:mb-20">
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(135deg, #2dd4a8, #6b8de3, #a855f7)" }}
+            >
+              KLYC
+            </span>
+            <span className="text-primary-foreground"> turns employees, leadership, and sales into synchronized visibility.</span>
           </h2>
-          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-foreground/30 mb-10">
-            Networks Do.
-          </p>
-        </AnimateOnScroll>
-
-        <AnimateOnScroll delay={100}>
-          <p className="text-lg sm:text-xl md:text-2xl text-primary-foreground/60 max-w-3xl mb-16 sm:mb-20 leading-relaxed font-light">
-            KLYC turns employees, leadership, and sales into synchronized visibility.
-          </p>
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={150}>
