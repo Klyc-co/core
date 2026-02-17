@@ -25,7 +25,7 @@ const Logo = ({ className = "", size = "md", to = "/home" }: LogoProps) => {
       <img 
         src={logoSrc} 
         alt="Klyc" 
-        className={`${sizes[size]} w-auto object-contain`}
+        className={`${sizes[size]} w-auto max-w-[120px] sm:max-w-[160px] object-contain`}
       />
     </Link>
   );
