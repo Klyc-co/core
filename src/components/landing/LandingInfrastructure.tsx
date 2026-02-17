@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import AnimateOnScroll from "./AnimateOnScroll";
 import { Database, Brain, Send } from "lucide-react";
+import klycPresenting from "@/assets/klyc-mascot-presenting.png";
 
 const layers = [
   {
@@ -162,10 +163,8 @@ const LandingInfrastructure = () => {
       <div className="relative z-10 max-w-5xl mx-auto">
         <AnimateOnScroll>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
-            <span className="text-foreground">Stop Hiring Output.</span>
-            <br />
             <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
-              Start Building Infrastructure.
+              Start Building Infrastructure with Klyc.
             </span>
           </h2>
         </AnimateOnScroll>
@@ -178,24 +177,38 @@ const LandingInfrastructure = () => {
           </p>
         </AnimateOnScroll>
 
-        <div className="grid md:grid-cols-3 gap-px rounded-xl overflow-hidden">
-          {layers.map((layer, i) => (
-            <AnimateOnScroll key={i} delay={150 + i * 100}>
-              <div className="bg-white/80 backdrop-blur-sm border border-border/40 p-8 sm:p-10 h-full flex flex-col rounded-xl shadow-sm">
-                <layer.icon
-                  className="w-5 h-5 mb-6"
-                  strokeWidth={1.5}
-                  style={{ color: layer.color }}
-                />
-                <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-3">
-                  {layer.title}
-                </h3>
-                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-light">
-                  {layer.description}
-                </p>
-              </div>
-            </AnimateOnScroll>
-          ))}
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          {/* Mascot on left */}
+          <AnimateOnScroll delay={100}>
+            <div className="flex-shrink-0">
+              <img
+                src={klycPresenting}
+                alt="Klyc mascot presenting"
+                className="w-64 sm:w-80 md:w-96 lg:w-[400px] drop-shadow-2xl"
+              />
+            </div>
+          </AnimateOnScroll>
+
+          {/* Stacked layer cards on right */}
+          <div className="flex-1 flex flex-col gap-5">
+            {layers.map((layer, i) => (
+              <AnimateOnScroll key={i} delay={150 + i * 100}>
+                <div className="bg-white/80 backdrop-blur-sm border border-border/40 p-8 sm:p-10 flex flex-col rounded-xl shadow-sm">
+                  <layer.icon
+                    className="w-5 h-5 mb-4"
+                    strokeWidth={1.5}
+                    style={{ color: layer.color }}
+                  />
+                  <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
+                    {layer.title}
+                  </h3>
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-light">
+                    {layer.description}
+                  </p>
+                </div>
+              </AnimateOnScroll>
+            ))}
+          </div>
         </div>
       </div>
     </section>
