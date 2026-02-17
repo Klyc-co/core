@@ -15,7 +15,7 @@ const LandingHero = () => {
       <NetworkGraph />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
-        <img src={klycLogo} alt="Klyc" className="h-32 sm:h-40 md:h-56 mx-auto mb-8 sm:mb-12" />
+        <img src={klycLogo} alt="Klyc" className="h-64 sm:h-80 md:h-[28rem] mx-auto mb-8 sm:mb-12" />
         
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6">
           <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
