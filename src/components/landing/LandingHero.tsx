@@ -12,14 +12,14 @@ const LandingHero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white text-foreground overflow-hidden pt-14">
+    <section className="relative min-h-screen flex flex-col justify-center px-4 sm:px-6 bg-white overflow-hidden pt-14">
       <NetworkGraph />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center py-32 sm:py-0">
         <img src={klycLogo} alt="Klyc" className="h-32 sm:h-40 md:h-56 mx-auto mb-8 sm:mb-12" />
         
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6">
-          <span className="text-foreground">Marketing Made Simple.</span>
+          <span className="text-[#191a1f]">Marketing Made Simple.</span>
           <br />
           <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
         </h1>
@@ -37,7 +37,7 @@ const LandingHero = () => {
             size="lg"
             variant="ghost"
             onClick={scrollToHowItWorks}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted px-8 py-6 text-base sm:text-lg rounded-lg"
+            className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] px-8 py-6 text-base sm:text-lg rounded-lg"
           >
             See How It Works
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -47,7 +47,7 @@ const LandingHero = () => {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-        <div className="w-px h-10 bg-gradient-to-b from-transparent to-foreground" />
+        <div className="w-px h-10 bg-gradient-to-b from-transparent to-[#191a1f]" />
       </div>
     </section>
   );

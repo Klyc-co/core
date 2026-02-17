@@ -52,7 +52,6 @@ const BlueprintGrid = () => {
 
       const gridSize = 60;
 
-      // Grid lines
       ctx.strokeStyle = "rgba(107, 141, 227, 0.08)";
       ctx.lineWidth = 0.5;
       for (let x = 0; x < w; x += gridSize) {
@@ -68,7 +67,6 @@ const BlueprintGrid = () => {
         ctx.stroke();
       }
 
-      // Nodes
       const nodes = [
         { x: w * 0.15, y: h * 0.2, color: "#2dd4a8" },
         { x: w * 0.35, y: h * 0.35, color: "#6b8de3" },
@@ -84,7 +82,6 @@ const BlueprintGrid = () => {
         { x: w * 0.85, y: h * 0.5, color: "#a855f7" },
       ];
 
-      // Animated connecting lines
       const connections = [
         [0, 1], [1, 2], [2, 4], [1, 3], [3, 4],
         [0, 9], [9, 5], [5, 6], [6, 10], [10, 3],
@@ -96,7 +93,6 @@ const BlueprintGrid = () => {
         const to = nodes[b];
         const progress = (Math.sin(t * 0.8 + i * 0.7) + 1) / 2;
 
-        // Base line
         ctx.strokeStyle = "rgba(107, 141, 227, 0.1)";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -104,7 +100,6 @@ const BlueprintGrid = () => {
         ctx.lineTo(to.x, to.y);
         ctx.stroke();
 
-        // Animated pulse along line
         const px = from.x + (to.x - from.x) * progress;
         const py = from.y + (to.y - from.y) * progress;
         const gradient = ctx.createRadialGradient(px, py, 0, px, py, 12);
@@ -116,11 +111,9 @@ const BlueprintGrid = () => {
         ctx.fill();
       });
 
-      // Glowing nodes
       nodes.forEach((node) => {
         const pulse = Math.sin(t * 1.2 + node.x * 0.01) * 0.3 + 0.7;
 
-        // Outer glow
         const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 20);
         glow.addColorStop(0, `${node.color}${Math.round(pulse * 50).toString(16).padStart(2, "0")}`);
         glow.addColorStop(1, "transparent");
@@ -129,7 +122,6 @@ const BlueprintGrid = () => {
         ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
         ctx.fill();
 
-        // Core dot
         ctx.fillStyle = `${node.color}${Math.round(pulse * 200).toString(16).padStart(2, "0")}`;
         ctx.beginPath();
         ctx.arc(node.x, node.y, 3, 0, Math.PI * 2);
@@ -174,7 +166,6 @@ const LandingInfrastructure = () => {
         </AnimateOnScroll>
 
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-          {/* Mascot on left */}
           <AnimateOnScroll delay={100}>
             <div className="flex-shrink-0">
               <img
@@ -185,20 +176,19 @@ const LandingInfrastructure = () => {
             </div>
           </AnimateOnScroll>
 
-          {/* Stacked layer cards on right */}
           <div className="flex-1 flex flex-col gap-5">
             {layers.map((layer, i) => (
               <AnimateOnScroll key={i} delay={150 + i * 100}>
-                <div className="bg-white/80 backdrop-blur-sm border border-border/40 p-8 sm:p-10 flex flex-col rounded-xl shadow-sm">
+                <div className="bg-white/80 backdrop-blur-sm border border-[#e2e5ea]/40 p-8 sm:p-10 flex flex-col rounded-xl shadow-sm">
                   <layer.icon
                     className="w-5 h-5 mb-4"
                     strokeWidth={1.5}
                     style={{ color: layer.color }}
                   />
-                  <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#191a1f] mb-2">
                     {layer.title}
                   </h3>
-                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-light">
+                  <p className="text-sm sm:text-base text-[#6b7280] leading-relaxed font-light">
                     {layer.description}
                   </p>
                 </div>

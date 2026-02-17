@@ -33,7 +33,7 @@ const LandingPowerClose = () => {
             <Button
               size="lg"
               variant="ghost"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted px-8 py-6 text-base sm:text-lg rounded-lg"
+              className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] px-8 py-6 text-base sm:text-lg rounded-lg"
             >
               Book Strategy Call
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -43,17 +43,17 @@ const LandingPowerClose = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 sm:py-8 px-4 sm:px-6 bg-background border-t border-border">
+      <footer className="py-6 sm:py-8 px-4 sm:px-6 bg-white border-t border-[#e2e5ea]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <img src={klycLogo} alt="Klyc" className="h-12 sm:h-14" />
-          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
-            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
-            <span className="text-border">|</span>
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
-            <span className="text-border">|</span>
-            <a href="/admin/login" className="hover:text-foreground transition-colors">Admin</a>
+          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#6b7280]">
+            <a href="/terms" className="hover:text-[#191a1f] transition-colors">Terms</a>
+            <span className="text-[#e2e5ea]">|</span>
+            <a href="/privacy" className="hover:text-[#191a1f] transition-colors">Privacy</a>
+            <span className="text-[#e2e5ea]">|</span>
+            <a href="/admin/login" className="hover:text-[#191a1f] transition-colors">Admin</a>
           </div>
-          <p className="text-muted-foreground/60 text-xs sm:text-sm">
+          <p className="text-[#6b7280]/60 text-xs sm:text-sm">
             © {new Date().getFullYear()} Klyc
           </p>
         </div>
