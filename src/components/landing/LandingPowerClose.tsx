@@ -11,9 +11,7 @@ const LandingPowerClose = () => {
       <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <img src={klycLogo} alt="Klyc" className="h-56 sm:h-64 mx-auto mb-10" />
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight mb-10">
-            Stop Managing Marketing.
-            <br />
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-10">
             <span
               className="bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, #2dd4a8, #6b8de3, #a855f7)" }}
