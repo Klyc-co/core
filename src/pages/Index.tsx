@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import LandingHero from "@/components/landing/LandingHero";
+import LandingMeetKlyc from "@/components/landing/LandingMeetKlyc";
 import LandingCostSection from "@/components/landing/LandingCostSection";
 import LandingInfrastructure from "@/components/landing/LandingInfrastructure";
 import LandingDistributed from "@/components/landing/LandingDistributed";
@@ -25,6 +26,7 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <LandingHero />
+      <LandingMeetKlyc />
       <LandingCostSection />
       <LandingInfrastructure />
       <LandingDistributed />
