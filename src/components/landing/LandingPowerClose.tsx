@@ -16,10 +16,10 @@ const LandingPowerClose = () => {
               className="bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, #2dd4a8, #6b8de3, #a855f7)" }}
             >
-              "Start Owning Attention."
+              "Start Earning Attention."
             </span>
           </h2>
-          <img src={klycMascot} alt="Klyc mascot" className="h-[28rem] sm:h-[32rem] mx-auto -mb-6" />
+          <img src={klycMascot} alt="Klyc mascot" className="h-[34rem] sm:h-[40rem] mx-auto -mb-6" />
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-6">
             <Button
