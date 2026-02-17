@@ -21,9 +21,9 @@ const LandingSpeed = () => {
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
-            <span className="text-foreground">Turn 4 Weeks of Marketing</span>
+            <span className="text-[#191a1f]">Turn 4 Weeks of Marketing</span>
             <br />
-            <span className="text-foreground">Work Into </span>
+            <span className="text-[#191a1f]">Work Into </span>
             <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
               30 Minutes.
             </span>
@@ -31,7 +31,7 @@ const LandingSpeed = () => {
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={50}>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-16 sm:mb-20 leading-relaxed font-light">
+          <p className="text-base sm:text-lg text-[#6b7280] max-w-2xl mb-16 sm:mb-20 leading-relaxed font-light">
             Traditional marketing execution is a coordination problem.
             <br />
             KLYC removes coordination.
@@ -41,24 +41,23 @@ const LandingSpeed = () => {
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-10">
           {/* Traditional Timeline */}
           <AnimateOnScroll delay={100}>
-            <div className="p-6 sm:p-8 rounded-xl border border-border bg-muted/20">
-              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60 mb-8">Traditional Marketing</p>
+            <div className="p-6 sm:p-8 rounded-xl border border-[#e2e5ea] bg-[#ebedf0]/20">
+              <p className="text-xs font-mono uppercase tracking-widest text-[#6b7280]/60 mb-8">Traditional Marketing</p>
               <div className="space-y-0">
                 {traditionalTimeline.map((item, i) => (
                   <div key={i} className="flex gap-4 relative">
-                    {/* Vertical line */}
                     {i < traditionalTimeline.length - 1 && (
-                      <div className="absolute left-[5px] top-3 w-px h-full bg-muted-foreground/15" />
+                      <div className="absolute left-[5px] top-3 w-px h-full bg-[#6b7280]/15" />
                     )}
-                    <div className="relative z-10 mt-1.5 w-[11px] h-[11px] rounded-full border-2 border-muted-foreground/25 bg-white flex-shrink-0" />
+                    <div className="relative z-10 mt-1.5 w-[11px] h-[11px] rounded-full border-2 border-[#6b7280]/25 bg-white flex-shrink-0" />
                     <div className="pb-6">
-                      <p className="text-xs font-mono uppercase tracking-wider text-muted-foreground/50 mb-1">{item.time}</p>
-                      <p className="text-sm sm:text-base text-muted-foreground">{item.label}</p>
+                      <p className="text-xs font-mono uppercase tracking-wider text-[#6b7280]/50 mb-1">{item.time}</p>
+                      <p className="text-sm sm:text-base text-[#6b7280]">{item.label}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground/50 mt-2 font-light italic">
+              <p className="text-xs text-[#6b7280]/50 mt-2 font-light italic">
                 Total: 4–6 weeks before momentum even starts.
               </p>
             </div>
@@ -71,7 +70,6 @@ const LandingSpeed = () => {
               <div className="space-y-0">
                 {klycTimeline.map((item, i) => (
                   <div key={i} className="flex gap-4 relative">
-                    {/* Vertical gradient line */}
                     {i < klycTimeline.length - 1 && (
                       <div className="absolute left-[5px] top-3 w-px h-full bg-gradient-to-b from-[#2dd4a8]/30 to-[#a855f7]/30" />
                     )}
@@ -83,7 +81,7 @@ const LandingSpeed = () => {
                     />
                     <div className="pb-6">
                       <p className="text-xs font-mono uppercase tracking-wider bg-gradient-to-r from-[#2dd4a8] to-[#6b8de3] bg-clip-text text-transparent mb-1">{item.time}</p>
-                      <p className="text-sm sm:text-base text-foreground font-medium">{item.label}</p>
+                      <p className="text-sm sm:text-base text-[#191a1f] font-medium">{item.label}</p>
                     </div>
                   </div>
                 ))}

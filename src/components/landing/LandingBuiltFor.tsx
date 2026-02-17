@@ -11,14 +11,14 @@ const audiences = [
 
 const LandingBuiltFor = () => {
   return (
-    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-background">
+    <section className="py-24 sm:py-32 lg:py-40 px-4 sm:px-6 bg-[#f5f7fa]">
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#191a1f] tracking-tight leading-tight mb-6">
             Built for Teams That Want Scale.
           </h2>
           <p className="text-lg sm:text-xl md:text-2xl font-light mb-16 max-w-3xl">
-            <span className="text-foreground/80">KLYC isn't for posting more.</span>
+            <span className="text-[#191a1f]/80">KLYC isn't for posting more.</span>
             <br />
             <span
               className="font-medium bg-clip-text text-transparent"
@@ -38,7 +38,7 @@ const LandingBuiltFor = () => {
                   background: "linear-gradient(135deg, rgba(45,212,168,0.4), rgba(107,141,227,0.4), rgba(168,85,247,0.4))",
                 }}
               >
-                <div className="relative rounded-xl p-6 sm:p-7 h-full overflow-hidden bg-card">
+                <div className="relative rounded-xl p-6 sm:p-7 h-full overflow-hidden bg-white">
                   {/* Subtle glow on hover */}
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -59,7 +59,7 @@ const LandingBuiltFor = () => {
                     >
                       {a.title}
                     </h3>
-                    <p className="text-sm sm:text-base text-muted-foreground font-light leading-relaxed">
+                    <p className="text-sm sm:text-base text-[#6b7280] font-light leading-relaxed">
                       {a.line}
                     </p>
                   </div>
