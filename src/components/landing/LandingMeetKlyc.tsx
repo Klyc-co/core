@@ -15,7 +15,7 @@ const LandingMeetKlyc = () => {
     <section className="py-20 sm:py-28 lg:py-36 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-16 sm:mb-20 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-3 text-center">
             Meet{" "}
             <span
               className="bg-clip-text text-transparent"
@@ -24,7 +24,7 @@ const LandingMeetKlyc = () => {
               Klyc
             </span>
           </h2>
-          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light mt-4 mb-16 sm:mb-20 text-center">
+          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light mb-10 sm:mb-12 text-center">
             Your Always-On Marketing Agent. I work 24/7 with you.
           </p>
         </AnimateOnScroll>
