@@ -1,54 +1,56 @@
- import { useState } from "react";
- import {
-   Dialog,
-   DialogContent,
-   DialogHeader,
-   DialogTitle,
-   DialogDescription,
- } from "@/components/ui/dialog";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Label } from "@/components/ui/label";
- import { Badge } from "@/components/ui/badge";
- import { Loader2, ExternalLink } from "lucide-react";
- import { toast } from "sonner";
- import { supabase } from "@/integrations/supabase/client";
- import HubSpotIcon from "@/components/icons/HubSpotIcon";
- import ShopifyIcon from "@/components/icons/ShopifyIcon";
- import SalesforceIcon from "@/components/icons/SalesforceIcon";
- import ZohoIcon from "@/components/icons/ZohoIcon";
- import PipedriveIcon from "@/components/icons/PipedriveIcon";
- import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
- 
- interface ConnectCrmModalProps {
-   open: boolean;
-   onOpenChange: (open: boolean) => void;
-   onSuccess: () => void;
- }
- 
- interface CrmProvider {
-   id: string;
-   name: string;
-   icon: React.FC<{ className?: string }>;
-   available: boolean;
-   description: string;
- }
- 
- const providers: CrmProvider[] = [
-   {
-     id: "hubspot",
-     name: "HubSpot",
-     icon: HubSpotIcon,
-     available: true,
-     description: "Contacts, companies, and deals",
-   },
-   {
-     id: "shopify",
-     name: "Shopify",
-     icon: ShopifyIcon,
-     available: true,
-     description: "Customers and orders",
-   },
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import HubSpotIcon from "@/components/icons/HubSpotIcon";
+import ShopifyIcon from "@/components/icons/ShopifyIcon";
+import SalesforceIcon from "@/components/icons/SalesforceIcon";
+import ZohoIcon from "@/components/icons/ZohoIcon";
+import PipedriveIcon from "@/components/icons/PipedriveIcon";
+import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
+import SquareIcon from "@/components/icons/SquareIcon";
+
+interface ConnectCrmModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+interface CrmProvider {
+  id: string;
+  name: string;
+  icon: React.FC<{ className?: string }>;
+  available: boolean;
+  description: string;
+  useApiKey?: boolean;
+}
+
+const providers: CrmProvider[] = [
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    icon: HubSpotIcon,
+    available: true,
+    description: "Contacts, companies, and deals",
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    icon: ShopifyIcon,
+    available: true,
+    description: "Customers and orders",
+  },
   {
     id: "salesforce",
     name: "Salesforce",
@@ -56,93 +58,122 @@
     available: true,
     description: "Contacts, accounts, and opportunities",
   },
-   {
+  {
     id: "zoho",
     name: "Zoho CRM",
     icon: ZohoIcon,
     available: true,
     description: "Contacts, accounts, and deals",
   },
-   {
-     id: "pipedrive",
-     name: "Pipedrive",
-     icon: PipedriveIcon,
-     available: false,
-     description: "Sales pipeline management",
-   },
-   {
-     id: "woocommerce",
-     name: "WooCommerce",
-     icon: WooCommerceIcon,
-     available: false,
-     description: "WordPress ecommerce",
-   },
- ];
+  {
+    id: "square",
+    name: "Square",
+    icon: SquareIcon,
+    available: true,
+    description: "Customers and orders",
+    useApiKey: true,
+  },
+  {
+    id: "pipedrive",
+    name: "Pipedrive",
+    icon: PipedriveIcon,
+    available: false,
+    description: "Sales pipeline management",
+  },
+  {
+    id: "woocommerce",
+    name: "WooCommerce",
+    icon: WooCommerceIcon,
+    available: false,
+    description: "WordPress ecommerce",
+  },
+];
  
- const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps) => {
-   const [step, setStep] = useState<"select" | "configure">("select");
-   const [selectedProvider, setSelectedProvider] = useState<CrmProvider | null>(null);
-   const [isConnecting, setIsConnecting] = useState(false);
-   const [formData, setFormData] = useState({
-     displayName: "",
-     shopDomain: "", // For Shopify
-   });
- 
-   const handleSelectProvider = (provider: CrmProvider) => {
-     if (!provider.available) {
-       toast.info(`${provider.name} integration coming soon!`);
-       return;
-     }
-     setSelectedProvider(provider);
-     setFormData({
-       displayName: provider.name,
-       shopDomain: "",
-     });
-     setStep("configure");
-   };
- 
-   const handleConnect = async () => {
-     if (!selectedProvider) return;
- 
-     setIsConnecting(true);
-     try {
-       // Call the appropriate auth URL edge function
-       const functionName = `${selectedProvider.id}-crm-auth-url`;
-       
-       const body: Record<string, string> = {
-         displayName: formData.displayName,
-       };
- 
-       if (selectedProvider.id === "shopify" && formData.shopDomain) {
-         body.shopDomain = formData.shopDomain;
-       }
- 
-       const { data, error } = await supabase.functions.invoke(functionName, {
-         body,
-       });
- 
-       if (error) throw error;
- 
-       if (data?.authUrl) {
-         // Redirect to OAuth
-         window.location.href = data.authUrl;
-       } else {
-         toast.error("Failed to get authorization URL");
-       }
-     } catch (error: unknown) {
-       console.error("Failed to connect CRM:", error);
-       toast.error("Failed to connect CRM. Please try again.");
-     } finally {
-       setIsConnecting(false);
-     }
-   };
- 
-   const handleClose = () => {
-     setStep("select");
-     setSelectedProvider(null);
-     setFormData({ displayName: "", shopDomain: "" });
-     onOpenChange(false);
-   };
+const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps) => {
+  const [step, setStep] = useState<"select" | "configure">("select");
+  const [selectedProvider, setSelectedProvider] = useState<CrmProvider | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [formData, setFormData] = useState({
+    displayName: "",
+    shopDomain: "",
+    squareAccessToken: "",
+    squareApplicationId: "",
+  });
+
+  const handleSelectProvider = (provider: CrmProvider) => {
+    if (!provider.available) {
+      toast.info(`${provider.name} integration coming soon!`);
+      return;
+    }
+    setSelectedProvider(provider);
+    setFormData({
+      displayName: provider.name,
+      shopDomain: "",
+      squareAccessToken: "",
+      squareApplicationId: "",
+    });
+    setStep("configure");
+  };
+
+  const handleConnect = async () => {
+    if (!selectedProvider) return;
+
+    setIsConnecting(true);
+    try {
+      // Square uses direct API token — no OAuth redirect
+      if (selectedProvider.id === "square") {
+        const { data, error } = await supabase.functions.invoke("square-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            accessToken: formData.squareAccessToken,
+            applicationId: formData.squareApplicationId,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Square connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Square");
+        }
+        return;
+      }
+
+      // OAuth flow for other providers
+      const functionName = `${selectedProvider.id}-crm-auth-url`;
+      const body: Record<string, string> = {
+        displayName: formData.displayName,
+      };
+
+      if (selectedProvider.id === "shopify" && formData.shopDomain) {
+        body.shopDomain = formData.shopDomain;
+      }
+
+      const { data, error } = await supabase.functions.invoke(functionName, { body });
+
+      if (error) throw error;
+
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast.error("Failed to get authorization URL");
+      }
+    } catch (error: unknown) {
+      console.error("Failed to connect CRM:", error);
+      toast.error("Failed to connect CRM. Please try again.");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep("select");
+    setSelectedProvider(null);
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "" });
+    onOpenChange(false);
+  };
+
  
    return (
      <Dialog open={open} onOpenChange={handleClose}>
@@ -209,23 +240,50 @@
                  </p>
                </div>
  
-               {selectedProvider?.id === "shopify" && (
-                 <div>
-                   <Label htmlFor="shopDomain">Shop Domain</Label>
-                   <div className="flex items-center gap-2">
-                     <Input
-                       id="shopDomain"
-                       value={formData.shopDomain}
-                       onChange={(e) => setFormData((prev) => ({ ...prev, shopDomain: e.target.value }))}
-                       placeholder="your-store"
-                     />
-                     <span className="text-muted-foreground">.myshopify.com</span>
-                   </div>
-                   <p className="text-xs text-muted-foreground mt-1">
-                     Enter your Shopify store subdomain.
-                   </p>
-                 </div>
-               )}
+              {selectedProvider?.id === "shopify" && (
+                <div>
+                  <Label htmlFor="shopDomain">Shop Domain</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="shopDomain"
+                      value={formData.shopDomain}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, shopDomain: e.target.value }))}
+                      placeholder="your-store"
+                    />
+                    <span className="text-muted-foreground">.myshopify.com</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter your Shopify store subdomain.
+                  </p>
+                </div>
+              )}
+
+              {selectedProvider?.id === "square" && (
+                <>
+                  <div>
+                    <Label htmlFor="squareAccessToken">Access Token</Label>
+                    <Input
+                      id="squareAccessToken"
+                      type="password"
+                      value={formData.squareAccessToken}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, squareAccessToken: e.target.value }))}
+                      placeholder="EAAAl..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Found in your Square Developer Dashboard under your app's credentials.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="squareApplicationId">Application ID <span className="text-muted-foreground">(optional)</span></Label>
+                    <Input
+                      id="squareApplicationId"
+                      value={formData.squareApplicationId}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, squareApplicationId: e.target.value }))}
+                      placeholder="sq0idp-..."
+                    />
+                  </div>
+                </>
+              )}
              </div>
  
              <div className="flex gap-3 pt-4">
@@ -234,7 +292,7 @@
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim())} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim())} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (

@@ -456,6 +456,120 @@ async function syncZoho(
   }
 }
 
+async function syncSquare(
+  supabase: any,
+  connection: any,
+  accessToken: string,
+  logId: string
+) {
+  let customersImported = 0;
+  let ordersImported = 0;
+
+  try {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Square-Version": "2024-01-18",
+      "Content-Type": "application/json",
+    };
+
+    // Fetch customers
+    const customersResponse = await fetch(
+      "https://connect.squareup.com/v2/customers?limit=200",
+      { headers }
+    );
+
+    if (customersResponse.ok) {
+      const customersData = await customersResponse.json();
+      for (const customer of customersData.customers || []) {
+        await supabase.from("crm_contacts").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: customer.id,
+            email: customer.email_address,
+            first_name: customer.given_name,
+            last_name: customer.family_name,
+            phone: customer.phone_number,
+            company_name: customer.company_name || null,
+            source: "square",
+            raw_data: customer,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        customersImported++;
+      }
+    }
+
+    // Fetch orders (last 90 days)
+    const startAt = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const ordersResponse = await fetch(
+      "https://connect.squareup.com/v2/orders/search",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          query: {
+            filter: {
+              date_time_filter: {
+                created_at: { start_at: startAt },
+              },
+            },
+            sort: { sort_field: "CREATED_AT", sort_order: "DESC" },
+          },
+          limit: 200,
+        }),
+      }
+    );
+
+    if (ordersResponse.ok) {
+      const ordersData = await ordersResponse.json();
+      for (const order of ordersData.orders || []) {
+        const totalMoney = order.total_money?.amount
+          ? order.total_money.amount / 100
+          : null;
+        const currency = order.total_money?.currency || "USD";
+
+        await supabase.from("crm_orders").upsert(
+          {
+            user_id: connection.user_id,
+            connection_id: connection.id,
+            external_id: order.id,
+            order_number: order.id,
+            customer_email: null,
+            customer_name: null,
+            associated_contact_external_id: order.customer_id || null,
+            items: (order.line_items || []).map((item: any) => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.base_price_money?.amount
+                ? item.base_price_money.amount / 100
+                : 0,
+            })),
+            total_amount: totalMoney,
+            currency,
+            status: order.state,
+            order_date: order.created_at,
+            raw_data: order,
+          },
+          { onConflict: "connection_id,external_id" }
+        );
+        ordersImported++;
+      }
+    }
+
+    return {
+      success: true,
+      summary: `Imported ${customersImported} customers, ${ordersImported} orders`,
+      stats: {
+        contacts_count: customersImported,
+        orders_count: ordersImported,
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: (error as Error).message };
+  }
+}
+
 serve(async (req) => {
    if (req.method === "OPTIONS") {
      return new Response(null, { headers: corsHeaders });
@@ -509,11 +623,13 @@ serve(async (req) => {
       result = await syncShopify(supabase, connection, accessToken, logId);
   } else if (connection.provider === "salesforce") {
       result = await syncSalesforce(supabase, connection, accessToken, logId);
-    } else if (connection.provider === "zoho") {
-      result = await syncZoho(supabase, connection, accessToken, logId);
-    } else {
-      result = { success: false, error: `Unknown provider: ${connection.provider}` };
-    }
+     } else if (connection.provider === "zoho") {
+       result = await syncZoho(supabase, connection, accessToken, logId);
+     } else if (connection.provider === "square") {
+       result = await syncSquare(supabase, connection, accessToken, logId);
+     } else {
+       result = { success: false, error: `Unknown provider: ${connection.provider}` };
+     }
  
      // Update sync log
      await supabase
