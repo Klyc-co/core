@@ -1,5 +1,5 @@
 import AnimateOnScroll from "./AnimateOnScroll";
-import { Lightbulb, Building2, Rocket, Target, Video } from "lucide-react";
+import { Lightbulb, Building2, Rocket, Target, Video, Users } from "lucide-react";
 
 const audiences = [
   { icon: Lightbulb, title: "FOUNDERS & GROWTH TEAMS", line: "Replace your entire marketing stack with one execution engine." },
@@ -7,6 +7,7 @@ const audiences = [
   { icon: Rocket, title: "AGENCIES", line: "Multiply client output without multiplying cost." },
   { icon: Target, title: "DISTRIBUTED SALES TEAMS", line: "Turn every rep into a measurable content channel." },
   { icon: Video, title: "CREATOR BRANDS", line: "Systematize what made you grow — and scale it." },
+  { icon: Users, title: "INFLUENCER/CREATOR", line: "Turn personal reach into a scalable content engine." },
 ];
 
 const LandingBuiltFor = () => {
