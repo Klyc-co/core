@@ -19,13 +19,14 @@ const Logo = ({ className = "", size = "md", to = "/home" }: LogoProps) => {
   };
 
   const logoSrc = theme === "dark" ? klycLogoDark : klycLogo;
+  const isDark = theme === "dark";
 
   return (
     <Link to={to} className={`flex items-center ${className}`}>
       <img 
         src={logoSrc} 
         alt="Klyc" 
-        className={`${sizes[size]} w-auto max-w-[80px] sm:max-w-[100px] object-contain`}
+        className={`${sizes[size]} w-auto object-contain ${isDark ? "max-w-[80px] sm:max-w-[100px]" : ""}`}
       />
     </Link>
   );
