@@ -21,7 +21,7 @@ const LandingSpeed = () => {
       <div className="max-w-5xl mx-auto">
         <AnimateOnScroll>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
-            <span className="text-foreground">4 Weeks of Marketing</span>
+            <span className="text-foreground">Turn 4 Weeks of Marketing</span>
             <br />
             <span className="text-foreground">Work Into </span>
             <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
