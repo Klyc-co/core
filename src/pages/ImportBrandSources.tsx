@@ -314,7 +314,7 @@ const ecommerceTools: ToolItem[] = [
   { name: "Kajabi", icon: KajabiIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Squarespace Commerce", icon: SquarespaceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Wix Stores", icon: WixIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Stripe CRM", icon: StripeIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Stripe CRM", icon: StripeIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Square CRM", icon: SquareIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Squarespace Commerce", icon: SquarespaceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
 ];
@@ -339,6 +339,9 @@ const ImportBrandSources = () => {
   const [squarespaceModalOpen, setSquarespaceModalOpen] = useState(false);
   const [squarespaceApiKey, setSquarespaceApiKey] = useState("");
   const [isConnectingSquarespace, setIsConnectingSquarespace] = useState(false);
+  const [stripeModalOpen, setStripeModalOpen] = useState(false);
+  const [stripeSecretKey, setStripeSecretKey] = useState("");
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -755,6 +758,33 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectStripe = async () => {
+    if (!stripeSecretKey.trim()) {
+      toast.error("Please enter your Stripe secret key");
+      return;
+    }
+    setIsConnectingStripe(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-crm-connect", {
+        body: { secretKey: stripeSecretKey.trim(), displayName: "Stripe CRM" },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Stripe CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Stripe CRM": 'connected' }));
+        setStripeModalOpen(false);
+        setStripeSecretKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Stripe");
+      }
+    } catch (err) {
+      console.error("Stripe connect error:", err);
+      toast.error("Failed to connect Stripe CRM");
+    } finally {
+      setIsConnectingStripe(false);
+    }
+  };
+
   const handleConnectCrmTool = async (toolName: string) => {
     if (!user) {
       toast.error("Please log in first");
@@ -776,6 +806,12 @@ const ImportBrandSources = () => {
     // For Squarespace Commerce, open the Squarespace modal
     if (toolName === 'Squarespace Commerce') {
       setSquarespaceModalOpen(true);
+      return;
+    }
+
+    // For Stripe CRM, open the Stripe modal
+    if (toolName === 'Stripe CRM') {
+      setStripeModalOpen(true);
       return;
     }
 
@@ -1557,6 +1593,43 @@ const ImportBrandSources = () => {
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
                 ) : (
                   "Connect Squarespace"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stripe CRM Connect Modal */}
+      <Dialog open={stripeModalOpen} onOpenChange={setStripeModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Stripe CRM</DialogTitle>
+            <DialogDescription>Enter your Stripe Secret Key to sync customers and payments.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="stripeSecretKeyImport">Secret Key</Label>
+              <Input
+                id="stripeSecretKeyImport"
+                type="password"
+                value={stripeSecretKey}
+                onChange={(e) => setStripeSecretKey(e.target.value)}
+                placeholder="sk_live_..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Found in <strong>Stripe Dashboard → Developers → API keys</strong>. Use your Secret key starting with <code>sk_</code>.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setStripeModalOpen(false); setStripeSecretKey(""); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleConnectStripe} disabled={isConnectingStripe || !stripeSecretKey.trim()} className="flex-1">
+                {isConnectingStripe ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
+                ) : (
+                  "Connect Stripe"
                 )}
               </Button>
             </div>
