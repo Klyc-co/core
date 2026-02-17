@@ -11,7 +11,7 @@ const LandingPowerClose = () => {
     <>
       <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-2">
             <span
               className="bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, #2dd4a8, #6b8de3, #a855f7)" }}
@@ -19,9 +19,9 @@ const LandingPowerClose = () => {
               "Start Earning Attention."
             </span>
           </h2>
-          <img src={klycMascot} alt="Klyc mascot" className="h-[34rem] sm:h-[40rem] mx-auto -mb-6" />
+          <img src={klycMascot} alt="Klyc mascot" className="h-[34rem] sm:h-[40rem] mx-auto -my-4" />
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-2">
             <Button
               size="lg"
               onClick={() => navigate("/auth")}
