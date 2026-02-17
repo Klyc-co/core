@@ -89,6 +89,7 @@ const providers: CrmProvider[] = [
     icon: StripeIcon,
     available: true,
     description: "Payments & customers",
+    useApiKey: true,
   },
   {
     id: "pipedrive",
@@ -116,6 +117,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     squareAccessToken: "",
     squareApplicationId: "",
     squarespaceApiKey: "",
+    stripeSecretKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -130,6 +132,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       squareAccessToken: "",
       squareApplicationId: "",
       squarespaceApiKey: "",
+      stripeSecretKey: "",
     });
     setStep("configure");
   };
@@ -154,6 +157,25 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
           handleClose();
         } else {
           toast.error(data?.error || "Failed to connect Squarespace");
+        }
+        return;
+      }
+
+      // Stripe uses direct secret key — no OAuth redirect
+      if (selectedProvider.id === "stripe") {
+        const { data, error } = await supabase.functions.invoke("stripe-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            secretKey: formData.stripeSecretKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Stripe connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Stripe");
         }
         return;
       }
@@ -208,7 +230,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "" });
     onOpenChange(false);
   };
 
@@ -323,6 +345,22 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                  </>
                )}
 
+               {selectedProvider?.id === "stripe" && (
+                 <div>
+                   <Label htmlFor="stripeSecretKey">Secret Key</Label>
+                   <Input
+                     id="stripeSecretKey"
+                     type="password"
+                     value={formData.stripeSecretKey}
+                     onChange={(e) => setFormData((prev) => ({ ...prev, stripeSecretKey: e.target.value }))}
+                     placeholder="sk_live_..."
+                   />
+                   <p className="text-xs text-muted-foreground mt-1">
+                     Found in your Stripe Dashboard under <strong>Developers → API keys</strong>. Use your <em>Secret key</em> (starts with <code>sk_</code>).
+                   </p>
+                 </div>
+               )}
+
                {selectedProvider?.id === "squarespace" && (
                  <div>
                    <Label htmlFor="squarespaceApiKey">API Key</Label>
@@ -346,7 +384,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim())} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim())} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
