@@ -31,9 +31,9 @@ const Index = () => {
       <LandingMeetKlyc />
       <LandingCostSection />
       <LandingInfrastructure />
-      <LandingDistributed />
-      <LandingSpeed />
       <LandingVirality />
+      <LandingSpeed />
+      <LandingDistributed />
       <LandingBuiltFor />
       <LandingCategory />
       <LandingPowerClose />
