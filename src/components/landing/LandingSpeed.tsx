@@ -39,32 +39,8 @@ const LandingSpeed = () => {
         </AnimateOnScroll>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-10">
-          {/* Traditional Timeline */}
-          <AnimateOnScroll delay={100}>
-            <div className="p-6 sm:p-8 rounded-xl border border-[#e2e5ea] bg-[#ebedf0]/20">
-              <p className="text-xs font-mono uppercase tracking-widest text-[#6b7280]/60 mb-8">Traditional Marketing</p>
-              <div className="space-y-0">
-                {traditionalTimeline.map((item, i) => (
-                  <div key={i} className="flex gap-4 relative">
-                    {i < traditionalTimeline.length - 1 && (
-                      <div className="absolute left-[5px] top-3 w-px h-full bg-[#6b7280]/15" />
-                    )}
-                    <div className="relative z-10 mt-1.5 w-[11px] h-[11px] rounded-full border-2 border-[#6b7280]/25 bg-white flex-shrink-0" />
-                    <div className="pb-6">
-                      <p className="text-xs font-mono uppercase tracking-wider text-[#6b7280]/50 mb-1">{item.time}</p>
-                      <p className="text-sm sm:text-base text-[#6b7280]">{item.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-[#6b7280]/50 mt-2 font-light italic">
-                Total: 4–6 weeks before momentum even starts.
-              </p>
-            </div>
-          </AnimateOnScroll>
-
           {/* KLYC Timeline */}
-          <AnimateOnScroll delay={200}>
+          <AnimateOnScroll delay={100}>
             <div className="p-6 sm:p-8 rounded-xl border border-[#2dd4a8]/25 bg-gradient-to-br from-[#2dd4a8]/[0.04] via-transparent to-[#a855f7]/[0.04]">
               <p className="text-xs font-mono uppercase tracking-widest bg-gradient-to-r from-[#2dd4a8] to-[#a855f7] bg-clip-text text-transparent mb-8">KLYC</p>
               <div className="space-y-0">
@@ -88,6 +64,30 @@ const LandingSpeed = () => {
               </div>
               <p className="text-sm font-medium bg-gradient-to-r from-[#2dd4a8] to-[#a855f7] bg-clip-text text-transparent mt-2">
                 Momentum begins immediately.
+              </p>
+            </div>
+          </AnimateOnScroll>
+
+          {/* Traditional Timeline */}
+          <AnimateOnScroll delay={200}>
+            <div className="p-6 sm:p-8 rounded-xl border border-[#e2e5ea] bg-[#ebedf0]/20">
+              <p className="text-xs font-mono uppercase tracking-widest text-[#6b7280]/60 mb-8">Traditional Marketing</p>
+              <div className="space-y-0">
+                {traditionalTimeline.map((item, i) => (
+                  <div key={i} className="flex gap-4 relative">
+                    {i < traditionalTimeline.length - 1 && (
+                      <div className="absolute left-[5px] top-3 w-px h-full bg-[#6b7280]/15" />
+                    )}
+                    <div className="relative z-10 mt-1.5 w-[11px] h-[11px] rounded-full border-2 border-[#6b7280]/25 bg-white flex-shrink-0" />
+                    <div className="pb-6">
+                      <p className="text-xs font-mono uppercase tracking-wider text-[#6b7280]/50 mb-1">{item.time}</p>
+                      <p className="text-sm sm:text-base text-[#6b7280]">{item.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-[#6b7280]/50 mt-2 font-light italic">
+                Total: 4–6 weeks before momentum even starts.
               </p>
             </div>
           </AnimateOnScroll>
