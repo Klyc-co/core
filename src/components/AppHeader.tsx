@@ -346,7 +346,7 @@ const navItems = [
   return (
     <>
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6">
             <Logo />
             {!isMobile && <NavButtons />}
