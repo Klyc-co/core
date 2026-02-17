@@ -316,6 +316,7 @@ const ecommerceTools: ToolItem[] = [
   { name: "Wix Stores", icon: WixIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Stripe CRM", icon: StripeIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Square CRM", icon: SquareIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
+  { name: "Squarespace Commerce", icon: SquarespaceIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
 ];
 
 const ImportBrandSources = () => {
@@ -335,6 +336,9 @@ const ImportBrandSources = () => {
   const [squareModalOpen, setSquareModalOpen] = useState(false);
   const [squareAccessToken, setSquareAccessToken] = useState("");
   const [isConnectingSquare, setIsConnectingSquare] = useState(false);
+  const [squarespaceModalOpen, setSquarespaceModalOpen] = useState(false);
+  const [squarespaceApiKey, setSquarespaceApiKey] = useState("");
+  const [isConnectingSquarespace, setIsConnectingSquarespace] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -630,6 +634,18 @@ const ImportBrandSources = () => {
     if (squareConn) {
       newStatus['Square CRM'] = 'connected';
     }
+
+    // Check Squarespace Commerce connection
+    const { data: squarespaceConn } = await supabase
+      .from("crm_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("provider", "squarespace")
+      .maybeSingle();
+
+    if (squarespaceConn) {
+      newStatus['Squarespace Commerce'] = 'connected';
+    }
     
     setConnectionStatus(newStatus);
   };
@@ -712,6 +728,33 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectSquarespace = async () => {
+    if (!squarespaceApiKey.trim()) {
+      toast.error("Please enter your Squarespace API key");
+      return;
+    }
+    setIsConnectingSquarespace(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("squarespace-crm-connect", {
+        body: { apiKey: squarespaceApiKey.trim(), displayName: "Squarespace Commerce" },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Squarespace Commerce connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Squarespace Commerce": 'connected' }));
+        setSquarespaceModalOpen(false);
+        setSquarespaceApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Squarespace");
+      }
+    } catch (err) {
+      console.error("Squarespace connect error:", err);
+      toast.error("Failed to connect Squarespace Commerce");
+    } finally {
+      setIsConnectingSquarespace(false);
+    }
+  };
+
   const handleConnectCrmTool = async (toolName: string) => {
     if (!user) {
       toast.error("Please log in first");
@@ -727,6 +770,12 @@ const ImportBrandSources = () => {
     // For Square CRM, open the Square modal
     if (toolName === 'Square CRM') {
       setSquareModalOpen(true);
+      return;
+    }
+
+    // For Squarespace Commerce, open the Squarespace modal
+    if (toolName === 'Squarespace Commerce') {
+      setSquarespaceModalOpen(true);
       return;
     }
 
@@ -1465,6 +1514,49 @@ const ImportBrandSources = () => {
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
                 ) : (
                   "Connect Square"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Squarespace Commerce Connect Modal */}
+      <Dialog open={squarespaceModalOpen} onOpenChange={setSquarespaceModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Squarespace Commerce</DialogTitle>
+            <DialogDescription>
+              Enter your Squarespace API key to sync customers and orders into Klyc.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="squarespaceApiKey">API Key</Label>
+              <Input
+                id="squarespaceApiKey"
+                type="password"
+                value={squarespaceApiKey}
+                onChange={(e) => setSquarespaceApiKey(e.target.value)}
+                placeholder="Enter your Squarespace API key"
+              />
+              <p className="text-xs text-muted-foreground">
+                Found in your Squarespace account under <strong>Settings → Advanced → API Keys</strong>. Create a key with <em>Commerce</em> read permissions.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setSquarespaceModalOpen(false); setSquarespaceApiKey(""); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConnectSquarespace}
+                disabled={isConnectingSquarespace || !squarespaceApiKey.trim()}
+                className="flex-1"
+              >
+                {isConnectingSquarespace ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
+                ) : (
+                  "Connect Squarespace"
                 )}
               </Button>
             </div>
