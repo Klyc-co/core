@@ -17,7 +17,7 @@ const LandingDistributed = () => {
             >
               KLYC
             </span>
-            <span className="text-primary-foreground"> turns employees, leadership, and sales into synchronized visibility.</span>
+            <span className="text-primary-foreground font-light"> turns employees, leadership, and sales into synchronized visibility.</span>
           </h2>
         </AnimateOnScroll>
 
