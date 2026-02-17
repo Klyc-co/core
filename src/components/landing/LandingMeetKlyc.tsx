@@ -25,7 +25,7 @@ const LandingMeetKlyc = () => {
             </span>
           </h2>
           <p className="text-lg sm:text-xl md:text-2xl text-[#6b7280] font-light italic mb-10 sm:mb-12 text-center">
-            "I'm Your Always-On Marketing Agent. I work 24/7 with you."
+            "I'm Your Always-On Marketing AI Agent. I work 24/7 with you."
           </p>
         </AnimateOnScroll>
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
