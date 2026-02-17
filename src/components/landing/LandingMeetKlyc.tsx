@@ -10,33 +10,33 @@ const finalBullets = [
   {
     icon: CalendarCheck,
     parts: [
-      { text: "I turn your goals into a weekly " },
+      { text: "\"I turn your goals into a weekly " },
       { text: "Plan", gradient: true },
-      { text: " — what to post, where to post, and why it matters." },
+      { text: " — what to post, where to post, and why it matters.\"" },
     ],
   },
   {
     icon: Sparkles,
     parts: [
-      { text: "I " },
+      { text: "\"I " },
       { text: "Create", gradient: true },
-      { text: " platform-native content that sounds like you — scripts, posts, captions, and creatives." },
+      { text: " platform-native content that sounds like you — scripts, posts, captions, and creatives.\"" },
     ],
   },
   {
     icon: Send,
     parts: [
-      { text: "I " },
+      { text: "\"I " },
       { text: "Publish", gradient: true },
-      { text: " across every channel on schedule — so you stay consistent without manual work." },
+      { text: " across every channel on schedule — so you stay consistent without manual work.\"" },
     ],
   },
   {
     icon: TrendingUp,
     parts: [
-      { text: "I track what's working, learn fast, and " },
+      { text: "\"I track what's working, learn fast, and " },
       { text: "Optimize", gradient: true },
-      { text: " — so every week performs better than the last." },
+      { text: " — so every week performs better than the last.\"" },
     ],
   },
 ];
@@ -106,18 +106,22 @@ const LandingMeetKlyc = () => {
 
         {/* Tagline under mascot and quotes */}
         <AnimateOnScroll delay={400}>
-          <p className="mt-14 sm:mt-16 text-center text-base sm:text-lg md:text-xl text-[#6b7280] font-medium max-w-3xl mx-auto">
-            Klyc is a social-first marketing loop:{" "}
-            <span className="text-[#191a1f] font-semibold">your community signals</span> →{" "}
-            <span
-              className="font-semibold bg-clip-text text-transparent"
-              style={gradientStyle}
-            >
-              Klyc executes
-            </span>{" "}
-            →{" "}
-            <span className="text-[#191a1f] font-semibold">your reach compounds.</span>
-          </p>
+          <div className="mt-14 sm:mt-16 text-center max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-[#6b7280] font-medium">
+              Klyc is a social-first marketing loop
+            </p>
+            <p className="text-base sm:text-lg md:text-xl font-medium mt-1">
+              <span className="text-[#191a1f] font-semibold">your community signals</span> →{" "}
+              <span
+                className="font-semibold bg-clip-text text-transparent"
+                style={gradientStyle}
+              >
+                Klyc executes
+              </span>{" "}
+              →{" "}
+              <span className="text-[#191a1f] font-semibold">your reach compounds.</span>
+            </p>
+          </div>
         </AnimateOnScroll>
       </div>
     </section>
