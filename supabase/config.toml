@@ -231,3 +231,10 @@ verify_jwt = false
 [functions.square-crm-connect]
 verify_jwt = false
 
+[functions.stripe-crm-auth-url]
+verify_jwt = false
+
+[functions.stripe-crm-oauth-callback]
+verify_jwt = false
+
+
