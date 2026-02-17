@@ -5,7 +5,7 @@ import { Layers, LayoutDashboard, Globe, Send, Rocket } from "lucide-react";
 const bullets = [
   { icon: Layers, text: "\"I replace marketing chaos with one unified execution engine.\"" },
   { icon: LayoutDashboard, text: "\"I run your strategy, creation, and distribution from one system.\"" },
-  { icon: Globe, text: "\"I generate platform-native content at scale — automatically.\"" },
+  { icon: Globe, text: "\"I generate platform-native content at scale, automatically.\"" },
   { icon: Send, text: "\"I publish across every channel without manual work.\"" },
   { icon: Rocket, text: "\"I amplify what's working before it disappears.\"" },
 ];
