@@ -277,7 +277,7 @@ const socialTools: ToolItem[] = [
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]" },
+  { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]", iconColor: "text-white", isConnectable: true },
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black" },
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white", isConnectable: true },
@@ -566,6 +566,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "monday") {
           newStatus['Monday.com'] = 'connected';
+        }
+        if (conn.platform === "canva") {
+          newStatus['Canva'] = 'connected';
         }
       });
     }
@@ -871,6 +874,8 @@ const ImportBrandSources = () => {
         return;
       } else if (toolName === 'Zoho CRM') {
         functionName = 'zoho-crm-auth-url';
+      } else if (toolName === 'Canva') {
+        functionName = 'canva-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
