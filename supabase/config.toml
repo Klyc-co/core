@@ -225,6 +225,12 @@ verify_jwt = false
 [functions.zoho-crm-oauth-callback]
 verify_jwt = false
 
+[functions.canva-auth-url]
+verify_jwt = false
+
+[functions.canva-oauth-callback]
+verify_jwt = false
+
 [functions.elevenlabs-tts]
 verify_jwt = false
 

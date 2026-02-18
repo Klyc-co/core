@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { ArrowLeft, Check, FolderOpen, Loader2 } from "lucide-react";
@@ -98,7 +98,7 @@ const storagePlatforms: StoragePlatform[] = [
     icon: CanvaIcon,
     bgColor: "bg-[#00C4CC]",
     description: "Import designs from Canva",
-    comingSoon: true,
+    connectionTable: "social_connections",
   },
   {
     id: "figma",
@@ -172,6 +172,7 @@ interface ConnectionStatus {
 
 const ImportAssetSources = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({});
@@ -179,6 +180,16 @@ const ImportAssetSources = () => {
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [showAdobePicker, setShowAdobePicker] = useState(false);
+
+  useEffect(() => {
+    const canvaStatus = searchParams.get("canva");
+    const error = searchParams.get("error");
+    if (canvaStatus === "connected") {
+      toast.success("Canva connected successfully!");
+    } else if (error) {
+      toast.error("Failed to connect. Please try again.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -196,59 +207,42 @@ const ImportAssetSources = () => {
     try {
       const connections: ConnectionStatus = {};
 
-      // Check Dropbox connection
-      const { data: dropboxData } = await supabase
-        .from("dropbox_connections")
-        .select("id, connection_status")
-        .eq("user_id", userId)
-        .maybeSingle();
-      
-      connections["dropbox"] = dropboxData?.connection_status === "connected";
+      const [dropboxRes, gdriveRes, adobeRes, boxRes, airtableRes, canvaRes] = await Promise.all([
+        supabase.from("dropbox_connections").select("id, connection_status").eq("user_id", userId).maybeSingle(),
+        supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "google_drive").maybeSingle(),
+        supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "adobe_cc").maybeSingle(),
+        supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "box").maybeSingle(),
+        supabase.from("airtable_connections").select("id").eq("user_id", userId).maybeSingle(),
+        supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "canva").maybeSingle(),
+      ]);
 
-      // Check Google Drive OAuth connection (stored in social_connections)
-      const { data: gdriveData } = await supabase
-        .from("social_connections")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("platform", "google_drive")
-        .maybeSingle();
-      
-      connections["google-drive"] = !!gdriveData;
-
-      // Check Adobe CC connection
-      const { data: adobeData } = await supabase
-        .from("social_connections")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("platform", "adobe_cc")
-        .maybeSingle();
-      
-      connections["adobe-cc"] = !!adobeData;
-
-      // Check Box connection
-      const { data: boxData } = await supabase
-        .from("social_connections")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("platform", "box")
-        .maybeSingle();
-      
-      connections["box"] = !!boxData;
-
-      // Check Airtable connection
-      const { data: airtableData } = await supabase
-        .from("airtable_connections")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      
-      connections["airtable"] = !!airtableData;
+      connections["dropbox"] = dropboxRes.data?.connection_status === "connected";
+      connections["google-drive"] = !!gdriveRes.data;
+      connections["adobe-cc"] = !!adobeRes.data;
+      connections["box"] = !!boxRes.data;
+      connections["airtable"] = !!airtableRes.data;
+      connections["canva"] = !!canvaRes.data;
 
       setConnectionStatus(connections);
     } catch (error) {
       console.error("Failed to check connections:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConnectCanva = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("canva-auth-url");
+      if (error) throw error;
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast.error("Failed to get Canva authorization URL");
+      }
+    } catch (err) {
+      console.error("Canva connect error:", err);
+      toast.error("Failed to connect Canva. Please try again.");
     }
   };
 
@@ -261,19 +255,23 @@ const ImportAssetSources = () => {
     const isConnected = connectionStatus[platform.id];
 
     if (!isConnected) {
-      // Navigate to the connection page
+      if (platform.id === "canva") {
+        handleConnectCanva();
+        return;
+      }
       navigate("/profile/import");
       toast.info(`Please connect ${platform.name} first`);
       return;
     }
 
-    // Open the file picker for connected platforms
     if (platform.id === "dropbox") {
       setShowDropboxPicker(true);
     } else if (platform.id === "google-drive") {
       setShowGoogleDrivePicker(true);
     } else if (platform.id === "adobe-cc") {
       setShowAdobePicker(true);
+    } else if (platform.id === "canva") {
+      toast.info("Canva file browser coming soon!");
     }
   };
 
