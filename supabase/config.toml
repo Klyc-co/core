@@ -243,4 +243,7 @@ verify_jwt = false
 [functions.stripe-crm-oauth-callback]
 verify_jwt = false
 
+[functions.riverside-connect]
+verify_jwt = false
+
 

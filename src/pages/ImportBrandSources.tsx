@@ -30,6 +30,7 @@ import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import AirtableConnectModal from "@/components/AirtableConnectModal";
 import TrelloConnectModal from "@/components/TrelloConnectModal";
 import LoomConnectModal from "@/components/LoomConnectModal";
+import RiversideConnectModal from "@/components/RiversideConnectModal";
 import FigmaIcon from "@/components/icons/FigmaIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
@@ -282,7 +283,7 @@ const socialTools: ToolItem[] = [
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white", isConnectable: true },
   { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black" },
-  { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]" },
+  { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]", iconColor: "text-white", isConnectable: true },
   { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
 ];
@@ -333,6 +334,7 @@ const ImportBrandSources = () => {
   const [airtableModalOpen, setAirtableModalOpen] = useState(false);
   const [trelloModalOpen, setTrelloModalOpen] = useState(false);
   const [loomModalOpen, setLoomModalOpen] = useState(false);
+  const [riversideModalOpen, setRiversideModalOpen] = useState(false);
   const [squareModalOpen, setSquareModalOpen] = useState(false);
   const [squareAccessToken, setSquareAccessToken] = useState("");
   const [isConnectingSquare, setIsConnectingSquare] = useState(false);
@@ -618,6 +620,17 @@ const ImportBrandSources = () => {
       newStatus['Loom'] = 'connected';
     }
 
+    // Check Riverside connection
+    const { data: riversideConn } = await supabase
+      .from("riverside_connections" as any)
+      .select("id, connection_status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (riversideConn && (riversideConn as any).connection_status === 'connected') {
+      newStatus['Riverside'] = 'connected';
+    }
+
     // Check Dropbox connection
     const { data: dropboxConn } = await supabase
       .from("dropbox_connections")
@@ -833,6 +846,12 @@ const ImportBrandSources = () => {
     // For Loom, open the connect modal (uses API token)
     if (toolName === 'Loom') {
       setLoomModalOpen(true);
+      return;
+    }
+
+    // For Riverside, open the connect modal (uses API key)
+    if (toolName === 'Riverside') {
+      setRiversideModalOpen(true);
       return;
     }
 
@@ -1526,6 +1545,16 @@ const ImportBrandSources = () => {
         onConnected={() => {
           setConnectionStatus(prev => ({ ...prev, Loom: 'connected' }));
           toast.success("Loom connected successfully!");
+        }}
+      />
+
+      {/* Riverside Connect Modal */}
+      <RiversideConnectModal
+        open={riversideModalOpen}
+        onOpenChange={setRiversideModalOpen}
+        onConnected={() => {
+          setConnectionStatus(prev => ({ ...prev, Riverside: 'connected' }));
+          toast.success("Riverside connected successfully!");
         }}
       />
 
