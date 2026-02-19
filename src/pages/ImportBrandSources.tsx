@@ -155,13 +155,6 @@ const socialPlatforms: SocialPlatform[] = [
     customOAuth: true,
   },
   { 
-    name: "Pinterest", 
-    icon: CircleDot, 
-    color: "bg-red-600", 
-    textColor: "text-red-600",
-    comingSoon: true,
-  },
-  { 
     name: "Snapchat", 
     icon: SnapchatIcon, 
     color: "bg-[#FFFC00]", 
@@ -174,13 +167,6 @@ const socialPlatforms: SocialPlatform[] = [
     color: "bg-[#9146FF]", 
     textColor: "text-[#9146FF]",
     customOAuth: true,
-  },
-  { 
-    name: "Reddit", 
-    icon: RedditIcon, 
-    color: "bg-[#FF4500]", 
-    textColor: "text-[#FF4500]",
-    comingSoon: true,
   },
   { 
     name: "Tumblr", 
@@ -197,20 +183,6 @@ const socialPlatforms: SocialPlatform[] = [
     comingSoon: true,
   },
   { 
-    name: "Substack", 
-    icon: SubstackIcon, 
-    color: "bg-[#FF6719]", 
-    textColor: "text-[#FF6719]",
-    comingSoon: true,
-  },
-  { 
-    name: "BeReal", 
-    icon: BeRealIcon, 
-    color: "bg-black", 
-    textColor: "text-black dark:text-white",
-    comingSoon: true,
-  },
-  { 
     name: "WhatsApp Business", 
     icon: WhatsAppIcon, 
     color: "bg-[#25D366]", 
@@ -222,13 +194,6 @@ const socialPlatforms: SocialPlatform[] = [
     icon: TelegramIcon, 
     color: "bg-[#0088CC]", 
     textColor: "text-[#0088CC]",
-    comingSoon: true,
-  },
-  { 
-    name: "Medium", 
-    icon: MediumIcon, 
-    color: "bg-black", 
-    textColor: "text-black dark:text-white",
     comingSoon: true,
   },
   { 
