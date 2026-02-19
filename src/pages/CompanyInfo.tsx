@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Building2, Users, Lightbulb, Loader2, Globe, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Building2, Users, Lightbulb, Loader2, Globe, TrendingUp, Upload, ImageIcon, Trash2 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -42,6 +43,11 @@ const CompanyInfo = () => {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { getEffectiveUserId, selectedClientId, isDefaultClient } = useClientContext();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [libraryImages, setLibraryImages] = useState<{ id: string; name: string; value: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle Google Analytics OAuth callback (works even when Analytics tab isn't active)
   // This is critical for popup OAuth flow - the popup lands on /profile/company
@@ -106,6 +112,7 @@ const CompanyInfo = () => {
           marketingGoals: profile.marketing_goals || "",
           mainCompetitors: profile.main_competitors || ""
         });
+        setLogoUrl(profile.logo_url || null);
 
         const savedAudience = profile.audience_data as Record<string, unknown> || {};
         setAudienceData({
@@ -195,6 +202,7 @@ const CompanyInfo = () => {
       value_proposition: valueData.corePromise,
       audience_data: audienceData,
       value_data: valueData,
+      logo_url: logoUrl,
       updated_at: new Date().toISOString()
     };
 
@@ -256,6 +264,92 @@ const CompanyInfo = () => {
 
             {/* Company Information Tab */}
             <TabsContent value="company" className="bg-card border border-border rounded-xl p-4 sm:p-8 space-y-6">
+              {/* Profile Photo */}
+              <div className="space-y-2">
+                <Label>Profile Photo</Label>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-xl bg-muted border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !user) return;
+                        setIsUploadingLogo(true);
+                        const ext = file.name.split('.').pop();
+                        const path = `${user.id}/profile-photo.${ext}`;
+                        const { error: uploadErr } = await supabase.storage
+                          .from('brand-assets')
+                          .upload(path, file, { upsert: true });
+                        if (uploadErr) {
+                          toast.error("Failed to upload photo");
+                          setIsUploadingLogo(false);
+                          return;
+                        }
+                        const { data: urlData } = supabase.storage
+                          .from('brand-assets')
+                          .getPublicUrl(path);
+                        setLogoUrl(urlData.publicUrl);
+                        setIsUploadingLogo(false);
+                        toast.success("Photo uploaded!");
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      disabled={isUploadingLogo}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      Upload Photo
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={async () => {
+                        const effectiveUserId = getEffectiveUserId();
+                        if (!effectiveUserId) return;
+                        const { data } = await supabase
+                          .from('brand_assets')
+                          .select('id, name, value')
+                          .eq('user_id', effectiveUserId)
+                          .eq('asset_type', 'image');
+                        setLibraryImages(data || []);
+                        setShowLibraryPicker(true);
+                      }}
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Choose from Library
+                    </Button>
+                    {logoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-destructive hover:text-destructive"
+                        onClick={() => setLogoUrl(null)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="businessName">Business Name *</Label>
                 <Input id="businessName" placeholder="e.g., EcoThreads" value={companyData.businessName}
@@ -472,6 +566,37 @@ const CompanyInfo = () => {
           </div>
         </form>
       </main>
+
+      {/* Library Image Picker Dialog */}
+      <Dialog open={showLibraryPicker} onOpenChange={setShowLibraryPicker}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Choose from Library</DialogTitle>
+          </DialogHeader>
+          {libraryImages.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No images found in your brand library.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+              {libraryImages.map((img) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  className="aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-colors"
+                  onClick={() => {
+                    setLogoUrl(img.value);
+                    setShowLibraryPicker(false);
+                    toast.success("Photo selected from library!");
+                  }}
+                >
+                  <img src={img.value} alt={img.name || "Library image"} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
