@@ -252,4 +252,10 @@ verify_jwt = false
 [functions.frameio-oauth-callback]
 verify_jwt = false
 
+[functions.miro-auth-url]
+verify_jwt = false
+
+[functions.miro-oauth-callback]
+verify_jwt = false
+
 
