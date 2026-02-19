@@ -1794,6 +1794,39 @@ export type Database = {
           },
         ]
       }
+      riverside_connections: {
+        Row: {
+          api_token: string
+          connection_status: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_sync_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          connection_status?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          connection_status?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       scheduled_campaigns: {
         Row: {
           campaign_name: string
