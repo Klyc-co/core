@@ -12,10 +12,12 @@ import NotionIcon from "@/components/icons/NotionIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
+import CanvaIcon from "@/components/icons/CanvaIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import NotionFilePicker from "@/components/NotionFilePicker";
 import AdobeFilePicker from "@/components/AdobeFilePicker";
+import CanvaFilePicker from "@/components/CanvaFilePicker";
 import AirtableConnectModal from "@/components/AirtableConnectModal";
 import AirtableDrawer from "@/components/AirtableDrawer";
 import ClickUpConnectModal from "@/components/ClickUpConnectModal";
@@ -23,7 +25,7 @@ import ClickUpDrawer from "@/components/ClickUpDrawer";
 
 interface ToolConnection {
   id: string;
-  type: "dropbox" | "google_drive" | "notion" | "adobe_cc" | "airtable" | "clickup";
+  type: "dropbox" | "google_drive" | "notion" | "adobe_cc" | "airtable" | "clickup" | "canva";
   name: string;
   email?: string;
   connected: boolean;
@@ -48,6 +50,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
   const [showAirtableDrawer, setShowAirtableDrawer] = useState(false);
   const [showClickUpConnectModal, setShowClickUpConnectModal] = useState(false);
   const [showClickUpDrawer, setShowClickUpDrawer] = useState(false);
+  const [showCanvaPicker, setShowCanvaPicker] = useState(false);
   const [importingFromTool, setImportingFromTool] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -105,6 +108,14 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         .from("clickup_connections")
         .select("id, connection_status, last_sync_at, team_name")
         .eq("user_id", userId)
+        .maybeSingle();
+
+      // Fetch Canva connection from social_connections
+      const { data: canvaConn } = await supabase
+        .from("social_connections")
+        .select("id, platform_username, updated_at")
+        .eq("user_id", userId)
+        .eq("platform", "canva")
         .maybeSingle();
 
       // Get Airtable summary if connected
@@ -189,6 +200,15 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         summary: clickupSummary || undefined,
       });
 
+      toolConnections.push({
+        id: canvaConn?.id || "canva",
+        type: "canva",
+        name: "Canva",
+        email: canvaConn?.platform_username || undefined,
+        connected: !!canvaConn,
+        lastSync: canvaConn?.updated_at,
+      });
+
       setConnections(toolConnections);
     } catch (error) {
       console.error("Failed to fetch connections:", error);
@@ -224,6 +244,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       setShowAirtableDrawer(true);
     } else if (tool.type === "clickup") {
       setShowClickUpDrawer(true);
+    } else if (tool.type === "canva") {
+      setShowCanvaPicker(true);
     }
   };
 
@@ -297,6 +319,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
         return <AirtableIcon className="w-10 h-10" />;
       case "clickup":
         return <ClickUpIcon className="w-10 h-10" />;
+      case "canva":
+        return <CanvaIcon className="w-10 h-10" />;
       default:
         return <FolderOpen className="w-10 h-10 text-muted-foreground" />;
     }
@@ -343,7 +367,7 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                         <p className="text-xs text-muted-foreground mt-1">{tool.summary}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {tool.type === "airtable" || tool.type === "clickup" ? "Click to configure & browse data" : "Click to browse & import files"}
+                        {tool.type === "airtable" || tool.type === "clickup" ? "Click to configure & browse data" : tool.type === "canva" ? "Click to browse & import designs" : "Click to browse & import files"}
                       </p>
                     </div>
                   </div>
@@ -390,6 +414,8 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
                           ? "Pull in content calendars, briefs & social planning tables"
                           : tool.type === "clickup"
                           ? "Pull in content calendars, briefs & marketing tasks from ClickUp"
+                          : tool.type === "canva"
+                          ? "Browse and import your Canva designs"
                           : "Not connected"}
                       </p>
                     </div>
@@ -449,6 +475,12 @@ export default function SocialToolsContent({ onImportComplete }: SocialToolsCont
       <AdobeFilePicker
         open={showAdobePicker}
         onOpenChange={setShowAdobePicker}
+        onImportComplete={onImportComplete}
+      />
+
+      <CanvaFilePicker
+        open={showCanvaPicker}
+        onOpenChange={setShowCanvaPicker}
         onImportComplete={onImportComplete}
       />
 
