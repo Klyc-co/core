@@ -90,6 +90,7 @@ import TelegramIcon from "@/components/icons/TelegramIcon";
 import MediumIcon from "@/components/icons/MediumIcon";
 import PatreonIcon from "@/components/icons/PatreonIcon";
 import DropboxConnectionCard from "@/components/DropboxConnectionCard";
+import DaVinciResolveImportDialog from "@/components/DaVinciResolveImportDialog";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface SocialPlatform {
@@ -224,7 +225,7 @@ const socialTools: ToolItem[] = [
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
@@ -309,6 +310,7 @@ const ImportBrandSources = () => {
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [davinciModalOpen, setDavinciModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -817,6 +819,12 @@ const ImportBrandSources = () => {
     // For Riverside, open the connect modal (uses API key)
     if (toolName === 'Riverside') {
       setRiversideModalOpen(true);
+      return;
+    }
+
+    // For DaVinci Resolve, open the file upload dialog
+    if (toolName === 'DaVinci Resolve') {
+      setDavinciModalOpen(true);
       return;
     }
 
@@ -1653,6 +1661,15 @@ const ImportBrandSources = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* DaVinci Resolve Import Dialog */}
+      {user && (
+        <DaVinciResolveImportDialog
+          open={davinciModalOpen}
+          onOpenChange={setDavinciModalOpen}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 };
