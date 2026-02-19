@@ -12,89 +12,85 @@ const DecayCurve = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const resize = () => {
-      canvas.width = canvas.offsetWidth * 2;
-      canvas.height = canvas.offsetHeight * 2;
-      ctx.scale(2, 2);
-    };
-    resize();
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 2;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      if (w === 0 || h === 0) return;
 
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
-    const padding = { top: 20, bottom: 30, left: 10, right: 10 };
-    const chartW = w - padding.left - padding.right;
-    const chartH = h - padding.top - padding.bottom;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    ctx.clearRect(0, 0, w, h);
+      const padding = { top: 20, bottom: 30, left: 10, right: 10 };
+      const chartW = w - padding.left - padding.right;
+      const chartH = h - padding.top - padding.bottom;
 
-    // Draw curve: sharp rise to 90min mark, then flatline
-    const gradient = ctx.createLinearGradient(padding.left, 0, w - padding.right, 0);
-    gradient.addColorStop(0, "#2dd4a8");
-    gradient.addColorStop(0.5, "#6b8de3");
-    gradient.addColorStop(1, "#a855f7");
+      ctx.clearRect(0, 0, w, h);
 
-    // Fill area under curve
-    const fillGrad = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
-    fillGrad.addColorStop(0, "rgba(45, 212, 168, 0.15)");
-    fillGrad.addColorStop(1, "transparent");
+      const gradient = ctx.createLinearGradient(padding.left, 0, w - padding.right, 0);
+      gradient.addColorStop(0, "#2dd4a8");
+      gradient.addColorStop(0.5, "#6b8de3");
+      gradient.addColorStop(1, "#a855f7");
 
-    ctx.beginPath();
-    ctx.moveTo(padding.left, padding.top + chartH);
+      const fillGrad = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+      fillGrad.addColorStop(0, "rgba(45, 212, 168, 0.15)");
+      fillGrad.addColorStop(1, "transparent");
 
-    const points: [number, number][] = [];
-    for (let i = 0; i <= 100; i++) {
-      const t = i / 100;
-      const x = padding.left + t * chartW;
-      let y: number;
-      if (t < 0.6) {
-        // Rising curve (first 90 min)
-        const progress = t / 0.6;
-        y = padding.top + chartH * (1 - (1 - Math.pow(1 - progress, 2.5)) * 0.85);
-      } else {
-        // Flatline/slight decay after 2hr
-        const decay = (t - 0.6) / 0.4;
-        const peakY = chartH * (1 - 0.85);
-        y = padding.top + peakY + decay * chartH * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top + chartH);
+
+      const points: [number, number][] = [];
+      for (let i = 0; i <= 100; i++) {
+        const t = i / 100;
+        const x = padding.left + t * chartW;
+        let y: number;
+        if (t < 0.6) {
+          const progress = t / 0.6;
+          y = padding.top + chartH * (1 - (1 - Math.pow(1 - progress, 2.5)) * 0.85);
+        } else {
+          const decay = (t - 0.6) / 0.4;
+          const peakY = chartH * (1 - 0.85);
+          y = padding.top + peakY + decay * chartH * 0.3;
+        }
+        points.push([x, y]);
+        ctx.lineTo(x, y);
       }
-      points.push([x, y]);
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(padding.left + chartW, padding.top + chartH);
-    ctx.closePath();
-    ctx.fillStyle = fillGrad;
-    ctx.fill();
+      ctx.lineTo(padding.left + chartW, padding.top + chartH);
+      ctx.closePath();
+      ctx.fillStyle = fillGrad;
+      ctx.fill();
 
-    // Draw the line itself
-    ctx.beginPath();
-    points.forEach(([x, y], i) => {
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      ctx.beginPath();
+      points.forEach(([x, y], i) => {
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    // 90min marker
-    const markerX = padding.left + 0.6 * chartW;
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "rgba(168, 85, 247, 0.3)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(markerX, padding.top);
-    ctx.lineTo(markerX, padding.top + chartH);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      const markerX = padding.left + 0.6 * chartW;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(168, 85, 247, 0.3)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(markerX, padding.top);
+      ctx.lineTo(markerX, padding.top + chartH);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-    // Labels
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.font = "10px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("0", padding.left, h - 10);
-    ctx.fillText("90 min", markerX, h - 10);
-    ctx.fillText("2 hr+", padding.left + chartW, h - 10);
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.font = "10px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("0", padding.left, h - 10);
+      ctx.fillText("90 min", markerX, h - 10);
+      ctx.fillText("2 hr+", padding.left + chartW, h - 10);
+    };
 
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    draw();
+    window.addEventListener("resize", draw);
+    return () => window.removeEventListener("resize", draw);
   }, []);
 
   return <canvas ref={canvasRef} className="w-full h-full" />;
