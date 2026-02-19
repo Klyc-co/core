@@ -30,16 +30,18 @@ serve(async (req) => {
     const redirectUri = `${SUPABASE_URL}/functions/v1/frameio-oauth-callback`;
 
     // Exchange code for access token
+    const tokenBody = new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      client_id: FRAMEIO_CLIENT_ID,
+      client_secret: FRAMEIO_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+    });
+
     const tokenResponse = await fetch("https://applications.frame.io/oauth2/token", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "authorization_code",
-        code,
-        client_id: FRAMEIO_CLIENT_ID,
-        client_secret: FRAMEIO_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-      }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: tokenBody.toString(),
     });
 
     if (!tokenResponse.ok) {
