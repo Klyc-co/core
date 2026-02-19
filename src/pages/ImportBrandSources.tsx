@@ -432,6 +432,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "frameio") {
+      toast.success("Frame.io connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "Frame.io": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -526,6 +532,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
+        }
+        if (conn.platform === "frameio") {
+          newStatus['Frame.io'] = 'connected';
         }
         if (conn.platform === "figma") {
           newStatus['Figma'] = 'connected';
@@ -846,9 +855,23 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // For Frame.io, open the file upload dialog
+    // For Frame.io, use OAuth flow
     if (toolName === 'Frame.io') {
-      setFrameioModalOpen(true);
+      setConnectionStatus(prev => ({ ...prev, [toolName]: 'connecting' }));
+      try {
+        const { data, error } = await supabase.functions.invoke('frameio-auth-url');
+        if (error) throw new Error(error.message);
+        if (data?.authUrl) {
+          window.open(data.authUrl, '_blank');
+          toast.info("Complete Frame.io authorization in the new window");
+        } else {
+          throw new Error("No auth URL returned");
+        }
+      } catch (err) {
+        console.error("Frame.io connect error:", err);
+        toast.error("Failed to connect to Frame.io");
+        setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+      }
       return;
     }
 

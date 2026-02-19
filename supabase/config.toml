@@ -246,4 +246,10 @@ verify_jwt = false
 [functions.riverside-connect]
 verify_jwt = false
 
+[functions.frameio-auth-url]
+verify_jwt = false
+
+[functions.frameio-oauth-callback]
+verify_jwt = false
+
 
