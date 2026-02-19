@@ -100,9 +100,9 @@ const LandingVirality = () => {
   return (
     <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 bg-[#08080c]">
       <div className="max-w-5xl mx-auto">
-        {/* Headline */}
+        {/* Headline — centered */}
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4 text-center">
             <span className="text-white">Attention Is Won</span>
             <br />
             <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">
@@ -112,41 +112,46 @@ const LandingVirality = () => {
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={50}>
-          <p className="text-base sm:text-lg text-white/70 max-w-2xl mb-16 leading-relaxed font-light">
-            After that, the algorithm moves on.
-            <br />
-            Momentum either compounds — or disappears.
+          <p className="text-base sm:text-lg text-white/70 max-w-2xl mx-auto mb-16 leading-relaxed font-light text-center">
+            After that, the algorithm moves on. Momentum either compounds — or disappears.
           </p>
         </AnimateOnScroll>
 
-        {/* Step 1 — Checkpoints */}
+        {/* Checkpoints + Graph side by side */}
         <AnimateOnScroll delay={100}>
-          <p className="text-xs font-mono uppercase tracking-widest text-white/60 mb-4">
+          <p className="text-xs font-mono uppercase tracking-widest text-white/60 mb-4 text-center">
             The first 120 minutes determine reach velocity.
           </p>
-          <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
-            {checkpoints.map((cp, i) => (
-              <div
-                key={cp}
-                className="px-4 py-2.5 rounded-lg border text-sm font-mono"
-                style={{
-                  borderColor: `rgba(${45 + i * 25}, ${212 - i * 20}, ${168 + i * 15}, 0.25)`,
-                  color: `rgba(${45 + i * 25}, ${212 - i * 20}, ${168 + i * 15}, ${0.5 + i * 0.1})`,
-                }}
-              >
-                {cp}
-              </div>
-            ))}
+          <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-center mb-6">
+            {/* Left: vertically stacked checkpoint boxes */}
+            <div className="flex flex-col gap-2 sm:gap-3 shrink-0">
+              {checkpoints.map((cp, i) => (
+                <div
+                  key={cp}
+                  className="px-5 py-2.5 rounded-lg border text-sm font-mono text-center"
+                  style={{
+                    borderColor: `rgba(${45 + i * 25}, ${212 - i * 20}, ${168 + i * 15}, 0.25)`,
+                    color: `rgba(${45 + i * 25}, ${212 - i * 20}, ${168 + i * 15}, ${0.5 + i * 0.1})`,
+                  }}
+                >
+                  {cp}
+                </div>
+              ))}
+            </div>
+            {/* Right: line graph */}
+            <div className="flex-1 w-full h-52 sm:h-60">
+              <DecayCurve />
+            </div>
           </div>
-          <p className="text-sm text-white/60 max-w-xl leading-relaxed font-light mb-14">
+          <p className="text-sm text-white/60 max-w-xl mx-auto leading-relaxed font-light text-center mb-14">
             Most posts plateau because amplification happens too late.
             By the time teams "review performance," momentum is already gone.
           </p>
         </AnimateOnScroll>
 
-        {/* Step 2 — Decision Engine */}
+        {/* Decision Engine — centered */}
         <AnimateOnScroll delay={150}>
-          <div className="p-6 sm:p-8 rounded-xl border border-[#2dd4a8]/20 bg-gradient-to-br from-[#2dd4a8]/[0.04] via-transparent to-[#a855f7]/[0.04] max-w-2xl mb-14">
+          <div className="p-6 sm:p-8 rounded-xl border border-[#2dd4a8]/20 bg-gradient-to-br from-[#2dd4a8]/[0.04] via-transparent to-[#a855f7]/[0.04] max-w-2xl mx-auto mb-14">
             <p className="text-xs font-mono uppercase tracking-widest bg-gradient-to-r from-[#2dd4a8] to-[#a855f7] bg-clip-text text-transparent mb-5">
               If engagement velocity exceeds baseline thresholds
             </p>
@@ -166,18 +171,9 @@ const LandingVirality = () => {
           </div>
         </AnimateOnScroll>
 
-        {/* Step 3 — Decay Graph */}
+        {/* Close — centered */}
         <AnimateOnScroll delay={200}>
-          <div className="max-w-lg mb-14">
-            <div className="h-40 sm:h-48">
-              <DecayCurve />
-            </div>
-          </div>
-        </AnimateOnScroll>
-
-        {/* Close — moved up right after engagement section */}
-        <AnimateOnScroll delay={250}>
-          <div className="pt-6 border-t border-white/[0.06]">
+          <div className="pt-6 border-t border-white/[0.06] text-center">
             <p className="text-xl sm:text-2xl font-bold text-white">
               Marketing isn't guesswork.
             </p>
