@@ -233,7 +233,7 @@ const socialTools: ToolItem[] = [
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -438,6 +438,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "miro") {
+      toast.success("Miro connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "Miro": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -535,6 +541,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "frameio") {
           newStatus['Frame.io'] = 'connected';
+        }
+        if (conn.platform === "miro") {
+          newStatus['Miro'] = 'connected';
         }
         if (conn.platform === "figma") {
           newStatus['Figma'] = 'connected';
@@ -870,6 +879,26 @@ const ImportBrandSources = () => {
       } catch (err) {
         console.error("Frame.io connect error:", err);
         toast.error("Failed to connect to Frame.io");
+        setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
+      }
+      return;
+    }
+
+    // For Miro, use OAuth flow
+    if (toolName === 'Miro') {
+      setConnectionStatus(prev => ({ ...prev, [toolName]: 'connecting' }));
+      try {
+        const { data, error } = await supabase.functions.invoke('miro-auth-url');
+        if (error) throw new Error(error.message);
+        if (data?.authUrl) {
+          window.open(data.authUrl, '_blank');
+          toast.info("Complete Miro authorization in the new window");
+        } else {
+          throw new Error("No auth URL returned");
+        }
+      } catch (err) {
+        console.error("Miro connect error:", err);
+        toast.error("Failed to connect to Miro");
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
       }
       return;
