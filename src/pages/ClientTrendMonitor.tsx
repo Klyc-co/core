@@ -533,14 +533,14 @@ function TrendCard({ trend }: TrendCardProps) {
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${config?.color || 'bg-gray-500'}`} />
-              {trend.trend_name}
+            <DialogTitle className="flex items-center gap-2 text-base leading-snug">
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${config?.color || 'bg-gray-500'}`} />
+              <span className="break-words">{trend.trend_name}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3 pt-2">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">{config?.label || trend.platform}</Badge>
               {trend.trend_rank && <Badge variant="secondary">Rank #{trend.trend_rank}</Badge>}
@@ -548,17 +548,17 @@ function TrendCard({ trend }: TrendCardProps) {
             </div>
             
             {trend.trend_volume && (
-              <p className="text-muted-foreground">Volume: {trend.trend_volume}</p>
+              <p className="text-sm text-muted-foreground">Volume: {trend.trend_volume}</p>
             )}
             
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Scraped: {format(new Date(trend.scraped_at), "MMM d, yyyy h:mm a")}
             </p>
             
             {trend.trend_url && (
               <Button asChild variant="outline" className="w-full gap-2">
                 <a href={trend.trend_url} target="_blank" rel="noopener noreferrer">
-                  View Link <ExternalLink className="w-4 h-4" />
+                  View on {config?.label || trend.platform} <ExternalLink className="w-4 h-4" />
                 </a>
               </Button>
             )}
