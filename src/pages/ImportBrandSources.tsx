@@ -28,6 +28,7 @@ import TrelloIcon from "@/components/icons/TrelloIcon";
 import AirtableIcon from "@/components/icons/AirtableIcon";
 import ClickUpIcon from "@/components/icons/ClickUpIcon";
 import AirtableConnectModal from "@/components/AirtableConnectModal";
+import ClickUpConnectModal from "@/components/ClickUpConnectModal";
 import TrelloConnectModal from "@/components/TrelloConnectModal";
 import LoomConnectModal from "@/components/LoomConnectModal";
 import RiversideConnectModal from "@/components/RiversideConnectModal";
@@ -222,7 +223,7 @@ const socialTools: ToolItem[] = [
   { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
   
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -311,6 +312,7 @@ const ImportBrandSources = () => {
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [davinciModalOpen, setDavinciModalOpen] = useState(false);
+  const [clickupModalOpen, setClickupModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -825,6 +827,12 @@ const ImportBrandSources = () => {
     // For DaVinci Resolve, open the file upload dialog
     if (toolName === 'DaVinci Resolve') {
       setDavinciModalOpen(true);
+      return;
+    }
+
+    // For ClickUp, open the connect modal (uses API token)
+    if (toolName === 'ClickUp') {
+      setClickupModalOpen(true);
       return;
     }
 
@@ -1670,6 +1678,16 @@ const ImportBrandSources = () => {
           userId={user.id}
         />
       )}
+
+      {/* ClickUp Connect Modal */}
+      <ClickUpConnectModal
+        open={clickupModalOpen}
+        onOpenChange={setClickupModalOpen}
+        onConnected={() => {
+          setConnectionStatus(prev => ({ ...prev, ClickUp: 'connected' }));
+          setClickupModalOpen(false);
+        }}
+      />
     </div>
   );
 };
