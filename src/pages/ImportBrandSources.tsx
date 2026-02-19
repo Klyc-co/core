@@ -36,6 +36,7 @@ import FigmaIcon from "@/components/icons/FigmaIcon";
 import AdobeCreativeCloudIcon from "@/components/icons/AdobeCreativeCloudIcon";
 import DaVinciResolveIcon from "@/components/icons/DaVinciResolveIcon";
 import DescriptIcon from "@/components/icons/DescriptIcon";
+import DescriptImportDialog from "@/components/DescriptImportDialog";
 import VeedIcon from "@/components/icons/VeedIcon";
 import LoomIcon from "@/components/icons/LoomIcon";
 import FrameioIcon from "@/components/icons/FrameioIcon";
@@ -227,7 +228,7 @@ const socialTools: ToolItem[] = [
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -313,6 +314,7 @@ const ImportBrandSources = () => {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [davinciModalOpen, setDavinciModalOpen] = useState(false);
   const [clickupModalOpen, setClickupModalOpen] = useState(false);
+  const [descriptModalOpen, setDescriptModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -833,6 +835,12 @@ const ImportBrandSources = () => {
     // For ClickUp, open the connect modal (uses API token)
     if (toolName === 'ClickUp') {
       setClickupModalOpen(true);
+      return;
+    }
+
+    // For Descript, open the file upload dialog
+    if (toolName === 'Descript') {
+      setDescriptModalOpen(true);
       return;
     }
 
@@ -1688,6 +1696,15 @@ const ImportBrandSources = () => {
           setClickupModalOpen(false);
         }}
       />
+
+      {/* Descript Import Dialog */}
+      {user && (
+        <DescriptImportDialog
+          open={descriptModalOpen}
+          onOpenChange={setDescriptModalOpen}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 };
