@@ -10,7 +10,7 @@ const LandingCostSection = () => {
           <ul className="space-y-7">
             {[
               "Minutes from idea to distributed publish",
-              "100+ employee accounts as distribution nodes",
+              "100+ employee distribution nodes",
               "Real-time velocity detection & amplification",
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-4">
