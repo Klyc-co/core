@@ -12,7 +12,6 @@ const LandingCostSection = () => {
               "Minutes from idea to distributed publish",
               "100+ employee accounts as distribution nodes",
               "Real-time velocity detection & amplification",
-              "Near-zero marginal cost per post",
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-4">
                 <span className="mt-3 w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" />
@@ -32,7 +31,6 @@ const LandingCostSection = () => {
               "Weeks between idea and publish",
               "One brand account, limited reach",
               "Reactive, fragmented analytics",
-              "Rising cost per post",
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-4">
                 <span className="mt-3 w-1.5 h-1.5 rounded-full bg-white/20 flex-shrink-0" />
