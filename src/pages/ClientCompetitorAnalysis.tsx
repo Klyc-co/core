@@ -153,7 +153,7 @@ const ClientCompetitorAnalysis = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <ClientHeader user={user} />
       
       {/* Page Header */}
@@ -173,10 +173,10 @@ const ClientCompetitorAnalysis = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto px-6 py-8 overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Sidebar - Strategy Modules */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-full lg:w-64 flex-shrink-0">
             <h2 className="text-sm font-semibold text-foreground mb-4">Strategy Modules</h2>
             <nav className="space-y-1">
               <button 
@@ -237,7 +237,7 @@ const ClientCompetitorAnalysis = () => {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 min-w-0 space-y-6">
             {/* Input Card */}
             <Card>
               <CardContent className="pt-6">
@@ -245,7 +245,7 @@ const ClientCompetitorAnalysis = () => {
                   <Search className="w-5 h-5" />
                   Analyze a Competitor
                 </h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">
                       Competitor Name *
@@ -290,22 +290,22 @@ const ClientCompetitorAnalysis = () => {
 
             {/* Results */}
             {selectedAnalysis ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedAnalysis.competitor_name}</h2>
+              <div className="space-y-4 overflow-hidden">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl font-bold truncate">{selectedAnalysis.competitor_name}</h2>
                     {selectedAnalysis.competitor_url && (
-                      <a 
+                       <a 
                         href={selectedAnalysis.competitor_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
+                        className="text-sm text-primary hover:underline truncate block"
                       >
                         {selectedAnalysis.competitor_url}
                       </a>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge variant="outline">
                       {format(new Date(selectedAnalysis.analyzed_at), "MMM d, yyyy")}
                     </Badge>
@@ -331,7 +331,7 @@ const ClientCompetitorAnalysis = () => {
                 </Card>
 
                 {/* Key Info Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
@@ -385,7 +385,7 @@ const ClientCompetitorAnalysis = () => {
                 </Card>
 
                 {/* SWOT */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Card className="border-green-500/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2 text-green-600">

@@ -231,7 +231,7 @@ const CompetitorAnalysisPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <AppHeader user={user} />
       
       {/* Mobile Strategy Navigation */}
@@ -288,7 +288,7 @@ const CompetitorAnalysisPage = () => {
           )}
 
           {/* Main Content */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 min-w-0 space-y-6">
             {/* Input Card */}
             <Card>
               <CardContent className="pt-4 sm:pt-6">
