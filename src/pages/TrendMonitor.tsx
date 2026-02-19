@@ -603,21 +603,22 @@ function TrendCard({ trend }: { trend: TrendItem }) {
       </div>
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[95vw] max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <div className={`w-3 h-3 rounded-full shrink-0 ${config?.color || 'bg-gray-500'}`} />
-              <span className="truncate">{trend.trend_name}</span>
+        <DialogContent className="w-[90vw] max-w-sm p-5">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${config?.color || 'bg-gray-500'}`} />
+              <Badge variant="secondary" className="text-xs">{config?.label || trend.platform}</Badge>
+              <Badge variant="outline" className="text-xs">#{trend.trend_rank}</Badge>
+            </div>
+            <DialogTitle className="text-sm sm:text-base font-semibold leading-snug break-words whitespace-normal">
+              {trend.trend_name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs">#{trend.trend_rank}</Badge>
-              <Badge variant="secondary" className="text-xs">{config?.label || trend.platform}</Badge>
-            </div>
+          <div className="space-y-3 pt-1">
             {trend.trend_category && (
               <p className="text-xs sm:text-sm">
-                <span className="text-muted-foreground">Category:</span> {trend.trend_category}
+                <span className="text-muted-foreground">Category:</span>{" "}
+                <span className="capitalize">{trend.trend_category}</span>
               </p>
             )}
             {trend.trend_volume && (
