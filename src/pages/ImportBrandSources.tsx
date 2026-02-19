@@ -40,6 +40,7 @@ import DescriptImportDialog from "@/components/DescriptImportDialog";
 import VeedIcon from "@/components/icons/VeedIcon";
 import LoomIcon from "@/components/icons/LoomIcon";
 import FrameioIcon from "@/components/icons/FrameioIcon";
+import FrameioImportDialog from "@/components/FrameioImportDialog";
 import MiroIcon from "@/components/icons/MiroIcon";
 import MilanoteIcon from "@/components/icons/MilanoteIcon";
 import ZapierIcon from "@/components/icons/ZapierIcon";
@@ -231,7 +232,7 @@ const socialTools: ToolItem[] = [
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
-  { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -315,6 +316,7 @@ const ImportBrandSources = () => {
   const [davinciModalOpen, setDavinciModalOpen] = useState(false);
   const [clickupModalOpen, setClickupModalOpen] = useState(false);
   const [descriptModalOpen, setDescriptModalOpen] = useState(false);
+  const [frameioModalOpen, setFrameioModalOpen] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -841,6 +843,12 @@ const ImportBrandSources = () => {
     // For Descript, open the file upload dialog
     if (toolName === 'Descript') {
       setDescriptModalOpen(true);
+      return;
+    }
+
+    // For Frame.io, open the file upload dialog
+    if (toolName === 'Frame.io') {
+      setFrameioModalOpen(true);
       return;
     }
 
@@ -1702,6 +1710,15 @@ const ImportBrandSources = () => {
         <DescriptImportDialog
           open={descriptModalOpen}
           onOpenChange={setDescriptModalOpen}
+          userId={user.id}
+        />
+      )}
+
+      {/* Frame.io Import Dialog */}
+      {user && (
+        <FrameioImportDialog
+          open={frameioModalOpen}
+          onOpenChange={setFrameioModalOpen}
           userId={user.id}
         />
       )}
