@@ -10,6 +10,7 @@ import type { User } from "@supabase/supabase-js";
 import DropboxFilePicker from "@/components/DropboxFilePicker";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import AdobeFilePicker from "@/components/AdobeFilePicker";
+import CanvaFilePicker from "@/components/CanvaFilePicker";
 
 // Storage & Tool Icons
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
@@ -99,6 +100,7 @@ const storagePlatforms: StoragePlatform[] = [
     bgColor: "bg-[#00C4CC]",
     description: "Import designs from Canva",
     connectionTable: "social_connections",
+    hasFilePicker: true,
   },
   {
     id: "figma",
@@ -180,6 +182,7 @@ const ImportAssetSources = () => {
   const [showDropboxPicker, setShowDropboxPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [showAdobePicker, setShowAdobePicker] = useState(false);
+  const [showCanvaPicker, setShowCanvaPicker] = useState(false);
 
   useEffect(() => {
     const canvaStatus = searchParams.get("canva");
@@ -271,7 +274,7 @@ const ImportAssetSources = () => {
     } else if (platform.id === "adobe-cc") {
       setShowAdobePicker(true);
     } else if (platform.id === "canva") {
-      toast.info("Canva file browser coming soon!");
+      setShowCanvaPicker(true);
     }
   };
 
@@ -397,6 +400,13 @@ const ImportAssetSources = () => {
       <AdobeFilePicker
         open={showAdobePicker}
         onOpenChange={setShowAdobePicker}
+        onImportComplete={handleImportComplete}
+      />
+
+      {/* Canva File Picker */}
+      <CanvaFilePicker
+        open={showCanvaPicker}
+        onOpenChange={setShowCanvaPicker}
         onImportComplete={handleImportComplete}
       />
     </div>
