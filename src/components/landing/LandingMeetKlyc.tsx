@@ -1,5 +1,6 @@
 import AnimateOnScroll from "./AnimateOnScroll";
 import klycMascot from "@/assets/klyc-mascot-waving.png";
+import klycLogoDark from "@/assets/klyc-logo-dark-nobg.png";
 import { CalendarCheck, Sparkles, Send, TrendingUp } from "lucide-react";
 
 const gradientStyle = {
@@ -46,14 +47,9 @@ const LandingMeetKlyc = () => {
     <section className="py-20 sm:py-28 lg:py-36 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-[#191a1f] mb-3 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-[#191a1f] mb-3 text-center flex items-center justify-center gap-3 flex-wrap">
             Meet{" "}
-            <span
-              className="bg-clip-text text-transparent"
-              style={gradientStyle}
-            >
-              Klyc
-            </span>
+            <img src={klycLogoDark} alt="Klyc" className="h-10 sm:h-12 md:h-14 lg:h-16 inline-block" />
           </h2>
           <p className="text-lg sm:text-xl md:text-2xl text-[#6b7280] font-light italic mb-10 sm:mb-12 text-center">
             "I'm Your Always-On Marketing AI Agent. I work 24/7 with you."
