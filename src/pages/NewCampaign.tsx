@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -36,6 +36,10 @@ import {
 } from "@/components/ui/dialog";
 import CampaignDraftPicker from "@/components/social-post-editor/CampaignDraftPicker";
 import type { CampaignDraft } from "@/components/social-post-editor/types";
+import { Textarea } from "@/components/ui/textarea";
+import LibraryAssetPicker from "@/components/LibraryAssetPicker";
+import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
+import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 
 interface SocialPlatform {
   id: string;
@@ -81,6 +85,10 @@ const NewCampaign = () => {
   const [clients, setClients] = useState<{ id: string; client_id: string; client_name: string }[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [showDraftPicker, setShowDraftPicker] = useState(false);
+  const [postCaption, setPostCaption] = useState("");
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
+  const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -431,6 +439,18 @@ const NewCampaign = () => {
             )}
           </div>
 
+          {/* Post Caption */}
+          <div className="space-y-2">
+            <Label htmlFor="postCaption">Post Caption (Text Above Image)</Label>
+            <Textarea
+              id="postCaption"
+              placeholder="Write your post caption here..."
+              value={postCaption}
+              onChange={(e) => setPostCaption(e.target.value)}
+              rows={4}
+            />
+          </div>
+
           {/* Upload Content */}
           <div className="space-y-2">
             <Label>Upload Content</Label>
@@ -468,19 +488,105 @@ const NewCampaign = () => {
 
           {/* Add from Content Library */}
           <div className="space-y-2">
-            <Label>Add from content library</Label>
-            <p className="text-sm text-muted-foreground">Select images and videos from your library</p>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Select from library..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="item1">Library Item 1</SelectItem>
-                <SelectItem value="item2">Library Item 2</SelectItem>
-                <SelectItem value="item3">Library Item 3</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-base font-semibold">Add from Content Library</Label>
+            <p className="text-sm text-muted-foreground">Select images and videos from your sources ({libraryAssets.length}/10)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Upload from device */}
+              <div
+                className="border-2 border-dashed border-primary/40 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all"
+                onClick={() => document.getElementById("libraryFileInput")?.click()}
+              >
+                <Upload className="w-7 h-7 text-muted-foreground" />
+                <span className="font-medium text-sm">Upload</span>
+                <span className="text-xs text-muted-foreground">From device</span>
+                <input
+                  id="libraryFileInput"
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept="image/*,video/*"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Google Drive */}
+              <div
+                className="border rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all"
+                onClick={() => setShowGoogleDrivePicker(true)}
+              >
+                <GoogleDriveIcon className="w-7 h-7" />
+                <span className="font-medium text-sm">Google Drive</span>
+                <span className="text-xs text-muted-foreground">Select files</span>
+              </div>
+
+              {/* Klyc Library */}
+              <div
+                className="border rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all"
+                onClick={() => setShowLibraryPicker(true)}
+              >
+                <FolderOpen className="w-7 h-7 text-primary" />
+                <span className="font-medium text-sm">Klyc Library</span>
+                <span className="text-xs text-muted-foreground">Your assets</span>
+              </div>
+            </div>
+
+            {/* Selected library assets */}
+            {libraryAssets.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {libraryAssets.map((asset, index) => (
+                  <div key={asset.id} className="relative group">
+                    <img
+                      src={asset.url}
+                      alt={asset.name}
+                      className="w-16 h-16 rounded-lg object-cover border"
+                      onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
+                    />
+                    <button
+                      onClick={() => setLibraryAssets(prev => prev.filter(a => a.id !== asset.id))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Library Picker Modal */}
+          <LibraryAssetPicker
+            open={showLibraryPicker}
+            onOpenChange={setShowLibraryPicker}
+            onAssetsSelected={(assets) => {
+              setLibraryAssets(prev => {
+                const existing = new Set(prev.map(a => a.id));
+                const newOnes = assets.filter(a => !existing.has(a.id));
+                return [...prev, ...newOnes].slice(0, 10);
+              });
+            }}
+            maxSelection={10}
+            assetTypeFilter="all"
+          />
+
+          {/* Google Drive Picker */}
+          <GoogleDriveFilePicker
+            open={showGoogleDrivePicker}
+            onOpenChange={setShowGoogleDrivePicker}
+            selectionMode="select"
+            onFilesSelected={(files) => {
+              const mapped = files.map(f => ({ id: f.id, name: f.name, url: f.thumbnailUrl || f.path || "" }));
+              setLibraryAssets(prev => {
+                const existing = new Set(prev.map(a => a.id));
+                const newOnes = mapped.filter(a => !existing.has(a.id));
+                return [...prev, ...newOnes].slice(0, 10);
+              });
+            }}
+          />
 
           {/* Tags & Keywords */}
           <div className="space-y-2">
@@ -649,6 +755,7 @@ const NewCampaign = () => {
           onOpenChange={setShowDraftPicker}
           onSelectDraft={(draft: CampaignDraft) => {
             if (draft.campaign_idea) setCampaignName(draft.campaign_idea);
+            if (draft.post_caption) setPostCaption(draft.post_caption);
             if (draft.tags && draft.tags.length > 0) setTags(draft.tags);
             toast({
               title: "Draft loaded! ✨",
