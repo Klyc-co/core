@@ -59,12 +59,7 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
 ];
 
-const timeSlots = [
-  "12:00 AM", "1:00 AM", "2:00 AM", "3:00 AM", "4:00 AM", "5:00 AM",
-  "6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
-  "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
-  "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM",
-];
+// No more timeSlots array needed
 
 const NewCampaign = () => {
   const navigate = useNavigate();
@@ -716,21 +711,53 @@ const NewCampaign = () => {
               {/* Time Picker */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Time</Label>
-                <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                  <SelectTrigger>
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select time" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="e.g. 9:30"
+                      className="pl-9"
+                      value={scheduledTime.replace(/ (AM|PM)$/, "")}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/[^0-9:]/g, "");
+                        // Auto-insert colon after hour digits
+                        if (val.length === 2 && !val.includes(":")) val += ":";
+                        if (val.length > 5) val = val.slice(0, 5);
+                        const period = scheduledTime.includes("PM") ? "PM" : "AM";
+                        setScheduledTime(val ? `${val} ${period}` : "");
+                      }}
+                    />
+                  </div>
+                  <div className="flex rounded-lg border overflow-hidden">
+                    <button
+                      type="button"
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium transition-colors",
+                        (!scheduledTime || scheduledTime.includes("AM"))
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      )}
+                      onClick={() => setScheduledTime(prev => prev.replace(/ PM$/, " AM") || "")}
+                    >
+                      AM
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium transition-colors",
+                        scheduledTime.includes("PM")
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted"
+                      )}
+                      onClick={() => setScheduledTime(prev => {
+                        if (!prev) return "";
+                        return prev.includes("AM") ? prev.replace(" AM", " PM") : prev.replace(/ PM$/, " PM");
+                      })}
+                    >
+                      PM
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
