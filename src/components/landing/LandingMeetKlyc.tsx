@@ -47,7 +47,7 @@ const LandingMeetKlyc = () => {
     <section className="py-20 sm:py-28 lg:py-36 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         <AnimateOnScroll>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-[#191a1f] mb-3 text-center flex items-center justify-center gap-3 flex-wrap">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-[#191a1f] mb-3 text-center flex items-center justify-center gap-1 flex-wrap">
             Meet{" "}
             <img src={klycLogoDark} alt="Klyc" className="h-[5.5rem] sm:h-[6.5rem] md:h-[8.5rem] lg:h-[10rem] inline-block -mb-1" />
           </h2>
