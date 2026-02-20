@@ -430,40 +430,61 @@ const ProfileOverview = () => {
           ))}
         </div>
 
-        {/* Connected Platforms - Always visible */}
+        {/* Connected Platforms - 3 Column Layout */}
         <Card className="bg-card border-border mb-8">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Platforms Connected</h2>
-            {allConnections.length > 0 ? (
-              <div className="flex flex-wrap gap-3">
-                {allConnections.map((conn) => {
-                  const key = conn.platform.toLowerCase();
-                  const icon = platformIcons[key];
-                  return (
-                    <div 
-                      key={conn.platform}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/30"
-                    >
-                      {icon || <CheckCircle2 className="w-4 h-4 text-purple-500" />}
-                      <span className="text-sm font-medium text-foreground">
-                        {platformLabels[key] || conn.platform}
-                      </span>
-                      {conn.platform_username && (
-                        <span className="text-xs text-muted-foreground">
-                          @{conn.platform_username}
-                        </span>
-                      )}
+            {(() => {
+              const socialMediaPlatforms = ["tiktok", "instagram", "youtube", "facebook", "twitter", "linkedin", "snapchat", "threads", "tumblr", "reddit", "twitch", "patreon", "medium", "substack", "bereal"];
+              const socialToolPlatforms = ["google_drive", "dropbox", "notion", "adobe_cc", "slack", "figma", "discord", "monday", "box", "canva", "miro", "frame_io", "airtable", "clickup", "loom", "riverside", "trello", "google_analytics"];
+              const crmPlatformKeys = ["hubspot", "salesforce", "zoho", "shopify", "stripe", "square", "squarespace"];
+
+              const socialMedia = allConnections.filter(c => socialMediaPlatforms.includes(c.platform.toLowerCase()));
+              const socialTools = allConnections.filter(c => socialToolPlatforms.includes(c.platform.toLowerCase()));
+              const crm = allConnections.filter(c => crmPlatformKeys.includes(c.platform.toLowerCase()));
+
+              const renderColumn = (title: string, items: typeof allConnections) => (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</h3>
+                  {items.length > 0 ? (
+                    <div className="space-y-2">
+                      {items.map((conn) => {
+                        const key = conn.platform.toLowerCase();
+                        const icon = platformIcons[key];
+                        return (
+                          <div
+                            key={conn.platform}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"
+                          >
+                            {icon || <CheckCircle2 className="w-4 h-4 text-primary" />}
+                            <span className="text-sm font-medium text-foreground">
+                              {platformLabels[key] || conn.platform}
+                            </span>
+                            {conn.platform_username && (
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                @{conn.platform_username}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="h-16 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  No platforms connected yet. Import brand sources to get started.
-                </p>
-              </div>
-            )}
+                  ) : (
+                    <div className="py-4 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+                      <p className="text-xs text-muted-foreground">None connected</p>
+                    </div>
+                  )}
+                </div>
+              );
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {renderColumn("Social Media", socialMedia)}
+                  {renderColumn("Social Tools", socialTools)}
+                  {renderColumn("CRM", crm)}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </main>
