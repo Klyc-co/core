@@ -1476,8 +1476,18 @@ const ImportBrandSources = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {socialPlatforms.map((platform) => {
+          {(() => {
+            const connectablePlatforms = socialPlatforms.filter(p => !p.comingSoon);
+            const comingSoonPlatforms = socialPlatforms.filter(p => p.comingSoon);
+            
+            // Sort connectable: connected first
+            const sortedConnectable = [...connectablePlatforms].sort((a, b) => {
+              const aConn = connectionStatus[a.name] === 'connected' ? 0 : 1;
+              const bConn = connectionStatus[b.name] === 'connected' ? 0 : 1;
+              return aConn - bConn;
+            });
+
+            const renderPlatformCard = (platform: SocialPlatform) => {
               const status = connectionStatus[platform.name] || 'disconnected';
               const isConnected = status === 'connected';
               const isConnecting = status === 'connecting';
@@ -1527,8 +1537,24 @@ const ImportBrandSources = () => {
                   )}
                 </div>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {sortedConnectable.map(renderPlatformCard)}
+                </div>
+                {comingSoonPlatforms.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <p className="text-sm font-medium text-muted-foreground mb-4">Coming Soon</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {comingSoonPlatforms.map(renderPlatformCard)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </Card>
 
         {/* Social Tools Section */}
