@@ -454,17 +454,12 @@ const ProfileOverview = () => {
                         return (
                           <div
                             key={conn.platform}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"
+                            className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20"
                           >
                             {icon || <CheckCircle2 className="w-4 h-4 text-primary" />}
                             <span className="text-sm font-medium text-foreground">
                               {platformLabels[key] || conn.platform}
                             </span>
-                            {conn.platform_username && (
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                @{conn.platform_username}
-                              </span>
-                            )}
                           </div>
                         );
                       })}
