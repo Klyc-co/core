@@ -1567,12 +1567,11 @@ const ImportBrandSources = () => {
                       </Button>
                       <Button 
                         variant="outline" 
-                        size="sm"
+                        size="icon"
                         onClick={() => handleDisconnectPlatform(platform.name)}
-                        className="flex-1 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
                       >
                         <Unlink className="w-3 h-3" />
-                        Disconnect
                       </Button>
                     </div>
                   )}
