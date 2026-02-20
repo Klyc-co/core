@@ -10,7 +10,10 @@ import { Mail, Lock, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") !== "signup";
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
