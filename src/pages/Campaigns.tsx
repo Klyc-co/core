@@ -5,27 +5,24 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, Zap, History, Sparkles, Send, Calendar, Globe } from "lucide-react";
+import { Plus, Clock, History, Sparkles, Send } from "lucide-react";
+import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import type { User } from "@supabase/supabase-js";
 
-interface ScheduledCampaign {
+interface PastCampaign {
   id: string;
   campaign_name: string;
   platforms: string[];
   scheduled_date: string;
-  scheduled_time: string;
   status: string;
-  post_caption: string | null;
-  image_url: string | null;
 }
 
 const Campaigns = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-  const [liveCampaigns, setLiveCampaigns] = useState<ScheduledCampaign[]>([]);
-  const [pastCampaigns, setPastCampaigns] = useState<ScheduledCampaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pastCampaigns, setPastCampaigns] = useState<PastCampaign[]>([]);
+  const [loadingPast, setLoadingPast] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -34,7 +31,7 @@ const Campaigns = () => {
       } else {
         setUser(user);
         fetchPendingCount(user.id);
-        fetchCampaigns(user.id);
+        fetchPastCampaigns(user.id);
       }
     });
   }, [navigate]);
@@ -45,56 +42,21 @@ const Campaigns = () => {
       .select("*", { count: "exact", head: true })
       .eq("marketer_id", userId)
       .eq("status", "pending");
-    
     setPendingCount(count || 0);
   };
 
-  const fetchCampaigns = async (userId: string) => {
-    setLoading(true);
-    const { data, error } = await supabase
+  const fetchPastCampaigns = async (userId: string) => {
+    setLoadingPast(true);
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
       .from("scheduled_campaigns")
-      .select("id, campaign_name, platforms, scheduled_date, scheduled_time, status, post_caption, image_url")
+      .select("id, campaign_name, platforms, scheduled_date, status")
       .eq("user_id", userId)
+      .lt("scheduled_date", today)
       .order("scheduled_date", { ascending: false });
-
-    if (!error && data) {
-      const today = new Date().toISOString().split("T")[0];
-      setLiveCampaigns(data.filter(c => c.scheduled_date >= today));
-      setPastCampaigns(data.filter(c => c.scheduled_date < today));
-    }
-    setLoading(false);
+    if (data) setPastCampaigns(data);
+    setLoadingPast(false);
   };
-
-  const CampaignCard = ({ campaign }: { campaign: ScheduledCampaign }) => (
-    <Card className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => navigate("/campaigns/schedule")}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {campaign.image_url ? (
-            <img src={campaign.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Globe className="w-5 h-5 text-primary" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-foreground truncate">{campaign.campaign_name}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <Calendar className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{campaign.scheduled_date} · {campaign.scheduled_time}</span>
-            </div>
-            <div className="flex gap-1 mt-2 flex-wrap">
-              {campaign.platforms.map(p => (
-                <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0">{p}</Badge>
-              ))}
-            </div>
-          </div>
-          <Badge variant={campaign.status === "published" ? "default" : "outline"} className="text-[10px] flex-shrink-0">
-            {campaign.status}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,23 +110,7 @@ const Campaigns = () => {
 
         {/* Live Campaigns */}
         <div className="mb-6 sm:mb-10">
-          <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
-            Live Campaigns
-          </h2>
-          {loading ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
-          ) : liveCampaigns.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
-                No live campaigns yet. Click "New Campaign" to create your first campaign.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {liveCampaigns.map(c => <CampaignCard key={c.id} campaign={c} />)}
-            </div>
-          )}
+          <LiveCampaignsFeed />
         </div>
 
         {/* Past Campaigns */}
@@ -173,7 +119,7 @@ const Campaigns = () => {
             <History className="w-4 h-4 sm:w-5 sm:h-5" />
             Past Campaigns
           </h2>
-          {loading ? (
+          {loadingPast ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
           ) : pastCampaigns.length === 0 ? (
             <Card className="border-dashed">
@@ -182,8 +128,25 @@ const Campaigns = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pastCampaigns.map(c => <CampaignCard key={c.id} campaign={c} />)}
+            <div className="space-y-3">
+              {pastCampaigns.map(c => (
+                <Card key={c.id} className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => navigate("/campaigns/schedule")}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-foreground">{c.campaign_name}</h3>
+                      <span className="text-xs text-muted-foreground">{c.scheduled_date}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {c.platforms.map(p => (
+                          <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0">{p}</Badge>
+                        ))}
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
