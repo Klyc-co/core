@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1162,6 +1162,36 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleDisconnectPlatform = async (platformName: string) => {
+    if (!user) return;
+    try {
+      const platformMap: Record<string, string> = {
+        'YouTube': 'youtube', 'Facebook': 'facebook', 'Instagram': 'instagram',
+        'LinkedIn': 'linkedin', 'Twitter/X': 'twitter', 'TikTok': 'tiktok',
+        'Twitch': 'twitch', 'Tumblr': 'tumblr', 'Patreon': 'patreon',
+        'Notion': 'notion', 'Figma': 'figma', 'Slack': 'slack',
+        'Discord': 'discord', 'Box': 'box', 'Monday.com': 'monday',
+        'Canva': 'canva', 'Adobe Creative Cloud': 'adobe_cc',
+        'Frame.io': 'frameio', 'Miro': 'miro', 'Google Drive': 'google_drive',
+      };
+      const dbPlatform = platformMap[platformName];
+      if (dbPlatform) {
+        await supabase.from("social_connections").delete().eq("user_id", user.id).eq("platform", dbPlatform);
+      }
+      if (platformName === 'Dropbox') await supabase.from("dropbox_connections").delete().eq("user_id", user.id);
+      else if (platformName === 'Airtable') await supabase.from("airtable_connections").delete().eq("user_id", user.id);
+      else if (platformName === 'ClickUp') await supabase.from("clickup_connections").delete().eq("user_id", user.id);
+      else if (platformName === 'Trello') await supabase.from("trello_connections" as any).delete().eq("user_id", user.id);
+      else if (platformName === 'Loom') await supabase.from("loom_connections" as any).delete().eq("user_id", user.id);
+      else if (platformName === 'Riverside') await supabase.from("riverside_connections" as any).delete().eq("user_id", user.id);
+      setConnectionStatus(prev => ({ ...prev, [platformName]: 'disconnected' }));
+      toast.success(`${platformName} disconnected`);
+    } catch (err) {
+      console.error("Disconnect error:", err);
+      toast.error(`Failed to disconnect ${platformName}`);
+    }
+  };
+
   const getButtonContent = (platform: SocialPlatform) => {
     const status = connectionStatus[platform.name] || 'disconnected';
     
@@ -1515,25 +1545,36 @@ const ImportBrandSources = () => {
                     </Button>
                   </div>
                   {isConnected && (
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => {
-                        const routes: Record<string, string> = {
-                          'TikTok': '/profile/tiktok-analytics',
-                          'Instagram': '/profile/instagram-analytics',
-                          'YouTube': '/profile/youtube-analytics',
-                          'Facebook': '/profile/facebook-analytics',
-                          'Twitter/X': '/profile/twitter-analytics',
-                          'LinkedIn': '/profile/linkedin-analytics',
-                        };
-                        if (routes[platform.name]) navigate(routes[platform.name]);
-                      }}
-                      className="w-full gap-1"
-                    >
-                      <BarChart3 className="w-3 h-3" />
-                      Analytics
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => {
+                          const routes: Record<string, string> = {
+                            'TikTok': '/profile/tiktok-analytics',
+                            'Instagram': '/profile/instagram-analytics',
+                            'YouTube': '/profile/youtube-analytics',
+                            'Facebook': '/profile/facebook-analytics',
+                            'Twitter/X': '/profile/twitter-analytics',
+                            'LinkedIn': '/profile/linkedin-analytics',
+                          };
+                          if (routes[platform.name]) navigate(routes[platform.name]);
+                        }}
+                        className="flex-1 gap-1"
+                      >
+                        <BarChart3 className="w-3 h-3" />
+                        Analytics
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDisconnectPlatform(platform.name)}
+                        className="flex-1 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                      >
+                        <Unlink className="w-3 h-3" />
+                        Disconnect
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
