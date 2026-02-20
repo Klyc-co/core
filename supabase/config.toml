@@ -258,4 +258,13 @@ verify_jwt = false
 [functions.miro-oauth-callback]
 verify_jwt = false
 
+[functions.trello-auth-url]
+verify_jwt = false
+
+[functions.trello-oauth-callback]
+verify_jwt = false
+
+[functions.trello-connect]
+verify_jwt = false
+
 
