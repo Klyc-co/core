@@ -44,6 +44,17 @@ import TrelloIcon from "@/components/icons/TrelloIcon";
 import MediumIcon from "@/components/icons/MediumIcon";
 import SubstackIcon from "@/components/icons/SubstackIcon";
 import BeRealIcon from "@/components/icons/BeRealIcon";
+import MiroIcon from "@/components/icons/MiroIcon";
+import RiversideIcon from "@/components/icons/RiversideIcon";
+import FrameioIcon from "@/components/icons/FrameioIcon";
+import CanvaIcon from "@/components/icons/CanvaIcon";
+import HubSpotIcon from "@/components/icons/HubSpotIcon";
+import SalesforceIcon from "@/components/icons/SalesforceIcon";
+import ZohoIcon from "@/components/icons/ZohoIcon";
+import ShopifyIcon from "@/components/icons/ShopifyIcon";
+import StripeIcon from "@/components/icons/StripeIcon";
+import SquareIcon from "@/components/icons/SquareIcon";
+import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
 
 interface SocialConnection {
   platform: string;
@@ -64,6 +75,12 @@ const ProfileOverview = () => {
   const [profile, setProfile] = useState<any>(null);
   const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([]);
   const [hasGoogleDrive, setHasGoogleDrive] = useState(false);
+  const [hasDropbox, setHasDropbox] = useState(false);
+  const [hasAirtable, setHasAirtable] = useState(false);
+  const [hasClickUp, setHasClickUp] = useState(false);
+  const [hasLoom, setHasLoom] = useState(false);
+  const [hasRiverside, setHasRiverside] = useState(false);
+  const [crmProviders, setCrmProviders] = useState<string[]>([]);
   const [brandAssetCount, setBrandAssetCount] = useState(0);
   const [campaignDraftCount, setCampaignDraftCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -104,15 +121,66 @@ const ProfileOverview = () => {
         .eq("user_id", effectiveUserId)
         .eq("connection_status", "connected")
         .maybeSingle();
-      
       setHasGoogleDrive(!!driveConn);
+
+      // Check for Dropbox connection
+      const { data: dropboxConn } = await supabase
+        .from("dropbox_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      setHasDropbox(!!dropboxConn);
+
+      // Check for Airtable connection
+      const { data: airtableConn } = await supabase
+        .from("airtable_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      setHasAirtable(!!airtableConn);
+
+      // Check for ClickUp connection
+      const { data: clickupConn } = await supabase
+        .from("clickup_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      setHasClickUp(!!clickupConn);
+
+      // Check for Loom connection
+      const { data: loomConn } = await supabase
+        .from("loom_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      setHasLoom(!!loomConn);
+
+      // Check for Riverside connection
+      const { data: riversideConn } = await supabase
+        .from("riverside_connections")
+        .select("id, connection_status")
+        .eq("user_id", effectiveUserId)
+        .eq("connection_status", "connected")
+        .maybeSingle();
+      setHasRiverside(!!riversideConn);
+
+      // Check for CRM connections
+      const { data: crmConns } = await supabase
+        .from("crm_connections")
+        .select("provider")
+        .eq("user_id", effectiveUserId)
+        .eq("status", "connected");
+      setCrmProviders((crmConns || []).map(c => c.provider));
 
       // Fetch brand asset count
       const { count: assetCount } = await supabase
         .from("brand_assets")
         .select("*", { count: "exact", head: true })
         .eq("user_id", effectiveUserId);
-      
       setBrandAssetCount(assetCount || 0);
 
       // Fetch campaign draft count
@@ -120,7 +188,6 @@ const ProfileOverview = () => {
         .from("campaign_drafts")
         .select("*", { count: "exact", head: true })
         .eq("user_id", effectiveUserId);
-      
       setCampaignDraftCount(draftCount || 0);
 
       setLoading(false);
@@ -143,6 +210,40 @@ const ProfileOverview = () => {
     linkedin: "LinkedIn",
     google_analytics: "Google Analytics",
     google_drive: "Google Drive",
+    dropbox: "Dropbox",
+    airtable: "Airtable",
+    clickup: "ClickUp",
+    loom: "Loom",
+    riverside: "Riverside",
+    notion: "Notion",
+    adobe_cc: "Adobe CC",
+    slack: "Slack",
+    figma: "Figma",
+    discord: "Discord",
+    monday: "Monday.com",
+    box: "Box",
+    canva: "Canva",
+    miro: "Miro",
+    frame_io: "Frame.io",
+    patreon: "Patreon",
+    twitch: "Twitch",
+    tumblr: "Tumblr",
+    reddit: "Reddit",
+    snapchat: "Snapchat",
+    telegram: "Telegram",
+    threads: "Threads",
+    whatsapp: "WhatsApp",
+    medium: "Medium",
+    substack: "Substack",
+    bereal: "BeReal",
+    trello: "Trello",
+    hubspot: "HubSpot",
+    salesforce: "Salesforce",
+    zoho: "Zoho CRM",
+    shopify: "Shopify",
+    stripe: "Stripe",
+    square: "Square",
+    squarespace: "Squarespace",
   };
 
   const platformIcons: Record<string, ReactNode> = {
@@ -177,12 +278,29 @@ const ProfileOverview = () => {
     medium: <MediumIcon className="w-4 h-4" />,
     substack: <SubstackIcon className="w-4 h-4" />,
     bereal: <BeRealIcon className="w-4 h-4" />,
+    miro: <MiroIcon className="w-4 h-4" />,
+    riverside: <RiversideIcon className="w-4 h-4" />,
+    frame_io: <FrameioIcon className="w-4 h-4" />,
+    canva: <CanvaIcon className="w-4 h-4" />,
+    hubspot: <HubSpotIcon className="w-4 h-4" />,
+    salesforce: <SalesforceIcon className="w-4 h-4" />,
+    zoho: <ZohoIcon className="w-4 h-4" />,
+    shopify: <ShopifyIcon className="w-4 h-4" />,
+    stripe: <StripeIcon className="w-4 h-4" />,
+    square: <SquareIcon className="w-4 h-4" />,
+    squarespace: <SquarespaceIcon className="w-4 h-4" />,
   };
 
-  // Combine social connections with Google Drive for display
+  // Combine all connections for display
   const allConnections = [
     ...socialConnections,
     ...(hasGoogleDrive ? [{ platform: "google_drive", platform_username: null }] : []),
+    ...(hasDropbox ? [{ platform: "dropbox", platform_username: null }] : []),
+    ...(hasAirtable ? [{ platform: "airtable", platform_username: null }] : []),
+    ...(hasClickUp ? [{ platform: "clickup", platform_username: null }] : []),
+    ...(hasLoom ? [{ platform: "loom", platform_username: null }] : []),
+    ...(hasRiverside ? [{ platform: "riverside", platform_username: null }] : []),
+    ...crmProviders.map(p => ({ platform: p, platform_username: null })),
   ];
 
   const connectedPlatformCount = allConnections.length;
