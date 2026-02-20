@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -34,6 +34,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import CampaignDraftPicker from "@/components/social-post-editor/CampaignDraftPicker";
+import type { CampaignDraft } from "@/components/social-post-editor/types";
 
 interface SocialPlatform {
   id: string;
@@ -78,6 +80,7 @@ const NewCampaign = () => {
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [clients, setClients] = useState<{ id: string; client_id: string; client_name: string }[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [showDraftPicker, setShowDraftPicker] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -359,7 +362,17 @@ const NewCampaign = () => {
           Back to Campaigns
         </Button>
 
-        <h1 className="text-3xl font-bold mb-8">Create New Campaign</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Create New Campaign</h1>
+          <Button
+            variant="outline"
+            className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
+            onClick={() => setShowDraftPicker(true)}
+          >
+            <FileText className="w-4 h-4" />
+            Use Draft
+          </Button>
+        </div>
 
         <div className="space-y-8">
           {/* Campaign Name */}
@@ -629,6 +642,20 @@ const NewCampaign = () => {
             </Button>
           </div>
         </div>
+
+        {/* Draft Picker */}
+        <CampaignDraftPicker
+          open={showDraftPicker}
+          onOpenChange={setShowDraftPicker}
+          onSelectDraft={(draft: CampaignDraft) => {
+            if (draft.campaign_idea) setCampaignName(draft.campaign_idea);
+            if (draft.tags && draft.tags.length > 0) setTags(draft.tags);
+            toast({
+              title: "Draft loaded! ✨",
+              description: "Campaign fields have been populated from your draft.",
+            });
+          }}
+        />
 
         {/* Client Selection Dialog */}
         <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
