@@ -122,9 +122,9 @@ const LandingVirality = () => {
           <p className="text-xs font-mono uppercase tracking-widest text-white/60 mb-4 text-center">
             The first 120 minutes determine reach velocity.
           </p>
-          <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-center mb-6">
-            {/* Left: vertically stacked checkpoint boxes */}
-            <div className="flex flex-col gap-2 sm:gap-3 shrink-0">
+          <div className="flex flex-col items-center mb-6 max-w-3xl mx-auto">
+            {/* Checkpoints in a horizontal row */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6">
               {checkpoints.map((cp, i) => (
                 <div
                   key={cp}
@@ -138,8 +138,8 @@ const LandingVirality = () => {
                 </div>
               ))}
             </div>
-            {/* Right: line graph */}
-            <div className="flex-1 w-full h-52 sm:h-60">
+            {/* Centered line graph */}
+            <div className="w-full h-52 sm:h-60">
               <DecayCurve />
             </div>
           </div>
