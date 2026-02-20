@@ -20,7 +20,7 @@ const LandingHero = () => {
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-5 sm:mb-6">
           <span className="bg-gradient-to-r from-[#2dd4a8] via-[#6b8de3] to-[#a855f7] bg-clip-text text-transparent">Plan. Create. Publish. Optimize.</span>
            <br /><div className="h-3 sm:h-4" />
-           <span className="text-[#191a1f]">Marketing Made Social.</span>
+           <span className="text-[#191a1f]">Where Marketing Runs Itself.</span>
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
