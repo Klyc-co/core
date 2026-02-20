@@ -11,12 +11,14 @@
  import { RefreshCw, MoreVertical, Eye, Settings, Trash2, Loader2 } from "lucide-react";
  import type { CrmConnection } from "./CrmContent";
  import type { Json } from "@/integrations/supabase/types";
- import HubSpotIcon from "@/components/icons/HubSpotIcon";
- import ShopifyIcon from "@/components/icons/ShopifyIcon";
- import SalesforceIcon from "@/components/icons/SalesforceIcon";
- import ZohoIcon from "@/components/icons/ZohoIcon";
- import PipedriveIcon from "@/components/icons/PipedriveIcon";
- import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
+import HubSpotIcon from "@/components/icons/HubSpotIcon";
+import ShopifyIcon from "@/components/icons/ShopifyIcon";
+import SalesforceIcon from "@/components/icons/SalesforceIcon";
+import ZohoIcon from "@/components/icons/ZohoIcon";
+import PipedriveIcon from "@/components/icons/PipedriveIcon";
+import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
+import StripeIcon from "@/components/icons/StripeIcon";
+import SquareIcon from "@/components/icons/SquareIcon";
  
  interface CrmConnectionCardProps {
    connection: CrmConnection;
@@ -26,23 +28,27 @@
    onDisconnect: () => void;
  }
  
- const providerIcons: Record<string, React.FC<{ className?: string }>> = {
-   hubspot: HubSpotIcon,
-   shopify: ShopifyIcon,
-   salesforce: SalesforceIcon,
-   zoho: ZohoIcon,
-   pipedrive: PipedriveIcon,
-   woocommerce: WooCommerceIcon,
- };
+const providerIcons: Record<string, React.FC<{ className?: string }>> = {
+  hubspot: HubSpotIcon,
+  shopify: ShopifyIcon,
+  salesforce: SalesforceIcon,
+  zoho: ZohoIcon,
+  pipedrive: PipedriveIcon,
+  woocommerce: WooCommerceIcon,
+  stripe: StripeIcon,
+  square: SquareIcon,
+};
  
- const providerNames: Record<string, string> = {
-   hubspot: "HubSpot",
-   shopify: "Shopify",
-   salesforce: "Salesforce",
-   zoho: "Zoho CRM",
-   pipedrive: "Pipedrive",
-   woocommerce: "WooCommerce",
- };
+const providerNames: Record<string, string> = {
+  hubspot: "HubSpot",
+  shopify: "Shopify",
+  salesforce: "Salesforce",
+  zoho: "Zoho CRM",
+  pipedrive: "Pipedrive",
+  woocommerce: "WooCommerce",
+  stripe: "Stripe",
+  square: "Square",
+};
  
  const statusColors: Record<string, string> = {
    connected: "bg-green-500/10 text-green-500 border-green-500/20",
