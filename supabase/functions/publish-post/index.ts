@@ -29,16 +29,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Check if this is a service-role call (from cron/scheduler)
+    const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let userId: string;
+
+    if (isServiceRole) {
+      // Service role calls don't have a user - we'll verify ownership from the post itself
+      userId = "";
+    } else {
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = user.id;
     }
 
     const { postQueueId }: PublishRequest = await req.json();
@@ -50,8 +61,13 @@ serve(async (req) => {
       });
     }
 
+    // Use service role client for fetching to bypass RLS when called from cron
+    const fetchClient = isServiceRole
+      ? createClient(supabaseUrl, supabaseServiceKey)
+      : createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
+
     // Fetch the post from queue
-    const { data: post, error: postError } = await supabase
+    const { data: post, error: postError } = await fetchClient
       .from("post_queue")
       .select("*")
       .eq("id", postQueueId)
@@ -64,8 +80,8 @@ serve(async (req) => {
       });
     }
 
-    // Verify ownership or client access
-    if (post.user_id !== user.id && post.client_id !== user.id) {
+    // Verify ownership or client access (skip for service role)
+    if (!isServiceRole && post.user_id !== userId && post.client_id !== userId) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -73,7 +89,7 @@ serve(async (req) => {
     }
 
     // Fetch platform targets
-    const { data: targets, error: targetsError } = await supabase
+    const { data: targets, error: targetsError } = await fetchClient
       .from("post_platform_targets")
       .select("*")
       .eq("post_queue_id", postQueueId);
@@ -86,7 +102,7 @@ serve(async (req) => {
     }
 
     // Fetch social connections for the post owner
-    const { data: connections, error: connError } = await supabase
+    const { data: connections, error: connError } = await fetchClient
       .from("social_connections")
       .select("*")
       .eq("user_id", post.user_id);
