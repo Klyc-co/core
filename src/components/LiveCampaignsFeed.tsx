@@ -18,6 +18,13 @@ interface ScheduledCampaign {
   video_url: string | null;
 }
 
+interface CampaignAnalytics {
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+}
+
 const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   YouTube: Youtube,
   Facebook: Facebook,
@@ -54,6 +61,7 @@ interface LiveCampaignsFeedProps {
 export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaignsFeedProps) {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<ScheduledCampaign[]>([]);
+  const [analyticsMap, setAnalyticsMap] = useState<Record<string, CampaignAnalytics>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,17 +84,68 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
     if (limit) query = query.limit(limit);
 
     const { data } = await query;
-    if (data) setCampaigns(data);
+    if (data) {
+      setCampaigns(data);
+      // Fetch real analytics from post_queue -> post_analytics
+      await fetchAnalytics(user.id, data);
+    }
     setLoading(false);
   };
 
-  // Mock analytics per campaign (will be real when post_analytics is populated)
-  const getMockAnalytics = () => ({
-    views: Math.floor(Math.random() * 5000) + 200,
-    likes: Math.floor(Math.random() * 800) + 50,
-    comments: Math.floor(Math.random() * 120) + 5,
-    shares: Math.floor(Math.random() * 200) + 10,
-  });
+  const fetchAnalytics = async (userId: string, campaigns: ScheduledCampaign[]) => {
+    // Get all post_queue entries for this user that have analytics
+    const { data: postQueues } = await supabase
+      .from("post_queue")
+      .select("id, post_text, video_url, image_url")
+      .eq("user_id", userId)
+      .eq("status", "published");
+
+    if (!postQueues || postQueues.length === 0) return;
+
+    // Fetch analytics for all published posts
+    const postIds = postQueues.map(pq => pq.id);
+    const { data: analytics } = await supabase
+      .from("post_analytics")
+      .select("post_queue_id, views, likes, comments, shares")
+      .in("post_queue_id", postIds);
+
+    if (!analytics || analytics.length === 0) return;
+
+    // Aggregate analytics per post_queue_id
+    const postAnalyticsMap: Record<string, CampaignAnalytics> = {};
+    for (const a of analytics) {
+      const existing = postAnalyticsMap[a.post_queue_id] || { views: 0, likes: 0, comments: 0, shares: 0 };
+      postAnalyticsMap[a.post_queue_id] = {
+        views: (existing.views || 0) + (a.views || 0),
+        likes: (existing.likes || 0) + (a.likes || 0),
+        comments: (existing.comments || 0) + (a.comments || 0),
+        shares: (existing.shares || 0) + (a.shares || 0),
+      };
+    }
+
+    // Match campaigns to post_queue by caption/video_url
+    const campaignAnalytics: Record<string, CampaignAnalytics> = {};
+    for (const campaign of campaigns) {
+      for (const pq of postQueues) {
+        const captionMatch = campaign.post_caption && pq.post_text && 
+          campaign.post_caption.trim().toLowerCase() === pq.post_text.trim().toLowerCase();
+        const videoMatch = campaign.video_url && pq.video_url && campaign.video_url === pq.video_url;
+        const imageMatch = campaign.image_url && pq.image_url && campaign.image_url === pq.image_url;
+
+        if ((captionMatch || videoMatch || imageMatch) && postAnalyticsMap[pq.id]) {
+          campaignAnalytics[campaign.id] = postAnalyticsMap[pq.id];
+          break;
+        }
+      }
+    }
+
+    setAnalyticsMap(campaignAnalytics);
+  };
+
+  const formatStat = (value: number | null | undefined) => {
+    if (value === null || value === undefined) return "--";
+    return value.toLocaleString();
+  };
 
   return (
     <Card>
@@ -111,7 +170,7 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
           </div>
         ) : (
           campaigns.map((campaign) => {
-            const analytics = getMockAnalytics();
+            const analytics = analyticsMap[campaign.id];
             return (
               <div
                 key={campaign.id}
@@ -121,7 +180,6 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
                 {/* Top row: platforms + name + status */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Platform icons */}
                     <div className="flex -space-x-1.5 flex-shrink-0">
                       {campaign.platforms.map((p) => {
                         const Icon = platformIcons[p] || Zap;
@@ -151,26 +209,26 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
                   <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{campaign.post_caption}</p>
                 )}
 
-                {/* Analytics boxes */}
+                {/* Analytics boxes - real data */}
                 <div className="grid grid-cols-4 gap-2">
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Eye className="w-3.5 h-3.5 text-blue-500 mx-auto mb-1" />
-                    <p className="text-sm sm:text-base font-bold text-foreground">{analytics.views.toLocaleString()}</p>
+                    <p className="text-sm sm:text-base font-bold text-foreground">{formatStat(analytics?.views)}</p>
                     <p className="text-[10px] text-muted-foreground">Views</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Heart className="w-3.5 h-3.5 text-red-500 mx-auto mb-1" />
-                    <p className="text-sm sm:text-base font-bold text-foreground">{analytics.likes.toLocaleString()}</p>
+                    <p className="text-sm sm:text-base font-bold text-foreground">{formatStat(analytics?.likes)}</p>
                     <p className="text-[10px] text-muted-foreground">Likes</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <MessageCircle className="w-3.5 h-3.5 text-green-500 mx-auto mb-1" />
-                    <p className="text-sm sm:text-base font-bold text-foreground">{analytics.comments.toLocaleString()}</p>
+                    <p className="text-sm sm:text-base font-bold text-foreground">{formatStat(analytics?.comments)}</p>
                     <p className="text-[10px] text-muted-foreground">Comments</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Share2 className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
-                    <p className="text-sm sm:text-base font-bold text-foreground">{analytics.shares.toLocaleString()}</p>
+                    <p className="text-sm sm:text-base font-bold text-foreground">{formatStat(analytics?.shares)}</p>
                     <p className="text-[10px] text-muted-foreground">Shares</p>
                   </div>
                 </div>
