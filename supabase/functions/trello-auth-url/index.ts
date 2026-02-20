@@ -47,10 +47,11 @@ serve(async (req) => {
       );
     }
 
-    const FRONTEND_URL = Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") ||
-      (SUPABASE_URL.includes("yfhuhcopgddbuecsrbje")
-        ? "https://idea-to-idiom.lovable.app"
-        : "http://localhost:5173");
+    // Use the Origin header to redirect back to wherever the user is testing from
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") ||
+      Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") ||
+      "https://idea-to-idiom.lovable.app";
+    const FRONTEND_URL = origin.replace(/\/$/, "");
 
     // Trello uses token-based auth redirect. The callback page will capture the token
     // and send it to the trello-oauth-callback edge function.
