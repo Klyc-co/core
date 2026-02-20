@@ -1832,8 +1832,11 @@ export type Database = {
           campaign_name: string
           created_at: string
           id: string
+          image_url: string | null
           links: string[] | null
+          media_urls: string[] | null
           platforms: string[]
+          post_caption: string | null
           product: string | null
           scheduled_date: string
           scheduled_time: string
@@ -1841,13 +1844,17 @@ export type Database = {
           tags: string[] | null
           updated_at: string
           user_id: string
+          video_url: string | null
         }
         Insert: {
           campaign_name: string
           created_at?: string
           id?: string
+          image_url?: string | null
           links?: string[] | null
+          media_urls?: string[] | null
           platforms?: string[]
+          post_caption?: string | null
           product?: string | null
           scheduled_date: string
           scheduled_time: string
@@ -1855,13 +1862,17 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id: string
+          video_url?: string | null
         }
         Update: {
           campaign_name?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           links?: string[] | null
+          media_urls?: string[] | null
           platforms?: string[]
+          post_caption?: string | null
           product?: string | null
           scheduled_date?: string
           scheduled_time?: string
@@ -1869,6 +1880,7 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id?: string
+          video_url?: string | null
         }
         Relationships: []
       }
