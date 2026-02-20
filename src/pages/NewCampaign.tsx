@@ -89,6 +89,7 @@ const NewCampaign = () => {
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -257,18 +258,70 @@ const NewCampaign = () => {
     setTags(tags.filter((_, i) => i !== index));
   };
 
+  const uploadFilesToLibrary = async (files: File[]) => {
+    if (!user || files.length === 0) return;
+    setIsUploading(true);
+    try {
+      for (const file of files) {
+        const ext = file.name.split(".").pop() || "bin";
+        const fileName = `${user.id}/${Date.now()}_${crypto.randomUUID()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("brand-assets")
+          .upload(fileName, file, { contentType: file.type, cacheControl: "3600" });
+
+        if (uploadError) {
+          console.error("Upload failed:", uploadError);
+          toast({ title: "Upload failed", description: `Could not upload ${file.name}: ${uploadError.message}`, variant: "destructive" });
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage.from("brand-assets").getPublicUrl(fileName);
+        const publicUrl = urlData.publicUrl;
+
+        const isVideo = file.type.startsWith("video/");
+        const assetType = isVideo ? "video" : "image";
+
+        const { data: assetRow, error: insertError } = await supabase
+          .from("brand_assets")
+          .insert({
+            user_id: user.id,
+            asset_type: assetType,
+            name: file.name,
+            value: publicUrl,
+            metadata: { source: "campaign_upload", original_name: file.name, mime_type: file.type, size: file.size },
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Library save failed:", insertError);
+          continue;
+        }
+
+        setLibraryAssets(prev => [...prev, { id: assetRow.id, name: file.name, url: publicUrl }].slice(0, 10));
+      }
+      toast({ title: "Uploaded! ✨", description: `${files.length} file(s) uploaded and saved to your library.` });
+    } catch (err: any) {
+      toast({ title: "Upload error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      setUploadedFiles([...uploadedFiles, ...Array.from(files)]);
+      uploadFilesToLibrary(Array.from(files));
     }
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files) {
-      setUploadedFiles([...uploadedFiles, ...Array.from(files)]);
+      uploadFilesToLibrary(Array.from(files));
     }
   };
 
@@ -461,23 +514,24 @@ const NewCampaign = () => {
               {/* Upload from device */}
               <div
                 className="border-2 border-dashed border-primary/40 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all"
-                onClick={() => document.getElementById("libraryFileInput")?.click()}
+                onClick={() => !isUploading && document.getElementById("libraryFileInput")?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
               >
-                <Upload className="w-7 h-7 text-muted-foreground" />
-                <span className="font-medium text-sm">Upload</span>
+                {isUploading ? (
+                  <Loader2 className="w-7 h-7 text-muted-foreground animate-spin" />
+                ) : (
+                  <Upload className="w-7 h-7 text-muted-foreground" />
+                )}
+                <span className="font-medium text-sm">{isUploading ? "Uploading..." : "Upload"}</span>
                 <span className="text-xs text-muted-foreground">From device</span>
                 <input
                   id="libraryFileInput"
                   type="file"
                   multiple
                   className="hidden"
-                  accept="image/*,video/*"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files) {
-                      setUploadedFiles(prev => [...prev, ...Array.from(files)]);
-                    }
-                  }}
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  onChange={handleFileUpload}
                 />
               </div>
 
