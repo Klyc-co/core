@@ -187,20 +187,6 @@ const socialPlatforms: SocialPlatform[] = [
     comingSoon: true,
   },
   { 
-    name: "WhatsApp Business", 
-    icon: WhatsAppIcon, 
-    color: "bg-[#25D366]", 
-    textColor: "text-[#25D366]",
-    comingSoon: true,
-  },
-  { 
-    name: "Telegram", 
-    icon: TelegramIcon, 
-    color: "bg-[#0088CC]", 
-    textColor: "text-[#0088CC]",
-    comingSoon: true,
-  },
-  { 
     name: "Patreon", 
     icon: PatreonIcon, 
     color: "bg-[#FF424D]", 
@@ -216,6 +202,7 @@ interface ToolItem {
   iconColor?: string;
   hasBorder?: boolean;
   isConnectable?: boolean;
+  comingSoon?: boolean;
 }
 
 const socialTools: ToolItem[] = [
@@ -255,6 +242,8 @@ const socialTools: ToolItem[] = [
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]", iconColor: "text-white", isConnectable: true },
   { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
+  { name: "WhatsApp Business", icon: WhatsAppIcon, bgColor: "bg-[#25D366]", iconColor: "text-white", comingSoon: true },
+  { name: "Telegram", icon: TelegramIcon, bgColor: "bg-[#0088CC]", iconColor: "text-white", comingSoon: true },
 ];
 
 const crmTools: ToolItem[] = [
@@ -1200,132 +1189,170 @@ const ImportBrandSources = () => {
     }
   };
 
-  const renderToolGrid = (tools: ToolItem[], showStorageTools = false) => (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {showStorageTools && user && (
-        <>
-          {/* Dropbox */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#0061FF] flex items-center justify-center">
-                <DropboxIcon className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-sm font-medium text-foreground">Dropbox</span>
-              {connectionStatus['Dropbox'] === 'connected' && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
+  const renderToolGrid = (tools: ToolItem[], showStorageTools = false) => {
+    const filteredTools = tools.filter(tool => tool.name !== 'Dropbox' && tool.name !== 'Google Drive');
+    
+    // Split into connectable tools and coming soon tools
+    const connectableTools = filteredTools.filter(t => t.isConnectable);
+    const comingSoonTools = filteredTools.filter(t => !t.isConnectable);
+    
+    // Sort connectable tools: connected first, then the rest
+    const sortedConnectableTools = [...connectableTools].sort((a, b) => {
+      const aConnected = connectionStatus[a.name] === 'connected' ? 0 : 1;
+      const bConnected = connectionStatus[b.name] === 'connected' ? 0 : 1;
+      return aConnected - bConnected;
+    });
+
+    const renderToolCard = (tool: ToolItem) => {
+      const isConnectable = tool.isConnectable;
+      const isComingSoon = tool.comingSoon;
+      const status = connectionStatus[tool.name] || 'disconnected';
+      const isConnected = status === 'connected';
+      const isConnecting = status === 'connecting';
+      
+      return (
+        <div key={tool.name} className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
+              <tool.icon className={`w-5 h-5 ${tool.iconColor || ''}`} />
             </div>
-            <Button 
-              variant={connectionStatus['Dropbox'] === 'connected' ? "outline" : "secondary"} 
-              size="sm" 
-              className={`w-full ${connectionStatus['Dropbox'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
-              onClick={handleConnectDropbox}
-              disabled={connectionStatus['Dropbox'] === 'connecting'}
-            >
-              {connectionStatus['Dropbox'] === 'connecting' ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Connecting...
-                </>
-              ) : connectionStatus['Dropbox'] === 'connected' ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Connected
-                </>
-              ) : (
-                'Connect'
-              )}
-            </Button>
-          </div>
-          {/* Google Drive */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center">
-                <GoogleDriveIcon className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-foreground">Google Drive</span>
-              {connectionStatus['Google Drive'] === 'connected' && (
-                <Check className="w-4 h-4 text-primary" />
-              )}
-            </div>
-            <Button 
-              variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
-              size="sm" 
-              className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
-              onClick={handleConnectGoogleDrive}
-              disabled={connectionStatus['Google Drive'] === 'connecting'}
-            >
-              {connectionStatus['Google Drive'] === 'connecting' ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Connecting...
-                </>
-              ) : connectionStatus['Google Drive'] === 'connected' ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Connected
-                </>
-              ) : (
-                'Connect'
-              )}
-            </Button>
-          </div>
-        </>
-      )}
-      {tools.filter(tool => tool.name !== 'Dropbox' && tool.name !== 'Google Drive').map((tool) => {
-        const isConnectable = tool.isConnectable;
-        const status = connectionStatus[tool.name] || 'disconnected';
-        const isConnected = status === 'connected';
-        const isConnecting = status === 'connecting';
-        
-        return (
-          <div key={tool.name} className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-lg ${tool.bgColor} ${tool.hasBorder ? 'border border-border' : ''} flex items-center justify-center overflow-hidden`}>
-                <tool.icon className={`w-5 h-5 ${tool.iconColor || ''}`} />
-              </div>
-              <span className="text-sm font-medium text-foreground truncate">{tool.name}</span>
-              {isConnected && (
-                <Check className="w-4 h-4 text-primary flex-shrink-0" />
-              )}
-            </div>
-            {isConnectable ? (
-              <Button 
-                variant={isConnected ? "outline" : "secondary"} 
-                size="sm" 
-                className={`w-full ${isConnected ? 'border-primary/50 text-primary' : ''}`}
-                onClick={() => handleConnectCrmTool(tool.name)}
-                disabled={isConnecting}
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Connecting...
-                  </>
-                ) : isConnected ? (
-                  <>
-                    <Check className="w-3 h-3" />
-                    Connected
-                  </>
-                ) : (
-                  'Connect'
-                )}
-              </Button>
-            ) : (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full opacity-50"
-                disabled
-              >
-                Coming Soon
-              </Button>
+            <span className="text-sm font-medium text-foreground truncate">{tool.name}</span>
+            {isConnected && (
+              <Check className="w-4 h-4 text-primary flex-shrink-0" />
             )}
           </div>
-        );
-      })}
-    </div>
-  );
+          {isComingSoon ? (
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="w-full opacity-50"
+              disabled
+            >
+              Coming Soon
+            </Button>
+          ) : isConnectable ? (
+            <Button 
+              variant={isConnected ? "outline" : "secondary"} 
+              size="sm" 
+              className={`w-full ${isConnected ? 'border-primary/50 text-primary' : ''}`}
+              onClick={() => handleConnectCrmTool(tool.name)}
+              disabled={isConnecting}
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Connecting...
+                </>
+              ) : isConnected ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Connected
+                </>
+              ) : (
+                'Connect'
+              )}
+            </Button>
+          ) : (
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="w-full opacity-50"
+              disabled
+            >
+              Coming Soon
+            </Button>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {showStorageTools && user && (
+            <>
+              {/* Dropbox */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#0061FF] flex items-center justify-center">
+                    <DropboxIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">Dropbox</span>
+                  {connectionStatus['Dropbox'] === 'connected' && (
+                    <Check className="w-4 h-4 text-primary" />
+                  )}
+                </div>
+                <Button 
+                  variant={connectionStatus['Dropbox'] === 'connected' ? "outline" : "secondary"} 
+                  size="sm" 
+                  className={`w-full ${connectionStatus['Dropbox'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
+                  onClick={handleConnectDropbox}
+                  disabled={connectionStatus['Dropbox'] === 'connecting'}
+                >
+                  {connectionStatus['Dropbox'] === 'connecting' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : connectionStatus['Dropbox'] === 'connected' ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      Connected
+                    </>
+                  ) : (
+                    'Connect'
+                  )}
+                </Button>
+              </div>
+              {/* Google Drive */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center">
+                    <GoogleDriveIcon className="w-5 h-5" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">Google Drive</span>
+                  {connectionStatus['Google Drive'] === 'connected' && (
+                    <Check className="w-4 h-4 text-primary" />
+                  )}
+                </div>
+                <Button 
+                  variant={connectionStatus['Google Drive'] === 'connected' ? "outline" : "secondary"} 
+                  size="sm" 
+                  className={`w-full ${connectionStatus['Google Drive'] === 'connected' ? 'border-primary/50 text-primary' : ''}`}
+                  onClick={handleConnectGoogleDrive}
+                  disabled={connectionStatus['Google Drive'] === 'connecting'}
+                >
+                  {connectionStatus['Google Drive'] === 'connecting' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : connectionStatus['Google Drive'] === 'connected' ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      Connected
+                    </>
+                  ) : (
+                    'Connect'
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+          {sortedConnectableTools.map(renderToolCard)}
+        </div>
+
+        {comingSoonTools.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-border">
+            <p className="text-sm font-medium text-muted-foreground mb-4">Coming Soon</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {comingSoonTools.map(renderToolCard)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (isAuthLoading) {
     return (
