@@ -209,7 +209,7 @@ const socialTools: ToolItem[] = [
   { name: "Dropbox", icon: DropboxIcon, bgColor: "bg-[#0061FF]", iconColor: "text-white", isConnectable: true },
   { name: "Google Drive", icon: GoogleDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Notion", icon: NotionIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white" },
+  { name: "Trello", icon: TrelloIcon, bgColor: "bg-[#0052CC]", iconColor: "text-white", isConnectable: true },
   
   { name: "Airtable", icon: AirtableIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -823,9 +823,28 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // For Trello, open the connect modal (uses API key + token)
+    // For Trello, use OAuth redirect flow
     if (toolName === 'Trello') {
-      setTrelloModalOpen(true);
+      if (!user) {
+        toast.error("Please log in first");
+        return;
+      }
+      setConnectionStatus(prev => ({ ...prev, Trello: 'connecting' }));
+      try {
+        const { data, error } = await supabase.functions.invoke("trello-auth-url");
+        if (error) throw error;
+        const authUrl = data?.authUrl;
+        if (authUrl) {
+          window.open(authUrl, '_blank');
+          toast.info("Complete Trello authorization in the new window");
+        } else {
+          throw new Error("No auth URL returned");
+        }
+      } catch (err: any) {
+        console.error("Trello OAuth error:", err);
+        toast.error("Failed to connect Trello");
+        setConnectionStatus(prev => ({ ...prev, Trello: 'disconnected' }));
+      }
       return;
     }
 

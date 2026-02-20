@@ -61,6 +61,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import TrelloCallback from "./pages/TrelloCallback";
 
 const queryClient = new QueryClient();
 
@@ -145,6 +146,7 @@ const App = () => (
             <Route path="/analytics" element={<WithSidebar><FullAnalytics /></WithSidebar>} />
             <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
             
+            <Route path="/trello-callback" element={<TrelloCallback />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
