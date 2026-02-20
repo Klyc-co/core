@@ -56,14 +56,21 @@ serve(async (req) => {
           .update({ status: "publishing" })
           .eq("id", campaign.id);
 
-        // Create post_queue entry
+        // Create post_queue entry with media from campaign
+        const hasVideo = !!campaign.video_url;
+        const hasImage = !!campaign.image_url;
+        const contentType = hasVideo ? "video" : hasImage ? "image" : "text";
+
         const { data: postQueue, error: pqError } = await supabaseAdmin
           .from("post_queue")
           .insert({
             user_id: campaign.user_id,
-            post_text: campaign.campaign_name,
-            content_type: "text",
+            post_text: campaign.post_caption || campaign.campaign_name,
+            content_type: contentType,
             status: "draft",
+            video_url: campaign.video_url || null,
+            image_url: campaign.image_url || null,
+            media_urls: campaign.media_urls || [],
           })
           .select()
           .single();

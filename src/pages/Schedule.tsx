@@ -152,14 +152,32 @@ const Schedule = () => {
     setPublishingId(campaign.id);
 
     try {
-      // 1. Create a post_queue entry
+      // 1. Fetch full campaign data including media URLs
+      const { data: fullCampaign, error: fetchError } = await supabase
+        .from("scheduled_campaigns")
+        .select("*")
+        .eq("id", campaign.id)
+        .single();
+
+      if (fetchError || !fullCampaign) {
+        throw new Error("Failed to fetch campaign details");
+      }
+
+      // 2. Create a post_queue entry with media
+      const hasVideo = !!(fullCampaign as any).video_url;
+      const hasImage = !!(fullCampaign as any).image_url;
+      const contentType = hasVideo ? "video" : hasImage ? "image" : "text";
+
       const { data: postQueue, error: pqError } = await supabase
         .from("post_queue")
         .insert({
           user_id: user.id,
-          post_text: campaign.campaign_name,
-          content_type: "text",
+          post_text: (fullCampaign as any).post_caption || campaign.campaign_name,
+          content_type: contentType,
           status: "draft",
+          video_url: (fullCampaign as any).video_url || null,
+          image_url: (fullCampaign as any).image_url || null,
+          media_urls: (fullCampaign as any).media_urls || [],
         })
         .select()
         .single();

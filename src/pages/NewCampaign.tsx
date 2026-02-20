@@ -373,6 +373,13 @@ const NewCampaign = () => {
 
     setIsLaunching(true);
     
+    // Separate video and image URLs from library assets
+    const videoAsset = libraryAssets.find(a => {
+      const ext = a.url.split('.').pop()?.toLowerCase() || '';
+      return ['mp4', 'mov', 'webm', 'avi'].includes(ext) || a.name.match(/\.(mp4|mov|webm|avi)$/i);
+    });
+    const imageAssets = libraryAssets.filter(a => a !== videoAsset);
+
     const { error } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       campaign_name: campaignName.trim(),
@@ -383,6 +390,10 @@ const NewCampaign = () => {
       scheduled_date: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: scheduledTime,
       status: "scheduled",
+      video_url: videoAsset?.url || null,
+      image_url: imageAssets[0]?.url || null,
+      media_urls: libraryAssets.map(a => a.url),
+      post_caption: postCaption || campaignName.trim(),
     });
 
     if (error) {
