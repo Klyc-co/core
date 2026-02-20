@@ -385,40 +385,36 @@ async function publishToLinkedIn(post: any, connection: any): Promise<{ success:
     const profileData = await profileRes.json();
     const personUrn = `urn:li:person:${profileData.sub}`;
 
-    // Build the post payload
+    // Build the post payload using the new Posts API (UGC Posts API is deprecated)
     const postText = post.post_text || post.campaign_idea || "";
     const postBody: any = {
       author: personUrn,
+      commentary: postText,
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
       lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: postText,
-          },
-          shareMediaCategory: "NONE",
-        },
-      },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-      },
     };
 
-    // If there's an image URL, attach it as media
+    // If there's an image URL, attach it as an article
     if (post.image_url) {
-      postBody.specificContent["com.linkedin.ugc.ShareContent"].shareMediaCategory = "ARTICLE";
-      postBody.specificContent["com.linkedin.ugc.ShareContent"].media = [
-        {
-          status: "READY",
-          originalUrl: post.image_url,
+      postBody.content = {
+        article: {
+          source: post.image_url,
+          title: postText.substring(0, 100) || "Shared via Klyc",
         },
-      ];
+      };
     }
 
-    const publishRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+    const publishRes = await fetch("https://api.linkedin.com/rest/posts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        "LinkedIn-Version": "202401",
         "X-Restli-Protocol-Version": "2.0.0",
       },
       body: JSON.stringify(postBody),
@@ -427,10 +423,10 @@ async function publishToLinkedIn(post: any, connection: any): Promise<{ success:
     if (!publishRes.ok) {
       const errText = await publishRes.text();
       console.error("LinkedIn post failed:", errText);
-      return { success: false, error: `LinkedIn post failed: ${publishRes.status}` };
+      return { success: false, error: `LinkedIn post failed: ${publishRes.status} - ${errText}` };
     }
 
-    const postId = publishRes.headers.get("x-restli-id") || "unknown";
+    const postId = publishRes.headers.get("x-restli-id") || publishRes.headers.get("x-linkedin-id") || "unknown";
     console.log("LinkedIn post published successfully:", postId);
     return { success: true, postId };
   } catch (error) {
