@@ -451,40 +451,7 @@ const NewCampaign = () => {
             />
           </div>
 
-          {/* Upload Content */}
-          <div className="space-y-2">
-            <Label>Upload Content</Label>
-            <div
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              onClick={() => document.getElementById("fileInput")?.click()}
-            >
-              <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-foreground font-medium">Drag and drop files here or click to upload</p>
-              <p className="text-sm text-muted-foreground mt-1">Supports images, videos, and documents</p>
-              <input
-                id="fileInput"
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileUpload}
-                accept="image/*,video/*,.pdf,.doc,.docx"
-              />
-            </div>
-            {uploadedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {uploadedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-secondary px-3 py-2 rounded-lg text-sm">
-                    <span className="max-w-[150px] truncate">{file.name}</span>
-                    <button onClick={() => handleRemoveFile(index)} className="hover:text-destructive">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+
 
           {/* Add from Content Library */}
           <div className="space-y-2">
