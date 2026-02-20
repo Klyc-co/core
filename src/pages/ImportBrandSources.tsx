@@ -236,7 +236,7 @@ const socialTools: ToolItem[] = [
   { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Hootsuite", icon: HootsuiteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   
   { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -320,6 +320,9 @@ const ImportBrandSources = () => {
   const [zapierModalOpen, setZapierModalOpen] = useState(false);
   const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
   const [isConnectingZapier, setIsConnectingZapier] = useState(false);
+  const [iftttModalOpen, setIftttModalOpen] = useState(false);
+  const [iftttWebhookUrl, setIftttWebhookUrl] = useState("");
+  const [isConnectingIfttt, setIsConnectingIfttt] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -910,6 +913,12 @@ const ImportBrandSources = () => {
     // For Zapier, open the webhook URL modal
     if (toolName === 'Zapier') {
       setZapierModalOpen(true);
+      return;
+    }
+
+    // For IFTTT, open the webhook URL modal
+    if (toolName === 'IFTTT') {
+      setIftttModalOpen(true);
       return;
     }
 
@@ -1835,6 +1844,69 @@ const ImportBrandSources = () => {
               }}
             >
               {isConnectingZapier ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* IFTTT Webhook URL Dialog */}
+      <Dialog open={iftttModalOpen} onOpenChange={setIftttModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect IFTTT</DialogTitle>
+            <DialogDescription>
+              Enter your IFTTT Webhooks URL to trigger applets from Klyc. Go to IFTTT → Webhooks service → Documentation to find your key, then use the URL format shown below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="ifttt-webhook">Webhook URL</Label>
+              <Input
+                id="ifttt-webhook"
+                placeholder="https://maker.ifttt.com/trigger/{event}/json/with/key/..."
+                value={iftttWebhookUrl}
+                onChange={(e) => setIftttWebhookUrl(e.target.value)}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!iftttWebhookUrl.trim() || isConnectingIfttt}
+              onClick={async () => {
+                if (!iftttWebhookUrl.startsWith("https://maker.ifttt.com/")) {
+                  toast.error("Please enter a valid IFTTT Webhooks URL");
+                  return;
+                }
+                setIsConnectingIfttt(true);
+                try {
+                  await fetch(iftttWebhookUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    mode: "no-cors",
+                    body: JSON.stringify({
+                      value1: "connection_test",
+                      value2: new Date().toISOString(),
+                      value3: "klyc",
+                    }),
+                  });
+                  setConnectionStatus(prev => ({ ...prev, IFTTT: 'connected' }));
+                  toast.success("IFTTT connected! Check your applet activity to confirm.");
+                  setIftttModalOpen(false);
+                } catch (err) {
+                  console.error("IFTTT webhook error:", err);
+                  toast.error("Failed to connect to IFTTT. Please check the URL.");
+                } finally {
+                  setIsConnectingIfttt(false);
+                }
+              }}
+            >
+              {isConnectingIfttt ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Connecting...
