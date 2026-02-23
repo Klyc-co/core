@@ -96,6 +96,7 @@ import DropboxConnectionCard from "@/components/DropboxConnectionCard";
 import DaVinciResolveImportDialog from "@/components/DaVinciResolveImportDialog";
 import CapCutImportDialog from "@/components/CapCutImportDialog";
 import VideoleapImportDialog from "@/components/VideoleapImportDialog";
+import BazaartImportDialog from "@/components/BazaartImportDialog";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface SocialPlatform {
@@ -243,7 +244,7 @@ const socialTools: ToolItem[] = [
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white", isConnectable: true },
   { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black", isConnectable: true, isManualImport: true },
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]", iconColor: "text-white", isConnectable: true },
-  { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
+  { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent", isConnectable: true, isManualImport: true },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent", isConnectable: true, isManualImport: true },
   { name: "WhatsApp Business", icon: WhatsAppIcon, bgColor: "bg-[#25D366]", iconColor: "text-white", comingSoon: true },
   { name: "Telegram", icon: TelegramIcon, bgColor: "bg-[#0088CC]", iconColor: "text-white", comingSoon: true },
@@ -311,6 +312,7 @@ const ImportBrandSources = () => {
   const [frameioModalOpen, setFrameioModalOpen] = useState(false);
   const [capcutModalOpen, setCapcutModalOpen] = useState(false);
   const [videoleapModalOpen, setVideoleapModalOpen] = useState(false);
+  const [bazaartModalOpen, setBazaartModalOpen] = useState(false);
   const [zapierModalOpen, setZapierModalOpen] = useState(false);
   const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
   const [isConnectingZapier, setIsConnectingZapier] = useState(false);
@@ -913,7 +915,12 @@ const ImportBrandSources = () => {
       return;
     }
 
-    if (toolName === 'ClickUp') {
+    // For Bazaart, open the file upload dialog
+    if (toolName === 'Bazaart') {
+      setBazaartModalOpen(true);
+      return;
+    }
+
       setClickupModalOpen(true);
       return;
     }
@@ -1949,6 +1956,15 @@ const ImportBrandSources = () => {
         <VideoleapImportDialog
           open={videoleapModalOpen}
           onOpenChange={setVideoleapModalOpen}
+          userId={user.id}
+        />
+      )}
+
+      {/* Bazaart Import Dialog */}
+      {user && (
+        <BazaartImportDialog
+          open={bazaartModalOpen}
+          onOpenChange={setBazaartModalOpen}
           userId={user.id}
         />
       )}
