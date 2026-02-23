@@ -97,6 +97,7 @@ import DaVinciResolveImportDialog from "@/components/DaVinciResolveImportDialog"
 import CapCutImportDialog from "@/components/CapCutImportDialog";
 import VideoleapImportDialog from "@/components/VideoleapImportDialog";
 import BazaartImportDialog from "@/components/BazaartImportDialog";
+import VeedImportDialog from "@/components/VeedImportDialog";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface SocialPlatform {
@@ -221,7 +222,7 @@ const socialTools: ToolItem[] = [
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
-  { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -313,6 +314,7 @@ const ImportBrandSources = () => {
   const [capcutModalOpen, setCapcutModalOpen] = useState(false);
   const [videoleapModalOpen, setVideoleapModalOpen] = useState(false);
   const [bazaartModalOpen, setBazaartModalOpen] = useState(false);
+  const [veedModalOpen, setVeedModalOpen] = useState(false);
   const [zapierModalOpen, setZapierModalOpen] = useState(false);
   const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
   const [isConnectingZapier, setIsConnectingZapier] = useState(false);
@@ -918,6 +920,12 @@ const ImportBrandSources = () => {
     // For Bazaart, open the file upload dialog
     if (toolName === 'Bazaart') {
       setBazaartModalOpen(true);
+      return;
+    }
+
+    // For VEED.io, open the file upload dialog
+    if (toolName === 'VEED.io') {
+      setVeedModalOpen(true);
       return;
     }
 
@@ -1966,6 +1974,15 @@ const ImportBrandSources = () => {
         <BazaartImportDialog
           open={bazaartModalOpen}
           onOpenChange={setBazaartModalOpen}
+          userId={user.id}
+        />
+      )}
+
+      {/* VEED.io Import Dialog */}
+      {user && (
+        <VeedImportDialog
+          open={veedModalOpen}
+          onOpenChange={setVeedModalOpen}
           userId={user.id}
         />
       )}
