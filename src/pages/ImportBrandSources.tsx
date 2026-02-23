@@ -204,6 +204,7 @@ interface ToolItem {
   hasBorder?: boolean;
   isConnectable?: boolean;
   comingSoon?: boolean;
+  isManualImport?: boolean;
 }
 
 const socialTools: ToolItem[] = [
@@ -216,8 +217,8 @@ const socialTools: ToolItem[] = [
   { name: "ClickUp", icon: ClickUpIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Figma", icon: FigmaIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Adobe Creative Cloud", icon: AdobeCreativeCloudIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
+  { name: "DaVinci Resolve", icon: DaVinciResolveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
+  { name: "Descript", icon: DescriptIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "VEED.io", icon: VeedIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Loom", icon: LoomIcon, bgColor: "bg-[#625DF5]", iconColor: "text-white", isConnectable: true },
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -239,7 +240,7 @@ const socialTools: ToolItem[] = [
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black", isConnectable: true },
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white", isConnectable: true },
-  { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black", isConnectable: true },
+  { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black", isConnectable: true, isManualImport: true },
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]", iconColor: "text-white", isConnectable: true },
   { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
@@ -1329,15 +1330,15 @@ const ImportBrandSources = () => {
               {isConnecting ? (
                 <>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Connecting...
+                  {tool.isManualImport ? 'Importing...' : 'Connecting...'}
                 </>
               ) : isConnected ? (
                 <>
                   <Check className="w-3 h-3" />
-                  Connected
+                  {tool.isManualImport ? 'Imported' : 'Connected'}
                 </>
               ) : (
-                'Connect'
+                tool.isManualImport ? 'Import' : 'Connect'
               )}
             </Button>
           ) : (
