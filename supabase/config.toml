@@ -274,3 +274,9 @@ verify_jwt = false
 verify_jwt = false
 
 
+[functions.restream-auth-url]
+verify_jwt = false
+
+[functions.restream-oauth-callback]
+verify_jwt = false
+
