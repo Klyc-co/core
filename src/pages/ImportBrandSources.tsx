@@ -921,6 +921,7 @@ const ImportBrandSources = () => {
       return;
     }
 
+    if (toolName === 'ClickUp') {
       setClickupModalOpen(true);
       return;
     }
