@@ -163,7 +163,7 @@ const socialPlatforms: SocialPlatform[] = [
     icon: SnapchatIcon, 
     color: "bg-[#FFFC00]", 
     textColor: "text-yellow-500",
-    comingSoon: true,
+    customOAuth: true,
   },
   { 
     name: "Twitch", 
@@ -427,6 +427,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "snapchat") {
+      toast.success("Snapchat connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Snapchat: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (success === "frameio") {
       toast.success("Frame.io connected successfully!");
       setConnectionStatus(prev => ({ ...prev, "Frame.io": 'connected' }));
@@ -530,6 +536,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "tumblr") {
           newStatus['Tumblr'] = 'connected';
+        }
+        if (conn.platform === "snapchat") {
+          newStatus['Snapchat'] = 'connected';
         }
         if (conn.platform === "adobe_cc") {
           newStatus['Adobe Creative Cloud'] = 'connected';
@@ -1119,6 +1128,8 @@ const ImportBrandSources = () => {
           functionName = "twitch-auth-url";
         } else if (platform.name === "Tumblr") {
           functionName = "tumblr-auth-url";
+        } else if (platform.name === "Snapchat") {
+          functionName = "snapchat-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
@@ -1131,7 +1142,7 @@ const ImportBrandSources = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          if (platform.name === "Patreon" || platform.name === "Twitch" || platform.name === "Tumblr" || platform.name === "Twitter/X") {
+          if (platform.name === "Patreon" || platform.name === "Twitch" || platform.name === "Tumblr" || platform.name === "Twitter/X" || platform.name === "Snapchat") {
             window.open(authUrl, '_blank');
             toast.info(`Complete ${platform.name} authorization in the new window`);
           } else {

@@ -267,4 +267,10 @@ verify_jwt = false
 [functions.trello-connect]
 verify_jwt = false
 
+[functions.snapchat-auth-url]
+verify_jwt = false
+
+[functions.snapchat-oauth-callback]
+verify_jwt = false
+
 
