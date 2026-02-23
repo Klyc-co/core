@@ -230,7 +230,7 @@ const socialTools: ToolItem[] = [
   
   { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -457,6 +457,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "onedrive") {
+      toast.success("OneDrive connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "OneDrive": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -581,6 +587,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "restream") {
           newStatus['Restream'] = 'connected';
+        }
+        if (conn.platform === "onedrive") {
+          newStatus['OneDrive'] = 'connected';
         }
       });
     }
@@ -1026,6 +1035,8 @@ const ImportBrandSources = () => {
         functionName = 'canva-auth-url';
       } else if (toolName === 'Restream') {
         functionName = 'restream-auth-url';
+      } else if (toolName === 'OneDrive') {
+        functionName = 'onedrive-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
