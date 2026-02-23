@@ -230,7 +230,7 @@ const socialTools: ToolItem[] = [
   
   { name: "Sprout Social", icon: SproutSocialIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
+  { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, comingSoon: true },
   { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },

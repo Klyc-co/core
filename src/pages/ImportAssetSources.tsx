@@ -84,6 +84,7 @@ const storagePlatforms: StoragePlatform[] = [
     description: "Import files from Microsoft OneDrive",
     connectionTable: "social_connections",
     hasFilePicker: false,
+    comingSoon: true,
   },
   {
     id: "box",
