@@ -232,7 +232,7 @@ const socialTools: ToolItem[] = [
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
+  { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
