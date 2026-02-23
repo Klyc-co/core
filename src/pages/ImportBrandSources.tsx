@@ -94,6 +94,7 @@ import MediumIcon from "@/components/icons/MediumIcon";
 import PatreonIcon from "@/components/icons/PatreonIcon";
 import DropboxConnectionCard from "@/components/DropboxConnectionCard";
 import DaVinciResolveImportDialog from "@/components/DaVinciResolveImportDialog";
+import CapCutImportDialog from "@/components/CapCutImportDialog";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface SocialPlatform {
@@ -238,7 +239,7 @@ const socialTools: ToolItem[] = [
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black", isConnectable: true },
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
   { name: "Discord", icon: DiscordIcon, bgColor: "bg-[#5865F2]", iconColor: "text-white", isConnectable: true },
-  { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black" },
+  { name: "CapCut", icon: CapCutIcon, bgColor: "bg-black", isConnectable: true },
   { name: "Riverside", icon: RiversideIcon, bgColor: "bg-[#6366F1]", iconColor: "text-white", isConnectable: true },
   { name: "Bazaart", icon: BazaartIcon, bgColor: "bg-transparent" },
   { name: "Videoleap", icon: VideoleapIcon, bgColor: "bg-transparent" },
@@ -306,6 +307,7 @@ const ImportBrandSources = () => {
   const [clickupModalOpen, setClickupModalOpen] = useState(false);
   const [descriptModalOpen, setDescriptModalOpen] = useState(false);
   const [frameioModalOpen, setFrameioModalOpen] = useState(false);
+  const [capcutModalOpen, setCapcutModalOpen] = useState(false);
   const [zapierModalOpen, setZapierModalOpen] = useState(false);
   const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
   const [isConnectingZapier, setIsConnectingZapier] = useState(false);
@@ -884,6 +886,12 @@ const ImportBrandSources = () => {
     // For DaVinci Resolve, open the file upload dialog
     if (toolName === 'DaVinci Resolve') {
       setDavinciModalOpen(true);
+      return;
+    }
+
+    // For CapCut, open the file upload dialog
+    if (toolName === 'CapCut') {
+      setCapcutModalOpen(true);
       return;
     }
 
@@ -1904,6 +1912,15 @@ const ImportBrandSources = () => {
         <DaVinciResolveImportDialog
           open={davinciModalOpen}
           onOpenChange={setDavinciModalOpen}
+          userId={user.id}
+        />
+      )}
+
+      {/* CapCut Import Dialog */}
+      {user && (
+        <CapCutImportDialog
+          open={capcutModalOpen}
+          onOpenChange={setCapcutModalOpen}
           userId={user.id}
         />
       )}
