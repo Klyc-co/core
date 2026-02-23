@@ -82,7 +82,8 @@ const storagePlatforms: StoragePlatform[] = [
     icon: OneDriveIcon,
     bgColor: "bg-[#0078D4]",
     description: "Import files from Microsoft OneDrive",
-    comingSoon: true,
+    connectionTable: "social_connections",
+    hasFilePicker: false,
   },
   {
     id: "box",
@@ -210,13 +211,14 @@ const ImportAssetSources = () => {
     try {
       const connections: ConnectionStatus = {};
 
-      const [dropboxRes, gdriveRes, adobeRes, boxRes, airtableRes, canvaRes] = await Promise.all([
+      const [dropboxRes, gdriveRes, adobeRes, boxRes, airtableRes, canvaRes, onedriveRes] = await Promise.all([
         supabase.from("dropbox_connections").select("id, connection_status").eq("user_id", userId).maybeSingle(),
         supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "google_drive").maybeSingle(),
         supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "adobe_cc").maybeSingle(),
         supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "box").maybeSingle(),
         supabase.from("airtable_connections").select("id").eq("user_id", userId).maybeSingle(),
         supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "canva").maybeSingle(),
+        supabase.from("social_connections").select("id").eq("user_id", userId).eq("platform", "onedrive").maybeSingle(),
       ]);
 
       connections["dropbox"] = dropboxRes.data?.connection_status === "connected";
@@ -225,6 +227,7 @@ const ImportAssetSources = () => {
       connections["box"] = !!boxRes.data;
       connections["airtable"] = !!airtableRes.data;
       connections["canva"] = !!canvaRes.data;
+      connections["onedrive"] = !!onedriveRes.data;
 
       setConnectionStatus(connections);
     } catch (error) {

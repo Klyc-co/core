@@ -280,3 +280,9 @@ verify_jwt = false
 [functions.restream-oauth-callback]
 verify_jwt = false
 
+[functions.onedrive-auth-url]
+verify_jwt = false
+
+[functions.onedrive-oauth-callback]
+verify_jwt = false
+
