@@ -230,7 +230,7 @@ const socialTools: ToolItem[] = [
   { name: "Monday.com", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "OneDrive", icon: OneDriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
@@ -312,6 +312,9 @@ const ImportBrandSources = () => {
   const [iftttModalOpen, setIftttModalOpen] = useState(false);
   const [iftttWebhookUrl, setIftttWebhookUrl] = useState("");
   const [isConnectingIfttt, setIsConnectingIfttt] = useState(false);
+  const [wetransferModalOpen, setWetransferModalOpen] = useState(false);
+  const [wetransferLink, setWetransferLink] = useState("");
+  const [isImportingWetransfer, setIsImportingWetransfer] = useState(false);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -936,6 +939,12 @@ const ImportBrandSources = () => {
     // For IFTTT, open the webhook URL modal
     if (toolName === 'IFTTT') {
       setIftttModalOpen(true);
+      return;
+    }
+
+    // For WeTransfer, open the link paste modal
+    if (toolName === 'WeTransfer') {
+      setWetransferModalOpen(true);
       return;
     }
 
@@ -2038,6 +2047,82 @@ const ImportBrandSources = () => {
                 'Connect'
               )}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* WeTransfer Link Import Dialog */}
+      <Dialog open={wetransferModalOpen} onOpenChange={setWetransferModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WeTransferIcon className="w-5 h-5" />
+              Import from WeTransfer
+            </DialogTitle>
+            <DialogDescription>
+              Paste a WeTransfer download link to import files into your brand library. WeTransfer's public API has been retired, so link-based import is the supported method.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="wetransfer-link">WeTransfer Download Link</Label>
+              <Input
+                id="wetransfer-link"
+                placeholder="https://we.tl/... or https://wetransfer.com/downloads/..."
+                value={wetransferLink}
+                onChange={(e) => setWetransferLink(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Open your WeTransfer email or page and copy the download link.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setWetransferModalOpen(false); setWetransferLink(""); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  const link = wetransferLink.trim();
+                  if (!link) {
+                    toast.error("Please paste a WeTransfer link");
+                    return;
+                  }
+                  if (!link.includes("we.tl") && !link.includes("wetransfer.com")) {
+                    toast.error("Please enter a valid WeTransfer link");
+                    return;
+                  }
+                  setIsImportingWetransfer(true);
+                  try {
+                    // Store the link as a brand asset for later processing
+                    const { error } = await supabase.from("brand_assets").insert({
+                      user_id: user!.id,
+                      asset_type: "wetransfer_link",
+                      name: "WeTransfer Import",
+                      value: link,
+                      metadata: { source: "wetransfer", imported_at: new Date().toISOString() },
+                    });
+                    if (error) throw error;
+                    toast.success("WeTransfer link saved! Your files will be available in your brand library.");
+                    setConnectionStatus(prev => ({ ...prev, WeTransfer: 'connected' }));
+                    setWetransferModalOpen(false);
+                    setWetransferLink("");
+                  } catch (err) {
+                    console.error("WeTransfer import error:", err);
+                    toast.error("Failed to save WeTransfer link");
+                  } finally {
+                    setIsImportingWetransfer(false);
+                  }
+                }}
+                disabled={isImportingWetransfer || !wetransferLink.trim()}
+                className="flex-1"
+              >
+                {isImportingWetransfer ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importing...</>
+                ) : (
+                  "Import Link"
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
