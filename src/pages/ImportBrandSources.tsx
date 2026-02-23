@@ -232,7 +232,7 @@ const socialTools: ToolItem[] = [
   { name: "Box", icon: BoxIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]", iconColor: "text-white", isConnectable: true },
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black", isConnectable: true },
@@ -448,6 +448,12 @@ const ImportBrandSources = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "restream") {
+      toast.success("Restream connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "Restream": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (youtubeSuccess === "true") {
       toast.success("YouTube connected successfully!");
       setConnectionStatus(prev => ({ ...prev, YouTube: 'connected' }));
@@ -569,6 +575,9 @@ const ImportBrandSources = () => {
         }
         if (conn.platform === "canva") {
           newStatus['Canva'] = 'connected';
+        }
+        if (conn.platform === "restream") {
+          newStatus['Restream'] = 'connected';
         }
       });
     }
@@ -1006,6 +1015,8 @@ const ImportBrandSources = () => {
         functionName = 'zoho-crm-auth-url';
       } else if (toolName === 'Canva') {
         functionName = 'canva-auth-url';
+      } else if (toolName === 'Restream') {
+        functionName = 'restream-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
