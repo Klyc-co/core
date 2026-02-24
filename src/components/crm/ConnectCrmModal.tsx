@@ -22,6 +22,7 @@ import WooCommerceIcon from "@/components/icons/WooCommerceIcon";
 import SquareIcon from "@/components/icons/SquareIcon";
 import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
 import StripeIcon from "@/components/icons/StripeIcon";
+import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -99,6 +100,14 @@ const providers: CrmProvider[] = [
     description: "Sales pipeline management",
   },
   {
+    id: "activecampaign",
+    name: "ActiveCampaign",
+    icon: ActiveCampaignIcon,
+    available: true,
+    description: "Contacts & marketing automation",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -118,6 +127,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     squareApplicationId: "",
     squarespaceApiKey: "",
     stripeSecretKey: "",
+    activecampaignApiUrl: "",
+    activecampaignApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -133,6 +144,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       squareApplicationId: "",
       squarespaceApiKey: "",
       stripeSecretKey: "",
+      activecampaignApiUrl: "",
+      activecampaignApiKey: "",
     });
     setStep("configure");
   };
@@ -200,6 +213,26 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // ActiveCampaign uses API URL + API Key
+      if (selectedProvider.id === "activecampaign") {
+        const { data, error } = await supabase.functions.invoke("activecampaign-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            apiUrl: formData.activecampaignApiUrl,
+            apiKey: formData.activecampaignApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("ActiveCampaign connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect ActiveCampaign");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -230,11 +263,9 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "" });
     onOpenChange(false);
   };
-
- 
    return (
      <Dialog open={open} onOpenChange={handleClose}>
        <DialogContent className="sm:max-w-lg">
@@ -375,7 +406,37 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                      Found in <strong>Settings → Advanced → API Keys</strong>. Create a key with Commerce read permissions.
                    </p>
                  </div>
-               )}
+                )}
+
+                {selectedProvider?.id === "activecampaign" && (
+                  <>
+                    <div>
+                      <Label htmlFor="activecampaignApiUrl">Account URL</Label>
+                      <Input
+                        id="activecampaignApiUrl"
+                        value={formData.activecampaignApiUrl}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, activecampaignApiUrl: e.target.value }))}
+                        placeholder="https://youraccountname.api-us1.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found in <strong>Settings → Developer</strong>. It looks like <code>https://youraccountname.api-us1.com</code>.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="activecampaignApiKey">API Key</Label>
+                      <Input
+                        id="activecampaignApiKey"
+                        type="password"
+                        value={formData.activecampaignApiKey}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, activecampaignApiKey: e.target.value }))}
+                        placeholder="Enter your ActiveCampaign API key"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found on the same <strong>Settings → Developer</strong> page as the URL.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -384,7 +445,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim())} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
