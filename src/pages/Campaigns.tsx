@@ -5,8 +5,14 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, History, Sparkles, Send } from "lucide-react";
+import { Plus, Clock, History, Sparkles, Send, Rocket, FlaskConical, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
+import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { User } from "@supabase/supabase-js";
 
 interface PastCampaign {
@@ -17,12 +23,26 @@ interface PastCampaign {
   status: string;
 }
 
+interface CampaignDraftOption {
+  id: string;
+  campaign_idea: string | null;
+  content_type: string | null;
+  created_at: string;
+}
+
 const Campaigns = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [pastCampaigns, setPastCampaigns] = useState<PastCampaign[]>([]);
   const [loadingPast, setLoadingPast] = useState(true);
+  const { isLaunching, lastResult, launch } = useLaunchCampaign();
+  const [launchModalOpen, setLaunchModalOpen] = useState(false);
+  const [selectedDraftId, setSelectedDraftId] = useState<string>("");
+  const [webhookUrlOverride, setWebhookUrlOverride] = useState("");
+  const [drafts, setDrafts] = useState<CampaignDraftOption[]>([]);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [showPayload, setShowPayload] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -56,6 +76,33 @@ const Campaigns = () => {
       .order("scheduled_date", { ascending: false });
     if (data) setPastCampaigns(data);
     setLoadingPast(false);
+  };
+
+  const openLaunchModal = async (testMode = false) => {
+    setIsTestMode(testMode);
+    setShowPayload(false);
+    setLaunchModalOpen(true);
+    // Fetch drafts for selection
+    if (user) {
+      const { data } = await supabase
+        .from("campaign_drafts")
+        .select("id, campaign_idea, content_type, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setDrafts((data as CampaignDraftOption[]) || []);
+    }
+  };
+
+  const handleLaunch = async () => {
+    await launch(
+      selectedDraftId || undefined,
+      webhookUrlOverride || undefined,
+      isTestMode
+    );
+    if (!isTestMode) {
+      setLaunchModalOpen(false);
+    }
   };
 
   return (
@@ -108,6 +155,25 @@ const Campaigns = () => {
           </div>
         </div>
 
+        {/* Launch & Test Buttons */}
+        <div className="flex gap-3 mb-6">
+          <Button
+            className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+            onClick={() => openLaunchModal(false)}
+          >
+            <Rocket className="w-4 h-4" />
+            Launch Campaign
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 border-muted-foreground/30"
+            onClick={() => openLaunchModal(true)}
+          >
+            <FlaskConical className="w-4 h-4" />
+            Test Launch
+          </Button>
+        </div>
+
         {/* Live Campaigns */}
         <div className="mb-6 sm:mb-10">
           <LiveCampaignsFeed />
@@ -151,6 +217,116 @@ const Campaigns = () => {
           )}
         </div>
       </main>
+
+      {/* Launch Campaign Dialog */}
+      <Dialog open={launchModalOpen} onOpenChange={setLaunchModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
+              {isTestMode ? "Test Campaign Launch" : "Launch Campaign"}
+            </DialogTitle>
+            <DialogDescription>
+              {isTestMode
+                ? "Send a test campaignContext payload to your Zapier webhook and inspect the result."
+                : "Build and transmit the full campaignContext payload to your configured Zapier webhook."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 flex-1 overflow-auto">
+            <div className="space-y-2">
+              <Label>Campaign Draft (optional)</Label>
+              <Select value={selectedDraftId} onValueChange={setSelectedDraftId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a draft to include..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {drafts.map(d => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {(d.campaign_idea || "Untitled").slice(0, 60)} — {d.content_type || "unknown"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Webhook URL Override (optional)</Label>
+              <Input
+                placeholder="https://hooks.zapier.com/hooks/catch/..."
+                value={webhookUrlOverride}
+                onChange={(e) => setWebhookUrlOverride(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use your configured webhook URL.
+              </p>
+            </div>
+
+            <Button
+              className="w-full gap-2"
+              disabled={isLaunching}
+              onClick={handleLaunch}
+            >
+              {isLaunching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isTestMode ? "Sending test..." : "Launching..."}
+                </>
+              ) : (
+                <>
+                  {isTestMode ? <FlaskConical className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
+                  {isTestMode ? "Send Test Payload" : "Launch Now"}
+                </>
+              )}
+            </Button>
+
+            {/* Delivery Log */}
+            {lastResult?.deliveryLog && (
+              <Card className="border-muted">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Delivery Status</span>
+                    <Badge variant={lastResult.deliveryLog.webhookDeliveryStatus === "success" ? "default" : "destructive"}>
+                      {lastResult.deliveryLog.webhookDeliveryStatus}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div>Response Code: {lastResult.deliveryLog.responseCode}</div>
+                    <div>Attempts: {lastResult.deliveryLog.attempts}</div>
+                    <div>Timestamp: {lastResult.deliveryLog.timestamp}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Test Mode Payload Inspector */}
+            {isTestMode && lastResult?.campaignContext && (
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setShowPayload(!showPayload)}
+                >
+                  {showPayload ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showPayload ? "Hide" : "Show"} Full Payload
+                </Button>
+                {showPayload && (
+                  <ScrollArea className="h-[300px] rounded border border-border">
+                    <pre className="p-3 text-[10px] leading-tight font-mono text-foreground">
+                      {JSON.stringify(lastResult.campaignContext, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                )}
+              </div>
+            )}
+
+            {lastResult?.error && (
+              <p className="text-sm text-destructive">{lastResult.error}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
