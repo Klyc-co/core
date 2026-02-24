@@ -28,6 +28,7 @@ import CopperIcon from "@/components/icons/CopperIcon";
 import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
 import FreshsalesIcon from "@/components/icons/FreshsalesIcon";
 import AgileCRMIcon from "@/components/icons/AgileCRMIcon";
+import NutshellIcon from "@/components/icons/NutshellIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -153,6 +154,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "nutshell",
+    name: "Nutshell CRM",
+    icon: NutshellIcon,
+    available: true,
+    description: "Simple, powerful CRM",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -185,6 +194,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     agilecrmDomain: "",
     agilecrmEmail: "",
     agilecrmApiKey: "",
+    nutshellEmail: "",
+    nutshellApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -213,6 +224,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       agilecrmDomain: "",
       agilecrmEmail: "",
       agilecrmApiKey: "",
+      nutshellEmail: "",
+      nutshellApiKey: "",
     });
     setStep("configure");
   };
@@ -401,6 +414,26 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // Nutshell CRM uses email + API key
+      if (selectedProvider.id === "nutshell") {
+        const { data, error } = await supabase.functions.invoke("nutshell-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            email: formData.nutshellEmail,
+            apiKey: formData.nutshellApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Nutshell CRM connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Nutshell CRM");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -431,7 +464,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "", freshsalesSubdomain: "", freshsalesApiKey: "", agilecrmDomain: "", agilecrmEmail: "", agilecrmApiKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "", freshsalesSubdomain: "", freshsalesApiKey: "", agilecrmDomain: "", agilecrmEmail: "", agilecrmApiKey: "", nutshellEmail: "", nutshellApiKey: "" });
     onOpenChange(false);
   };
    return (
@@ -766,6 +799,37 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                     </div>
                   </>
                 )}
+
+                {selectedProvider?.id === "nutshell" && (
+                  <>
+                    <div>
+                      <Label htmlFor="nutshellEmail">Account Email</Label>
+                      <Input
+                        id="nutshellEmail"
+                        type="email"
+                        value={formData.nutshellEmail}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, nutshellEmail: e.target.value }))}
+                        placeholder="you@company.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The email address you use to log in to Nutshell.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="nutshellApiKey">API Key</Label>
+                      <Input
+                        id="nutshellApiKey"
+                        type="password"
+                        value={formData.nutshellApiKey}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, nutshellApiKey: e.target.value }))}
+                        placeholder="Enter your Nutshell API key"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found in <strong>Setup → API Keys</strong> in your Nutshell account.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -774,7 +838,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim())) || (selectedProvider?.id === "freshsales" && (!formData.freshsalesSubdomain.trim() || !formData.freshsalesApiKey.trim())) || (selectedProvider?.id === "agilecrm" && (!formData.agilecrmDomain.trim() || !formData.agilecrmEmail.trim() || !formData.agilecrmApiKey.trim()))} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim())) || (selectedProvider?.id === "freshsales" && (!formData.freshsalesSubdomain.trim() || !formData.freshsalesApiKey.trim())) || (selectedProvider?.id === "agilecrm" && (!formData.agilecrmDomain.trim() || !formData.agilecrmEmail.trim() || !formData.agilecrmApiKey.trim())) || (selectedProvider?.id === "nutshell" && (!formData.nutshellEmail.trim() || !formData.nutshellApiKey.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
