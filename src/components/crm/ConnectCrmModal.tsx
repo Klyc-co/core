@@ -24,6 +24,7 @@ import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
 import StripeIcon from "@/components/icons/StripeIcon";
 import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
 import CloseIcon from "@/components/icons/CloseIcon";
+import CopperIcon from "@/components/icons/CopperIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -117,6 +118,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "copper",
+    name: "Copper CRM",
+    icon: CopperIcon,
+    available: true,
+    description: "Google Workspace CRM",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -139,6 +148,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     activecampaignApiUrl: "",
     activecampaignApiKey: "",
     closeApiKey: "",
+    copperApiKey: "",
+    copperEmail: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -157,6 +168,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       activecampaignApiUrl: "",
       activecampaignApiKey: "",
       closeApiKey: "",
+      copperApiKey: "",
+      copperEmail: "",
     });
     setStep("configure");
   };
@@ -263,6 +276,26 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // Copper CRM uses API Key + Email
+      if (selectedProvider.id === "copper") {
+        const { data, error } = await supabase.functions.invoke("copper-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            apiKey: formData.copperApiKey,
+            email: formData.copperEmail,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Copper CRM connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Copper CRM");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -293,7 +326,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "" });
     onOpenChange(false);
   };
    return (
@@ -483,6 +516,37 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                     </p>
                   </div>
                 )}
+
+                {selectedProvider?.id === "copper" && (
+                  <>
+                    <div>
+                      <Label htmlFor="copperEmail">Account Email</Label>
+                      <Input
+                        id="copperEmail"
+                        type="email"
+                        value={formData.copperEmail}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, copperEmail: e.target.value }))}
+                        placeholder="you@company.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The email address associated with your Copper account.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="copperApiKey">API Key</Label>
+                      <Input
+                        id="copperApiKey"
+                        type="password"
+                        value={formData.copperApiKey}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, copperApiKey: e.target.value }))}
+                        placeholder="Enter your Copper API key"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found in <strong>Settings → Integrations → API Keys</strong> in Copper.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -491,7 +555,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim())} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
