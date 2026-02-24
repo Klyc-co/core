@@ -301,3 +301,6 @@ verify_jwt = false
 [functions.copper-crm-connect]
 verify_jwt = false
 
+[functions.sugarcrm-connect]
+verify_jwt = false
+
