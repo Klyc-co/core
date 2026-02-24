@@ -23,6 +23,7 @@ import SquareIcon from "@/components/icons/SquareIcon";
 import SquarespaceIcon from "@/components/icons/SquarespaceIcon";
 import StripeIcon from "@/components/icons/StripeIcon";
 import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
+import CloseIcon from "@/components/icons/CloseIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -108,6 +109,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "close",
+    name: "Close CRM",
+    icon: CloseIcon,
+    available: true,
+    description: "Sales CRM & pipeline",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -129,6 +138,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     stripeSecretKey: "",
     activecampaignApiUrl: "",
     activecampaignApiKey: "",
+    closeApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -146,6 +156,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       stripeSecretKey: "",
       activecampaignApiUrl: "",
       activecampaignApiKey: "",
+      closeApiKey: "",
     });
     setStep("configure");
   };
@@ -233,6 +244,25 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // Close CRM uses API Key
+      if (selectedProvider.id === "close") {
+        const { data, error } = await supabase.functions.invoke("close-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            apiKey: formData.closeApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Close CRM connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Close CRM");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -263,7 +293,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "" });
     onOpenChange(false);
   };
    return (
@@ -437,6 +467,22 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                     </div>
                   </>
                 )}
+
+                {selectedProvider?.id === "close" && (
+                  <div>
+                    <Label htmlFor="closeApiKey">API Key</Label>
+                    <Input
+                      id="closeApiKey"
+                      type="password"
+                      value={formData.closeApiKey}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, closeApiKey: e.target.value }))}
+                      placeholder="api_..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Found in <strong>Settings → API Keys</strong> in your Close account.
+                    </p>
+                  </div>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -445,7 +491,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim()))} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim())} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (

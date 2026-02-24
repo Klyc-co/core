@@ -295,3 +295,6 @@ verify_jwt = false
 [functions.activecampaign-crm-connect]
 verify_jwt = false
 
+[functions.close-crm-connect]
+verify_jwt = false
+
