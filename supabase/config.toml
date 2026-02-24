@@ -286,3 +286,9 @@ verify_jwt = false
 [functions.onedrive-oauth-callback]
 verify_jwt = false
 
+[functions.pipedrive-crm-auth-url]
+verify_jwt = false
+
+[functions.pipedrive-crm-oauth-callback]
+verify_jwt = false
+
