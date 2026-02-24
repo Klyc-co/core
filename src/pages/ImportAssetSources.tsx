@@ -84,7 +84,6 @@ const storagePlatforms: StoragePlatform[] = [
     description: "Import files from Microsoft OneDrive",
     connectionTable: "social_connections",
     hasFilePicker: false,
-    comingSoon: true,
   },
   {
     id: "box",
@@ -188,9 +187,12 @@ const ImportAssetSources = () => {
 
   useEffect(() => {
     const canvaStatus = searchParams.get("canva");
+    const success = searchParams.get("success");
     const error = searchParams.get("error");
     if (canvaStatus === "connected") {
       toast.success("Canva connected successfully!");
+    } else if (success === "onedrive") {
+      toast.success("OneDrive connected successfully!");
     } else if (error) {
       toast.error("Failed to connect. Please try again.");
     }
@@ -253,6 +255,21 @@ const ImportAssetSources = () => {
     }
   };
 
+  const handleConnectOneDrive = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("onedrive-auth-url");
+      if (error) throw error;
+      if (data?.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast.error("Failed to get OneDrive authorization URL");
+      }
+    } catch (err) {
+      console.error("OneDrive connect error:", err);
+      toast.error("Failed to connect OneDrive. Please try again.");
+    }
+  };
+
   const handlePlatformClick = (platform: StoragePlatform) => {
     if (platform.comingSoon) {
       toast.info(`${platform.name} integration coming soon!`);
@@ -264,6 +281,10 @@ const ImportAssetSources = () => {
     if (!isConnected) {
       if (platform.id === "canva") {
         handleConnectCanva();
+        return;
+      }
+      if (platform.id === "onedrive") {
+        handleConnectOneDrive();
         return;
       }
       navigate("/profile/import");
