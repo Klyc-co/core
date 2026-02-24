@@ -39,19 +39,50 @@ function gzipAndEncode(data: any): { encoded: string; sizeBytes: number; wasTrun
   return { encoded, sizeBytes: encoded.length, wasTruncated };
 }
 
-async function sendWithRetry(url: string, payload: any, maxRetries = 3): Promise<{ status: number; body: string; attempts: number }> {
+async function computePayloadHash(payloadString: string): Promise<string> {
+  const data = new TextEncoder().encode(payloadString);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sendWithRetry(
+  url: string,
+  payloadString: string,
+  payloadHash: string,
+  payloadSizeBytes: number,
+  maxRetries = 3
+): Promise<{ status: number; body: string; attempts: number; attemptLogs: any[] }> {
   let lastError: Error | null = null;
+  const attemptLogs: any[] = [];
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const attemptLog: any = {
+      attemptNumber: attempt,
+      timestamp: new Date().toISOString(),
+      payloadHash,
+      payloadSizeBytes,
+      webhookUrl: url,
+    };
+
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payloadString,
       });
       const body = await response.text();
-      return { status: response.status, body, attempts: attempt };
+      attemptLog.responseCode = response.status;
+      attemptLog.responseBody = body;
+      attemptLogs.push(attemptLog);
+      console.log(`Attempt ${attempt} log:`, JSON.stringify(attemptLog));
+      return { status: response.status, body, attempts: attempt, attemptLogs };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      attemptLog.responseCode = 0;
+      attemptLog.responseBody = lastError.message;
+      attemptLogs.push(attemptLog);
+      console.log(`Attempt ${attempt} failed:`, JSON.stringify(attemptLog));
       if (attempt < maxRetries) {
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
@@ -521,8 +552,13 @@ serve(async (req) => {
 
     console.log("Campaign context assembled, sending to Zapier...");
 
+    // ===== SERIALIZE & HASH =====
+    const payloadString = JSON.stringify(campaignContext);
+    const payloadSizeBytes = new Blob([payloadString]).size;
+    const payloadHash = await computePayloadHash(payloadString);
+
     // ===== SEND TO ZAPIER =====
-    const sendResult = await sendWithRetry(resolvedWebhookUrl, campaignContext);
+    const sendResult = await sendWithRetry(resolvedWebhookUrl, payloadString, payloadHash, payloadSizeBytes);
 
     const deliveryLog = {
       webhookDeliveryStatus: sendResult.status >= 200 && sendResult.status < 300 ? "success" : "failed",
@@ -530,6 +566,10 @@ serve(async (req) => {
       responseBody: sendResult.body,
       timestamp: new Date().toISOString(),
       attempts: sendResult.attempts,
+      payloadHash,
+      payloadSizeBytes,
+      webhookUrl: resolvedWebhookUrl,
+      attemptLogs: sendResult.attemptLogs,
     };
 
     console.log("Zapier delivery log:", JSON.stringify(deliveryLog));
