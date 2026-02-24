@@ -304,3 +304,6 @@ verify_jwt = false
 [functions.sugarcrm-connect]
 verify_jwt = false
 
+[functions.freshsales-crm-connect]
+verify_jwt = false
+

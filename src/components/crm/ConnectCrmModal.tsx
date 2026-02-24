@@ -26,6 +26,7 @@ import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
 import CloseIcon from "@/components/icons/CloseIcon";
 import CopperIcon from "@/components/icons/CopperIcon";
 import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
+import FreshsalesIcon from "@/components/icons/FreshsalesIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -135,6 +136,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "freshsales",
+    name: "Freshsales",
+    icon: FreshsalesIcon,
+    available: true,
+    description: "Sales CRM by Freshworks",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -162,6 +171,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     sugarcrmInstanceUrl: "",
     sugarcrmUsername: "",
     sugarcrmPassword: "",
+    freshsalesSubdomain: "",
+    freshsalesApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -185,6 +196,8 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       sugarcrmInstanceUrl: "",
       sugarcrmUsername: "",
       sugarcrmPassword: "",
+      freshsalesSubdomain: "",
+      freshsalesApiKey: "",
     });
     setStep("configure");
   };
@@ -332,6 +345,26 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // Freshsales uses subdomain + API key
+      if (selectedProvider.id === "freshsales") {
+        const { data, error } = await supabase.functions.invoke("freshsales-crm-connect", {
+          body: {
+            displayName: formData.displayName,
+            subdomain: formData.freshsalesSubdomain,
+            apiKey: formData.freshsalesApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Freshsales connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Freshsales");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -362,7 +395,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "", freshsalesSubdomain: "", freshsalesApiKey: "" });
     onOpenChange(false);
   };
    return (
@@ -619,6 +652,39 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                     </div>
                   </>
                 )}
+
+                {selectedProvider?.id === "freshsales" && (
+                  <>
+                    <div>
+                      <Label htmlFor="freshsalesSubdomain">Subdomain</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="freshsalesSubdomain"
+                          value={formData.freshsalesSubdomain}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, freshsalesSubdomain: e.target.value }))}
+                          placeholder="yourcompany"
+                        />
+                        <span className="text-muted-foreground whitespace-nowrap">.freshsales.io</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your Freshsales subdomain from the URL.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="freshsalesApiKey">API Key</Label>
+                      <Input
+                        id="freshsalesApiKey"
+                        type="password"
+                        value={formData.freshsalesApiKey}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, freshsalesApiKey: e.target.value }))}
+                        placeholder="Enter your Freshsales API key"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found in <strong>Settings → API Settings</strong> in your Freshsales account.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -627,7 +693,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim()))} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim())) || (selectedProvider?.id === "freshsales" && (!formData.freshsalesSubdomain.trim() || !formData.freshsalesApiKey.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (

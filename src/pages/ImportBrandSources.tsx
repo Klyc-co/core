@@ -261,7 +261,7 @@ const crmTools: ToolItem[] = [
   { name: "ActiveCampaign", icon: ActiveCampaignIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Microsoft Dynamics 365", icon: MicrosoftDynamicsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Copper CRM", icon: CopperIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Freshsales", icon: FreshsalesIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Freshsales", icon: FreshsalesIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Close CRM", icon: CloseIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Monday CRM", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Nutshell CRM", icon: NutshellIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
