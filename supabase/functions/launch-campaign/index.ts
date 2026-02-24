@@ -119,18 +119,40 @@ serve(async (req) => {
 
     const { campaignDraftId, webhookUrl, testMode } = await req.json();
 
-    // Resolve webhook URL
-    let resolvedWebhookUrl = webhookUrl;
+    // Resolve webhook URL with priority: override > user_settings > env
+    let resolvedWebhookUrl: string | null = null;
+    let webhookSource: "override" | "db" | "env" | "none" = "none";
+
+    // (a) Explicit override from request body
+    if (webhookUrl && typeof webhookUrl === "string" && webhookUrl.trim()) {
+      resolvedWebhookUrl = webhookUrl.trim();
+      webhookSource = "override";
+    }
+
+    // (b) user_settings table
     if (!resolvedWebhookUrl) {
-      const { data: driveConn } = await supabase
-        .from("google_drive_connections")
+      const { data: settings } = await supabase
+        .from("user_settings")
         .select("zapier_webhook_url")
         .eq("user_id", user.id)
-        .not("zapier_webhook_url", "is", null)
-        .limit(1)
-        .single();
-      resolvedWebhookUrl = driveConn?.zapier_webhook_url;
+        .maybeSingle();
+      const dbUrl = settings?.zapier_webhook_url;
+      if (dbUrl && typeof dbUrl === "string" && dbUrl.trim()) {
+        resolvedWebhookUrl = dbUrl.trim();
+        webhookSource = "db";
+      }
     }
+
+    // (c) Environment fallback (dev only)
+    if (!resolvedWebhookUrl) {
+      const envUrl = Deno.env.get("ZAPIER_WEBHOOK_URL_DEFAULT");
+      if (envUrl && envUrl.trim()) {
+        resolvedWebhookUrl = envUrl.trim();
+        webhookSource = "env";
+      }
+    }
+
+    console.log(`Webhook URL resolved from: ${webhookSource}`);
 
     if (!resolvedWebhookUrl) {
       return new Response(JSON.stringify({ error: "No Zapier webhook URL configured. Add one in Settings or provide webhookUrl." }), {
