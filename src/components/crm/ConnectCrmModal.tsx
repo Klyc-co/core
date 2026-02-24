@@ -95,7 +95,7 @@ const providers: CrmProvider[] = [
     id: "pipedrive",
     name: "Pipedrive",
     icon: PipedriveIcon,
-    available: false,
+    available: true,
     description: "Sales pipeline management",
   },
   {
