@@ -97,6 +97,7 @@ import DaVinciResolveImportDialog from "@/components/DaVinciResolveImportDialog"
 import CapCutImportDialog from "@/components/CapCutImportDialog";
 import VideoleapImportDialog from "@/components/VideoleapImportDialog";
 import BazaartImportDialog from "@/components/BazaartImportDialog";
+import OBSStudioImportDialog from "@/components/OBSStudioImportDialog";
 import VeedImportDialog from "@/components/VeedImportDialog";
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -238,7 +239,7 @@ const socialTools: ToolItem[] = [
   { name: "WeTransfer", icon: WeTransferIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "StreamYard", icon: StreamYardIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Restream", icon: RestreamIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "OBS Studio", icon: OBSStudioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true, isManualImport: true },
   { name: "Canva", icon: CanvaIcon, bgColor: "bg-[#00C4CC]", iconColor: "text-white", isConnectable: true },
   { name: "ElevenLabs", icon: ElevenLabsIcon, bgColor: "bg-black dark:bg-white", iconColor: "text-white dark:text-black", isConnectable: true },
   { name: "Slack", icon: SlackIcon, bgColor: "bg-white dark:bg-[#4A154B]", hasBorder: true, isConnectable: true },
@@ -314,6 +315,7 @@ const ImportBrandSources = () => {
   const [capcutModalOpen, setCapcutModalOpen] = useState(false);
   const [videoleapModalOpen, setVideoleapModalOpen] = useState(false);
   const [bazaartModalOpen, setBazaartModalOpen] = useState(false);
+  const [obsModalOpen, setObsModalOpen] = useState(false);
   const [veedModalOpen, setVeedModalOpen] = useState(false);
   const [zapierModalOpen, setZapierModalOpen] = useState(false);
   const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
@@ -920,6 +922,12 @@ const ImportBrandSources = () => {
     // For Bazaart, open the file upload dialog
     if (toolName === 'Bazaart') {
       setBazaartModalOpen(true);
+      return;
+    }
+
+    // For OBS Studio, open the file upload dialog
+    if (toolName === 'OBS Studio') {
+      setObsModalOpen(true);
       return;
     }
 
@@ -1978,7 +1986,16 @@ const ImportBrandSources = () => {
         />
       )}
 
-      {/* VEED.io Import Dialog */}
+      {/* OBS Studio Import Dialog */}
+      {user && (
+        <OBSStudioImportDialog
+          open={obsModalOpen}
+          onOpenChange={setObsModalOpen}
+          userId={user.id}
+        />
+      )}
+
+
       {user && (
         <VeedImportDialog
           open={veedModalOpen}
