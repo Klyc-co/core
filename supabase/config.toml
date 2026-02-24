@@ -310,3 +310,6 @@ verify_jwt = false
 [functions.agilecrm-connect]
 verify_jwt = false
 
+[functions.nutshell-crm-connect]
+verify_jwt = false
+
