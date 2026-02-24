@@ -25,6 +25,7 @@ import StripeIcon from "@/components/icons/StripeIcon";
 import ActiveCampaignIcon from "@/components/icons/ActiveCampaignIcon";
 import CloseIcon from "@/components/icons/CloseIcon";
 import CopperIcon from "@/components/icons/CopperIcon";
+import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -126,6 +127,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "sugarcrm",
+    name: "SugarCRM",
+    icon: SugarCRMIcon,
+    available: true,
+    description: "Enterprise CRM platform",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -150,6 +159,9 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     closeApiKey: "",
     copperApiKey: "",
     copperEmail: "",
+    sugarcrmInstanceUrl: "",
+    sugarcrmUsername: "",
+    sugarcrmPassword: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -170,6 +182,9 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       closeApiKey: "",
       copperApiKey: "",
       copperEmail: "",
+      sugarcrmInstanceUrl: "",
+      sugarcrmUsername: "",
+      sugarcrmPassword: "",
     });
     setStep("configure");
   };
@@ -296,6 +311,27 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // SugarCRM uses instance URL + username/password
+      if (selectedProvider.id === "sugarcrm") {
+        const { data, error } = await supabase.functions.invoke("sugarcrm-connect", {
+          body: {
+            displayName: formData.displayName,
+            instanceUrl: formData.sugarcrmInstanceUrl,
+            username: formData.sugarcrmUsername,
+            password: formData.sugarcrmPassword,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("SugarCRM connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect SugarCRM");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -326,7 +362,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "" });
     onOpenChange(false);
   };
    return (
@@ -547,6 +583,42 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                     </div>
                   </>
                 )}
+
+                {selectedProvider?.id === "sugarcrm" && (
+                  <>
+                    <div>
+                      <Label htmlFor="sugarcrmInstanceUrl">Instance URL</Label>
+                      <Input
+                        id="sugarcrmInstanceUrl"
+                        value={formData.sugarcrmInstanceUrl}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, sugarcrmInstanceUrl: e.target.value }))}
+                        placeholder="https://yourcompany.sugarondemand.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your SugarCRM instance URL (e.g., <code>https://yourcompany.sugarondemand.com</code>).
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="sugarcrmUsername">Username</Label>
+                      <Input
+                        id="sugarcrmUsername"
+                        value={formData.sugarcrmUsername}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, sugarcrmUsername: e.target.value }))}
+                        placeholder="admin"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sugarcrmPassword">Password</Label>
+                      <Input
+                        id="sugarcrmPassword"
+                        type="password"
+                        value={formData.sugarcrmPassword}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, sugarcrmPassword: e.target.value }))}
+                        placeholder="Enter your password"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
   
              <div className="flex gap-3 pt-4">
@@ -555,7 +627,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim()))} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
