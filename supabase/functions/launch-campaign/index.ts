@@ -117,7 +117,7 @@ serve(async (req) => {
       });
     }
 
-    const { campaignDraftId, webhookUrl, testMode } = await req.json();
+    const { campaignDraftId, webhookUrl, testMode, useSyntheticData } = await req.json();
 
     // Resolve webhook URL with priority: override > user_settings > env
     let resolvedWebhookUrl: string | null = null;
@@ -162,6 +162,204 @@ serve(async (req) => {
 
     const userId = user.id;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    let campaignContext: any;
+
+    if (useSyntheticData) {
+      // ===== SYNTHETIC DATA GENERATION =====
+      const syntheticBrand = {
+        businessName: "Apex Digital Co.",
+        website: "https://apexdigital.co",
+        description: "A next-gen SaaS platform for AI-powered marketing automation, serving mid-market e-commerce brands globally.",
+        industry: "Marketing Technology",
+        productCategory: "SaaS / Marketing Automation",
+        geographyMarkets: "North America, Europe, APAC",
+        marketingGoals: "Drive product-led growth through viral social content and strategic partnerships with top-tier influencers.",
+        valueProposition: "10x your content output with AI that understands your brand voice, audience, and competitive landscape.",
+        logoUrl: "https://apexdigital.co/logo.png",
+        brandColors: ["#1A1A2E", "#16213E", "#0F3460", "#E94560"],
+        mainCompetitors: "HubSpot, Hootsuite, Sprout Social, Buffer, Later, Loomly, Sendible, Brandwatch",
+        assetsSummary: { totalAssets: 47, byType: { logo: 3, color: 8, font: 4, image: 22, video: 10 } },
+        productLines: [
+          { id: "pl-1", name: "Apex Studio", description: "AI-powered content creation suite for social media marketers." },
+          { id: "pl-2", name: "Apex Analytics", description: "Real-time performance dashboards with predictive engagement scoring." },
+          { id: "pl-3", name: "Apex Distribute", description: "Multi-platform publishing and scheduling engine." },
+        ],
+      };
+
+      const syntheticAudienceRaw = {
+        demographics: { ageRange: "25-44", gender: "60% female, 40% male", income: "$50K-$150K" },
+        psychographics: { interests: ["digital marketing", "AI tools", "growth hacking", "e-commerce"], values: ["efficiency", "innovation", "ROI-driven"] },
+        behaviors: { platforms: ["Instagram", "LinkedIn", "TikTok"], contentPreferences: ["short-form video", "carousel posts", "case studies"], peakActivity: "9am-12pm EST" },
+      };
+      const audienceCompressed = gzipAndEncode(syntheticAudienceRaw);
+
+      const syntheticAudience = {
+        primaryDescription: "Marketing managers and social media strategists at mid-market e-commerce brands (25-44, tech-savvy, ROI-focused).",
+        audienceDataCompressed: audienceCompressed.encoded,
+        compressedSizeBytes: audienceCompressed.sizeBytes,
+        wasTruncated: audienceCompressed.wasTruncated,
+      };
+
+      const competitorNames = [
+        { name: "HubSpot", share: 28, videoDom: true },
+        { name: "Hootsuite", share: 22, videoDom: false },
+        { name: "Sprout Social", share: 18, videoDom: true },
+        { name: "Buffer", share: 14, videoDom: true },
+        { name: "Later", share: 10, videoDom: false },
+        { name: "Loomly", share: 4, videoDom: false },
+        { name: "Sendible", share: 3, videoDom: false },
+        { name: "Brandwatch", share: 1, videoDom: false },
+      ];
+
+      const syntheticCompetitorItems = competitorNames.slice(0, 5).map((c, i) => ({
+        name: c.name,
+        url: `https://${c.name.toLowerCase().replace(/\s/g, "")}.com`,
+        description: `${c.name} is a leading marketing platform with strong presence in social media management.`,
+        targetAudience: "SMBs and enterprise marketing teams",
+        valueProposition: `Comprehensive ${c.name} suite for social media management and analytics.`,
+        keyProducts: "Social scheduling, Analytics, CRM integration",
+        pricingStrategy: i < 2 ? "Freemium + Enterprise tiers" : "Subscription-based",
+        marketingChannels: "Content marketing, Paid social, Webinars, SEO",
+        swot: {
+          strengths: `Strong brand recognition, large user base, extensive integrations.`,
+          weaknesses: `Higher pricing for advanced features, slower innovation cycle.`,
+          opportunities: `AI-driven content creation, short-form video automation.`,
+          threats: `New AI-native competitors, platform API restrictions.`,
+        },
+        analyzedAt: new Date(Date.now() - i * 86400000).toISOString(),
+        marketSharePercent: c.share,
+        primaryContentMix: c.videoDom
+          ? { textPercent: 15, imagePercent: 20, shortFormVideoPercent: 40, longFormVideoPercent: 25 }
+          : { textPercent: 35, imagePercent: 35, shortFormVideoPercent: 20, longFormVideoPercent: 10 },
+        videoDominant: c.videoDom,
+      }));
+
+      const syntheticCompetitors = {
+        totalCompetitorCount: 8,
+        includedTop: 5,
+        selectionBasis: "market_share",
+        items: syntheticCompetitorItems,
+      };
+
+      const syntheticCampaign = {
+        id: "draft-synth-001",
+        idea: "Launch a 'Creator Spotlight' video series featuring real customers using Apex Studio to build content in under 60 seconds — distributed across LinkedIn, Instagram Reels, and TikTok.",
+        objective: "brand_awareness",
+        goals: "Achieve 500K impressions and 10K engagements across all platforms within 14 days of launch.",
+        contentType: "social_video",
+        postCaption: "Watch how @RealCustomer creates scroll-stopping content in 60 seconds flat 🚀 #ApexStudio #AIMarketing #ContentCreator",
+        imagePrompt: "A split-screen showing a marketer on one side and AI-generated content on the other, vibrant neon color scheme.",
+        videoScript: "HOOK: What if you could create a week's worth of content in 60 seconds? BODY: Meet Sarah, a marketing manager who tripled her engagement using Apex Studio. CTA: Try it free today.",
+        scenePrompts: "Scene 1: Close-up of hands typing on laptop. Scene 2: AI dashboard generating content. Scene 3: Phone showing viral post metrics. Scene 4: Team celebrating results.",
+        articleOutline: null,
+        targetAudience: "social_media_managers",
+        targetAudienceDescription: "Marketing managers and content strategists at DTC e-commerce brands with 10-200 employees.",
+        tags: ["video", "brand-awareness", "AI", "creator-spotlight", "short-form"],
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Platform targets: linkedin, instagram, tiktok — min 2 per platform, >50% video
+      const syntheticPerPlatformPostCount = [
+        { platform: "linkedin", plannedPosts: 3, contentTypeMix: { video: 2, image: 1, text: 0 } },
+        { platform: "instagram", plannedPosts: 4, contentTypeMix: { video: 3, image: 1, text: 0 } },
+        { platform: "tiktok", plannedPosts: 3, contentTypeMix: { video: 3, image: 0, text: 0 } },
+      ];
+      const syntheticTotalPlannedPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.plannedPosts, 0); // 10
+      const syntheticTotalVideoPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.contentTypeMix.video, 0); // 8
+
+      const syntheticDistribution = {
+        connectedPlatforms: [
+          { platform: "linkedin", username: "apexdigitalco", platformUserId: "li-9281", scopes: ["w_member_social", "r_liteprofile"], tokenExpiresAt: new Date(Date.now() + 86400000 * 30).toISOString(), connectedAt: new Date(Date.now() - 86400000 * 60).toISOString() },
+          { platform: "instagram", username: "apex.digital", platformUserId: "ig-44821", scopes: ["publish_media", "pages_read_engagement"], tokenExpiresAt: new Date(Date.now() + 86400000 * 30).toISOString(), connectedAt: new Date(Date.now() - 86400000 * 45).toISOString() },
+          { platform: "tiktok", username: "apexdigital", platformUserId: "tt-77123", scopes: ["video.upload", "video.list"], tokenExpiresAt: new Date(Date.now() + 86400000 * 15).toISOString(), connectedAt: new Date(Date.now() - 86400000 * 30).toISOString() },
+        ],
+        publishingPlan: {
+          perPlatformPostCount: syntheticPerPlatformPostCount,
+          totalPlannedPosts: syntheticTotalPlannedPosts,
+        },
+      };
+
+      const syntheticPerformanceSummary = {
+        timeWindow: "last_30_days",
+        totalPostsTracked: 42,
+        aggregateMetrics: {
+          totalViews: 284000, totalLikes: 18400, totalComments: 2100, totalShares: 3200,
+          totalSaves: 1450, totalClicks: 5600, totalImpressions: 412000, totalReach: 198000,
+          avgEngagementRate: 4.72,
+        },
+        byPlatform: [
+          { platform: "linkedin", postCount: 14, totalViews: 92000, totalLikes: 5200, avgEngagementRate: 5.1 },
+          { platform: "instagram", postCount: 18, totalViews: 124000, totalLikes: 9800, avgEngagementRate: 4.8 },
+          { platform: "tiktok", postCount: 10, totalViews: 68000, totalLikes: 3400, avgEngagementRate: 3.9 },
+        ],
+        brandSentiment: {
+          searchTerm: "Apex Digital", sentiment: "Positive", mentions: 312, sources: 28,
+          positivePercent: 72, neutralPercent: 21, negativePercent: 7,
+          summary: "Strong positive sentiment driven by product launch reception and customer testimonials.",
+          generatedAt: new Date(Date.now() - 86400000).toISOString(),
+        },
+        scheduledReports: [{ searchTerm: "Apex Digital", frequency: "daily", isActive: true }],
+      };
+
+      const syntheticRecentTrends = [
+        { platform: "tiktok", trendName: "#AIMarketing", category: "Technology", volume: "2.1M", rank: 3, url: "https://tiktok.com/tag/aimarketing", scrapedAt: new Date(Date.now() - 3600000).toISOString() },
+        { platform: "instagram", trendName: "Reels Remix Challenge", category: "Content Format", volume: "890K", rank: 7, url: "https://instagram.com/explore/tags/reelsremix", scrapedAt: new Date(Date.now() - 7200000).toISOString() },
+        { platform: "linkedin", trendName: "AI in B2B Marketing", category: "Industry", volume: "450K", rank: 1, url: "https://linkedin.com/pulse/ai-b2b-marketing", scrapedAt: new Date(Date.now() - 10800000).toISOString() },
+        { platform: "tiktok", trendName: "#60SecondBrand", category: "Branding", volume: "1.3M", rank: 5, url: "https://tiktok.com/tag/60secondbrand", scrapedAt: new Date(Date.now() - 14400000).toISOString() },
+      ];
+
+      const syntheticHistoricalInsights = {
+        totalCampaignDrafts: 23,
+        contentTypeMix: { social_video: 12, visual_post: 7, written: 3, video_ad: 1 },
+        topTags: [
+          { tag: "video", count: 14 }, { tag: "brand-awareness", count: 11 }, { tag: "AI", count: 9 },
+          { tag: "short-form", count: 8 }, { tag: "product-launch", count: 6 },
+        ],
+        publishingHistory: {
+          totalPublished: 38, totalFailed: 2, totalScheduled: 4,
+          platformBreakdown: [
+            { platform: "linkedin", published: 14, failed: 0 },
+            { platform: "instagram", published: 16, failed: 1 },
+            { platform: "tiktok", published: 8, failed: 1 },
+          ],
+        },
+      };
+
+      // Video strategy: 8/10 = 80% video => videoHeavyStrategy = true
+      // Also 3/5 top competitors are videoDominant => majority check also triggers
+      const syntheticVideoHeavy = syntheticTotalVideoPosts > syntheticTotalPlannedPosts / 2; // 8 > 5 => true
+
+      const syntheticMonetizationFlags = {
+        videoHeavyStrategy: syntheticVideoHeavy,
+        estimatedVideoPosts: syntheticTotalVideoPosts,
+        feeMultiplier: syntheticVideoHeavy ? 1.5 : 1.0,
+      };
+
+      campaignContext = stripNulls({
+        schemaVersion: "1.0.0",
+        syntheticData: true,
+        identity: { userId, email: user.email, activeClientContext: { mode: "my_business", clientRosterCount: 0 } },
+        brand: syntheticBrand,
+        audience: syntheticAudience,
+        competitors: syntheticCompetitors,
+        campaign: syntheticCampaign,
+        assets: { logos: [{ name: "Primary Logo", url: "https://apexdigital.co/logo.png" }], colors: [{ name: "Dark Navy", value: "#1A1A2E" }, { name: "Accent Red", value: "#E94560" }], fonts: [{ name: "Inter", value: "Inter" }], images: [{ name: "Hero Banner", url: "https://apexdigital.co/hero.jpg" }], totalAssets: 47 },
+        distribution: syntheticDistribution,
+        crmSummary: {
+          connections: [{ provider: "hubspot", displayName: "HubSpot CRM", status: "connected", syncFrequencyMinutes: 60, lastSyncAt: new Date(Date.now() - 3600000).toISOString() }],
+          aggregateMetrics: { totalContacts: 1248, totalCompanies: 89, totalDeals: 34, totalOrders: 156, totalDealValue: 287500, totalOrderRevenue: 412800, dealsByStage: [{ stage: "negotiation", count: 12, totalValue: 145000 }, { stage: "closed_won", count: 18, totalValue: 98500 }, { stage: "proposal", count: 4, totalValue: 44000 }], ordersByStatus: [{ status: "completed", count: 142, totalAmount: 398200 }, { status: "pending", count: 14, totalAmount: 14600 }] },
+          lastSync: { status: "completed", startedAt: new Date(Date.now() - 3600000).toISOString(), finishedAt: new Date(Date.now() - 3540000).toISOString(), summary: "Synced 1248 contacts, 89 companies, 34 deals." },
+        },
+        performanceSummary: syntheticPerformanceSummary,
+        recentTrends: syntheticRecentTrends,
+        historicalInsights: syntheticHistoricalInsights,
+        monetizationFlags: syntheticMonetizationFlags,
+      });
+
+    } else {
+      // ===== REAL DATA PATH (existing logic) =====
 
     // ===== PARALLEL DATA FETCH =====
     const [
@@ -287,7 +485,6 @@ serve(async (req) => {
           threats: truncate(c.threats),
         }),
         analyzedAt: c.analyzed_at,
-        // Simulated market share ranking (descending by recency as proxy)
         marketSharePercent: 0,
         primaryContentMix: {
           textPercent: 40,
@@ -353,7 +550,6 @@ serve(async (req) => {
       connectedAt: sc.created_at,
     }));
 
-    // Build publishing plan per platform
     const contentType = draft?.content_type || "visual_post";
     const isVideo = contentType === "social_video" || contentType === "video_ad";
     const perPlatformPostCount = connectedPlatforms.map((p: any) => ({
@@ -556,7 +752,7 @@ serve(async (req) => {
     };
 
     // ===== ASSEMBLE FINAL PAYLOAD =====
-    const campaignContext = stripNulls({
+    campaignContext = stripNulls({
       schemaVersion: "1.0.0",
       identity,
       brand,
@@ -571,6 +767,8 @@ serve(async (req) => {
       historicalInsights,
       monetizationFlags,
     });
+
+    } // end real data path
 
     console.log("Campaign context assembled, sending to Zapier...");
 
