@@ -292,3 +292,6 @@ verify_jwt = false
 [functions.pipedrive-crm-oauth-callback]
 verify_jwt = false
 
+[functions.activecampaign-crm-connect]
+verify_jwt = false
+
