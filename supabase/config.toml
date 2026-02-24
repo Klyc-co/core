@@ -307,3 +307,6 @@ verify_jwt = false
 [functions.freshsales-crm-connect]
 verify_jwt = false
 
+[functions.agilecrm-connect]
+verify_jwt = false
+

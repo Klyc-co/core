@@ -266,7 +266,7 @@ const crmTools: ToolItem[] = [
   { name: "Monday CRM", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "Nutshell CRM", icon: NutshellIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "SugarCRM", icon: SugarCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Agile CRM", icon: AgileCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Agile CRM", icon: AgileCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
 ];
 
 const ecommerceTools: ToolItem[] = [
