@@ -27,6 +27,7 @@ import CloseIcon from "@/components/icons/CloseIcon";
 import CopperIcon from "@/components/icons/CopperIcon";
 import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
 import FreshsalesIcon from "@/components/icons/FreshsalesIcon";
+import AgileCRMIcon from "@/components/icons/AgileCRMIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -144,6 +145,14 @@ const providers: CrmProvider[] = [
     useApiKey: true,
   },
   {
+    id: "agilecrm",
+    name: "Agile CRM",
+    icon: AgileCRMIcon,
+    available: true,
+    description: "Sales & marketing CRM",
+    useApiKey: true,
+  },
+  {
     id: "woocommerce",
     name: "WooCommerce",
     icon: WooCommerceIcon,
@@ -173,6 +182,9 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
     sugarcrmPassword: "",
     freshsalesSubdomain: "",
     freshsalesApiKey: "",
+    agilecrmDomain: "",
+    agilecrmEmail: "",
+    agilecrmApiKey: "",
   });
 
   const handleSelectProvider = (provider: CrmProvider) => {
@@ -198,6 +210,9 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
       sugarcrmPassword: "",
       freshsalesSubdomain: "",
       freshsalesApiKey: "",
+      agilecrmDomain: "",
+      agilecrmEmail: "",
+      agilecrmApiKey: "",
     });
     setStep("configure");
   };
@@ -365,6 +380,27 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
         return;
       }
 
+      // Agile CRM uses domain + email + API key
+      if (selectedProvider.id === "agilecrm") {
+        const { data, error } = await supabase.functions.invoke("agilecrm-connect", {
+          body: {
+            displayName: formData.displayName,
+            domain: formData.agilecrmDomain,
+            email: formData.agilecrmEmail,
+            apiKey: formData.agilecrmApiKey,
+          },
+        });
+        if (error) throw error;
+        if (data?.success) {
+          toast.success("Agile CRM connected successfully!");
+          onSuccess();
+          handleClose();
+        } else {
+          toast.error(data?.error || "Failed to connect Agile CRM");
+        }
+        return;
+      }
+
       // OAuth flow for other providers
       const functionName = `${selectedProvider.id}-crm-auth-url`;
       const body: Record<string, string> = {
@@ -395,7 +431,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
   const handleClose = () => {
     setStep("select");
     setSelectedProvider(null);
-    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "", freshsalesSubdomain: "", freshsalesApiKey: "" });
+    setFormData({ displayName: "", shopDomain: "", squareAccessToken: "", squareApplicationId: "", squarespaceApiKey: "", stripeSecretKey: "", activecampaignApiUrl: "", activecampaignApiKey: "", closeApiKey: "", copperApiKey: "", copperEmail: "", sugarcrmInstanceUrl: "", sugarcrmUsername: "", sugarcrmPassword: "", freshsalesSubdomain: "", freshsalesApiKey: "", agilecrmDomain: "", agilecrmEmail: "", agilecrmApiKey: "" });
     onOpenChange(false);
   };
    return (
@@ -653,6 +689,51 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                   </>
                 )}
 
+                {selectedProvider?.id === "agilecrm" && (
+                  <>
+                    <div>
+                      <Label htmlFor="agilecrmDomain">Domain</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="agilecrmDomain"
+                          value={formData.agilecrmDomain}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, agilecrmDomain: e.target.value }))}
+                          placeholder="yourcompany"
+                        />
+                        <span className="text-muted-foreground whitespace-nowrap">.agilecrm.com</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your Agile CRM subdomain from the URL.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="agilecrmEmail">Account Email</Label>
+                      <Input
+                        id="agilecrmEmail"
+                        type="email"
+                        value={formData.agilecrmEmail}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, agilecrmEmail: e.target.value }))}
+                        placeholder="you@company.com"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The email address you use to log in to Agile CRM.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="agilecrmApiKey">REST API Key</Label>
+                      <Input
+                        id="agilecrmApiKey"
+                        type="password"
+                        value={formData.agilecrmApiKey}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, agilecrmApiKey: e.target.value }))}
+                        placeholder="Enter your Agile CRM API key"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Found in <strong>Admin Settings → API & Analytics → REST API</strong>.
+                      </p>
+                    </div>
+                  </>
+                )}
                 {selectedProvider?.id === "freshsales" && (
                   <>
                     <div>
@@ -693,7 +774,7 @@ const ConnectCrmModal = ({ open, onOpenChange, onSuccess }: ConnectCrmModalProps
                </Button>
                 <Button 
                   onClick={handleConnect} 
-                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim())) || (selectedProvider?.id === "freshsales" && (!formData.freshsalesSubdomain.trim() || !formData.freshsalesApiKey.trim()))} 
+                  disabled={isConnecting || (selectedProvider?.id === "shopify" && !formData.shopDomain.trim()) || (selectedProvider?.id === "square" && !formData.squareAccessToken.trim()) || (selectedProvider?.id === "squarespace" && !formData.squarespaceApiKey.trim()) || (selectedProvider?.id === "stripe" && !formData.stripeSecretKey.trim()) || (selectedProvider?.id === "activecampaign" && (!formData.activecampaignApiUrl.trim() || !formData.activecampaignApiKey.trim())) || (selectedProvider?.id === "close" && !formData.closeApiKey.trim()) || (selectedProvider?.id === "copper" && (!formData.copperApiKey.trim() || !formData.copperEmail.trim())) || (selectedProvider?.id === "sugarcrm" && (!formData.sugarcrmInstanceUrl.trim() || !formData.sugarcrmUsername.trim() || !formData.sugarcrmPassword.trim())) || (selectedProvider?.id === "freshsales" && (!formData.freshsalesSubdomain.trim() || !formData.freshsalesApiKey.trim())) || (selectedProvider?.id === "agilecrm" && (!formData.agilecrmDomain.trim() || !formData.agilecrmEmail.trim() || !formData.agilecrmApiKey.trim()))} 
                   className="flex-1 gap-2"
                 >
                  {isConnecting ? (
