@@ -1086,6 +1086,8 @@ const ImportBrandSources = () => {
         functionName = 'restream-auth-url';
       } else if (toolName === 'OneDrive') {
         functionName = 'onedrive-auth-url';
+      } else if (toolName === 'Monday CRM') {
+        functionName = 'monday-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
