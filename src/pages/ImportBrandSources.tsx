@@ -259,7 +259,7 @@ const crmTools: ToolItem[] = [
   { name: "Pipedrive", icon: PipedriveIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Keap / Infusionsoft", icon: KeapIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   { name: "ActiveCampaign", icon: ActiveCampaignIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Microsoft Dynamics 365", icon: MicrosoftDynamicsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Microsoft Dynamics 365", icon: MicrosoftDynamicsIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Copper CRM", icon: CopperIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Freshsales", icon: FreshsalesIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Close CRM", icon: CloseIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -1088,6 +1088,8 @@ const ImportBrandSources = () => {
         functionName = 'onedrive-auth-url';
       } else if (toolName === 'Monday CRM') {
         functionName = 'monday-crm-auth-url';
+      } else if (toolName === 'Microsoft Dynamics 365') {
+        functionName = 'dynamics-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));

@@ -319,3 +319,9 @@ verify_jwt = false
 [functions.nutshell-crm-connect]
 verify_jwt = false
 
+[functions.dynamics-crm-auth-url]
+verify_jwt = false
+
+[functions.dynamics-crm-oauth-callback]
+verify_jwt = false
+
