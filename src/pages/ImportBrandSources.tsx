@@ -263,7 +263,7 @@ const crmTools: ToolItem[] = [
   { name: "Copper CRM", icon: CopperIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Freshsales", icon: FreshsalesIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Close CRM", icon: CloseIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
-  { name: "Monday CRM", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
+  { name: "Monday CRM", icon: MondayIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Nutshell CRM", icon: NutshellIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "SugarCRM", icon: SugarCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Agile CRM", icon: AgileCRMIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
@@ -468,6 +468,12 @@ const ImportBrandSources = () => {
     if (success === "onedrive") {
       toast.success("OneDrive connected successfully!");
       setConnectionStatus(prev => ({ ...prev, "OneDrive": 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "monday_crm") {
+      toast.success("Monday CRM connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, "Monday CRM": 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -691,6 +697,18 @@ const ImportBrandSources = () => {
 
     if (squarespaceConn) {
       newStatus['Squarespace Commerce'] = 'connected';
+    }
+
+    // Check Monday CRM connection
+    const { data: mondayCrmConn } = await supabase
+      .from("crm_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("provider", "monday")
+      .maybeSingle();
+
+    if (mondayCrmConn) {
+      newStatus['Monday CRM'] = 'connected';
     }
     
     setConnectionStatus(newStatus);
