@@ -29,6 +29,7 @@ import SugarCRMIcon from "@/components/icons/SugarCRMIcon";
 import FreshsalesIcon from "@/components/icons/FreshsalesIcon";
 import AgileCRMIcon from "@/components/icons/AgileCRMIcon";
 import NutshellIcon from "@/components/icons/NutshellIcon";
+import MondayIcon from "@/components/icons/MondayIcon";
 
 interface ConnectCrmModalProps {
   open: boolean;
@@ -160,6 +161,13 @@ const providers: CrmProvider[] = [
     available: true,
     description: "Simple, powerful CRM",
     useApiKey: true,
+  },
+  {
+    id: "monday",
+    name: "Monday CRM",
+    icon: MondayIcon,
+    available: true,
+    description: "Work management & CRM",
   },
   {
     id: "woocommerce",

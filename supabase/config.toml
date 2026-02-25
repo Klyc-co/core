@@ -219,6 +219,12 @@ verify_jwt = false
 [functions.monday-oauth-callback]
 verify_jwt = false
 
+[functions.monday-crm-auth-url]
+verify_jwt = false
+
+[functions.monday-crm-oauth-callback]
+verify_jwt = false
+
 [functions.zoho-crm-auth-url]
 verify_jwt = false
 
