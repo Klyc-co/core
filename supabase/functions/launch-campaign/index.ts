@@ -39,9 +39,9 @@ async function gzipCompress(data: Uint8Array): Promise<Uint8Array> {
 }
 
 async function encryptPayload(plaintext: string): Promise<{ encrypted_payload: string; iv: string; v: number; compression: string; original_size: number; compressed_size: number; encrypted_size: number } | null> {
-  const keyHex = Deno.env.get("ZAPIER_PAYLOAD_KEY");
+  const keyHex = Deno.env.get("ZAPIER_PAYLOAD_KEY")?.trim();
   if (!keyHex || keyHex.length !== 64) {
-    console.warn("ZAPIER_PAYLOAD_KEY not configured — sending plaintext");
+    console.warn(`ZAPIER_PAYLOAD_KEY issue — length: ${keyHex?.length ?? 'undefined'}, expected 64 hex chars. Sending plaintext.`);
     return null;
   }
 
