@@ -509,10 +509,12 @@ serve(async (req) => {
     }) : {};
 
     // ===== BUILD ASSETS =====
-    const logoAssets = brandAssets.filter(a => a.asset_type === "logo").map(a => ({ name: a.name, url: a.value }));
+    // Filter out base64 data URLs — only send hosted URLs to keep payload small
+    const isHostedUrl = (v: string) => v && (v.startsWith("http://") || v.startsWith("https://"));
+    const logoAssets = brandAssets.filter(a => a.asset_type === "logo" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
     const colorAssets = brandAssets.filter(a => a.asset_type === "color").map(a => ({ name: a.name, value: a.value }));
     const fontAssets = brandAssets.filter(a => a.asset_type === "font").map(a => ({ name: a.name, value: a.value }));
-    const imageAssets = brandAssets.filter(a => a.asset_type === "image").map(a => ({ name: a.name, url: a.value }));
+    const imageAssets = brandAssets.filter(a => a.asset_type === "image" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
 
     const assets = stripNulls({
       logos: logoAssets.length ? logoAssets : undefined,
