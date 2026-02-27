@@ -117,46 +117,15 @@ serve(async (req) => {
       });
     }
 
-    const { campaignDraftId, webhookUrl, testMode, useSyntheticData } = await req.json();
+    const { campaignDraftId, testMode, useSyntheticData } = await req.json();
 
-    // Resolve webhook URL with priority: override > user_settings > env
-    let resolvedWebhookUrl: string | null = null;
-    let webhookSource: "override" | "db" | "env" | "none" = "none";
-
-    // (a) Explicit override from request body
-    if (webhookUrl && typeof webhookUrl === "string" && webhookUrl.trim()) {
-      resolvedWebhookUrl = webhookUrl.trim();
-      webhookSource = "override";
-    }
-
-    // (b) user_settings table
-    if (!resolvedWebhookUrl) {
-      const { data: settings } = await supabase
-        .from("user_settings")
-        .select("zapier_webhook_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const dbUrl = settings?.zapier_webhook_url;
-      if (dbUrl && typeof dbUrl === "string" && dbUrl.trim()) {
-        resolvedWebhookUrl = dbUrl.trim();
-        webhookSource = "db";
-      }
-    }
-
-    // (c) Environment fallback (dev only)
-    if (!resolvedWebhookUrl) {
-      const envUrl = Deno.env.get("ZAPIER_WEBHOOK_URL_DEFAULT");
-      if (envUrl && envUrl.trim()) {
-        resolvedWebhookUrl = envUrl.trim();
-        webhookSource = "env";
-      }
-    }
-
-    console.log(`Webhook URL resolved from: ${webhookSource}`);
+    // Platform-level Zapier webhook — same endpoint for all users (Klyc-owned)
+    const resolvedWebhookUrl = Deno.env.get("ZAPIER_PLATFORM_WEBHOOK_URL");
 
     if (!resolvedWebhookUrl) {
-      return new Response(JSON.stringify({ error: "No Zapier webhook URL configured. Add one in Settings or provide webhookUrl." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("ZAPIER_PLATFORM_WEBHOOK_URL secret is not configured");
+      return new Response(JSON.stringify({ error: "Platform webhook not configured. Contact support." }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
