@@ -61,6 +61,7 @@ serve(async (req) => {
 
     // Trello uses token-based auth redirect. The callback page will capture the token
     // and send it to the trello-oauth-callback edge function.
+    // IMPORTANT: return_url must be a clean URL without query params to match allowed origins
     const callbackUrl = `${FRONTEND_URL}/trello-callback`;
 
     const authUrl = new URL("https://trello.com/1/authorize");
@@ -72,12 +73,8 @@ serve(async (req) => {
     authUrl.searchParams.set("callback_method", "fragment");
     authUrl.searchParams.set("return_url", callbackUrl);
 
-    // Store user_id in a temporary state so the callback page knows who to associate
-    // We'll pass it via the return_url as a query param
-    const callbackWithState = `${callbackUrl}?user_id=${userId}`;
-    authUrl.searchParams.set("return_url", callbackWithState);
-
-    console.log("Generated Trello auth URL for user:", userId);
+    console.log("Generated Trello auth URL for user:", userId, "return_url:", callbackUrl);
+    console.log("Full auth URL:", authUrl.toString());
 
     return new Response(
       JSON.stringify({ authUrl: authUrl.toString() }),
