@@ -47,11 +47,17 @@ serve(async (req) => {
       );
     }
 
-    // Use the Origin header to redirect back to wherever the user is testing from
-    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") ||
-      Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") ||
-      "https://idea-to-idiom.lovable.app";
-    const FRONTEND_URL = origin.replace(/\/$/, "");
+    // Detect the frontend origin from the request
+    const rawOrigin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/[^/]*$/, "") || "";
+    console.log("Detected origin:", rawOrigin);
+    
+    // Use the detected origin if it's a known frontend URL, otherwise fall back
+    const knownOrigins = [
+      "https://idea-to-idiom.lovable.app",
+      "https://id-preview--12a99886-b5e5-4828-985b-30192faff5ae.lovable.app",
+    ];
+    const FRONTEND_URL = knownOrigins.includes(rawOrigin) ? rawOrigin : 
+      (Deno.env.get("FRONTEND_URL") || "https://idea-to-idiom.lovable.app");
 
     // Trello uses token-based auth redirect. The callback page will capture the token
     // and send it to the trello-oauth-callback edge function.
