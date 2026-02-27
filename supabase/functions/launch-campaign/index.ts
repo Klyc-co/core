@@ -38,7 +38,20 @@ async function gzipCompress(data: Uint8Array): Promise<Uint8Array> {
   return result;
 }
 
-async function encryptPayload(plaintext: string): Promise<{ encrypted_payload: string; iv: string; v: number; compression: string; original_size: number; compressed_size: number; encrypted_size: number } | null> {
+interface EncryptResult {
+  // Flat envelope fields sent to Zapier
+  encrypted_payload: string;
+  iv: string;
+  authTag: string;
+  v: number;
+  compression: string;
+  // Internal metrics (NOT sent to Zapier)
+  _original_size: number;
+  _compressed_size: number;
+  _encrypted_size: number;
+}
+
+async function encryptPayload(plaintext: string): Promise<EncryptResult | null> {
   const keyHex = Deno.env.get("ZAPIER_PAYLOAD_KEY")?.trim();
   if (!keyHex || keyHex.length !== 64) {
     console.warn(`ZAPIER_PAYLOAD_KEY issue — length: ${keyHex?.length ?? 'undefined'}, expected 64 hex chars. Sending plaintext.`);
@@ -58,25 +71,31 @@ async function encryptPayload(plaintext: string): Promise<{ encrypted_payload: s
   const compressed = await gzipCompress(originalBytes);
   const compressedSize = compressed.length;
 
-  // AES-256-GCM encrypt
+  // AES-256-GCM encrypt (Web Crypto appends 16-byte auth tag to ciphertext)
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
+  const ciphertextWithTag = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv.buffer as ArrayBuffer },
     key, compressed.buffer as ArrayBuffer
   );
-  const ciphertextBytes = new Uint8Array(ciphertext);
+  const fullBytes = new Uint8Array(ciphertextWithTag);
 
-  // Base64 encode
-  const encrypted_payload = base64Encode(ciphertextBytes);
+  // Separate ciphertext and auth tag (last 16 bytes = 128-bit GCM tag)
+  const ciphertextOnly = fullBytes.slice(0, fullBytes.length - 16);
+  const authTagBytes = fullBytes.slice(fullBytes.length - 16);
+
+  // Base64 encode the ciphertext (without tag)
+  const encrypted_payload = base64Encode(ciphertextOnly);
+  const authTag = bytesToHex(authTagBytes);
 
   return {
     encrypted_payload,
-    iv: bytesToHex(iv),
+    iv: bytesToHex(iv),       // 24-char hex (12 bytes)
+    authTag,                  // 32-char hex (16 bytes)
     v: 1,
     compression: "gzip",
-    original_size: originalSize,
-    compressed_size: compressedSize,
-    encrypted_size: ciphertextBytes.length,
+    _original_size: originalSize,
+    _compressed_size: compressedSize,
+    _encrypted_size: fullBytes.length,
   };
 }
 
@@ -879,10 +898,18 @@ serve(async (req) => {
 
     const encryptedEnvelope = await encryptPayload(rawPayloadString);
     if (encryptedEnvelope) {
-      payloadString = JSON.stringify(encryptedEnvelope);
+      // Send ONLY flat envelope fields — no internal metrics
+      const flatEnvelope = {
+        encrypted_payload: encryptedEnvelope.encrypted_payload,
+        iv: encryptedEnvelope.iv,
+        authTag: encryptedEnvelope.authTag,
+        v: encryptedEnvelope.v,
+        compression: encryptedEnvelope.compression,
+      };
+      payloadString = JSON.stringify(flatEnvelope);
       payloadSizeBytes = new Blob([payloadString]).size;
       encrypted = true;
-      console.log(`Payload encrypted: ${rawPayloadSizeBytes} bytes → ${encryptedEnvelope.compressed_size} gzipped → ${encryptedEnvelope.encrypted_size} encrypted → ${payloadSizeBytes} bytes envelope`);
+      console.log(`Payload encrypted: ${rawPayloadSizeBytes} bytes → ${encryptedEnvelope._compressed_size} gzipped → ${encryptedEnvelope._encrypted_size} encrypted → ${payloadSizeBytes} bytes envelope`);
     } else {
       payloadString = rawPayloadString;
       payloadSizeBytes = rawPayloadSizeBytes;
@@ -902,7 +929,7 @@ serve(async (req) => {
       payloadSizeBytes,
       rawPayloadSizeBytes,
       encrypted,
-      compressionRatio: encrypted && encryptedEnvelope ? Math.round((1 - encryptedEnvelope.compressed_size / rawPayloadSizeBytes) * 100) : 0,
+      compressionRatio: encrypted && encryptedEnvelope ? Math.round((1 - encryptedEnvelope._compressed_size / rawPayloadSizeBytes) * 100) : 0,
       webhookUrl: resolvedWebhookUrl,
       attemptLogs: sendResult.attemptLogs,
     };
