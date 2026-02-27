@@ -325,3 +325,6 @@ verify_jwt = false
 [functions.dynamics-crm-oauth-callback]
 verify_jwt = false
 
+[functions.zapier-query-posts]
+verify_jwt = false
+
