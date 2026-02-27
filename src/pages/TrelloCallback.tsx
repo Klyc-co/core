@@ -16,7 +16,10 @@ export default function TrelloCallback() {
         const hash = window.location.hash.substring(1);
         const fragmentParams = new URLSearchParams(hash);
         const token = fragmentParams.get("token");
-        const userId = searchParams.get("user_id");
+
+        // Get user_id from the current auth session
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
 
         if (!token) {
           toast.error("No Trello token received");
@@ -25,8 +28,8 @@ export default function TrelloCallback() {
         }
 
         if (!userId) {
-          toast.error("Missing user context");
-          navigate("/profile/import?error=missing_user");
+          toast.error("You must be logged in to connect Trello");
+          navigate("/auth");
           return;
         }
 
