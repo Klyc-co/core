@@ -362,6 +362,9 @@ serve(async (req) => {
       // ===== REAL DATA PATH (existing logic) =====
 
     // ===== PARALLEL DATA FETCH =====
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
     const [
       profileRes,
       draftRes,
@@ -375,6 +378,7 @@ serve(async (req) => {
       crmSyncLogRes,
       brandAssetsRes,
       productLinesRes,
+      productsRes,
       postAnalyticsRes,
       postQueueRes,
       trendsRes,
@@ -383,6 +387,7 @@ serve(async (req) => {
       marketerClientsRes,
       reportRes,
       scheduledReportsRes,
+      postHistoryRes,
     ] = await Promise.all([
       supabase.from("client_profiles").select("*").eq("user_id", userId).single(),
       campaignDraftId
@@ -398,6 +403,7 @@ serve(async (req) => {
       supabase.from("crm_sync_logs").select("status, started_at, finished_at, summary, error_message").order("started_at", { ascending: false }).limit(1),
       supabase.from("brand_assets").select("asset_type, name, value, metadata").eq("user_id", userId),
       supabase.from("product_lines").select("id, name, description").eq("user_id", userId),
+      supabaseAdmin.from("products").select("name, short_description, product_type, target_audience, value_propositions").eq("user_id", userId),
       supabase.from("post_analytics").select("platform, views, likes, comments, shares, saves, clicks, impressions, reach, engagement_rate").gte("fetched_at", thirtyDaysAgo),
       supabase.from("post_queue").select("content_type, status").eq("user_id", userId),
       supabase.from("social_trends").select("platform, trend_name, trend_category, trend_volume, trend_rank, trend_url, scraped_at").eq("user_id", userId).order("scraped_at", { ascending: false }).limit(20),
@@ -406,6 +412,12 @@ serve(async (req) => {
       supabase.from("marketer_clients").select("client_id, client_name, client_email, status").eq("marketer_id", userId),
       supabase.from("report_results").select("search_term, sentiment, mentions, sources, positive_percent, neutral_percent, negative_percent, summary, generated_at").eq("user_id", userId).order("generated_at", { ascending: false }).limit(1),
       supabase.from("scheduled_reports").select("search_term, schedule_frequency, is_active, next_run_at").eq("user_id", userId),
+      // Fetch post history using service role (bypasses RLS for cross-table join)
+      supabaseAdmin.from("post_queue")
+        .select("id, content_type, status, scheduled_at, published_at, created_at, post_platform_targets(platform, status, platform_post_id, published_at)")
+        .eq("user_id", userId)
+        .gte("created_at", thirtyDaysAgo)
+        .order("created_at", { ascending: false }),
     ]);
 
     const profile = profileRes.data;
@@ -414,6 +426,7 @@ serve(async (req) => {
     const socialConns = socialRes.data || [];
     const brandAssets = brandAssetsRes.data || [];
     const productLines = productLinesRes.data || [];
+    const productsData = productsRes.data || [];
     const analytics = postAnalyticsRes.data || [];
     const postQueue = postQueueRes.data || [];
     const trends = trendsRes.data || [];
@@ -751,6 +764,36 @@ serve(async (req) => {
       feeMultiplier: videoHeavyStrategy ? 1.5 : 1.0,
     };
 
+    // ===== BUILD PRODUCTS =====
+    const productsPayload = productsData.map((p: any) => stripNulls({
+      name: p.name,
+      type: p.product_type,
+      shortDescription: truncate(p.short_description),
+      targetAudience: p.target_audience,
+      valuePropositions: p.value_propositions,
+    }));
+
+    // ===== BUILD POST HISTORY =====
+    const postHistoryPosts = postHistoryRes.data || [];
+    const platforms = ["tiktok", "instagram", "twitter", "linkedin", "facebook", "youtube"];
+    const postsCountPerPlatform: Record<string, number> = {};
+    platforms.forEach(p => {
+      postsCountPerPlatform[p] = postHistoryPosts.filter((post: any) =>
+        post.post_platform_targets?.some((t: any) => t.platform === p)
+      ).length;
+    });
+    const postHistoryStatusCounts: Record<string, number> = {};
+    postHistoryPosts.forEach((post: any) => {
+      postHistoryStatusCounts[post.status] = (postHistoryStatusCounts[post.status] || 0) + 1;
+    });
+
+    const postHistory = {
+      daysBack: 30,
+      totalPosts: postHistoryPosts.length,
+      postsCountPerPlatform,
+      statusCounts: postHistoryStatusCounts,
+    };
+
     // ===== ASSEMBLE FINAL PAYLOAD =====
     campaignContext = stripNulls({
       schemaVersion: "1.0.0",
@@ -759,13 +802,16 @@ serve(async (req) => {
       audience,
       competitors: competitorsPayload,
       campaign,
+      products: productsPayload.length ? productsPayload : undefined,
       assets,
       distribution,
+      postHistory,
       crmSummary,
       performanceSummary,
       recentTrends,
       historicalInsights,
       monetizationFlags,
+      callbackUrl: `${supabaseUrl}/functions/v1/zapier-callback`,
     });
 
     } // end real data path
