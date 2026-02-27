@@ -2,6 +2,84 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
+// ===== GZIP + AES-256-GCM ENCRYPTION HELPERS =====
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function gzipCompress(data: Uint8Array): Promise<Uint8Array> {
+  const cs = new CompressionStream("gzip");
+  const writer = cs.writable.getWriter();
+  writer.write(data);
+  writer.close();
+  const reader = cs.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const totalLength = chunks.reduce((s, c) => s + c.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+async function encryptPayload(plaintext: string): Promise<{ encrypted_payload: string; iv: string; v: number; compression: string; original_size: number; compressed_size: number; encrypted_size: number } | null> {
+  const keyHex = Deno.env.get("ZAPIER_PAYLOAD_KEY");
+  if (!keyHex || keyHex.length !== 64) {
+    console.warn("ZAPIER_PAYLOAD_KEY not configured — sending plaintext");
+    return null;
+  }
+
+  const keyBytes = hexToBytes(keyHex);
+  const key = await crypto.subtle.importKey(
+    "raw", keyBytes.buffer as ArrayBuffer,
+    { name: "AES-GCM", length: 256 }, false, ["encrypt"]
+  );
+
+  const originalBytes = new TextEncoder().encode(plaintext);
+  const originalSize = originalBytes.length;
+
+  // GZIP compress
+  const compressed = await gzipCompress(originalBytes);
+  const compressedSize = compressed.length;
+
+  // AES-256-GCM encrypt
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv.buffer as ArrayBuffer },
+    key, compressed.buffer as ArrayBuffer
+  );
+  const ciphertextBytes = new Uint8Array(ciphertext);
+
+  // Base64 encode
+  const encrypted_payload = base64Encode(ciphertextBytes);
+
+  return {
+    encrypted_payload,
+    iv: bytesToHex(iv),
+    v: 1,
+    compression: "gzip",
+    original_size: originalSize,
+    compressed_size: compressedSize,
+    encrypted_size: ciphertextBytes.length,
+  };
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -787,12 +865,29 @@ serve(async (req) => {
 
     } // end real data path
 
-    console.log("Campaign context assembled, sending to Zapier...");
+    console.log("Campaign context assembled, preparing for transmission...");
 
     // ===== SERIALIZE & HASH =====
-    const payloadString = JSON.stringify(campaignContext);
-    const payloadSizeBytes = new Blob([payloadString]).size;
-    const payloadHash = await computePayloadHash(payloadString);
+    const rawPayloadString = JSON.stringify(campaignContext);
+    const rawPayloadSizeBytes = new Blob([rawPayloadString]).size;
+    const payloadHash = await computePayloadHash(rawPayloadString);
+
+    // ===== COMPRESS + ENCRYPT (if key available) =====
+    let payloadString: string;
+    let payloadSizeBytes: number;
+    let encrypted = false;
+
+    const encryptedEnvelope = await encryptPayload(rawPayloadString);
+    if (encryptedEnvelope) {
+      payloadString = JSON.stringify(encryptedEnvelope);
+      payloadSizeBytes = new Blob([payloadString]).size;
+      encrypted = true;
+      console.log(`Payload encrypted: ${rawPayloadSizeBytes} bytes → ${encryptedEnvelope.compressed_size} gzipped → ${encryptedEnvelope.encrypted_size} encrypted → ${payloadSizeBytes} bytes envelope`);
+    } else {
+      payloadString = rawPayloadString;
+      payloadSizeBytes = rawPayloadSizeBytes;
+      console.log(`Payload sent as plaintext: ${payloadSizeBytes} bytes`);
+    }
 
     // ===== SEND TO ZAPIER =====
     const sendResult = await sendWithRetry(resolvedWebhookUrl, payloadString, payloadHash, payloadSizeBytes);
@@ -805,6 +900,9 @@ serve(async (req) => {
       attempts: sendResult.attempts,
       payloadHash,
       payloadSizeBytes,
+      rawPayloadSizeBytes,
+      encrypted,
+      compressionRatio: encrypted && encryptedEnvelope ? Math.round((1 - encryptedEnvelope.compressed_size / rawPayloadSizeBytes) * 100) : 0,
       webhookUrl: resolvedWebhookUrl,
       attemptLogs: sendResult.attemptLogs,
     };
