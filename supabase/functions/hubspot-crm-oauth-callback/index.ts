@@ -57,18 +57,18 @@ import { encryptToken } from "../_shared/encryption.ts";
        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
      );
  
-     // Create CRM connection
-     const { error: insertError } = await supabaseClient
-       .from("crm_connections")
-       .insert({
-         user_id: stateData.userId,
-         provider: "hubspot",
-         display_name: stateData.displayName,
-         status: "syncing",
-         access_token: encryptedAccessToken,
-         refresh_token: encryptedRefreshToken,
-         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-       });
+      // Upsert CRM connection (handles reconnects gracefully)
+      const { error: insertError } = await supabaseClient
+        .from("crm_connections")
+        .upsert({
+          user_id: stateData.userId,
+          provider: "hubspot",
+          display_name: stateData.displayName,
+          status: "syncing",
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken,
+          token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        }, { onConflict: "user_id,provider" });
  
      if (insertError) {
        console.error("Failed to save connection:", insertError);
