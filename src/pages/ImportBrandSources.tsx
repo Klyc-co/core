@@ -312,6 +312,31 @@ const ImportBrandSources = () => {
   const [activecampaignApiUrl, setActivecampaignApiUrl] = useState("");
   const [activecampaignApiKey, setActivecampaignApiKey] = useState("");
   const [isConnectingActivecampaign, setIsConnectingActivecampaign] = useState(false);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [closeApiKey, setCloseApiKey] = useState("");
+  const [isConnectingClose, setIsConnectingClose] = useState(false);
+  const [copperModalOpen, setCopperModalOpen] = useState(false);
+  const [copperApiKey, setCopperApiKey] = useState("");
+  const [copperEmail, setCopperEmail] = useState("");
+  const [isConnectingCopper, setIsConnectingCopper] = useState(false);
+  const [freshsalesModalOpen, setFreshsalesModalOpen] = useState(false);
+  const [freshsalesSubdomain, setFreshsalesSubdomain] = useState("");
+  const [freshsalesApiKey, setFreshsalesApiKey] = useState("");
+  const [isConnectingFreshsales, setIsConnectingFreshsales] = useState(false);
+  const [nutshellModalOpen, setNutshellModalOpen] = useState(false);
+  const [nutshellEmail, setNutshellEmail] = useState("");
+  const [nutshellApiKey, setNutshellApiKey] = useState("");
+  const [isConnectingNutshell, setIsConnectingNutshell] = useState(false);
+  const [sugarcrmModalOpen, setSugarcrmModalOpen] = useState(false);
+  const [sugarcrmInstanceUrl, setSugarcrmInstanceUrl] = useState("");
+  const [sugarcrmUsername, setSugarcrmUsername] = useState("");
+  const [sugarcrmPassword, setSugarcrmPassword] = useState("");
+  const [isConnectingSugarcrm, setIsConnectingSugarcrm] = useState(false);
+  const [agilecrmModalOpen, setAgilecrmModalOpen] = useState(false);
+  const [agilecrmDomain, setAgilecrmDomain] = useState("");
+  const [agilecrmEmail, setAgilecrmEmail] = useState("");
+  const [agilecrmApiKey, setAgilecrmApiKey] = useState("");
+  const [isConnectingAgilecrm, setIsConnectingAgilecrm] = useState(false);
   const [davinciModalOpen, setDavinciModalOpen] = useState(false);
   const [clickupModalOpen, setClickupModalOpen] = useState(false);
   const [descriptModalOpen, setDescriptModalOpen] = useState(false);
@@ -382,6 +407,12 @@ const ImportBrandSources = () => {
     if (success === "hubspot") {
       toast.success("HubSpot connected successfully! Initial sync started.");
       setConnectionStatus(prev => ({ ...prev, HubSpot: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "pipedrive") {
+      toast.success("Pipedrive connected successfully! Initial sync started.");
+      setConnectionStatus(prev => ({ ...prev, Pipedrive: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -879,6 +910,157 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectClose = async () => {
+    if (!closeApiKey.trim()) return;
+    setIsConnectingClose(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("close-crm-connect", {
+        body: { displayName: "Close CRM", apiKey: closeApiKey },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Close CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Close CRM": 'connected' }));
+        setCloseModalOpen(false);
+        setCloseApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Close CRM");
+      }
+    } catch (err) {
+      console.error("Close CRM connect error:", err);
+      toast.error("Failed to connect Close CRM");
+    } finally {
+      setIsConnectingClose(false);
+    }
+  };
+
+  const handleConnectCopper = async () => {
+    if (!copperApiKey.trim() || !copperEmail.trim()) return;
+    setIsConnectingCopper(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("copper-crm-connect", {
+        body: { displayName: "Copper CRM", apiKey: copperApiKey, email: copperEmail },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Copper CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Copper CRM": 'connected' }));
+        setCopperModalOpen(false);
+        setCopperApiKey("");
+        setCopperEmail("");
+      } else {
+        toast.error(data?.error || "Failed to connect Copper CRM");
+      }
+    } catch (err) {
+      console.error("Copper CRM connect error:", err);
+      toast.error("Failed to connect Copper CRM");
+    } finally {
+      setIsConnectingCopper(false);
+    }
+  };
+
+  const handleConnectFreshsales = async () => {
+    if (!freshsalesSubdomain.trim() || !freshsalesApiKey.trim()) return;
+    setIsConnectingFreshsales(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("freshsales-crm-connect", {
+        body: { displayName: "Freshsales", subdomain: freshsalesSubdomain, apiKey: freshsalesApiKey },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Freshsales connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Freshsales": 'connected' }));
+        setFreshsalesModalOpen(false);
+        setFreshsalesSubdomain("");
+        setFreshsalesApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Freshsales");
+      }
+    } catch (err) {
+      console.error("Freshsales connect error:", err);
+      toast.error("Failed to connect Freshsales");
+    } finally {
+      setIsConnectingFreshsales(false);
+    }
+  };
+
+  const handleConnectNutshell = async () => {
+    if (!nutshellEmail.trim() || !nutshellApiKey.trim()) return;
+    setIsConnectingNutshell(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("nutshell-crm-connect", {
+        body: { displayName: "Nutshell CRM", email: nutshellEmail, apiKey: nutshellApiKey },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Nutshell CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Nutshell CRM": 'connected' }));
+        setNutshellModalOpen(false);
+        setNutshellEmail("");
+        setNutshellApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Nutshell CRM");
+      }
+    } catch (err) {
+      console.error("Nutshell CRM connect error:", err);
+      toast.error("Failed to connect Nutshell CRM");
+    } finally {
+      setIsConnectingNutshell(false);
+    }
+  };
+
+  const handleConnectSugarcrm = async () => {
+    if (!sugarcrmInstanceUrl.trim() || !sugarcrmUsername.trim() || !sugarcrmPassword.trim()) return;
+    setIsConnectingSugarcrm(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sugarcrm-connect", {
+        body: { displayName: "SugarCRM", instanceUrl: sugarcrmInstanceUrl, username: sugarcrmUsername, password: sugarcrmPassword },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("SugarCRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "SugarCRM": 'connected' }));
+        setSugarcrmModalOpen(false);
+        setSugarcrmInstanceUrl("");
+        setSugarcrmUsername("");
+        setSugarcrmPassword("");
+      } else {
+        toast.error(data?.error || "Failed to connect SugarCRM");
+      }
+    } catch (err) {
+      console.error("SugarCRM connect error:", err);
+      toast.error("Failed to connect SugarCRM");
+    } finally {
+      setIsConnectingSugarcrm(false);
+    }
+  };
+
+  const handleConnectAgilecrm = async () => {
+    if (!agilecrmDomain.trim() || !agilecrmEmail.trim() || !agilecrmApiKey.trim()) return;
+    setIsConnectingAgilecrm(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("agilecrm-connect", {
+        body: { displayName: "Agile CRM", domain: agilecrmDomain, email: agilecrmEmail, apiKey: agilecrmApiKey },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("Agile CRM connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "Agile CRM": 'connected' }));
+        setAgilecrmModalOpen(false);
+        setAgilecrmDomain("");
+        setAgilecrmEmail("");
+        setAgilecrmApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect Agile CRM");
+      }
+    } catch (err) {
+      console.error("Agile CRM connect error:", err);
+      toast.error("Failed to connect Agile CRM");
+    } finally {
+      setIsConnectingAgilecrm(false);
+    }
+  };
+
   const handleConnectCrmTool = async (toolName: string) => {
     if (!user) {
       toast.error("Please log in first");
@@ -912,6 +1094,42 @@ const ImportBrandSources = () => {
     // For ActiveCampaign, open the ActiveCampaign modal
     if (toolName === 'ActiveCampaign') {
       setActivecampaignModalOpen(true);
+      return;
+    }
+
+    // For Close CRM, open the Close modal
+    if (toolName === 'Close CRM') {
+      setCloseModalOpen(true);
+      return;
+    }
+
+    // For Copper CRM, open the Copper modal
+    if (toolName === 'Copper CRM') {
+      setCopperModalOpen(true);
+      return;
+    }
+
+    // For Freshsales, open the Freshsales modal
+    if (toolName === 'Freshsales') {
+      setFreshsalesModalOpen(true);
+      return;
+    }
+
+    // For Nutshell CRM, open the Nutshell modal
+    if (toolName === 'Nutshell CRM') {
+      setNutshellModalOpen(true);
+      return;
+    }
+
+    // For SugarCRM, open the SugarCRM modal
+    if (toolName === 'SugarCRM') {
+      setSugarcrmModalOpen(true);
+      return;
+    }
+
+    // For Agile CRM, open the Agile CRM modal
+    if (toolName === 'Agile CRM') {
+      setAgilecrmModalOpen(true);
       return;
     }
 
@@ -1129,6 +1347,8 @@ const ImportBrandSources = () => {
         functionName = 'monday-crm-auth-url';
       } else if (toolName === 'Microsoft Dynamics 365') {
         functionName = 'dynamics-crm-auth-url';
+      } else if (toolName === 'Pipedrive') {
+        functionName = 'pipedrive-crm-auth-url';
       } else {
         toast.error(`${toolName} integration coming soon`);
         setConnectionStatus(prev => ({ ...prev, [toolName]: 'disconnected' }));
@@ -2051,6 +2271,173 @@ const ImportBrandSources = () => {
                 ) : (
                   "Connect"
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close CRM Connect Modal */}
+      <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Close CRM</DialogTitle>
+            <DialogDescription>Enter your Close API Key to sync contacts and deals.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="closeApiKeyImport">API Key</Label>
+              <Input id="closeApiKeyImport" type="password" value={closeApiKey} onChange={(e) => setCloseApiKey(e.target.value)} placeholder="api_..." />
+              <p className="text-xs text-muted-foreground mt-1">Found in <strong>Settings → API Keys</strong> in your Close account.</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setCloseModalOpen(false); setCloseApiKey(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectClose} disabled={isConnectingClose || !closeApiKey.trim()} className="flex-1">
+                {isConnectingClose ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Copper CRM Connect Modal */}
+      <Dialog open={copperModalOpen} onOpenChange={setCopperModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Copper CRM</DialogTitle>
+            <DialogDescription>Enter your Copper API Key and account email.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="copperEmailImport">Account Email</Label>
+              <Input id="copperEmailImport" type="email" value={copperEmail} onChange={(e) => setCopperEmail(e.target.value)} placeholder="you@company.com" />
+            </div>
+            <div>
+              <Label htmlFor="copperApiKeyImport">API Key</Label>
+              <Input id="copperApiKeyImport" type="password" value={copperApiKey} onChange={(e) => setCopperApiKey(e.target.value)} placeholder="Your API key" />
+              <p className="text-xs text-muted-foreground mt-1">Found in <strong>Settings → Integrations → API Keys</strong> in Copper.</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setCopperModalOpen(false); setCopperApiKey(""); setCopperEmail(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectCopper} disabled={isConnectingCopper || !copperApiKey.trim() || !copperEmail.trim()} className="flex-1">
+                {isConnectingCopper ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Freshsales Connect Modal */}
+      <Dialog open={freshsalesModalOpen} onOpenChange={setFreshsalesModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Freshsales</DialogTitle>
+            <DialogDescription>Enter your Freshsales subdomain and API Key.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="freshsalesSubdomainImport">Subdomain</Label>
+              <Input id="freshsalesSubdomainImport" value={freshsalesSubdomain} onChange={(e) => setFreshsalesSubdomain(e.target.value)} placeholder="yourcompany" />
+              <p className="text-xs text-muted-foreground mt-1">The subdomain from <code>yourcompany.freshsales.io</code>.</p>
+            </div>
+            <div>
+              <Label htmlFor="freshsalesApiKeyImport">API Key</Label>
+              <Input id="freshsalesApiKeyImport" type="password" value={freshsalesApiKey} onChange={(e) => setFreshsalesApiKey(e.target.value)} placeholder="Your API key" />
+              <p className="text-xs text-muted-foreground mt-1">Found in <strong>Settings → API Settings</strong> in Freshsales.</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setFreshsalesModalOpen(false); setFreshsalesSubdomain(""); setFreshsalesApiKey(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectFreshsales} disabled={isConnectingFreshsales || !freshsalesSubdomain.trim() || !freshsalesApiKey.trim()} className="flex-1">
+                {isConnectingFreshsales ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nutshell CRM Connect Modal */}
+      <Dialog open={nutshellModalOpen} onOpenChange={setNutshellModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Nutshell CRM</DialogTitle>
+            <DialogDescription>Enter your Nutshell email and API Key.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="nutshellEmailImport">Email</Label>
+              <Input id="nutshellEmailImport" type="email" value={nutshellEmail} onChange={(e) => setNutshellEmail(e.target.value)} placeholder="you@company.com" />
+            </div>
+            <div>
+              <Label htmlFor="nutshellApiKeyImport">API Key</Label>
+              <Input id="nutshellApiKeyImport" type="password" value={nutshellApiKey} onChange={(e) => setNutshellApiKey(e.target.value)} placeholder="Your API key" />
+              <p className="text-xs text-muted-foreground mt-1">Found in <strong>Setup → API Keys</strong> in Nutshell.</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setNutshellModalOpen(false); setNutshellEmail(""); setNutshellApiKey(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectNutshell} disabled={isConnectingNutshell || !nutshellEmail.trim() || !nutshellApiKey.trim()} className="flex-1">
+                {isConnectingNutshell ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* SugarCRM Connect Modal */}
+      <Dialog open={sugarcrmModalOpen} onOpenChange={setSugarcrmModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect SugarCRM</DialogTitle>
+            <DialogDescription>Enter your SugarCRM instance URL and credentials.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="sugarcrmInstanceUrlImport">Instance URL</Label>
+              <Input id="sugarcrmInstanceUrlImport" value={sugarcrmInstanceUrl} onChange={(e) => setSugarcrmInstanceUrl(e.target.value)} placeholder="https://yourinstance.sugarcrm.com" />
+            </div>
+            <div>
+              <Label htmlFor="sugarcrmUsernameImport">Username</Label>
+              <Input id="sugarcrmUsernameImport" value={sugarcrmUsername} onChange={(e) => setSugarcrmUsername(e.target.value)} placeholder="admin" />
+            </div>
+            <div>
+              <Label htmlFor="sugarcrmPasswordImport">Password</Label>
+              <Input id="sugarcrmPasswordImport" type="password" value={sugarcrmPassword} onChange={(e) => setSugarcrmPassword(e.target.value)} placeholder="Your password" />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setSugarcrmModalOpen(false); setSugarcrmInstanceUrl(""); setSugarcrmUsername(""); setSugarcrmPassword(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectSugarcrm} disabled={isConnectingSugarcrm || !sugarcrmInstanceUrl.trim() || !sugarcrmUsername.trim() || !sugarcrmPassword.trim()} className="flex-1">
+                {isConnectingSugarcrm ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agile CRM Connect Modal */}
+      <Dialog open={agilecrmModalOpen} onOpenChange={setAgilecrmModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect Agile CRM</DialogTitle>
+            <DialogDescription>Enter your Agile CRM domain, email, and API Key.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="agilecrmDomainImport">Domain</Label>
+              <Input id="agilecrmDomainImport" value={agilecrmDomain} onChange={(e) => setAgilecrmDomain(e.target.value)} placeholder="yourcompany" />
+              <p className="text-xs text-muted-foreground mt-1">The subdomain from <code>yourcompany.agilecrm.com</code>.</p>
+            </div>
+            <div>
+              <Label htmlFor="agilecrmEmailImport">Account Email</Label>
+              <Input id="agilecrmEmailImport" type="email" value={agilecrmEmail} onChange={(e) => setAgilecrmEmail(e.target.value)} placeholder="you@company.com" />
+            </div>
+            <div>
+              <Label htmlFor="agilecrmApiKeyImport">API Key</Label>
+              <Input id="agilecrmApiKeyImport" type="password" value={agilecrmApiKey} onChange={(e) => setAgilecrmApiKey(e.target.value)} placeholder="Your REST API key" />
+              <p className="text-xs text-muted-foreground mt-1">Found in <strong>Admin Settings → Developers & API</strong>.</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setAgilecrmModalOpen(false); setAgilecrmDomain(""); setAgilecrmEmail(""); setAgilecrmApiKey(""); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleConnectAgilecrm} disabled={isConnectingAgilecrm || !agilecrmDomain.trim() || !agilecrmEmail.trim() || !agilecrmApiKey.trim()} className="flex-1">
+                {isConnectingAgilecrm ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</> : "Connect"}
               </Button>
             </div>
           </div>
