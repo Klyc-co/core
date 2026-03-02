@@ -308,6 +308,10 @@ const ImportBrandSources = () => {
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [activecampaignModalOpen, setActivecampaignModalOpen] = useState(false);
+  const [activecampaignApiUrl, setActivecampaignApiUrl] = useState("");
+  const [activecampaignApiKey, setActivecampaignApiKey] = useState("");
+  const [isConnectingActivecampaign, setIsConnectingActivecampaign] = useState(false);
   const [davinciModalOpen, setDavinciModalOpen] = useState(false);
   const [clickupModalOpen, setClickupModalOpen] = useState(false);
   const [descriptModalOpen, setDescriptModalOpen] = useState(false);
@@ -846,6 +850,35 @@ const ImportBrandSources = () => {
     }
   };
 
+  const handleConnectActivecampaign = async () => {
+    if (!activecampaignApiUrl.trim() || !activecampaignApiKey.trim()) return;
+    setIsConnectingActivecampaign(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("activecampaign-crm-connect", {
+        body: {
+          displayName: "ActiveCampaign",
+          apiUrl: activecampaignApiUrl,
+          apiKey: activecampaignApiKey,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success("ActiveCampaign connected successfully!");
+        setConnectionStatus(prev => ({ ...prev, "ActiveCampaign": 'connected' }));
+        setActivecampaignModalOpen(false);
+        setActivecampaignApiUrl("");
+        setActivecampaignApiKey("");
+      } else {
+        toast.error(data?.error || "Failed to connect ActiveCampaign");
+      }
+    } catch (err) {
+      console.error("ActiveCampaign connect error:", err);
+      toast.error("Failed to connect ActiveCampaign");
+    } finally {
+      setIsConnectingActivecampaign(false);
+    }
+  };
+
   const handleConnectCrmTool = async (toolName: string) => {
     if (!user) {
       toast.error("Please log in first");
@@ -873,6 +906,12 @@ const ImportBrandSources = () => {
     // For Stripe CRM, open the Stripe modal
     if (toolName === 'Stripe CRM') {
       setStripeModalOpen(true);
+      return;
+    }
+
+    // For ActiveCampaign, open the ActiveCampaign modal
+    if (toolName === 'ActiveCampaign') {
+      setActivecampaignModalOpen(true);
       return;
     }
 
@@ -1965,6 +2004,52 @@ const ImportBrandSources = () => {
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
                 ) : (
                   "Connect Stripe"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ActiveCampaign Connect Modal */}
+      <Dialog open={activecampaignModalOpen} onOpenChange={setActivecampaignModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Connect ActiveCampaign</DialogTitle>
+            <DialogDescription>Enter your ActiveCampaign API URL and API Key to sync contacts and automation data.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="activecampaignApiUrlImport">Account URL</Label>
+              <Input
+                id="activecampaignApiUrlImport"
+                value={activecampaignApiUrl}
+                onChange={(e) => setActivecampaignApiUrl(e.target.value)}
+                placeholder="https://youraccountname.api-us1.com"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Found in <strong>Settings → Developer</strong> in your ActiveCampaign account.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="activecampaignApiKeyImport">API Key</Label>
+              <Input
+                id="activecampaignApiKeyImport"
+                type="password"
+                value={activecampaignApiKey}
+                onChange={(e) => setActivecampaignApiKey(e.target.value)}
+                placeholder="Your API key"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => { setActivecampaignModalOpen(false); setActivecampaignApiUrl(""); setActivecampaignApiKey(""); }} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={handleConnectActivecampaign} disabled={isConnectingActivecampaign || !activecampaignApiUrl.trim() || !activecampaignApiKey.trim()} className="flex-1">
+                {isConnectingActivecampaign ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>
+                ) : (
+                  "Connect"
                 )}
               </Button>
             </div>
