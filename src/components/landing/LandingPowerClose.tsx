@@ -44,18 +44,18 @@ const LandingPowerClose = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 sm:py-8 px-4 sm:px-6 bg-white border-t border-[#e2e5ea]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="py-8 sm:py-10 px-4 sm:px-6 bg-white border-t border-[#e2e5ea]">
+        <div className="max-w-7xl mx-auto flex flex-col items-center gap-6">
           <img src={klycLogo} alt="Klyc" className="h-12 sm:h-14" />
-          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#6b7280]">
-            <a href="/terms" className="hover:text-[#191a1f] transition-colors">Terms</a>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-[#6b7280]">
+            <a href="/terms" className="hover:text-[#191a1f] transition-colors font-medium">Terms of Service</a>
             <span className="text-[#e2e5ea]">|</span>
-            <a href="/privacy" className="hover:text-[#191a1f] transition-colors">Privacy</a>
+            <a href="/privacy" className="hover:text-[#191a1f] transition-colors font-medium">Privacy Policy</a>
             <span className="text-[#e2e5ea]">|</span>
             <a href="/admin/login" className="hover:text-[#191a1f] transition-colors">Admin</a>
           </div>
           <p className="text-[#6b7280]/60 text-xs sm:text-sm">
-            © {new Date().getFullYear()} Klyc
+            © {new Date().getFullYear()} Klyc. All rights reserved.
           </p>
         </div>
       </footer>
