@@ -2,25 +2,51 @@ import { useRef, useEffect, useState } from "react";
 import { MessageSquare, Send, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useSidebarContext } from "@/contexts/SidebarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientContext } from "@/contexts/ClientContext";
+import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
-type Message = { role: "user" | "assistant"; content: string };
+interface NextQuestion {
+  field: string;
+  question: string;
+  type: "text" | "select" | "date" | "bool";
+  options?: string[];
+}
+
+interface StructuredResponse {
+  intent: string;
+  message: string;
+  next_questions: NextQuestion[];
+  draft_updates: Record<string, any>;
+}
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  structured?: StructuredResponse;
+};
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 
 const ChatSidebar = () => {
   const { isOpen, setIsOpen } = useSidebarContext();
   const isMobile = useIsMobile();
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" }
+  const { getEffectiveUserId, selectedClientId } = useClientContext();
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,84 +54,83 @@ const ChatSidebar = () => {
     }
   }, [messages]);
 
-  const streamChat = async (userMessages: Message[]) => {
+  const sendToKlyc = async (allMessages: ChatMessage[]) => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) throw new Error("Not authenticated");
+
+    const effectiveClientId = getEffectiveUserId();
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ messages: userMessages }),
+      body: JSON.stringify({
+        messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
+        client_id: effectiveClientId,
+        draft_id: draftId,
+      }),
     });
 
-    if (!resp.ok || !resp.body) {
+    if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || "Failed to start stream");
+      throw new Error(errorData.error || `Request failed (${resp.status})`);
     }
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = "";
-    let assistantContent = "";
+    return (await resp.json()) as StructuredResponse;
+  };
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      textBuffer += decoder.decode(value, { stream: true });
+  const handleSend = async (overrideText?: string) => {
+    const text = overrideText || input.trim();
+    if (!text || isLoading) return;
 
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    if (!overrideText) setInput("");
+    setIsLoading(true);
+    setQuestionAnswers({});
 
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (line.startsWith(":") || line.trim() === "") continue;
-        if (!line.startsWith("data: ")) continue;
+    try {
+      const structured = await sendToKlyc(updated);
 
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") break;
-
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            assistantContent += content;
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last?.role === "assistant" && prev.length > 1) {
-                return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-              }
-              return [...prev, { role: "assistant", content: assistantContent }];
-            });
-          }
-        } catch {
-          textBuffer = line + "\n" + textBuffer;
-          break;
-        }
+      // Track draft_id across conversation
+      if (structured.draft_updates?._draft_id) {
+        setDraftId(structured.draft_updates._draft_id);
       }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: structured.message,
+          structured,
+        },
+      ]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleQuestionSubmit = (questions: NextQuestion[]) => {
+    // Compile answers into a message
+    const answerLines = questions
+      .map((q) => {
+        const answer = questionAnswers[q.field];
+        return answer ? `${q.field}: ${answer}` : null;
+      })
+      .filter(Boolean);
 
-    const userMsg: Message = { role: "user", content: input.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      await streamChat(newMessages.filter(m => m.content));
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "Sorry, I encountered an error. Please try again." 
-      }]);
-    } finally {
-      setIsLoading(false);
+    if (answerLines.length > 0) {
+      handleSend(answerLines.join("\n"));
     }
   };
 
@@ -114,6 +139,78 @@ const ChatSidebar = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const renderNextQuestions = (questions: NextQuestion[]) => {
+    if (!questions.length) return null;
+
+    return (
+      <div className="mt-3 space-y-3 border-t border-sidebar-border pt-3">
+        {questions.map((q) => (
+          <div key={q.field} className="space-y-1">
+            <label className="text-xs font-medium text-sidebar-foreground/80">{q.question}</label>
+            {q.type === "select" && q.options ? (
+              <Select
+                value={questionAnswers[q.field] || ""}
+                onValueChange={(v) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: v }))}
+              >
+                <SelectTrigger className="h-8 text-xs bg-sidebar-accent border-sidebar-border">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {q.options.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : q.type === "bool" ? (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={questionAnswers[q.field] === "yes" ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "yes" }))}
+                >
+                  Yes
+                </Button>
+                <Button
+                  size="sm"
+                  variant={questionAnswers[q.field] === "no" ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "no" }))}
+                >
+                  No
+                </Button>
+              </div>
+            ) : q.type === "date" ? (
+              <Input
+                type="date"
+                className="h-8 text-xs bg-sidebar-accent border-sidebar-border"
+                value={questionAnswers[q.field] || ""}
+                onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))}
+              />
+            ) : (
+              <Input
+                className="h-8 text-xs bg-sidebar-accent border-sidebar-border"
+                placeholder="Type your answer..."
+                value={questionAnswers[q.field] || ""}
+                onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))}
+              />
+            )}
+          </div>
+        ))}
+        <Button
+          size="sm"
+          className="w-full h-7 text-xs"
+          onClick={() => handleQuestionSubmit(questions)}
+          disabled={isLoading}
+        >
+          Submit Answers
+        </Button>
+      </div>
+    );
   };
 
   if (!isOpen) {
@@ -130,94 +227,96 @@ const ChatSidebar = () => {
 
   return (
     <>
-      {/* Backdrop for mobile */}
       {isMobile && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setIsOpen(false)} />
       )}
-      <div className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-50",
-        isMobile ? "w-[85vw] max-w-80" : "w-80"
-      )}>
-      {/* Header */}
-      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <MessageSquare className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-sidebar-foreground">Klyc</h2>
-            <p className="text-xs text-sidebar-foreground/60">AI Strategist</p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsOpen(false)}
-          className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex",
-                msg.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-sidebar-accent text-sidebar-accent-foreground"
-                )}
-              >
-                {msg.content}
-              </div>
+      <div
+        className={cn(
+          "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-50",
+          isMobile ? "w-[85vw] max-w-80" : "w-80"
+        )}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <MessageSquare className="h-4 w-4 text-primary-foreground" />
             </div>
-          ))}
-          {isLoading && messages[messages.length - 1]?.role === "user" && (
-            <div className="flex justify-start">
-              <div className="bg-sidebar-accent text-sidebar-accent-foreground rounded-lg px-3 py-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
+            <div>
+              <h2 className="font-semibold text-sidebar-foreground">Klyc</h2>
+              <p className="text-xs text-sidebar-foreground/60">AI Command Center</p>
             </div>
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* Input */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Klyc anything..."
-            className="min-h-[44px] max-h-32 resize-none bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50"
-            rows={1}
-          />
+          </div>
           <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            variant="ghost"
             size="icon"
-            className="h-11 w-11 shrink-0"
+            onClick={() => setIsOpen(false)}
+            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
           >
-            <Send className="h-4 w-4" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="space-y-4">
+            {messages.map((msg, i) => (
+              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-sidebar-accent text-sidebar-accent-foreground"
+                  )}
+                >
+                  {msg.role === "assistant" ? (
+                    <>
+                      <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                      {msg.structured?.intent && msg.structured.intent !== "other" && (
+                        <Badge variant="secondary" className="mt-2 text-[10px]">
+                          {msg.structured.intent.replace("_", " ")}
+                        </Badge>
+                      )}
+                      {msg.structured?.next_questions &&
+                        i === messages.length - 1 &&
+                        renderNextQuestions(msg.structured.next_questions)}
+                    </>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
+              <div className="flex justify-start">
+                <div className="bg-sidebar-accent text-sidebar-accent-foreground rounded-lg px-3 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask Klyc anything..."
+              className="min-h-[44px] max-h-32 resize-none bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50"
+              rows={1}
+            />
+            <Button onClick={() => handleSend()} disabled={!input.trim() || isLoading} size="icon" className="h-11 w-11 shrink-0">
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
     </>
   );
 };
