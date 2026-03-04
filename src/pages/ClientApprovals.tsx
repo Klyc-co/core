@@ -25,6 +25,7 @@ interface Approval {
   notes: string | null;
   created_at: string;
   campaign_drafts: {
+    id: string;
     campaign_idea: string | null;
     content_type: string | null;
     target_audience: string | null;
@@ -32,6 +33,7 @@ interface Approval {
     post_caption: string | null;
   } | null;
   scheduled_campaigns: {
+    id: string;
     campaign_name: string;
     platforms: string[];
     scheduled_date: string;
