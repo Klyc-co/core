@@ -109,12 +109,61 @@ const ChatSidebar = () => {
     return (await resp.json()) as StructuredResponse;
   };
 
-  const sendForInterview = async (text: string) => {
+  const sendForInterview = async (text: string, brainContext?: string) => {
     const userMsg: ChatMessage = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
 
-    const structured = await sendToKlyc(updated);
+    // Temporarily override context_summary if brain context provided
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) throw new Error("Not authenticated");
+
+    const effectiveClientId = getEffectiveUserId();
+
+    let marketerClientId: string | undefined;
+    if (selectedClientId && selectedClientId !== "default") {
+      const { data: mc } = await supabase
+        .from("marketer_clients")
+        .select("id")
+        .eq("client_id", selectedClientId)
+        .maybeSingle();
+      marketerClientId = mc?.id;
+    }
+
+    let contextSummary = selectedClientId && selectedClientId !== "default"
+      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
+      : undefined;
+
+    // Inject brain context for campaign interviews
+    if (brainContext) {
+      contextSummary = (contextSummary ? contextSummary + "\n" : "") +
+        `CLIENT BRAIN CONTEXT (use to guide questions):\n${brainContext}`;
+    }
+
+    const signedPayload = signRequest({
+      messages: updated.map((m) => ({ role: m.role, content: m.content })),
+      client_id: effectiveClientId,
+      marketer_client_id: marketerClientId,
+      context_summary: contextSummary,
+      draft_id: draftId,
+    });
+
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(signedPayload),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed (${resp.status})`);
+    }
+
+    const structured = await resp.json() as StructuredResponse;
 
     setMessages((prev) => [
       ...prev,
