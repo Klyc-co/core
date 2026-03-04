@@ -93,12 +93,6 @@ const ClientSocialAssets = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
-  const [showDriveDialog, setShowDriveDialog] = useState(false);
-  const [driveSetupInfo, setDriveSetupInfo] = useState<{
-    user_id: string;
-    callback_url: string;
-    folder_url?: string;
-  } | null>(null);
   const [driveConnection, setDriveConnection] = useState<{
     folder_url?: string;
     assets_sheet_url?: string;
@@ -242,28 +236,18 @@ const ClientSocialAssets = () => {
     setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connecting' }));
 
     try {
-      const { data, error } = await supabase.functions.invoke("google-drive-init");
-      
-      if (error) {
-        throw new Error(error.message);
+      // Direct Google Drive OAuth flow
+      const { data, error } = await supabase.functions.invoke("google-drive-auth-url");
+      if (error) throw new Error(error.message);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to get Google Drive auth URL");
+        setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
       }
-
-      if (data.already_connected) {
-        toast.success("Google Drive already connected!");
-        setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connected' }));
-        setDriveConnection({ folder_url: data.folder_url });
-        return;
-      }
-
-      setDriveSetupInfo({
-        user_id: data.user_id,
-        callback_url: data.callback_url,
-      });
-      setShowDriveDialog(true);
-      setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
     } catch (err) {
-      console.error("Google Drive init error:", err);
-      toast.error("Failed to initialize Google Drive connection");
+      console.error("Google Drive connect error:", err);
+      toast.error("Failed to connect Google Drive");
       setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
     }
   };
