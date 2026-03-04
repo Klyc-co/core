@@ -11,6 +11,7 @@ import { autoPopulateFromDraftUpdates, saveOnboardingTranscript } from "@/lib/on
 import { saveCampaignInterviewTranscript, upsertCampaignDraftFromInterview } from "@/lib/campaignInterviewHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientContext } from "@/contexts/ClientContext";
+import { loadClientBrain } from "@/lib/client/clientBrainLoader";
 
 const ONBOARDING_STEPS = [
   "Business Profile",
@@ -37,7 +38,7 @@ export type InterviewType = "onboarding" | "campaign";
 
 interface VoiceInterviewModeProps {
   onComplete: (result?: { draftId?: string; approved?: boolean }) => void;
-  onSendMessage: (text: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[]; intent?: string }>;
+  onSendMessage: (text: string, brainContext?: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[]; intent?: string }>;
   interviewType?: InterviewType;
   clientId?: string;
 }
@@ -59,6 +60,7 @@ export default function VoiceInterviewMode({
   const [hasStarted, setHasStarted] = useState(false);
   const [campaignDraftId, setCampaignDraftId] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [brainContextMin, setBrainContextMin] = useState<string | null>(null);
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, error: sttError } = useSpeechRecognition();
   const { speak, stop: stopSpeaking, isSpeaking } = useTTS();
@@ -90,7 +92,22 @@ export default function VoiceInterviewMode({
   const startInterview = async () => {
     setIsProcessing(true);
     try {
-      const result = await onSendMessage(getStartPrompt());
+      // Load client brain for campaign interviews (400 token budget)
+      let brainCtx: string | undefined;
+      if (interviewType === "campaign") {
+        const effectiveId = clientId || selectedClientId;
+        if (effectiveId && effectiveId !== "default") {
+          try {
+            const brain = await loadClientBrain(effectiveId, 400);
+            brainCtx = brain.brain_context_min;
+            setBrainContextMin(brainCtx);
+          } catch (e) {
+            console.warn("Could not load client brain:", e);
+          }
+        }
+      }
+
+      const result = await onSendMessage(getStartPrompt(), brainCtx);
       setAiMessage(result.message);
       if (result.draft_updates) {
         await handleDraftUpdates(result.draft_updates);
@@ -159,7 +176,7 @@ export default function VoiceInterviewMode({
     setIsProcessing(true);
 
     try {
-      const result = await onSendMessage(answer);
+      const result = await onSendMessage(answer, brainContextMin || undefined);
       setAiMessage(result.message);
       setFullTranscript((prev) => {
         const updated = [...prev];
