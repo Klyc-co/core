@@ -19,6 +19,7 @@ import { generateBatchContent, type BatchResult, type GeneratedPost } from "./ba
 import { schedulePosts, type ScheduleResult } from "@/lib/publishing/publishQueue";
 import { estimateTokenCost, enforceBudget } from "./tokenMonitor";
 import type { CampaignManifest } from "@/lib/campaigns/campaignManifest";
+import { analyzeCampaignPerformance, updateClientStrategyFromPerformance } from "@/lib/learning/campaignLearningEngine";
 
 // ============================================================
 // KLYC Campaign Orchestrator
@@ -53,6 +54,7 @@ export type PipelineStage =
   | "generate"
   | "save_posts"
   | "schedule"
+  | "campaign_learning"
   | "complete"
   | "error";
 
@@ -202,6 +204,29 @@ export async function runCampaignPipeline(
       warnings.push(
         "Posts saved as pending_approval. Marketer/client approval required before scheduling."
       );
+    }
+
+    // ── Step 7: Campaign Learning (async, non-blocking) ──
+    stage = "campaign_learning";
+    try {
+      await emitActivityEvent("campaign_learning_started", "Analyzing campaign performance for learning", clientId, { stage, draft_id: draftId });
+
+      const analysisResult = await analyzeCampaignPerformance(draftId);
+      if (analysisResult.success && analysisResult.rows_inserted > 0) {
+        const strategyResult = await updateClientStrategyFromPerformance(clientId);
+        if (strategyResult.success) {
+          await emitActivityEvent("strategy_updated", `Strategy updated from ${analysisResult.rows_inserted} performance data points`, clientId, {
+            stage, avg_score: analysisResult.avg_score,
+          });
+        }
+      }
+
+      await emitActivityEvent("campaign_learning_complete", "Campaign learning loop finished", clientId, { stage, draft_id: draftId });
+    } catch (learningErr) {
+      // Learning is non-critical — log warning but don't fail pipeline
+      const msg = learningErr instanceof Error ? learningErr.message : "Unknown learning error";
+      warnings.push(`Campaign learning skipped: ${msg}`);
+      console.warn("Campaign learning failed (non-critical):", msg);
     }
 
     // ── Complete ──
