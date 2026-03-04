@@ -112,6 +112,7 @@ export async function runCampaignPipeline(
   try {
     // ── Step 1: Load Campaign Draft ──
     stage = "load_draft";
+    await emitActivityEvent("campaign_generated", "Pipeline started: loading draft", null, { draft_id: draftId, stage });
     const draft = await loadCampaignDraft(draftId);
     if (!draft) {
       throw new PipelineError("load_draft", `Campaign draft not found: ${draftId}`);
@@ -123,6 +124,7 @@ export async function runCampaignPipeline(
 
     // ── Step 2: Load Client Brain ──
     stage = "load_brain";
+    await emitActivityEvent("campaign_generated", "Loading client brain context", clientId, { stage });
     const brainContext = await loadClientBrain(clientId);
     result.brain_context = brainContext;
 
@@ -131,10 +133,12 @@ export async function runCampaignPipeline(
         "Client brain is incomplete (missing brand/voice/strategy). " +
         "Campaign quality may be reduced."
       );
+      await emitActivityEvent("ai_warning", "Client brain incomplete — quality may be reduced", clientId, { stage });
     }
 
     // ── Step 3: Generate Campaign Manifest ──
     stage = "plan";
+    await emitActivityEvent("campaign_generated", "Planning campaign manifest", clientId, { stage });
     const plannerOutput = await runPlannerFromDraft(draft, brainContext, options);
     result.planner_output = plannerOutput;
     warnings.push(...plannerOutput.warnings);
@@ -151,6 +155,7 @@ export async function runCampaignPipeline(
 
     // ── Step 4: Generate Batch Content ──
     stage = "generate";
+    await emitActivityEvent("campaign_generated", `Generating ${manifest.total_posts} posts`, clientId, { stage, total_posts: manifest.total_posts });
     const batchResult = await generateBatchContent(manifest);
     result.batch_result = batchResult;
 
@@ -158,6 +163,7 @@ export async function runCampaignPipeline(
       warnings.push(
         `${batchResult.total_failed} of ${batchResult.total_requested} posts failed to generate.`
       );
+      await emitActivityEvent("ai_warning", `${batchResult.total_failed} posts failed generation`, clientId, { stage });
     }
 
     if (batchResult.posts.length === 0) {
@@ -166,6 +172,7 @@ export async function runCampaignPipeline(
 
     // ── Step 5: Save Posts to Queue ──
     stage = "save_posts";
+    await emitActivityEvent("campaign_generated", `Saving ${batchResult.posts.length} posts to queue`, clientId, { stage });
     const postQueueIds = await savePostsToQueue(
       batchResult.posts,
       userId,
@@ -190,6 +197,7 @@ export async function runCampaignPipeline(
         warnings.push(`Scheduling errors: ${scheduleResult.errors.join("; ")}`);
       }
     } else {
+      await emitActivityEvent("approval_required", `${postQueueIds.length} posts awaiting approval`, clientId, { stage, draft_id: draftId });
       warnings.push(
         "Posts saved as pending_approval. Marketer/client approval required before scheduling."
       );
@@ -202,6 +210,10 @@ export async function runCampaignPipeline(
     result.warnings = warnings;
     result.completed_at = new Date().toISOString();
 
+    await emitActivityEvent("campaign_generated", `Pipeline complete: ${postQueueIds.length} posts created`, clientId, {
+      stage, draft_id: draftId, posts_created: postQueueIds.length,
+    });
+
     return result;
   } catch (err) {
     const errorMsg = err instanceof PipelineError
@@ -211,6 +223,10 @@ export async function runCampaignPipeline(
         : "Unknown error";
 
     console.error(`Pipeline failed at stage "${stage}":`, errorMsg);
+
+    await emitActivityEvent("publish_failed", `Pipeline failed at ${stage}: ${errorMsg}`, result.client_id || null, {
+      stage, draft_id: draftId, error: errorMsg,
+    });
 
     result.success = false;
     result.stage_completed = stage;
@@ -344,6 +360,30 @@ function mapContentType(content: { structure: string; tone: string }): string {
   if (struct.includes("carousel") || struct.includes("gallery")) return "carousel";
   if (struct.includes("story")) return "story";
   return "text";
+}
+
+// ---- Activity Event Helper ----
+
+async function emitActivityEvent(
+  eventType: string,
+  eventMessage: string,
+  clientId: string | null,
+  metadata: Record<string, any> = {}
+): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("activity_events" as any).insert({
+      user_id: user.id,
+      client_id: clientId,
+      event_type: eventType,
+      event_message: eventMessage,
+      metadata,
+    } as any);
+  } catch (e) {
+    console.warn("Failed to emit activity event:", e);
+  }
 }
 
 // ---- Pipeline Error ----
