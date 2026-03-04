@@ -50,3 +50,9 @@ export type {
   ModelPricing,
   TokenUsageRecord,
 } from "./tokenMonitor";
+export { runCampaignPlanner } from "./campaignPlanner";
+export type {
+  PlannerInput,
+  PlannerOutput,
+  ClientBrainSnapshot,
+} from "./campaignPlanner";
