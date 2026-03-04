@@ -445,6 +445,69 @@ export type Database = {
           },
         ]
       }
+      campaign_performance: {
+        Row: {
+          actual_conversion: number | null
+          actual_ctr: number | null
+          actual_engagement: number | null
+          campaign_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          performance_score: number | null
+          platform: string
+          post_id: string | null
+          predicted_conversion: number | null
+          predicted_ctr: number | null
+          predicted_engagement: number | null
+        }
+        Insert: {
+          actual_conversion?: number | null
+          actual_ctr?: number | null
+          actual_engagement?: number | null
+          campaign_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          performance_score?: number | null
+          platform: string
+          post_id?: string | null
+          predicted_conversion?: number | null
+          predicted_ctr?: number | null
+          predicted_engagement?: number | null
+        }
+        Update: {
+          actual_conversion?: number | null
+          actual_ctr?: number | null
+          actual_engagement?: number | null
+          campaign_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          performance_score?: number | null
+          platform?: string
+          post_id?: string | null
+          predicted_conversion?: number | null
+          predicted_ctr?: number | null
+          predicted_engagement?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_performance_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_performance_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "post_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clickup_attachments: {
         Row: {
           clickup_task_id: string

@@ -166,6 +166,21 @@ function buildBudgetedContext(ctx: ClientBrainContext, budget: number): string {
     tryAdd("Campaign history", `${ch.campaigns.length} past campaigns`);
   }
 
+  // 9. Performance learning insights (from strategy_profile)
+  const perf = (ctx.strategy_profile as any)?.performanceInsights;
+  if (perf?.avgScore != null) {
+    tryAdd("Perf score", `${perf.avgScore} avg across ${perf.totalCampaignsAnalyzed} campaigns`);
+  }
+  const optTimes = (ctx.strategy_profile as any)?.optimalPostTimes;
+  if (optTimes?.length) {
+    tryAdd("Best times", optTimes.join(", "));
+  }
+  const platPerf = (ctx.strategy_profile as any)?.platformPerformance;
+  if (platPerf?.length) {
+    const top3 = platPerf.slice(0, 3).map((p: any) => `${p.platform}:${p.avgScore}`).join(", ");
+    tryAdd("Top platforms", top3);
+  }
+
   return sections.join("\n");
 }
 
