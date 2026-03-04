@@ -290,6 +290,7 @@ export type Database = {
           campaign_goals: string | null
           campaign_idea: string | null
           campaign_objective: string | null
+          client_id: string | null
           content_type: string | null
           created_at: string
           id: string
@@ -309,6 +310,7 @@ export type Database = {
           campaign_goals?: string | null
           campaign_idea?: string | null
           campaign_objective?: string | null
+          client_id?: string | null
           content_type?: string | null
           created_at?: string
           id?: string
@@ -328,6 +330,7 @@ export type Database = {
           campaign_goals?: string | null
           campaign_idea?: string | null
           campaign_objective?: string | null
+          client_id?: string | null
           content_type?: string | null
           created_at?: string
           id?: string
@@ -1860,6 +1863,7 @@ export type Database = {
       scheduled_campaigns: {
         Row: {
           campaign_name: string
+          client_id: string | null
           created_at: string
           id: string
           image_url: string | null
@@ -1878,6 +1882,7 @@ export type Database = {
         }
         Insert: {
           campaign_name: string
+          client_id?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
@@ -1896,6 +1901,7 @@ export type Database = {
         }
         Update: {
           campaign_name?: string
+          client_id?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
