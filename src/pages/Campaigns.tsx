@@ -9,7 +9,6 @@ import { Plus, Clock, History, Sparkles, Send, Rocket, FlaskConical, Loader2, Ch
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,7 +38,6 @@ const Campaigns = () => {
   const { isLaunching, lastResult, launch } = useLaunchCampaign();
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [selectedDraftId, setSelectedDraftId] = useState<string>("");
-  const [webhookUrlOverride, setWebhookUrlOverride] = useState("");
   const [drafts, setDrafts] = useState<CampaignDraftOption[]>([]);
   const [isTestMode, setIsTestMode] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
@@ -50,54 +48,31 @@ const Campaigns = () => {
         navigate("/auth");
       } else {
         setUser(user);
-        fetchPendingCount(user.id);
-        fetchPastCampaigns(user.id);
+        loadData(user.id);
       }
     });
   }, [navigate]);
 
-  const fetchPendingCount = async (userId: string) => {
-    const { count } = await supabase
-      .from("campaign_approvals")
-      .select("*", { count: "exact", head: true })
-      .eq("marketer_id", userId)
-      .eq("status", "pending");
-    setPendingCount(count || 0);
-  };
-
-  const fetchPastCampaigns = async (userId: string) => {
-    setLoadingPast(true);
-    const today = new Date().toISOString().split("T")[0];
-    const { data } = await supabase
-      .from("scheduled_campaigns")
-      .select("id, campaign_name, platforms, scheduled_date, status")
-      .eq("user_id", userId)
-      .lt("scheduled_date", today)
-      .order("scheduled_date", { ascending: false });
-    if (data) setPastCampaigns(data);
+  const loadData = async (userId: string) => {
+    const [pendingRes, pastRes, draftsRes] = await Promise.all([
+      supabase.from("campaign_approvals").select("id", { count: "exact", head: true }).eq("marketer_id", userId).eq("status", "pending"),
+      supabase.from("scheduled_campaigns").select("id, campaign_name, platforms, scheduled_date, status").eq("user_id", userId).order("scheduled_date", { ascending: false }).limit(10),
+      supabase.from("campaign_drafts").select("id, campaign_idea, content_type, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
+    ]);
+    setPendingCount(pendingRes.count || 0);
+    setPastCampaigns((pastRes.data || []) as PastCampaign[]);
+    setDrafts((draftsRes.data || []) as CampaignDraftOption[]);
     setLoadingPast(false);
   };
 
-  const openLaunchModal = async (testMode = false) => {
+  const openLaunchModal = (testMode: boolean) => {
     setIsTestMode(testMode);
-    setShowPayload(false);
     setLaunchModalOpen(true);
-    // Fetch drafts for selection
-    if (user) {
-      const { data } = await supabase
-        .from("campaign_drafts")
-        .select("id, campaign_idea, content_type, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      setDrafts((data as CampaignDraftOption[]) || []);
-    }
   };
 
   const handleLaunch = async () => {
     await launch(
       selectedDraftId || undefined,
-      webhookUrlOverride || undefined,
       isTestMode
     );
     if (!isTestMode) {
@@ -228,8 +203,8 @@ const Campaigns = () => {
             </DialogTitle>
             <DialogDescription>
               {isTestMode
-                ? "Send a test campaignContext payload to your Zapier webhook and inspect the result."
-                : "Build and transmit the full campaignContext payload to your configured Zapier webhook."}
+                ? "Generate a test campaign context payload and inspect the result."
+                : "Build and process the full campaign context through the KLYC orchestrator."}
             </DialogDescription>
           </DialogHeader>
 
@@ -250,18 +225,6 @@ const Campaigns = () => {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Webhook URL Override (optional)</Label>
-              <Input
-                placeholder="https://hooks.zapier.com/hooks/catch/..."
-                value={webhookUrlOverride}
-                onChange={(e) => setWebhookUrlOverride(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty to use your configured webhook URL.
-              </p>
-            </div>
-
             <Button
               className="w-full gap-2"
               disabled={isLaunching}
@@ -270,34 +233,15 @@ const Campaigns = () => {
               {isLaunching ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isTestMode ? "Sending test..." : "Launching..."}
+                  {isTestMode ? "Generating..." : "Launching..."}
                 </>
               ) : (
                 <>
                   {isTestMode ? <FlaskConical className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
-                  {isTestMode ? "Send Test Payload" : "Launch Now"}
+                  {isTestMode ? "Generate Test Payload" : "Launch Now"}
                 </>
               )}
             </Button>
-
-            {/* Delivery Log */}
-            {lastResult?.deliveryLog && (
-              <Card className="border-muted">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Delivery Status</span>
-                    <Badge variant={lastResult.deliveryLog.webhookDeliveryStatus === "success" ? "default" : "destructive"}>
-                      {lastResult.deliveryLog.webhookDeliveryStatus}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div>Response Code: {lastResult.deliveryLog.responseCode}</div>
-                    <div>Attempts: {lastResult.deliveryLog.attempts}</div>
-                    <div>Timestamp: {lastResult.deliveryLog.timestamp}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Test Mode Payload Inspector */}
             {isTestMode && lastResult?.campaignContext && (
