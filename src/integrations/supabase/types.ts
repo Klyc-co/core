@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          event_message: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          event_message: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          event_message?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       airtable_connections: {
         Row: {
           api_token: string
