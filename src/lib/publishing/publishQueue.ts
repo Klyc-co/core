@@ -6,7 +6,10 @@ import type { GeneratedPost, GeneratedContent } from "@/lib/agents/batchGenerato
 // Queues generated posts for timed publishing across platforms.
 // ============================================================
 
-export type PublishStatus = "queued" | "scheduled" | "published" | "failed";
+export type PublishStatus = "queued" | "scheduled" | "published" | "failed" | "dead_letter";
+
+const MAX_RETRIES = 5;
+const MAX_BACKOFF_MINUTES = 60;
 
 export interface PublishJob {
   job_id: string;
@@ -170,15 +173,16 @@ export async function schedulePosts(
  * Calls the publish-post edge function for each ready post.
  */
 export async function processQueue(userId: string): Promise<ProcessResult> {
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
 
-  // Fetch posts that are scheduled and due
+  // Fetch posts that are scheduled or failed (for retry), exclude dead_letter
   const { data: duePosts, error } = await supabase
     .from("post_queue")
-    .select("id, post_text, content_type, scheduled_at, status, image_url, video_url, media_urls")
+    .select("id, post_text, content_type, scheduled_at, status, image_url, video_url, media_urls, retry_count, error_message, updated_at")
     .eq("user_id", userId)
-    .eq("status", "scheduled")
-    .lte("scheduled_at", now)
+    .in("status", ["scheduled", "failed"])
+    .lte("scheduled_at", nowIso)
     .order("scheduled_at", { ascending: true })
     .limit(50);
 
@@ -194,12 +198,40 @@ export async function processQueue(userId: string): Promise<ProcessResult> {
   let skipped = 0;
 
   for (const post of posts) {
-    // Fetch platform targets for this post
+    const retryCount = (post as any).retry_count ?? 0;
+
+    // Dead-letter: max retries exceeded
+    if (retryCount >= MAX_RETRIES) {
+      await supabase
+        .from("post_queue")
+        .update({
+          status: "dead_letter",
+          error_message: `Max retries (${MAX_RETRIES}) exceeded. Last: ${(post as any).error_message || "unknown"}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", post.id);
+      failed++;
+      results.push({ job_id: post.id, status: "dead_letter" });
+      continue;
+    }
+
+    // Exponential backoff for failed retries
+    if (post.status === "failed" && retryCount > 0) {
+      const backoffMs = Math.min(Math.pow(2, retryCount), MAX_BACKOFF_MINUTES) * 60 * 1000;
+      const updatedAt = new Date((post as any).updated_at || nowIso);
+      if (now.getTime() - updatedAt.getTime() < backoffMs) {
+        skipped++;
+        results.push({ job_id: post.id, status: "queued" });
+        continue;
+      }
+    }
+
+    // Fetch platform targets (pending or previously failed)
     const { data: targets } = await supabase
       .from("post_platform_targets")
       .select("id, platform, status")
       .eq("post_queue_id", post.id)
-      .eq("status", "pending");
+      .in("status", ["pending", "failed"]);
 
     if (!targets || targets.length === 0) {
       skipped++;
@@ -207,59 +239,52 @@ export async function processQueue(userId: string): Promise<ProcessResult> {
       continue;
     }
 
-    // Mark post as publishing
     await supabase
       .from("post_queue")
       .update({ status: "publishing", updated_at: new Date().toISOString() })
       .eq("id", post.id);
 
     let postPublished = false;
+    let lastError = "";
 
     for (const target of targets) {
       try {
         const { error: fnError } = await supabase.functions.invoke("publish-post", {
-          body: {
-            postQueueId: post.id,
-            platform: target.platform,
-          },
+          body: { postQueueId: post.id, platform: target.platform },
         });
-
         if (fnError) {
-          await supabase
-            .from("post_platform_targets")
-            .update({ status: "failed", error_message: fnError.message })
-            .eq("id", target.id);
+          lastError = fnError.message;
+          await supabase.from("post_platform_targets")
+            .update({ status: "failed", error_message: fnError.message }).eq("id", target.id);
         } else {
           postPublished = true;
         }
       } catch (err: any) {
-        await supabase
-          .from("post_platform_targets")
-          .update({ status: "failed", error_message: err?.message || "Unknown error" })
-          .eq("id", target.id);
+        lastError = err?.message || "Unknown error";
+        await supabase.from("post_platform_targets")
+          .update({ status: "failed", error_message: lastError }).eq("id", target.id);
       }
     }
 
-    const finalStatus: PublishStatus = postPublished ? "published" : "failed";
+    if (postPublished) {
+      await supabase.from("post_queue").update({
+        status: "published", published_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("id", post.id);
+      published++;
+      results.push({ job_id: post.id, status: "published" });
+    } else {
+      const newRetry = retryCount + 1;
+      const newStatus: PublishStatus = newRetry >= MAX_RETRIES ? "dead_letter" : "failed";
+      await supabase.from("post_queue").update({
+        status: newStatus, retry_count: newRetry, error_message: lastError, updated_at: new Date().toISOString(),
+      }).eq("id", post.id);
+      failed++;
+      results.push({ job_id: post.id, status: newStatus, error: lastError });
+    }
 
-    await supabase
-      .from("post_queue")
-      .update({
-        status: finalStatus,
-        published_at: postPublished ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", post.id);
-
-    if (postPublished) published++;
-    else failed++;
-
-    results.push({ job_id: post.id, status: finalStatus });
-
-    // Sync local queue
     for (const [key, job] of localQueue) {
       if (job.post_id === post.id) {
-        job.status = finalStatus;
+        job.status = postPublished ? "published" : "failed";
         job.updated_at = new Date().toISOString();
       }
     }

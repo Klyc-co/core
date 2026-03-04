@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle, Skull } from "lucide-react";
 
 interface PlatformTarget {
   id: string;
@@ -21,7 +21,7 @@ const STATUS_MAP: Record<string, { icon: any; variant: string; label: string }> 
   pending: { icon: Clock, variant: "secondary", label: "Scheduled" },
   published: { icon: CheckCircle2, variant: "default", label: "Published" },
   failed: { icon: XCircle, variant: "destructive", label: "Failed" },
-  dead_letter: { icon: AlertTriangle, variant: "destructive", label: "Dead Letter" },
+  dead_letter: { icon: Skull, variant: "outline", label: "Dead Letter" },
 };
 
 export default function PublishStatusDashboard() {
