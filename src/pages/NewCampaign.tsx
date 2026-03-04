@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useClientContext } from "@/contexts/ClientContext";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ const socialPlatforms: SocialPlatform[] = [
 
 const NewCampaign = () => {
   const navigate = useNavigate();
+  const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
   const [campaignName, setCampaignName] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
@@ -172,6 +174,7 @@ const NewCampaign = () => {
         .from("scheduled_campaigns")
         .insert({
           user_id: user.id,
+          client_id: selectedClientId || user.id,
           campaign_name: campaignName.trim(),
           product: selectedProduct || null,
           links: links,
@@ -380,8 +383,10 @@ const NewCampaign = () => {
     });
     const imageAssets = libraryAssets.filter(a => a !== videoAsset);
 
+    const effectiveClientId = getEffectiveUserId();
     const { error } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
+      client_id: effectiveClientId || user.id,
       campaign_name: campaignName.trim(),
       product: selectedProduct || null,
       links: links,

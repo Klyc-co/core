@@ -357,8 +357,10 @@ const GenerateCampaignIdeas = () => {
     
     setIsSaving(true);
     try {
+      const effectiveClientId = getEffectiveUserId();
       const insertResult = await supabase.from("campaign_drafts" as any).insert({
         user_id: user.id,
+        client_id: effectiveClientId || user.id,
         campaign_idea: campaignIdea,
         content_type: selectedContentType,
         target_audience: targetAudience,
