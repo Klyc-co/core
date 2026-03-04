@@ -273,7 +273,16 @@ const ChatSidebar = () => {
                   {msg.role === "assistant" ? (
                     <>
                       <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown
+                          skipHtml={true}
+                          components={{
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                            ),
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
                       </div>
                       {msg.structured?.intent && msg.structured.intent !== "other" && (
                         <Badge variant="secondary" className="mt-2 text-[10px]">
