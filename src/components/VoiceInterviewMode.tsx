@@ -1,0 +1,290 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Mic, MicOff, Volume2, VolumeX, Keyboard, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useTTS } from "@/hooks/useTTS";
+import { autoPopulateFromDraftUpdates, saveOnboardingTranscript } from "@/lib/onboardingAutoPopulate";
+import { supabase } from "@/integrations/supabase/client";
+import { useClientContext } from "@/contexts/ClientContext";
+
+const INTERVIEW_STEPS = [
+  "Business Profile",
+  "Description",
+  "Target Audience",
+  "Products & Services",
+  "Brand Voice",
+  "Competitors",
+  "Social Platforms",
+  "Review",
+];
+
+interface VoiceInterviewModeProps {
+  onComplete: () => void;
+  onSendMessage: (text: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[] }>;
+}
+
+export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceInterviewModeProps) {
+  const [step, setStep] = useState(0);
+  const [mode, setMode] = useState<"voice" | "text">("voice");
+  const [aiMessage, setAiMessage] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [fullTranscript, setFullTranscript] = useState<string[]>([]);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, error: sttError } = useSpeechRecognition();
+  const { speak, stop: stopSpeaking, isSpeaking } = useTTS();
+  const { getEffectiveUserId } = useClientContext();
+  const pendingTranscriptRef = useRef("");
+
+  // Fallback to text mode if mic not supported
+  useEffect(() => {
+    if (!isSupported && mode === "voice") {
+      setMode("text");
+    }
+  }, [isSupported, mode]);
+
+  // Auto-start the interview
+  useEffect(() => {
+    if (!hasStarted) {
+      setHasStarted(true);
+      startInterview();
+    }
+  }, [hasStarted]);
+
+  const startInterview = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await onSendMessage(
+        "Start my onboarding interview. Ask me questions one at a time about my business. Begin with my business name. intent: onboarding_interview, interview_mode: voice"
+      );
+      setAiMessage(result.message);
+      if (result.draft_updates) {
+        await autoPopulateFromDraftUpdates(result.draft_updates);
+      }
+      // Speak the AI greeting
+      if (mode === "voice") {
+        await speak(result.message);
+      }
+    } catch {
+      setAiMessage("Welcome! Let's set up your brand profile. What's your business name?");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // When transcript finalizes after stop
+  useEffect(() => {
+    if (!isListening && pendingTranscriptRef.current) {
+      const finalText = pendingTranscriptRef.current;
+      pendingTranscriptRef.current = "";
+      handleSubmitAnswer(finalText);
+    }
+  }, [isListening]);
+
+  // Track transcript changes
+  useEffect(() => {
+    if (transcript) {
+      pendingTranscriptRef.current = transcript;
+    }
+  }, [transcript]);
+
+  const handleMicToggle = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      stopSpeaking();
+      startListening();
+    }
+  };
+
+  const handleSubmitAnswer = async (answer: string) => {
+    if (!answer.trim() || isProcessing) return;
+
+    setFullTranscript((prev) => [...prev, `You: ${answer}`, ""]);
+    setIsProcessing(true);
+
+    try {
+      const result = await onSendMessage(answer);
+      setAiMessage(result.message);
+      setFullTranscript((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = `Klyc: ${result.message}`;
+        return updated;
+      });
+
+      // Auto-populate DB from draft_updates
+      if (result.draft_updates) {
+        await autoPopulateFromDraftUpdates(result.draft_updates);
+        // Advance progress heuristic
+        setStep((s) => Math.min(s + 1, INTERVIEW_STEPS.length - 1));
+      }
+
+      // Check if onboarding complete
+      if (result.draft_updates?._onboarding_complete || step >= INTERVIEW_STEPS.length - 1) {
+        await saveOnboardingTranscript(fullTranscript.join("\n"), getEffectiveUserId() || undefined);
+        onComplete();
+        return;
+      }
+
+      // Speak AI response
+      if (mode === "voice") {
+        await speak(result.message);
+      }
+    } catch {
+      setAiMessage("Sorry, I didn't catch that. Could you try again?");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleTextSubmit = () => {
+    if (textInput.trim()) {
+      handleSubmitAnswer(textInput.trim());
+      setTextInput("");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleTextSubmit();
+    }
+  };
+
+  const progress = ((step + 1) / INTERVIEW_STEPS.length) * 100;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Progress Header */}
+      <div className="p-3 border-b border-sidebar-border space-y-2">
+        <div className="flex items-center justify-between">
+          <Badge variant="secondary" className="text-[10px]">
+            Step {step + 1} of {INTERVIEW_STEPS.length}
+          </Badge>
+          <span className="text-[10px] text-sidebar-foreground/60">
+            {INTERVIEW_STEPS[step]}
+          </span>
+        </div>
+        <Progress value={progress} className="h-1.5" />
+      </div>
+
+      {/* AI Message Display */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* AI Speaking Indicator */}
+        <div className="flex items-start gap-2">
+          <div
+            className={cn(
+              "w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 transition-all",
+              isSpeaking && "animate-pulse ring-2 ring-primary/40"
+            )}
+          >
+            {isSpeaking ? (
+              <Volume2 className="h-4 w-4 text-primary-foreground" />
+            ) : (
+              <VolumeX className="h-4 w-4 text-primary-foreground" />
+            )}
+          </div>
+          <div className="bg-sidebar-accent text-sidebar-accent-foreground rounded-lg px-3 py-2 text-sm max-w-[85%]">
+            {isProcessing && !aiMessage ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              aiMessage || "Starting interview..."
+            )}
+          </div>
+        </div>
+
+        {/* Live Transcript */}
+        {(isListening || interimTranscript || transcript) && (
+          <div className="flex justify-end">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm max-w-[85%]">
+              <span className="text-[10px] uppercase tracking-wide text-primary/60 block mb-1">
+                {isListening ? "🔴 Listening…" : "Transcript"}
+              </span>
+              <span className="text-sidebar-foreground">
+                {transcript}
+                {interimTranscript && (
+                  <span className="text-sidebar-foreground/50"> {interimTranscript}</span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        {mode === "voice" ? (
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleMicToggle}
+              disabled={isProcessing || isSpeaking}
+              variant={isListening ? "destructive" : "default"}
+              className="flex-1 h-11"
+            >
+              {isListening ? (
+                <>
+                  <MicOff className="h-4 w-4 mr-2" /> Stop & Send
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 mr-2" /> {isProcessing ? "Processing…" : "Tap to Speak"}
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 shrink-0"
+              onClick={() => setMode("text")}
+              title="Switch to typing"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your answer…"
+                className="min-h-[44px] max-h-24 resize-none bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
+                rows={1}
+              />
+              <Button
+                onClick={handleTextSubmit}
+                disabled={!textInput.trim() || isProcessing}
+                size="icon"
+                className="h-11 w-11 shrink-0"
+              >
+                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : "→"}
+              </Button>
+            </div>
+            {isSupported && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => setMode("voice")}
+              >
+                <Mic className="h-3 w-3 mr-1" /> Switch to voice
+              </Button>
+            )}
+          </div>
+        )}
+
+        {sttError && (
+          <p className="text-[10px] text-destructive">
+            Microphone error: {sttError}. Using text mode.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

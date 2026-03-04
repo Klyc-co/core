@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { MessageSquare, Send, X, Loader2 } from "lucide-react";
+import { MessageSquare, Send, X, Loader2, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useClientContext } from "@/contexts/ClientContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import VoiceInterviewMode from "@/components/VoiceInterviewMode";
+import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 
 interface NextQuestion {
   field: string;
@@ -48,6 +50,7 @@ const ChatSidebar = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
+  const [interviewMode, setInterviewMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,6 +103,30 @@ const ChatSidebar = () => {
     }
 
     return (await resp.json()) as StructuredResponse;
+  };
+
+  // Handler for VoiceInterviewMode - sends message and returns structured response
+  const sendForInterview = async (text: string) => {
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+
+    const structured = await sendToKlyc(updated);
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: structured.message, structured },
+    ]);
+
+    if (structured.draft_updates?._draft_id) {
+      setDraftId(structured.draft_updates._draft_id);
+    }
+
+    return {
+      message: structured.message,
+      draft_updates: structured.draft_updates,
+      next_questions: structured.next_questions,
+    };
   };
 
   const handleSend = async (overrideText?: string) => {
@@ -277,74 +304,91 @@ const ChatSidebar = () => {
           </Button>
         </div>
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="space-y-4">
-            {messages.map((msg, i) => (
-              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-sidebar-accent text-sidebar-accent-foreground"
-                  )}
-                >
-                  {msg.role === "assistant" ? (
-                    <>
-                      <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                        <ReactMarkdown
-                          skipHtml={true}
-                          components={{
-                            a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                            ),
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                      {msg.structured?.intent && msg.structured.intent !== "other" && (
-                        <Badge variant="secondary" className="mt-2 text-[10px]">
-                          {msg.structured.intent.replace("_", " ")}
-                        </Badge>
+        {interviewMode ? (
+          <VoiceInterviewMode
+            onComplete={() => setInterviewMode(false)}
+            onSendMessage={sendForInterview}
+          />
+        ) : (
+          <>
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              <div className="space-y-4">
+                {messages.map((msg, i) => (
+                  <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-sidebar-accent text-sidebar-accent-foreground"
                       )}
-                      {msg.structured?.next_questions &&
-                        i === messages.length - 1 &&
-                        renderNextQuestions(msg.structured.next_questions)}
-                    </>
-                  ) : (
-                    msg.content
-                  )}
-                </div>
+                    >
+                      {msg.role === "assistant" ? (
+                        <>
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
+                            <ReactMarkdown
+                              skipHtml={true}
+                              components={{
+                                a: ({ href, children }) => (
+                                  <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+                                ),
+                              }}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                          {msg.structured?.intent && msg.structured.intent !== "other" && (
+                            <Badge variant="secondary" className="mt-2 text-[10px]">
+                              {msg.structured.intent.replace("_", " ")}
+                            </Badge>
+                          )}
+                          {msg.structured?.next_questions &&
+                            i === messages.length - 1 &&
+                            renderNextQuestions(msg.structured.next_questions)}
+                        </>
+                      ) : (
+                        msg.content
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <div className="flex justify-start">
+                    <div className="bg-sidebar-accent text-sidebar-accent-foreground rounded-lg px-3 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex justify-start">
-                <div className="bg-sidebar-accent text-sidebar-accent-foreground rounded-lg px-3 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+            </ScrollArea>
 
-        {/* Input */}
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask Klyc anything..."
-              className="min-h-[44px] max-h-32 resize-none bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50"
-              rows={1}
-            />
-            <Button onClick={() => handleSend()} disabled={!input.trim() || isLoading} size="icon" className="h-11 w-11 shrink-0">
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+            {/* Input */}
+            <div className="p-4 border-t border-sidebar-border space-y-2">
+              <div className="flex gap-2">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask Klyc anything..."
+                  className="min-h-[44px] max-h-32 resize-none bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50"
+                  rows={1}
+                />
+                <Button onClick={() => handleSend()} disabled={!input.trim() || isLoading} size="icon" className="h-11 w-11 shrink-0">
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs border-sidebar-border"
+                onClick={() => setInterviewMode(true)}
+              >
+                <Mic className="h-3 w-3 mr-1" /> Start Voice Onboarding
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
