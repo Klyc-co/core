@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Zap, Send, Youtube } from "lucide-react";
+import { ArrowLeft, Copy, Check, X, Loader2, Share2, Sparkles, Send, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useZapierIntegration } from "@/hooks/use-zapier-integration";
 import { useClientContext } from "@/contexts/ClientContext";
 import type { User } from "@supabase/supabase-js";
 
@@ -72,7 +71,7 @@ const CampaignDraftView = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { triggerZapier, isSending: isSendingToZapier } = useZapierIntegration();
+  
   const { selectedClientUserId, selectedClientName, isDefaultClient } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
   const [draft, setDraft] = useState<CampaignDraft | null>(null);
@@ -475,15 +474,6 @@ const CampaignDraftView = () => {
             >
               {isPostingToYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <Youtube className="w-4 h-4" />}
               {isPostingToYouTube ? "Posting..." : "Post to YouTube"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSendToZapier}
-              disabled={isSendingToZapier}
-              className="gap-2 border-orange-500 text-orange-500 hover:bg-orange-500/10"
-            >
-              {isSendingToZapier ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              {isSendingToZapier ? "Sending..." : "Send to Zapier"}
             </Button>
             <Button
               onClick={handleSendForApproval}
