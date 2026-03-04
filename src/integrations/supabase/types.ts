@@ -410,6 +410,41 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_interview_transcripts: {
+        Row: {
+          campaign_draft_id: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          transcript: string
+          user_id: string
+        }
+        Insert: {
+          campaign_draft_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          transcript: string
+          user_id: string
+        }
+        Update: {
+          campaign_draft_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          transcript?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_interview_transcripts_campaign_draft_id_fkey"
+            columns: ["campaign_draft_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clickup_attachments: {
         Row: {
           clickup_task_id: string

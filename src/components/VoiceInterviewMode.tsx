@@ -3,15 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Volume2, VolumeX, Keyboard, Loader2 } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Keyboard, Loader2, Check, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTTS } from "@/hooks/useTTS";
 import { autoPopulateFromDraftUpdates, saveOnboardingTranscript } from "@/lib/onboardingAutoPopulate";
+import { saveCampaignInterviewTranscript, upsertCampaignDraftFromInterview } from "@/lib/campaignInterviewHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientContext } from "@/contexts/ClientContext";
 
-const INTERVIEW_STEPS = [
+const ONBOARDING_STEPS = [
   "Business Profile",
   "Description",
   "Target Audience",
@@ -22,12 +23,33 @@ const INTERVIEW_STEPS = [
   "Review",
 ];
 
+const CAMPAIGN_STEPS = [
+  "Goal",
+  "Platforms",
+  "Theme",
+  "Content Frequency",
+  "Audience",
+  "CTA",
+  "Review",
+];
+
+export type InterviewType = "onboarding" | "campaign";
+
 interface VoiceInterviewModeProps {
-  onComplete: () => void;
+  onComplete: (result?: { draftId?: string; approved?: boolean }) => void;
   onSendMessage: (text: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[] }>;
+  interviewType?: InterviewType;
+  clientId?: string;
 }
 
-export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceInterviewModeProps) {
+export default function VoiceInterviewMode({
+  onComplete,
+  onSendMessage,
+  interviewType = "onboarding",
+  clientId,
+}: VoiceInterviewModeProps) {
+  const steps = interviewType === "campaign" ? CAMPAIGN_STEPS : ONBOARDING_STEPS;
+
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<"voice" | "text">("voice");
   const [aiMessage, setAiMessage] = useState("");
@@ -35,10 +57,12 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
   const [textInput, setTextInput] = useState("");
   const [fullTranscript, setFullTranscript] = useState<string[]>([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const [campaignDraftId, setCampaignDraftId] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, error: sttError } = useSpeechRecognition();
   const { speak, stop: stopSpeaking, isSpeaking } = useTTS();
-  const { getEffectiveUserId } = useClientContext();
+  const { getEffectiveUserId, selectedClientId } = useClientContext();
   const pendingTranscriptRef = useRef("");
 
   // Fallback to text mode if mic not supported
@@ -56,25 +80,51 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
     }
   }, [hasStarted]);
 
+  const getStartPrompt = () => {
+    if (interviewType === "campaign") {
+      return "Start a campaign creation interview. Ask me questions one at a time to build a campaign draft. Begin with the campaign goal. intent: campaign_interview, interview_mode: voice";
+    }
+    return "Start my onboarding interview. Ask me questions one at a time about my business. Begin with my business name. intent: onboarding_interview, interview_mode: voice";
+  };
+
   const startInterview = async () => {
     setIsProcessing(true);
     try {
-      const result = await onSendMessage(
-        "Start my onboarding interview. Ask me questions one at a time about my business. Begin with my business name. intent: onboarding_interview, interview_mode: voice"
-      );
+      const result = await onSendMessage(getStartPrompt());
       setAiMessage(result.message);
       if (result.draft_updates) {
-        await autoPopulateFromDraftUpdates(result.draft_updates);
+        await handleDraftUpdates(result.draft_updates);
       }
-      // Speak the AI greeting
       if (mode === "voice") {
         await speak(result.message);
       }
     } catch {
-      setAiMessage("Welcome! Let's set up your brand profile. What's your business name?");
+      const fallback = interviewType === "campaign"
+        ? "Welcome! Let's create a campaign. What's the main goal for this campaign?"
+        : "Welcome! Let's set up your brand profile. What's your business name?";
+      setAiMessage(fallback);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDraftUpdates = async (draftUpdates: Record<string, any>) => {
+    if (interviewType === "campaign") {
+      // Handle campaign draft upsert
+      if (draftUpdates.campaign_draft) {
+        const effectiveClientId = clientId || selectedClientId || undefined;
+        const newDraftId = await upsertCampaignDraftFromInterview(
+          draftUpdates.campaign_draft,
+          campaignDraftId || undefined,
+          effectiveClientId
+        );
+        if (newDraftId) setCampaignDraftId(newDraftId);
+      }
+    } else {
+      await autoPopulateFromDraftUpdates(draftUpdates);
+    }
+    // Advance progress
+    setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   // When transcript finalizes after stop
@@ -117,21 +167,26 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
         return updated;
       });
 
-      // Auto-populate DB from draft_updates
       if (result.draft_updates) {
-        await autoPopulateFromDraftUpdates(result.draft_updates);
-        // Advance progress heuristic
-        setStep((s) => Math.min(s + 1, INTERVIEW_STEPS.length - 1));
+        await handleDraftUpdates(result.draft_updates);
       }
 
-      // Check if onboarding complete
-      if (result.draft_updates?._onboarding_complete || step >= INTERVIEW_STEPS.length - 1) {
+      // Check completion
+      const isComplete = interviewType === "campaign"
+        ? result.draft_updates?._campaign_complete || result.draft_updates?.intent === "campaign_summary"
+        : result.draft_updates?._onboarding_complete;
+
+      if (isComplete || step >= steps.length - 1) {
+        if (interviewType === "campaign") {
+          setShowConfirmation(true);
+          if (mode === "voice") await speak(result.message);
+          return;
+        }
         await saveOnboardingTranscript(fullTranscript.join("\n"), getEffectiveUserId() || undefined);
         onComplete();
         return;
       }
 
-      // Speak AI response
       if (mode === "voice") {
         await speak(result.message);
       }
@@ -156,7 +211,23 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
     }
   };
 
-  const progress = ((step + 1) / INTERVIEW_STEPS.length) * 100;
+  const handleApproveCampaign = async () => {
+    // Save transcript
+    await saveCampaignInterviewTranscript(
+      fullTranscript.join("\n"),
+      campaignDraftId || undefined,
+      clientId || selectedClientId || undefined
+    );
+    onComplete({ draftId: campaignDraftId || undefined, approved: true });
+  };
+
+  const handleEditCampaign = () => {
+    setShowConfirmation(false);
+    setStep(0);
+    setAiMessage("Sure, let's revise. Which part would you like to change?");
+  };
+
+  const progress = ((step + 1) / steps.length) * 100;
 
   return (
     <div className="flex flex-col h-full">
@@ -164,18 +235,20 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
       <div className="p-3 border-b border-sidebar-border space-y-2">
         <div className="flex items-center justify-between">
           <Badge variant="secondary" className="text-[10px]">
-            Step {step + 1} of {INTERVIEW_STEPS.length}
+            Step {step + 1} of {steps.length}
           </Badge>
           <span className="text-[10px] text-sidebar-foreground/60">
-            {INTERVIEW_STEPS[step]}
+            {steps[step]}
           </span>
         </div>
         <Progress value={progress} className="h-1.5" />
+        {interviewType === "campaign" && (
+          <p className="text-[10px] text-primary/70 font-medium">🎯 Campaign Interview</p>
+        )}
       </div>
 
       {/* AI Message Display */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {/* AI Speaking Indicator */}
         <div className="flex items-start gap-2">
           <div
             className={cn(
@@ -218,7 +291,16 @@ export default function VoiceInterviewMode({ onComplete, onSendMessage }: VoiceI
 
       {/* Controls */}
       <div className="p-4 border-t border-sidebar-border space-y-3">
-        {mode === "voice" ? (
+        {showConfirmation ? (
+          <div className="space-y-2">
+            <Button onClick={handleApproveCampaign} className="w-full h-11 gap-2">
+              <Check className="h-4 w-4" /> Approve Campaign
+            </Button>
+            <Button onClick={handleEditCampaign} variant="outline" className="w-full h-11 gap-2 border-sidebar-border">
+              <Edit className="h-4 w-4" /> Edit Answers
+            </Button>
+          </div>
+        ) : mode === "voice" ? (
           <div className="flex items-center gap-2">
             <Button
               onClick={handleMicToggle}

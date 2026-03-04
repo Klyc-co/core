@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { MessageSquare, Send, X, Loader2, Mic } from "lucide-react";
+import { MessageSquare, Send, X, Loader2, Mic, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useClientContext } from "@/contexts/ClientContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
-import VoiceInterviewMode from "@/components/VoiceInterviewMode";
+import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterviewMode";
 import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 import { signRequest } from "@/lib/security/aiRequestSigning";
+import { runCampaignPipeline } from "@/lib/agents/orchestrator";
+import { useToast } from "@/hooks/use-toast";
 
 interface NextQuestion {
   field: string;
@@ -44,6 +46,7 @@ const ChatSidebar = () => {
   const { isOpen, setIsOpen } = useSidebarContext();
   const isMobile = useIsMobile();
   const { getEffectiveUserId, selectedClientId } = useClientContext();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" },
   ]);
@@ -51,7 +54,7 @@ const ChatSidebar = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
-  const [interviewMode, setInterviewMode] = useState(false);
+  const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -67,7 +70,6 @@ const ChatSidebar = () => {
 
     const effectiveClientId = getEffectiveUserId();
 
-    // Resolve marketer_client_id for message persistence
     let marketerClientId: string | undefined;
     if (selectedClientId && selectedClientId !== "default") {
       const { data: mc } = await supabase
@@ -78,7 +80,6 @@ const ChatSidebar = () => {
       marketerClientId = mc?.id;
     }
 
-    // Build lightweight context summary from brain
     const contextSummary = selectedClientId && selectedClientId !== "default"
       ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
       : undefined;
@@ -108,7 +109,6 @@ const ChatSidebar = () => {
     return (await resp.json()) as StructuredResponse;
   };
 
-  // Handler for VoiceInterviewMode - sends message and returns structured response
   const sendForInterview = async (text: string) => {
     const userMsg: ChatMessage = { role: "user", content: text };
     const updated = [...messages, userMsg];
@@ -132,6 +132,29 @@ const ChatSidebar = () => {
     };
   };
 
+  const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
+    setInterviewMode(null);
+    
+    if (result?.approved && result?.draftId) {
+      toast({ title: "Campaign approved!", description: "Starting campaign pipeline..." });
+      
+      try {
+        const pipelineResult = await runCampaignPipeline(result.draftId, {
+          auto_schedule: false,
+        });
+        
+        if (pipelineResult.success) {
+          toast({ title: "Campaign created!", description: `${pipelineResult.post_queue_ids.length} posts generated and queued.` });
+        } else {
+          toast({ title: "Pipeline issue", description: pipelineResult.error || "Check drafts.", variant: "destructive" });
+        }
+      } catch (e) {
+        console.error("Pipeline error:", e);
+        toast({ title: "Pipeline failed", description: "Campaign draft saved. You can launch it manually.", variant: "destructive" });
+      }
+    }
+  };
+
   const handleSend = async (overrideText?: string) => {
     const text = overrideText || input.trim();
     if (!text || isLoading) return;
@@ -146,7 +169,6 @@ const ChatSidebar = () => {
     try {
       const structured = await sendToKlyc(updated);
 
-      // Track draft_id across conversation
       if (structured.draft_updates?._draft_id) {
         setDraftId(structured.draft_updates._draft_id);
       }
@@ -171,7 +193,6 @@ const ChatSidebar = () => {
   };
 
   const handleQuestionSubmit = (questions: NextQuestion[]) => {
-    // Compile answers into a message
     const answerLines = questions
       .map((q) => {
         const answer = questionAnswers[q.field];
@@ -309,8 +330,10 @@ const ChatSidebar = () => {
 
         {interviewMode ? (
           <VoiceInterviewMode
-            onComplete={() => setInterviewMode(false)}
+            interviewType={interviewMode}
+            onComplete={handleInterviewComplete}
             onSendMessage={sendForInterview}
+            clientId={selectedClientId !== "default" ? selectedClientId || undefined : undefined}
           />
         ) : (
           <>
@@ -381,14 +404,24 @@ const ChatSidebar = () => {
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs border-sidebar-border"
-                onClick={() => setInterviewMode(true)}
-              >
-                <Mic className="h-3 w-3 mr-1" /> Start Voice Onboarding
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs border-sidebar-border"
+                  onClick={() => setInterviewMode("onboarding")}
+                >
+                  <Mic className="h-3 w-3 mr-1" /> Voice Onboarding
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs border-sidebar-border"
+                  onClick={() => setInterviewMode("campaign")}
+                >
+                  <Zap className="h-3 w-3 mr-1" /> Voice Campaign
+                </Button>
+              </div>
             </div>
           </>
         )}
