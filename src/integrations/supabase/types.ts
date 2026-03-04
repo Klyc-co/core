@@ -566,6 +566,36 @@ export type Database = {
           },
         ]
       }
+      client_brain: {
+        Row: {
+          client_id: string
+          created_at: string
+          data: Json
+          document_type: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          data?: Json
+          document_type: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          data?: Json
+          document_type?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           audience_data: Json | null
