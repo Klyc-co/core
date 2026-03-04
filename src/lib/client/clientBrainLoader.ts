@@ -167,19 +167,27 @@ function buildBudgetedContext(ctx: ClientBrainContext, budget: number): string {
   }
 
   // 9. Performance learning insights (from strategy_profile)
-  const perf = (ctx.strategy_profile as any)?.performanceInsights;
+  const strat = ctx.strategy_profile as any;
+  const perf = strat?.performanceInsights;
   if (perf?.avgScore != null) {
     tryAdd("Perf score", `${perf.avgScore} avg across ${perf.totalCampaignsAnalyzed} campaigns`);
   }
-  const optTimes = (ctx.strategy_profile as any)?.optimalPostTimes;
+  const optTimes = strat?.optimalPostTimes;
   if (optTimes?.length) {
     tryAdd("Best times", optTimes.join(", "));
   }
-  const platPerf = (ctx.strategy_profile as any)?.platformPerformance;
+  const platPerf = strat?.platformPerformance;
   if (platPerf?.length) {
     const top3 = platPerf.slice(0, 3).map((p: any) => `${p.platform}:${p.avgScore}`).join(", ");
     tryAdd("Top platforms", top3);
   }
+
+  // 10. Learning engine insights
+  if (strat?.preferredTheme) tryAdd("Best theme", strat.preferredTheme);
+  if (strat?.preferredCta) tryAdd("Best CTA", strat.preferredCta);
+  if (strat?.bestEngagementDay) tryAdd("Best day", strat.bestEngagementDay);
+  if (strat?.preferredPostLength) tryAdd("Best length", strat.preferredPostLength);
+  if (strat?.learningOptimalTime) tryAdd("Optimal time", strat.learningOptimalTime);
 
   return sections.join("\n");
 }

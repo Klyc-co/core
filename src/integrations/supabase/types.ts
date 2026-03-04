@@ -452,14 +452,22 @@ export type Database = {
           actual_engagement: number | null
           campaign_id: string | null
           client_id: string
+          conversion_accuracy: number | null
           created_at: string
+          cta_type: string | null
+          ctr_accuracy: number | null
+          engagement_accuracy: number | null
+          experiment: boolean | null
           id: string
           performance_score: number | null
           platform: string
           post_id: string | null
+          post_length: number | null
+          post_theme: string | null
           predicted_conversion: number | null
           predicted_ctr: number | null
           predicted_engagement: number | null
+          publish_time: string | null
         }
         Insert: {
           actual_conversion?: number | null
@@ -467,14 +475,22 @@ export type Database = {
           actual_engagement?: number | null
           campaign_id?: string | null
           client_id: string
+          conversion_accuracy?: number | null
           created_at?: string
+          cta_type?: string | null
+          ctr_accuracy?: number | null
+          engagement_accuracy?: number | null
+          experiment?: boolean | null
           id?: string
           performance_score?: number | null
           platform: string
           post_id?: string | null
+          post_length?: number | null
+          post_theme?: string | null
           predicted_conversion?: number | null
           predicted_ctr?: number | null
           predicted_engagement?: number | null
+          publish_time?: string | null
         }
         Update: {
           actual_conversion?: number | null
@@ -482,14 +498,22 @@ export type Database = {
           actual_engagement?: number | null
           campaign_id?: string | null
           client_id?: string
+          conversion_accuracy?: number | null
           created_at?: string
+          cta_type?: string | null
+          ctr_accuracy?: number | null
+          engagement_accuracy?: number | null
+          experiment?: boolean | null
           id?: string
           performance_score?: number | null
           platform?: string
           post_id?: string | null
+          post_length?: number | null
+          post_theme?: string | null
           predicted_conversion?: number | null
           predicted_ctr?: number | null
           predicted_engagement?: number | null
+          publish_time?: string | null
         }
         Relationships: [
           {
@@ -1455,6 +1479,72 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_experiments: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          experiment_type: string
+          hypothesis: string | null
+          id: string
+          posts_tested: number | null
+          results: Json | null
+          status: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          experiment_type: string
+          hypothesis?: string | null
+          id?: string
+          posts_tested?: number | null
+          results?: Json | null
+          status?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          experiment_type?: string
+          hypothesis?: string | null
+          id?: string
+          posts_tested?: number | null
+          results?: Json | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      learning_patterns: {
+        Row: {
+          client_id: string
+          confidence_score: number | null
+          created_at: string | null
+          discovered_at: string | null
+          id: string
+          pattern_type: string
+          pattern_value: string
+          supporting_campaigns: number | null
+        }
+        Insert: {
+          client_id: string
+          confidence_score?: number | null
+          created_at?: string | null
+          discovered_at?: string | null
+          id?: string
+          pattern_type: string
+          pattern_value: string
+          supporting_campaigns?: number | null
+        }
+        Update: {
+          client_id?: string
+          confidence_score?: number | null
+          created_at?: string | null
+          discovered_at?: string | null
+          id?: string
+          pattern_type?: string
+          pattern_value?: string
+          supporting_campaigns?: number | null
+        }
+        Relationships: []
+      }
       loom_connections: {
         Row: {
           api_token: string
@@ -2275,6 +2365,39 @@ export type Database = {
           trend_url?: string | null
           trend_volume?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      strategy_updates: {
+        Row: {
+          applied_at: string | null
+          approved: boolean | null
+          client_id: string
+          confidence_score: number | null
+          created_at: string | null
+          id: string
+          new_strategy: Json | null
+          old_strategy: Json | null
+        }
+        Insert: {
+          applied_at?: string | null
+          approved?: boolean | null
+          client_id: string
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          new_strategy?: Json | null
+          old_strategy?: Json | null
+        }
+        Update: {
+          applied_at?: string | null
+          approved?: boolean | null
+          client_id?: string
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          new_strategy?: Json | null
+          old_strategy?: Json | null
         }
         Relationships: []
       }

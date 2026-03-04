@@ -19,7 +19,15 @@ import { generateBatchContent, type BatchResult, type GeneratedPost } from "./ba
 import { schedulePosts, type ScheduleResult } from "@/lib/publishing/publishQueue";
 import { estimateTokenCost, enforceBudget } from "./tokenMonitor";
 import type { CampaignManifest } from "@/lib/campaigns/campaignManifest";
-import { analyzeCampaignPerformance, updateClientStrategyFromPerformance } from "@/lib/learning/campaignLearningEngine";
+import {
+  analyzeCampaignPerformance,
+  updateClientStrategyFromPerformance,
+  discoverPerformancePatterns,
+  scopeNewOpportunities,
+  generatePrototypeCampaigns,
+  scaleWinningStrategies,
+  detectSelfPromotionOpportunity,
+} from "@/lib/learning/campaignLearningEngine";
 
 // ============================================================
 // KLYC Campaign Orchestrator
@@ -206,24 +214,61 @@ export async function runCampaignPipeline(
       );
     }
 
-    // ── Step 7: Campaign Learning (async, non-blocking) ──
+    // ── Step 7: Campaign Learning Engine (non-blocking) ──
     stage = "campaign_learning";
     try {
-      await emitActivityEvent("campaign_learning_started", "Analyzing campaign performance for learning", clientId, { stage, draft_id: draftId });
+      await emitActivityEvent("campaign_learning_started", "Starting learning engine", clientId, { stage, draft_id: draftId });
 
+      // 7a. Performance Analysis
       const analysisResult = await analyzeCampaignPerformance(draftId);
       if (analysisResult.success && analysisResult.rows_inserted > 0) {
-        const strategyResult = await updateClientStrategyFromPerformance(clientId);
-        if (strategyResult.success) {
-          await emitActivityEvent("strategy_updated", `Strategy updated from ${analysisResult.rows_inserted} performance data points`, clientId, {
-            stage, avg_score: analysisResult.avg_score,
+        await emitActivityEvent("campaign_performance_analyzed", `Analyzed ${analysisResult.rows_inserted} posts, avg score: ${analysisResult.avg_score}`, clientId, { stage });
+
+        // 7b. Legacy strategy update
+        await updateClientStrategyFromPerformance(clientId);
+      }
+
+      // 7c. Pattern Discovery
+      const patternResult = await discoverPerformancePatterns(clientId);
+      if (patternResult.success && patternResult.patterns_discovered > 0) {
+        await emitActivityEvent("learning_patterns_discovered", `Discovered ${patternResult.patterns_discovered} patterns`, clientId, {
+          stage, patterns: patternResult.patterns.map((p) => `${p.pattern_type}:${p.pattern_value}`),
+        });
+
+        // 7d. Scope New Opportunities
+        const scopeResult = await scopeNewOpportunities(clientId, patternResult.patterns);
+        if (scopeResult.success && scopeResult.recommendations.length > 0) {
+          await emitActivityEvent("scope_recommendations_created", `${scopeResult.recommendations.length} new opportunities identified`, clientId, { stage });
+        }
+
+        // 7e. Prototype Experiments
+        const protoResults = await generatePrototypeCampaigns(clientId, scopeResult.recommendations);
+        const successfulProtos = protoResults.filter((p) => p.success);
+        if (successfulProtos.length > 0) {
+          await emitActivityEvent("prototype_campaign_created", `${successfulProtos.length} experiments planned`, clientId, {
+            stage, experiments: successfulProtos.map((p) => p.hypothesis),
+          });
+        }
+
+        // 7f. Mass Production — Scale Winning Strategies
+        const scaleResult = await scaleWinningStrategies(clientId, patternResult.patterns);
+        if (scaleResult.success && scaleResult.strategies_applied > 0) {
+          await emitActivityEvent("strategy_scaled", `${scaleResult.strategies_applied} winning strategies applied`, clientId, {
+            stage, adjustments: scaleResult.adjustments.map((a) => `${a.field}: ${a.previous} → ${a.new_value}`),
           });
         }
       }
 
-      await emitActivityEvent("campaign_learning_complete", "Campaign learning loop finished", clientId, { stage, draft_id: draftId });
+      // 7g. Self-Promotion Detection (system-level)
+      const selfPromo = await detectSelfPromotionOpportunity();
+      if (selfPromo.should_promote) {
+        await emitActivityEvent("self_promotion_detected", `KLYC self-promo opportunity: ${selfPromo.best_themes.join(", ")}`, clientId, {
+          stage, avg_score: selfPromo.avg_score, themes: selfPromo.best_themes,
+        });
+      }
+
+      await emitActivityEvent("campaign_learning_complete", "Learning engine finished", clientId, { stage, draft_id: draftId });
     } catch (learningErr) {
-      // Learning is non-critical — log warning but don't fail pipeline
       const msg = learningErr instanceof Error ? learningErr.message : "Unknown learning error";
       warnings.push(`Campaign learning skipped: ${msg}`);
       console.warn("Campaign learning failed (non-critical):", msg);
