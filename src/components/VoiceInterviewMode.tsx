@@ -37,7 +37,7 @@ export type InterviewType = "onboarding" | "campaign";
 
 interface VoiceInterviewModeProps {
   onComplete: (result?: { draftId?: string; approved?: boolean }) => void;
-  onSendMessage: (text: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[] }>;
+  onSendMessage: (text: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[]; intent?: string }>;
   interviewType?: InterviewType;
   clientId?: string;
 }
@@ -173,7 +173,7 @@ export default function VoiceInterviewMode({
 
       // Check completion
       const isComplete = interviewType === "campaign"
-        ? result.draft_updates?._campaign_complete || result.draft_updates?.intent === "campaign_summary"
+        ? result.draft_updates?._campaign_complete || result.intent === "campaign_summary"
         : result.draft_updates?._onboarding_complete;
 
       if (isComplete || step >= steps.length - 1) {

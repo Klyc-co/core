@@ -20,7 +20,21 @@ IMPORTANT RULES:
 - You guide users through campaign creation via structured questions.
 - When a user wants to create a campaign, interview them step-by-step for: campaign name, target audience, platforms, content type, schedule, and goals.
 
-You must ALWAYS call one of the provided tools to respond. Never respond with plain text.`;
+CAMPAIGN INTERVIEW MODE:
+When the intent is "campaign_interview", you must ask questions sequentially to collect:
+1. Campaign goal (awareness, engagement, leads, conversions)
+2. Target platform(s) (instagram, linkedin, twitter, tiktok, youtube, facebook)
+3. Campaign theme/concept
+4. Content frequency (posts per week) and duration (days)
+5. Target audience segment
+6. Call to action
+7. Product or service focus
+
+After each answer, return draft_updates.campaign_draft with the accumulated fields.
+When all fields are collected, set draft_updates._campaign_complete to true and provide a summary.
+
+ONBOARDING INTERVIEW MODE:
+When the intent is "onboarding_interview", ask questions about the user's business one at a time.`;
 
 const TOOLS = [
   {
@@ -33,7 +47,7 @@ const TOOLS = [
         properties: {
           intent: {
             type: "string",
-            enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "other"],
+            enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "other"],
             description: "The detected intent of the user's message.",
           },
           message: {
@@ -57,8 +71,32 @@ const TOOLS = [
           },
           draft_updates: {
             type: "object",
-            description: "Partial updates to apply to the campaign draft.",
+            description: "Partial updates to apply to the campaign draft or onboarding profile.",
             properties: {
+              // Campaign draft fields (nested under campaign_draft)
+              campaign_draft: {
+                type: "object",
+                description: "Campaign draft fields collected during voice campaign interview.",
+                properties: {
+                  campaign_name: { type: "string" },
+                  goal: { type: "string" },
+                  theme: { type: "string" },
+                  platforms: {
+                    oneOf: [
+                      { type: "string" },
+                      { type: "array", items: { type: "string" } },
+                    ],
+                  },
+                  duration_days: { type: "number" },
+                  posts_per_week: { type: "number" },
+                  cta: { type: "string" },
+                  audience_segment: { type: "string" },
+                  target_audience_description: { type: "string" },
+                  product_focus: { type: "string" },
+                },
+                additionalProperties: false,
+              },
+              // Legacy campaign fields (for launch_campaign intent)
               campaign_idea: { type: "string" },
               content_type: { type: "string" },
               target_audience: { type: "string" },
@@ -82,6 +120,7 @@ const TOOLS = [
               website: { type: "string" },
               marketing_goals: { type: "string" },
               _onboarding_complete: { type: "boolean" },
+              _campaign_complete: { type: "boolean" },
             },
             additionalProperties: false,
           },
@@ -371,30 +410,35 @@ serve(async (req) => {
       }
     }
 
-    // ── 10. Campaign draft upsert ──
-    if (structured.intent === "launch_campaign" && Object.keys(structured.draft_updates).length > 0) {
-      // Filter out non-column fields
-      const { _draft_id, _onboarding_complete, ...draftCols } = structured.draft_updates;
+    // ── 10. Campaign draft upsert (for launch_campaign and campaign_interview intents) ──
+    const draftIntents = ["launch_campaign", "campaign_interview", "campaign_step", "campaign_summary"];
+    if (draftIntents.includes(structured.intent) && Object.keys(structured.draft_updates).length > 0) {
+      // Filter out non-column fields and nested campaign_draft
+      const { _draft_id, _onboarding_complete, _campaign_complete, campaign_draft, ...draftCols } = structured.draft_updates;
 
-      if (draft_id) {
-        await serviceClient
-          .from("campaign_drafts")
-          .update({ ...draftCols, updated_at: new Date().toISOString() })
-          .eq("id", draft_id);
-        structured.draft_updates._draft_id = draft_id;
-      } else if (Object.keys(draftCols).length > 0) {
-        const { data: newDraft } = await serviceClient
-          .from("campaign_drafts")
-          .insert({
-            user_id: userId,
-            client_id: effectiveClientId,
-            ...draftCols,
-          })
-          .select("id")
-          .single();
+      // For campaign_interview intents, the client-side handles upsert via campaignInterviewHelpers
+      // Server-side only handles launch_campaign legacy flow
+      if (structured.intent === "launch_campaign") {
+        if (draft_id) {
+          await serviceClient
+            .from("campaign_drafts")
+            .update({ ...draftCols, updated_at: new Date().toISOString() })
+            .eq("id", draft_id);
+          structured.draft_updates._draft_id = draft_id;
+        } else if (Object.keys(draftCols).length > 0) {
+          const { data: newDraft } = await serviceClient
+            .from("campaign_drafts")
+            .insert({
+              user_id: userId,
+              client_id: effectiveClientId,
+              ...draftCols,
+            })
+            .select("id")
+            .single();
 
-        if (newDraft) {
-          structured.draft_updates._draft_id = newDraft.id;
+          if (newDraft) {
+            structured.draft_updates._draft_id = newDraft.id;
+          }
         }
       }
     }
