@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { recordApprovalDecision } from "@/lib/approvalMemory";
 import ClientHeader from "@/components/ClientHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ interface Approval {
   notes: string | null;
   created_at: string;
   campaign_drafts: {
+    id: string;
     campaign_idea: string | null;
     content_type: string | null;
     target_audience: string | null;
@@ -31,6 +33,7 @@ interface Approval {
     post_caption: string | null;
   } | null;
   scheduled_campaigns: {
+    id: string;
     campaign_name: string;
     platforms: string[];
     scheduled_date: string;
@@ -93,6 +96,24 @@ const ClientApprovals = () => {
         .eq("id", selectedApproval.id);
 
       if (error) throw error;
+
+      // ── Persist decision into Client Brain examples_cache ──
+      const contentId = selectedApproval.campaign_drafts?.id
+        || selectedApproval.scheduled_campaigns?.id
+        || selectedApproval.id;
+      const contentPreview = selectedApproval.campaign_drafts?.post_caption
+        || selectedApproval.campaign_drafts?.campaign_idea
+        || selectedApproval.scheduled_campaigns?.campaign_name
+        || "";
+      const platforms = selectedApproval.scheduled_campaigns?.platforms || [];
+
+      await recordApprovalDecision(user.id, {
+        content_id: contentId || selectedApproval.id,
+        decision: status,
+        platform: platforms[0] || selectedApproval.campaign_drafts?.content_type || undefined,
+        content_preview: contentPreview || undefined,
+        reason: status === "rejected" ? (reviewNotes || "No reason provided") : undefined,
+      });
 
       toast({
         title: status === "approved" ? "Campaign Approved!" : "Campaign Rejected",
