@@ -8,6 +8,7 @@ import type {
   StrategyProfile,
   ExamplesCache,
   AnalyticsHistory,
+  ProductCatalog,
 } from "@/lib/clientBrain";
 
 // ============================================================
@@ -22,6 +23,7 @@ export interface ClientBrainSnapshot {
   strategy?: StrategyProfile;
   examples?: ExamplesCache;
   analytics?: AnalyticsHistory;
+  product_catalog?: ProductCatalog;
 }
 
 export interface PlannerInput {
