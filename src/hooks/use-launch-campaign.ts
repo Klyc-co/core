@@ -2,18 +2,9 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface DeliveryLog {
-  webhookDeliveryStatus: string;
-  responseCode: number;
-  responseBody: string;
-  timestamp: string;
-  attempts: number;
-}
-
 interface LaunchResult {
   success: boolean;
   campaignContext?: Record<string, unknown>;
-  deliveryLog?: DeliveryLog;
   error?: string;
 }
 
@@ -24,7 +15,6 @@ export function useLaunchCampaign() {
 
   const launch = async (
     campaignDraftId?: string,
-    webhookUrl?: string,
     testMode = false
   ): Promise<LaunchResult> => {
     setIsLaunching(true);
@@ -32,7 +22,7 @@ export function useLaunchCampaign() {
 
     try {
       const { data, error } = await supabase.functions.invoke("launch-campaign", {
-        body: { campaignDraftId, webhookUrl, testMode },
+        body: { campaignDraftId, testMode },
       });
 
       if (error) {
@@ -50,13 +40,13 @@ export function useLaunchCampaign() {
 
       if (data.success) {
         toast({
-          title: testMode ? "Test payload sent!" : "Campaign launched!",
-          description: `Delivered to Zapier in ${data.deliveryLog?.attempts || 1} attempt(s).`,
+          title: testMode ? "Test payload generated!" : "Campaign launched!",
+          description: "Campaign context assembled successfully.",
         });
       } else {
         toast({
-          title: "Delivery issue",
-          description: `Webhook returned status ${data.deliveryLog?.responseCode}`,
+          title: "Launch issue",
+          description: data.error || "Unknown error",
           variant: "destructive",
         });
       }

@@ -93,12 +93,6 @@ const ClientSocialAssets = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, ConnectionStatus>>({});
-  const [showDriveDialog, setShowDriveDialog] = useState(false);
-  const [driveSetupInfo, setDriveSetupInfo] = useState<{
-    user_id: string;
-    callback_url: string;
-    folder_url?: string;
-  } | null>(null);
   const [driveConnection, setDriveConnection] = useState<{
     folder_url?: string;
     assets_sheet_url?: string;
@@ -242,28 +236,18 @@ const ClientSocialAssets = () => {
     setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connecting' }));
 
     try {
-      const { data, error } = await supabase.functions.invoke("google-drive-init");
-      
-      if (error) {
-        throw new Error(error.message);
+      // Direct Google Drive OAuth flow
+      const { data, error } = await supabase.functions.invoke("google-drive-auth-url");
+      if (error) throw new Error(error.message);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to get Google Drive auth URL");
+        setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
       }
-
-      if (data.already_connected) {
-        toast.success("Google Drive already connected!");
-        setConnectionStatus(prev => ({ ...prev, "Google Drive": 'connected' }));
-        setDriveConnection({ folder_url: data.folder_url });
-        return;
-      }
-
-      setDriveSetupInfo({
-        user_id: data.user_id,
-        callback_url: data.callback_url,
-      });
-      setShowDriveDialog(true);
-      setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
     } catch (err) {
-      console.error("Google Drive init error:", err);
-      toast.error("Failed to initialize Google Drive connection");
+      console.error("Google Drive connect error:", err);
+      toast.error("Failed to connect Google Drive");
       setConnectionStatus(prev => ({ ...prev, "Google Drive": 'disconnected' }));
     }
   };
@@ -579,68 +563,6 @@ const ClientSocialAssets = () => {
         )}
       </main>
 
-      {/* Google Drive Setup Dialog */}
-      <Dialog open={showDriveDialog} onOpenChange={setShowDriveDialog}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HardDrive className="w-5 h-5" />
-              Connect Google Drive via Zapier
-            </DialogTitle>
-            <DialogDescription>
-              Set up a Zapier automation to connect your Google Drive for marketing asset storage.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 pt-4">
-            <div className="bg-muted rounded-lg p-4 space-y-3">
-              <h4 className="font-medium text-sm">Your Zapier Setup Details:</h4>
-              
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">User ID:</span>
-                  <code className="ml-2 bg-background px-2 py-0.5 rounded text-xs">{driveSetupInfo?.user_id}</code>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Callback URL:</span>
-                  <div className="mt-1">
-                    <code className="bg-background px-2 py-1 rounded text-xs block break-all">{driveSetupInfo?.callback_url}</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Steps to complete:</h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Create a Zap with a "Webhooks by Zapier" trigger (Catch Hook)</li>
-                <li>Add Google Drive actions to create your asset folder structure</li>
-                <li>Add Google Sheets actions to create an asset tracking spreadsheet</li>
-                <li>Add a final "POST" action to send the folder/sheet IDs to the callback URL above</li>
-                <li>Trigger the Zap to complete the connection</li>
-              </ol>
-            </div>
-
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                <strong>Tip:</strong> Include <code className="text-xs">action: "setup_complete"</code> and your <code className="text-xs">user_id</code> in the POST body, along with <code className="text-xs">folder_id</code>, <code className="text-xs">folder_url</code>, and sheet details.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowDriveDialog(false)}>
-              Close
-            </Button>
-            <Button onClick={() => {
-              navigator.clipboard.writeText(driveSetupInfo?.callback_url || '');
-              toast.success("Callback URL copied to clipboard!");
-            }}>
-              Copy Callback URL
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

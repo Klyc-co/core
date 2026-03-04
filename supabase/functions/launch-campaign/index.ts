@@ -2,103 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
-// ===== GZIP + AES-256-GCM ENCRYPTION HELPERS =====
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-  }
-  return bytes;
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function gzipCompress(data: Uint8Array): Promise<Uint8Array> {
-  const cs = new CompressionStream("gzip");
-  const writer = cs.writable.getWriter();
-  writer.write(data);
-  writer.close();
-  const reader = cs.readable.getReader();
-  const chunks: Uint8Array[] = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const totalLength = chunks.reduce((s, c) => s + c.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
-}
-
-interface EncryptResult {
-  // Flat envelope fields sent to Zapier
-  encrypted_payload: string;
-  iv: string;
-  authTag: string;
-  v: number;
-  compression: string;
-  // Internal metrics (NOT sent to Zapier)
-  _original_size: number;
-  _compressed_size: number;
-  _encrypted_size: number;
-}
-
-async function encryptPayload(plaintext: string): Promise<EncryptResult | null> {
-  const keyHex = Deno.env.get("ZAPIER_PAYLOAD_KEY")?.trim();
-  if (!keyHex || keyHex.length !== 64) {
-    console.warn(`ZAPIER_PAYLOAD_KEY issue — length: ${keyHex?.length ?? 'undefined'}, expected 64 hex chars. Sending plaintext.`);
-    return null;
-  }
-
-  const keyBytes = hexToBytes(keyHex);
-  const key = await crypto.subtle.importKey(
-    "raw", keyBytes.buffer as ArrayBuffer,
-    { name: "AES-GCM", length: 256 }, false, ["encrypt"]
-  );
-
-  const originalBytes = new TextEncoder().encode(plaintext);
-  const originalSize = originalBytes.length;
-
-  // GZIP compress
-  const compressed = await gzipCompress(originalBytes);
-  const compressedSize = compressed.length;
-
-  // AES-256-GCM encrypt (Web Crypto appends 16-byte auth tag to ciphertext)
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertextWithTag = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv.buffer as ArrayBuffer },
-    key, compressed.buffer as ArrayBuffer
-  );
-  const fullBytes = new Uint8Array(ciphertextWithTag);
-
-  // Separate ciphertext and auth tag (last 16 bytes = 128-bit GCM tag)
-  const ciphertextOnly = fullBytes.slice(0, fullBytes.length - 16);
-  const authTagBytes = fullBytes.slice(fullBytes.length - 16);
-
-  // Base64 encode the ciphertext (without tag)
-  const encrypted_payload = base64Encode(ciphertextOnly);
-  const authTag = bytesToHex(authTagBytes);
-
-  return {
-    encrypted_payload,
-    iv: bytesToHex(iv),       // 24-char hex (12 bytes)
-    authTag,                  // 32-char hex (16 bytes)
-    v: 1,
-    compression: "gzip",
-    _original_size: originalSize,
-    _compressed_size: compressedSize,
-    _encrypted_size: fullBytes.length,
-  };
-}
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -126,7 +29,6 @@ function stripNulls(obj: any): any {
 function gzipAndEncode(data: any): { encoded: string; sizeBytes: number; wasTruncated: boolean } {
   let json = JSON.stringify(data || {});
   let wasTruncated = false;
-  // Simple size check - if JSON is > 4KB, summarize
   if (json.length > 4096) {
     const summary = typeof data === "object" ? { fieldCount: Object.keys(data).length, note: "Summarized due to size" } : { note: "Truncated" };
     json = JSON.stringify(summary);
@@ -134,58 +36,6 @@ function gzipAndEncode(data: any): { encoded: string; sizeBytes: number; wasTrun
   }
   const encoded = base64Encode(new TextEncoder().encode(json));
   return { encoded, sizeBytes: encoded.length, wasTruncated };
-}
-
-async function computePayloadHash(payloadString: string): Promise<string> {
-  const data = new TextEncoder().encode(payloadString);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function sendWithRetry(
-  url: string,
-  payloadString: string,
-  payloadHash: string,
-  payloadSizeBytes: number,
-  maxRetries = 3
-): Promise<{ status: number; body: string; attempts: number; attemptLogs: any[] }> {
-  let lastError: Error | null = null;
-  const attemptLogs: any[] = [];
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const attemptLog: any = {
-      attemptNumber: attempt,
-      timestamp: new Date().toISOString(),
-      payloadHash,
-      payloadSizeBytes,
-      webhookUrl: url,
-    };
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payloadString,
-      });
-      const body = await response.text();
-      attemptLog.responseCode = response.status;
-      attemptLog.responseBody = body;
-      attemptLogs.push(attemptLog);
-      console.log(`Attempt ${attempt} log:`, JSON.stringify(attemptLog));
-      return { status: response.status, body, attempts: attempt, attemptLogs };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      attemptLog.responseCode = 0;
-      attemptLog.responseBody = lastError.message;
-      attemptLogs.push(attemptLog);
-      console.log(`Attempt ${attempt} failed:`, JSON.stringify(attemptLog));
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
-  }
-  throw lastError || new Error("All retry attempts failed");
 }
 
 serve(async (req) => {
@@ -215,16 +65,6 @@ serve(async (req) => {
     }
 
     const { campaignDraftId, testMode, useSyntheticData } = await req.json();
-
-    // Platform-level Zapier webhook — same endpoint for all users (Klyc-owned)
-    const resolvedWebhookUrl = Deno.env.get("ZAPIER_PLATFORM_WEBHOOK_URL");
-
-    if (!resolvedWebhookUrl) {
-      console.error("ZAPIER_PLATFORM_WEBHOOK_URL secret is not configured");
-      return new Response(JSON.stringify({ error: "Platform webhook not configured. Contact support." }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const userId = user.id;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -326,14 +166,13 @@ serve(async (req) => {
         updatedAt: new Date().toISOString(),
       };
 
-      // Platform targets: linkedin, instagram, tiktok — min 2 per platform, >50% video
       const syntheticPerPlatformPostCount = [
         { platform: "linkedin", plannedPosts: 3, contentTypeMix: { video: 2, image: 1, text: 0 } },
         { platform: "instagram", plannedPosts: 4, contentTypeMix: { video: 3, image: 1, text: 0 } },
         { platform: "tiktok", plannedPosts: 3, contentTypeMix: { video: 3, image: 0, text: 0 } },
       ];
-      const syntheticTotalPlannedPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.plannedPosts, 0); // 10
-      const syntheticTotalVideoPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.contentTypeMix.video, 0); // 8
+      const syntheticTotalPlannedPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.plannedPosts, 0);
+      const syntheticTotalVideoPosts = syntheticPerPlatformPostCount.reduce((s, p) => s + p.contentTypeMix.video, 0);
 
       const syntheticDistribution = {
         connectedPlatforms: [
@@ -393,9 +232,7 @@ serve(async (req) => {
         },
       };
 
-      // Video strategy: 8/10 = 80% video => videoHeavyStrategy = true
-      // Also 3/5 top competitors are videoDominant => majority check also triggers
-      const syntheticVideoHeavy = syntheticTotalVideoPosts > syntheticTotalPlannedPosts / 2; // 8 > 5 => true
+      const syntheticVideoHeavy = syntheticTotalVideoPosts > syntheticTotalPlannedPosts / 2;
 
       const syntheticMonetizationFlags = {
         videoHeavyStrategy: syntheticVideoHeavy,
@@ -425,521 +262,217 @@ serve(async (req) => {
       });
 
     } else {
-      // ===== REAL DATA PATH (existing logic) =====
+      // ===== REAL DATA PATH =====
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ===== PARALLEL DATA FETCH =====
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+      const [
+        profileRes, draftRes, competitorsRes, socialRes,
+        crmConnectionsRes, crmContactCountRes, crmCompanyCountRes,
+        crmDealRes, crmOrderRes, crmSyncLogRes,
+        brandAssetsRes, productLinesRes, productsRes,
+        postAnalyticsRes, postQueueRes, trendsRes,
+        draftsCountRes, scheduledRes, marketerClientsRes,
+        reportRes, scheduledReportsRes, postHistoryRes,
+      ] = await Promise.all([
+        supabase.from("client_profiles").select("*").eq("user_id", userId).single(),
+        campaignDraftId
+          ? supabase.from("campaign_drafts").select("*").eq("id", campaignDraftId).eq("user_id", userId).single()
+          : Promise.resolve({ data: null, error: null }),
+        supabase.from("competitor_analyses").select("*").eq("user_id", userId).order("analyzed_at", { ascending: false }).limit(10),
+        supabase.from("social_connections").select("platform, platform_username, platform_user_id, scopes, token_expires_at, created_at").eq("user_id", userId),
+        supabase.from("crm_connections").select("provider, display_name, status, sync_frequency_minutes, last_sync_at").eq("user_id", userId),
+        supabase.from("crm_contacts").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("crm_companies").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("crm_deals").select("stage, value, status").eq("user_id", userId),
+        supabase.from("crm_orders").select("status, total_amount").eq("user_id", userId),
+        supabase.from("crm_sync_logs").select("status, started_at, finished_at, summary, error_message").order("started_at", { ascending: false }).limit(1),
+        supabase.from("brand_assets").select("asset_type, name, value, metadata").eq("user_id", userId),
+        supabase.from("product_lines").select("id, name, description").eq("user_id", userId),
+        supabaseAdmin.from("products").select("name, short_description, product_type, target_audience, value_propositions").eq("user_id", userId),
+        supabase.from("post_analytics").select("platform, views, likes, comments, shares, saves, clicks, impressions, reach, engagement_rate").gte("fetched_at", thirtyDaysAgo),
+        supabase.from("post_queue").select("content_type, status").eq("user_id", userId),
+        supabase.from("social_trends").select("platform, trend_name, trend_category, trend_volume, trend_rank, trend_url, scraped_at").eq("user_id", userId).order("scraped_at", { ascending: false }).limit(20),
+        supabase.from("campaign_drafts").select("id, content_type, tags", { count: "exact" }).eq("user_id", userId),
+        supabase.from("scheduled_campaigns").select("status, platforms").eq("user_id", userId),
+        supabase.from("marketer_clients").select("client_id, client_name, client_email, status").eq("marketer_id", userId),
+        supabase.from("report_results").select("search_term, sentiment, mentions, sources, positive_percent, neutral_percent, negative_percent, summary, generated_at").eq("user_id", userId).order("generated_at", { ascending: false }).limit(1),
+        supabase.from("scheduled_reports").select("search_term, schedule_frequency, is_active, next_run_at").eq("user_id", userId),
+        supabaseAdmin.from("post_queue")
+          .select("id, content_type, status, scheduled_at, published_at, created_at, post_platform_targets(platform, status, platform_post_id, published_at)")
+          .eq("user_id", userId)
+          .gte("created_at", thirtyDaysAgo)
+          .order("created_at", { ascending: false }),
+      ]);
 
-    const [
-      profileRes,
-      draftRes,
-      competitorsRes,
-      socialRes,
-      crmConnectionsRes,
-      crmContactCountRes,
-      crmCompanyCountRes,
-      crmDealRes,
-      crmOrderRes,
-      crmSyncLogRes,
-      brandAssetsRes,
-      productLinesRes,
-      productsRes,
-      postAnalyticsRes,
-      postQueueRes,
-      trendsRes,
-      draftsCountRes,
-      scheduledRes,
-      marketerClientsRes,
-      reportRes,
-      scheduledReportsRes,
-      postHistoryRes,
-    ] = await Promise.all([
-      supabase.from("client_profiles").select("*").eq("user_id", userId).single(),
-      campaignDraftId
-        ? supabase.from("campaign_drafts").select("*").eq("id", campaignDraftId).eq("user_id", userId).single()
-        : Promise.resolve({ data: null, error: null }),
-      supabase.from("competitor_analyses").select("*").eq("user_id", userId).order("analyzed_at", { ascending: false }).limit(10),
-      supabase.from("social_connections").select("platform, platform_username, platform_user_id, scopes, token_expires_at, created_at").eq("user_id", userId),
-      supabase.from("crm_connections").select("provider, display_name, status, sync_frequency_minutes, last_sync_at").eq("user_id", userId),
-      supabase.from("crm_contacts").select("id", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("crm_companies").select("id", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("crm_deals").select("stage, value, status").eq("user_id", userId),
-      supabase.from("crm_orders").select("status, total_amount").eq("user_id", userId),
-      supabase.from("crm_sync_logs").select("status, started_at, finished_at, summary, error_message").order("started_at", { ascending: false }).limit(1),
-      supabase.from("brand_assets").select("asset_type, name, value, metadata").eq("user_id", userId),
-      supabase.from("product_lines").select("id, name, description").eq("user_id", userId),
-      supabaseAdmin.from("products").select("name, short_description, product_type, target_audience, value_propositions").eq("user_id", userId),
-      supabase.from("post_analytics").select("platform, views, likes, comments, shares, saves, clicks, impressions, reach, engagement_rate").gte("fetched_at", thirtyDaysAgo),
-      supabase.from("post_queue").select("content_type, status").eq("user_id", userId),
-      supabase.from("social_trends").select("platform, trend_name, trend_category, trend_volume, trend_rank, trend_url, scraped_at").eq("user_id", userId).order("scraped_at", { ascending: false }).limit(20),
-      supabase.from("campaign_drafts").select("id, content_type, tags", { count: "exact" }).eq("user_id", userId),
-      supabase.from("scheduled_campaigns").select("status, platforms").eq("user_id", userId),
-      supabase.from("marketer_clients").select("client_id, client_name, client_email, status").eq("marketer_id", userId),
-      supabase.from("report_results").select("search_term, sentiment, mentions, sources, positive_percent, neutral_percent, negative_percent, summary, generated_at").eq("user_id", userId).order("generated_at", { ascending: false }).limit(1),
-      supabase.from("scheduled_reports").select("search_term, schedule_frequency, is_active, next_run_at").eq("user_id", userId),
-      // Fetch post history using service role (bypasses RLS for cross-table join)
-      supabaseAdmin.from("post_queue")
-        .select("id, content_type, status, scheduled_at, published_at, created_at, post_platform_targets(platform, status, platform_post_id, published_at)")
-        .eq("user_id", userId)
-        .gte("created_at", thirtyDaysAgo)
-        .order("created_at", { ascending: false }),
-    ]);
+      const profile = profileRes.data;
+      const draft = draftRes.data;
+      const competitors = competitorsRes.data || [];
+      const socialConns = socialRes.data || [];
+      const brandAssets = brandAssetsRes.data || [];
+      const productLines = productLinesRes.data || [];
+      const productsData = productsRes.data || [];
+      const analytics = postAnalyticsRes.data || [];
+      const postQueue = postQueueRes.data || [];
+      const trends = trendsRes.data || [];
+      const allDrafts = draftsCountRes.data || [];
+      const scheduled = scheduledRes.data || [];
+      const clients = marketerClientsRes.data || [];
+      const crmDeals = crmDealRes.data || [];
+      const crmOrders = crmOrderRes.data || [];
 
-    const profile = profileRes.data;
-    const draft = draftRes.data;
-    const competitors = competitorsRes.data || [];
-    const socialConns = socialRes.data || [];
-    const brandAssets = brandAssetsRes.data || [];
-    const productLines = productLinesRes.data || [];
-    const productsData = productsRes.data || [];
-    const analytics = postAnalyticsRes.data || [];
-    const postQueue = postQueueRes.data || [];
-    const trends = trendsRes.data || [];
-    const allDrafts = draftsCountRes.data || [];
-    const scheduled = scheduledRes.data || [];
-    const clients = marketerClientsRes.data || [];
-    const crmDeals = crmDealRes.data || [];
-    const crmOrders = crmOrderRes.data || [];
+      // ===== BUILD IDENTITY =====
+      const identity = { userId, email: user.email, activeClientContext: { mode: "my_business", clientRosterCount: clients.length } };
 
-    // ===== BUILD IDENTITY =====
-    const identity = {
-      userId,
-      email: user.email,
-      activeClientContext: {
-        mode: "my_business",
-        clientRosterCount: clients.length,
-      },
-    };
+      // ===== BUILD BRAND =====
+      const assetsByType: Record<string, number> = {};
+      for (const a of brandAssets) { assetsByType[a.asset_type] = (assetsByType[a.asset_type] || 0) + 1; }
+      const brand = profile ? stripNulls({
+        businessName: profile.business_name, website: profile.website, description: truncate(profile.description),
+        industry: profile.industry, productCategory: profile.product_category, geographyMarkets: profile.geography_markets,
+        marketingGoals: truncate(profile.marketing_goals), valueProposition: truncate(profile.value_proposition),
+        logoUrl: profile.logo_url, brandColors: profile.brand_colors, mainCompetitors: profile.main_competitors,
+        assetsSummary: { totalAssets: brandAssets.length, byType: assetsByType },
+        productLines: productLines.map(p => ({ id: p.id, name: p.name, description: truncate(p.description) })),
+      }) : {};
 
-    // ===== BUILD BRAND =====
-    const assetsByType: Record<string, number> = {};
-    for (const a of brandAssets) {
-      assetsByType[a.asset_type] = (assetsByType[a.asset_type] || 0) + 1;
-    }
-    const brand = profile ? stripNulls({
-      businessName: profile.business_name,
-      website: profile.website,
-      description: truncate(profile.description),
-      industry: profile.industry,
-      productCategory: profile.product_category,
-      geographyMarkets: profile.geography_markets,
-      marketingGoals: truncate(profile.marketing_goals),
-      valueProposition: truncate(profile.value_proposition),
-      logoUrl: profile.logo_url,
-      brandColors: profile.brand_colors,
-      mainCompetitors: profile.main_competitors,
-      assetsSummary: {
-        totalAssets: brandAssets.length,
-        byType: assetsByType,
-      },
-      productLines: productLines.map(p => ({ id: p.id, name: p.name, description: truncate(p.description) })),
-    }) : {};
+      // ===== BUILD AUDIENCE =====
+      const audienceRaw = profile?.audience_data || {};
+      const compressed = gzipAndEncode(audienceRaw);
+      const audience = stripNulls({
+        primaryDescription: profile?.target_audience,
+        audienceDataCompressed: compressed.encoded,
+        compressedSizeBytes: compressed.sizeBytes,
+        wasTruncated: compressed.wasTruncated,
+      });
 
-    // ===== BUILD AUDIENCE =====
-    const audienceRaw = profile?.audience_data || {};
-    const compressed = gzipAndEncode(audienceRaw);
-    const audience = stripNulls({
-      primaryDescription: profile?.target_audience,
-      audienceDataCompressed: compressed.encoded,
-      compressedSizeBytes: compressed.sizeBytes,
-      wasTruncated: compressed.wasTruncated,
-    });
+      // ===== BUILD COMPETITORS =====
+      const sortedCompetitors = competitors
+        .map((c: any) => ({
+          name: c.competitor_name, url: c.competitor_url, description: truncate(c.company_description),
+          targetAudience: c.target_audience, valueProposition: truncate(c.value_proposition),
+          keyProducts: c.key_products, pricingStrategy: c.pricing_strategy, marketingChannels: c.marketing_channels,
+          swot: stripNulls({ strengths: truncate(c.strengths), weaknesses: truncate(c.weaknesses), opportunities: truncate(c.opportunities), threats: truncate(c.threats) }),
+          analyzedAt: c.analyzed_at, marketSharePercent: 0,
+          primaryContentMix: { textPercent: 40, imagePercent: 30, shortFormVideoPercent: 20, longFormVideoPercent: 10 },
+          videoDominant: false,
+        }))
+        .map((c: any, i: number) => ({
+          ...c, marketSharePercent: Math.max(5, 30 - i * 5),
+          videoDominant: (c.primaryContentMix.shortFormVideoPercent + c.primaryContentMix.longFormVideoPercent) > 50,
+        }));
 
-    // ===== BUILD COMPETITORS =====
-    const sortedCompetitors = competitors
-      .map((c: any) => ({
-        name: c.competitor_name,
-        url: c.competitor_url,
-        description: truncate(c.company_description),
-        targetAudience: c.target_audience,
-        valueProposition: truncate(c.value_proposition),
-        keyProducts: c.key_products,
-        pricingStrategy: c.pricing_strategy,
-        marketingChannels: c.marketing_channels,
-        swot: stripNulls({
-          strengths: truncate(c.strengths),
-          weaknesses: truncate(c.weaknesses),
-          opportunities: truncate(c.opportunities),
-          threats: truncate(c.threats),
-        }),
-        analyzedAt: c.analyzed_at,
-        marketSharePercent: 0,
-        primaryContentMix: {
-          textPercent: 40,
-          imagePercent: 30,
-          shortFormVideoPercent: 20,
-          longFormVideoPercent: 10,
-        },
-        videoDominant: false,
-      }))
-      .map((c: any, i: number) => ({
-        ...c,
-        marketSharePercent: Math.max(5, 30 - i * 5),
-        videoDominant: (c.primaryContentMix.shortFormVideoPercent + c.primaryContentMix.longFormVideoPercent) > 50,
-      }));
+      const competitorsPayload = { totalCompetitorCount: competitors.length, includedTop: Math.min(5, sortedCompetitors.length), selectionBasis: "market_share" as const, items: sortedCompetitors.slice(0, 5) };
 
-    const competitorsPayload = {
-      totalCompetitorCount: competitors.length,
-      includedTop: Math.min(5, sortedCompetitors.length),
-      selectionBasis: "market_share" as const,
-      items: sortedCompetitors.slice(0, 5),
-    };
+      // ===== BUILD CAMPAIGN =====
+      const campaign = draft ? stripNulls({
+        id: draft.id, idea: truncate(draft.campaign_idea), objective: draft.campaign_objective, goals: truncate(draft.campaign_goals),
+        contentType: draft.content_type, postCaption: truncate(draft.post_caption), imagePrompt: truncate(draft.image_prompt),
+        videoScript: truncate(draft.video_script), scenePrompts: truncate(draft.scene_prompts), articleOutline: truncate(draft.article_outline),
+        targetAudience: draft.target_audience, targetAudienceDescription: draft.target_audience_description,
+        tags: draft.tags, createdAt: draft.created_at, updatedAt: draft.updated_at,
+      }) : {};
 
-    // ===== BUILD CAMPAIGN =====
-    const campaign = draft ? stripNulls({
-      id: draft.id,
-      idea: truncate(draft.campaign_idea),
-      objective: draft.campaign_objective,
-      goals: truncate(draft.campaign_goals),
-      contentType: draft.content_type,
-      postCaption: truncate(draft.post_caption),
-      imagePrompt: truncate(draft.image_prompt),
-      videoScript: truncate(draft.video_script),
-      scenePrompts: truncate(draft.scene_prompts),
-      articleOutline: truncate(draft.article_outline),
-      targetAudience: draft.target_audience,
-      targetAudienceDescription: draft.target_audience_description,
-      tags: draft.tags,
-      createdAt: draft.created_at,
-      updatedAt: draft.updated_at,
-    }) : {};
+      // ===== BUILD ASSETS =====
+      const isHostedUrl = (v: string) => v && (v.startsWith("http://") || v.startsWith("https://"));
+      const logoAssets = brandAssets.filter(a => a.asset_type === "logo" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
+      const colorAssets = brandAssets.filter(a => a.asset_type === "color").map(a => ({ name: a.name, value: a.value }));
+      const fontAssets = brandAssets.filter(a => a.asset_type === "font").map(a => ({ name: a.name, value: a.value }));
+      const imageAssets = brandAssets.filter(a => a.asset_type === "image" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
+      const assets = stripNulls({ logos: logoAssets.length ? logoAssets : undefined, colors: colorAssets.length ? colorAssets : undefined, fonts: fontAssets.length ? fontAssets : undefined, images: imageAssets.length ? imageAssets : undefined, totalAssets: brandAssets.length });
 
-    // ===== BUILD ASSETS =====
-    // Filter out base64 data URLs — only send hosted URLs to keep payload small
-    const isHostedUrl = (v: string) => v && (v.startsWith("http://") || v.startsWith("https://"));
-    const logoAssets = brandAssets.filter(a => a.asset_type === "logo" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
-    const colorAssets = brandAssets.filter(a => a.asset_type === "color").map(a => ({ name: a.name, value: a.value }));
-    const fontAssets = brandAssets.filter(a => a.asset_type === "font").map(a => ({ name: a.name, value: a.value }));
-    const imageAssets = brandAssets.filter(a => a.asset_type === "image" && isHostedUrl(a.value)).map(a => ({ name: a.name, url: a.value }));
+      // ===== BUILD DISTRIBUTION =====
+      const connectedPlatforms = socialConns.map((sc: any) => ({ platform: sc.platform, username: sc.platform_username, platformUserId: sc.platform_user_id, scopes: sc.scopes, tokenExpiresAt: sc.token_expires_at, connectedAt: sc.created_at }));
+      const contentType = draft?.content_type || "visual_post";
+      const isVideo = contentType === "social_video" || contentType === "video_ad";
+      const perPlatformPostCount = connectedPlatforms.map((p: any) => ({ platform: p.platform, plannedPosts: 1, contentTypeMix: { video: isVideo ? 1 : 0, image: !isVideo && contentType === "visual_post" ? 1 : 0, text: contentType === "written" ? 1 : 0 } }));
+      const totalPlannedPosts = perPlatformPostCount.reduce((s: number, p: any) => s + p.plannedPosts, 0);
+      const totalVideoPosts = perPlatformPostCount.reduce((s: number, p: any) => s + (p.contentTypeMix.video || 0), 0);
+      const distribution = { connectedPlatforms, publishingPlan: { perPlatformPostCount, totalPlannedPosts } };
 
-    const assets = stripNulls({
-      logos: logoAssets.length ? logoAssets : undefined,
-      colors: colorAssets.length ? colorAssets : undefined,
-      fonts: fontAssets.length ? fontAssets : undefined,
-      images: imageAssets.length ? imageAssets : undefined,
-      totalAssets: brandAssets.length,
-    });
+      // ===== BUILD CRM SUMMARY =====
+      const dealsByStage: Record<string, { count: number; totalValue: number }> = {};
+      for (const d of crmDeals) { const s = (d as any).stage || "unknown"; if (!dealsByStage[s]) dealsByStage[s] = { count: 0, totalValue: 0 }; dealsByStage[s].count++; dealsByStage[s].totalValue += Number((d as any).value) || 0; }
+      const ordersByStatus: Record<string, { count: number; totalAmount: number }> = {};
+      for (const o of crmOrders) { const s = (o as any).status || "unknown"; if (!ordersByStatus[s]) ordersByStatus[s] = { count: 0, totalAmount: 0 }; ordersByStatus[s].count++; ordersByStatus[s].totalAmount += Number((o as any).total_amount) || 0; }
+      const lastSync = crmSyncLogRes.data?.[0];
+      const crmSummary = stripNulls({
+        connections: (crmConnectionsRes.data || []).map((c: any) => ({ provider: c.provider, displayName: c.display_name, status: c.status, syncFrequencyMinutes: c.sync_frequency_minutes, lastSyncAt: c.last_sync_at })),
+        aggregateMetrics: { totalContacts: crmContactCountRes.count || 0, totalCompanies: crmCompanyCountRes.count || 0, totalDeals: crmDeals.length, totalOrders: crmOrders.length, totalDealValue: crmDeals.reduce((s, d: any) => s + (Number(d.value) || 0), 0), totalOrderRevenue: crmOrders.reduce((s, o: any) => s + (Number(o.total_amount) || 0), 0), dealsByStage: Object.entries(dealsByStage).map(([stage, v]) => ({ stage, ...v })), ordersByStatus: Object.entries(ordersByStatus).map(([status, v]) => ({ status, ...v })) },
+        lastSync: lastSync ? stripNulls({ status: lastSync.status, startedAt: lastSync.started_at, finishedAt: lastSync.finished_at, summary: truncate(lastSync.summary), errorMessage: truncate(lastSync.error_message) }) : undefined,
+      });
 
-    // ===== BUILD DISTRIBUTION =====
-    const connectedPlatforms = socialConns.map((sc: any) => ({
-      platform: sc.platform,
-      username: sc.platform_username,
-      platformUserId: sc.platform_user_id,
-      scopes: sc.scopes,
-      tokenExpiresAt: sc.token_expires_at,
-      connectedAt: sc.created_at,
-    }));
+      // ===== BUILD PERFORMANCE SUMMARY =====
+      const platformMetrics: Record<string, any> = {};
+      for (const a of analytics) { const p = (a as any).platform; if (!platformMetrics[p]) platformMetrics[p] = { postCount: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0, clicks: 0, impressions: 0, reach: 0, engagementRates: [] }; const m = platformMetrics[p]; m.postCount++; m.views += (a as any).views || 0; m.likes += (a as any).likes || 0; m.comments += (a as any).comments || 0; m.shares += (a as any).shares || 0; m.saves += (a as any).saves || 0; m.clicks += (a as any).clicks || 0; m.impressions += (a as any).impressions || 0; m.reach += (a as any).reach || 0; if ((a as any).engagement_rate) m.engagementRates.push((a as any).engagement_rate); }
+      const totalMetrics = { totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0, totalClicks: 0, totalImpressions: 0, totalReach: 0 };
+      for (const m of Object.values(platformMetrics) as any[]) { totalMetrics.totalViews += m.views; totalMetrics.totalLikes += m.likes; totalMetrics.totalComments += m.comments; totalMetrics.totalShares += m.shares; totalMetrics.totalSaves += m.saves; totalMetrics.totalClicks += m.clicks; totalMetrics.totalImpressions += m.impressions; totalMetrics.totalReach += m.reach; }
+      const avgEngagement = analytics.length > 0 ? analytics.reduce((s, a: any) => s + (a.engagement_rate || 0), 0) / analytics.length : 0;
 
-    const contentType = draft?.content_type || "visual_post";
-    const isVideo = contentType === "social_video" || contentType === "video_ad";
-    const perPlatformPostCount = connectedPlatforms.map((p: any) => ({
-      platform: p.platform,
-      plannedPosts: 1,
-      contentTypeMix: {
-        video: isVideo ? 1 : 0,
-        image: !isVideo && contentType === "visual_post" ? 1 : 0,
-        text: contentType === "written" ? 1 : 0,
-      },
-    }));
+      const performanceSummary = {
+        timeWindow: "last_30_days",
+        totalPostsTracked: analytics.length,
+        aggregateMetrics: { ...totalMetrics, avgEngagementRate: Math.round(avgEngagement * 100) / 100 },
+        byPlatform: Object.entries(platformMetrics).map(([platform, m]: [string, any]) => ({ platform, postCount: m.postCount, totalViews: m.views, totalLikes: m.likes, avgEngagementRate: m.engagementRates.length > 0 ? Math.round((m.engagementRates.reduce((a: number, b: number) => a + b, 0) / m.engagementRates.length) * 100) / 100 : 0 })),
+        brandSentiment: reportRes.data ? stripNulls({ searchTerm: reportRes.data.search_term, sentiment: reportRes.data.sentiment, mentions: reportRes.data.mentions, sources: reportRes.data.sources, positivePercent: reportRes.data.positive_percent, neutralPercent: reportRes.data.neutral_percent, negativePercent: reportRes.data.negative_percent, summary: truncate(reportRes.data.summary), generatedAt: reportRes.data.generated_at }) : undefined,
+        scheduledReports: (scheduledReportsRes.data || []).map((r: any) => ({ searchTerm: r.search_term, frequency: r.schedule_frequency, isActive: r.is_active })),
+      };
 
-    const totalPlannedPosts = perPlatformPostCount.reduce((s: number, p: any) => s + p.plannedPosts, 0);
-    const totalVideoPosts = perPlatformPostCount.reduce((s: number, p: any) => s + (p.contentTypeMix.video || 0), 0);
+      // ===== BUILD RECENT TRENDS =====
+      const recentTrends = trends.map((t: any) => stripNulls({ platform: t.platform, trendName: t.trend_name, category: t.trend_category, volume: t.trend_volume, rank: t.trend_rank, url: t.trend_url, scrapedAt: t.scraped_at }));
 
-    const distribution = {
-      connectedPlatforms,
-      publishingPlan: {
-        perPlatformPostCount,
-        totalPlannedPosts,
-      },
-    };
+      // ===== BUILD HISTORICAL INSIGHTS =====
+      const contentTypeMix: Record<string, number> = {};
+      const tagCounts: Record<string, number> = {};
+      for (const d of allDrafts) { const ct = (d as any).content_type || "unknown"; contentTypeMix[ct] = (contentTypeMix[ct] || 0) + 1; for (const tag of ((d as any).tags || [])) { tagCounts[tag] = (tagCounts[tag] || 0) + 1; } }
+      const statusCounts: Record<string, number> = {};
+      for (const p of postQueue) { const s = (p as any).status || "unknown"; statusCounts[s] = (statusCounts[s] || 0) + 1; }
+      const platformPublishCounts: Record<string, { published: number; failed: number }> = {};
+      for (const s of scheduled) { const status = (s as any).status; for (const plat of ((s as any).platforms || [])) { if (!platformPublishCounts[plat]) platformPublishCounts[plat] = { published: 0, failed: 0 }; if (status === "published") platformPublishCounts[plat].published++; if (status === "failed") platformPublishCounts[plat].failed++; } }
 
-    // ===== BUILD CRM SUMMARY =====
-    const dealsByStage: Record<string, { count: number; totalValue: number }> = {};
-    for (const d of crmDeals) {
-      const s = (d as any).stage || "unknown";
-      if (!dealsByStage[s]) dealsByStage[s] = { count: 0, totalValue: 0 };
-      dealsByStage[s].count++;
-      dealsByStage[s].totalValue += Number((d as any).value) || 0;
-    }
-    const ordersByStatus: Record<string, { count: number; totalAmount: number }> = {};
-    for (const o of crmOrders) {
-      const s = (o as any).status || "unknown";
-      if (!ordersByStatus[s]) ordersByStatus[s] = { count: 0, totalAmount: 0 };
-      ordersByStatus[s].count++;
-      ordersByStatus[s].totalAmount += Number((o as any).total_amount) || 0;
-    }
+      const historicalInsights = {
+        totalCampaignDrafts: draftsCountRes.count || 0, contentTypeMix,
+        topTags: Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag, count]) => ({ tag, count })),
+        publishingHistory: { totalPublished: statusCounts["published"] || 0, totalFailed: statusCounts["failed"] || 0, totalScheduled: statusCounts["scheduled"] || 0, platformBreakdown: Object.entries(platformPublishCounts).map(([platform, v]) => ({ platform, ...v })) },
+      };
 
-    const lastSync = crmSyncLogRes.data?.[0];
-    const crmSummary = stripNulls({
-      connections: (crmConnectionsRes.data || []).map((c: any) => ({
-        provider: c.provider,
-        displayName: c.display_name,
-        status: c.status,
-        syncFrequencyMinutes: c.sync_frequency_minutes,
-        lastSyncAt: c.last_sync_at,
-      })),
-      aggregateMetrics: {
-        totalContacts: crmContactCountRes.count || 0,
-        totalCompanies: crmCompanyCountRes.count || 0,
-        totalDeals: crmDeals.length,
-        totalOrders: crmOrders.length,
-        totalDealValue: crmDeals.reduce((s, d: any) => s + (Number(d.value) || 0), 0),
-        totalOrderRevenue: crmOrders.reduce((s, o: any) => s + (Number(o.total_amount) || 0), 0),
-        dealsByStage: Object.entries(dealsByStage).map(([stage, v]) => ({ stage, ...v })),
-        ordersByStatus: Object.entries(ordersByStatus).map(([status, v]) => ({ status, ...v })),
-      },
-      lastSync: lastSync ? stripNulls({
-        status: lastSync.status,
-        startedAt: lastSync.started_at,
-        finishedAt: lastSync.finished_at,
-        summary: truncate(lastSync.summary),
-        errorMessage: truncate(lastSync.error_message),
-      }) : undefined,
-    });
+      // ===== VIDEO STRATEGY & MONETIZATION =====
+      const videoDominantCompetitors = competitorsPayload.items.filter((c: any) => c.videoDominant).length;
+      const majorityCompetitorsVideoDominant = videoDominantCompetitors > competitorsPayload.items.length / 2;
+      const videoHeavyStrategy = totalVideoPosts > totalPlannedPosts / 2 || majorityCompetitorsVideoDominant;
+      const monetizationFlags = { videoHeavyStrategy, estimatedVideoPosts: totalVideoPosts, feeMultiplier: videoHeavyStrategy ? 1.5 : 1.0 };
 
-    // ===== BUILD PERFORMANCE SUMMARY =====
-    const platformMetrics: Record<string, any> = {};
-    for (const a of analytics) {
-      const p = (a as any).platform;
-      if (!platformMetrics[p]) {
-        platformMetrics[p] = { postCount: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0, clicks: 0, impressions: 0, reach: 0, engagementRates: [] };
-      }
-      const m = platformMetrics[p];
-      m.postCount++;
-      m.views += (a as any).views || 0;
-      m.likes += (a as any).likes || 0;
-      m.comments += (a as any).comments || 0;
-      m.shares += (a as any).shares || 0;
-      m.saves += (a as any).saves || 0;
-      m.clicks += (a as any).clicks || 0;
-      m.impressions += (a as any).impressions || 0;
-      m.reach += (a as any).reach || 0;
-      if ((a as any).engagement_rate) m.engagementRates.push((a as any).engagement_rate);
-    }
+      // ===== BUILD PRODUCTS =====
+      const productsPayload = productsData.map((p: any) => stripNulls({ name: p.name, type: p.product_type, shortDescription: truncate(p.short_description), targetAudience: p.target_audience, valuePropositions: p.value_propositions }));
 
-    const totalMetrics = {
-      totalViews: 0, totalLikes: 0, totalComments: 0, totalShares: 0,
-      totalSaves: 0, totalClicks: 0, totalImpressions: 0, totalReach: 0,
-    };
-    for (const m of Object.values(platformMetrics) as any[]) {
-      totalMetrics.totalViews += m.views;
-      totalMetrics.totalLikes += m.likes;
-      totalMetrics.totalComments += m.comments;
-      totalMetrics.totalShares += m.shares;
-      totalMetrics.totalSaves += m.saves;
-      totalMetrics.totalClicks += m.clicks;
-      totalMetrics.totalImpressions += m.impressions;
-      totalMetrics.totalReach += m.reach;
-    }
+      // ===== BUILD POST HISTORY =====
+      const postHistoryPosts = postHistoryRes.data || [];
+      const platforms = ["tiktok", "instagram", "twitter", "linkedin", "facebook", "youtube"];
+      const postsCountPerPlatform: Record<string, number> = {};
+      platforms.forEach(p => { postsCountPerPlatform[p] = postHistoryPosts.filter((post: any) => post.post_platform_targets?.some((t: any) => t.platform === p)).length; });
+      const postHistoryStatusCounts: Record<string, number> = {};
+      postHistoryPosts.forEach((post: any) => { postHistoryStatusCounts[post.status] = (postHistoryStatusCounts[post.status] || 0) + 1; });
 
-    const avgEngagement = analytics.length > 0
-      ? analytics.reduce((s, a: any) => s + (a.engagement_rate || 0), 0) / analytics.length
-      : 0;
+      const postHistory = { daysBack: 30, totalPosts: postHistoryPosts.length, postsCountPerPlatform, statusCounts: postHistoryStatusCounts };
 
-    const performanceSummary = {
-      timeWindow: "last_30_days",
-      totalPostsTracked: analytics.length,
-      aggregateMetrics: { ...totalMetrics, avgEngagementRate: Math.round(avgEngagement * 100) / 100 },
-      byPlatform: Object.entries(platformMetrics).map(([platform, m]: [string, any]) => ({
-        platform,
-        postCount: m.postCount,
-        totalViews: m.views,
-        totalLikes: m.likes,
-        avgEngagementRate: m.engagementRates.length > 0
-          ? Math.round((m.engagementRates.reduce((a: number, b: number) => a + b, 0) / m.engagementRates.length) * 100) / 100
-          : 0,
-      })),
-      brandSentiment: reportRes.data ? stripNulls({
-        searchTerm: reportRes.data.search_term,
-        sentiment: reportRes.data.sentiment,
-        mentions: reportRes.data.mentions,
-        sources: reportRes.data.sources,
-        positivePercent: reportRes.data.positive_percent,
-        neutralPercent: reportRes.data.neutral_percent,
-        negativePercent: reportRes.data.negative_percent,
-        summary: truncate(reportRes.data.summary),
-        generatedAt: reportRes.data.generated_at,
-      }) : undefined,
-      scheduledReports: (scheduledReportsRes.data || []).map((r: any) => ({
-        searchTerm: r.search_term,
-        frequency: r.schedule_frequency,
-        isActive: r.is_active,
-      })),
-    };
-
-    // ===== BUILD RECENT TRENDS =====
-    const recentTrends = trends.map((t: any) => stripNulls({
-      platform: t.platform,
-      trendName: t.trend_name,
-      category: t.trend_category,
-      volume: t.trend_volume,
-      rank: t.trend_rank,
-      url: t.trend_url,
-      scrapedAt: t.scraped_at,
-    }));
-
-    // ===== BUILD HISTORICAL INSIGHTS =====
-    const contentTypeMix: Record<string, number> = {};
-    const tagCounts: Record<string, number> = {};
-    for (const d of allDrafts) {
-      const ct = (d as any).content_type || "unknown";
-      contentTypeMix[ct] = (contentTypeMix[ct] || 0) + 1;
-      for (const tag of ((d as any).tags || [])) {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      }
-    }
-
-    const statusCounts: Record<string, number> = {};
-    for (const p of postQueue) {
-      const s = (p as any).status || "unknown";
-      statusCounts[s] = (statusCounts[s] || 0) + 1;
-    }
-
-    const platformPublishCounts: Record<string, { published: number; failed: number }> = {};
-    for (const s of scheduled) {
-      const status = (s as any).status;
-      for (const plat of ((s as any).platforms || [])) {
-        if (!platformPublishCounts[plat]) platformPublishCounts[plat] = { published: 0, failed: 0 };
-        if (status === "published") platformPublishCounts[plat].published++;
-        if (status === "failed") platformPublishCounts[plat].failed++;
-      }
-    }
-
-    const historicalInsights = {
-      totalCampaignDrafts: draftsCountRes.count || 0,
-      contentTypeMix,
-      topTags: Object.entries(tagCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([tag, count]) => ({ tag, count })),
-      publishingHistory: {
-        totalPublished: statusCounts["published"] || 0,
-        totalFailed: statusCounts["failed"] || 0,
-        totalScheduled: statusCounts["scheduled"] || 0,
-        platformBreakdown: Object.entries(platformPublishCounts).map(([platform, v]) => ({ platform, ...v })),
-      },
-    };
-
-    // ===== VIDEO STRATEGY & MONETIZATION =====
-    const videoDominantCompetitors = competitorsPayload.items.filter((c: any) => c.videoDominant).length;
-    const majorityCompetitorsVideoDominant = videoDominantCompetitors > competitorsPayload.items.length / 2;
-    const videoHeavyStrategy = totalVideoPosts > totalPlannedPosts / 2 || majorityCompetitorsVideoDominant;
-
-    const monetizationFlags = {
-      videoHeavyStrategy,
-      estimatedVideoPosts: totalVideoPosts,
-      feeMultiplier: videoHeavyStrategy ? 1.5 : 1.0,
-    };
-
-    // ===== BUILD PRODUCTS =====
-    const productsPayload = productsData.map((p: any) => stripNulls({
-      name: p.name,
-      type: p.product_type,
-      shortDescription: truncate(p.short_description),
-      targetAudience: p.target_audience,
-      valuePropositions: p.value_propositions,
-    }));
-
-    // ===== BUILD POST HISTORY =====
-    const postHistoryPosts = postHistoryRes.data || [];
-    const platforms = ["tiktok", "instagram", "twitter", "linkedin", "facebook", "youtube"];
-    const postsCountPerPlatform: Record<string, number> = {};
-    platforms.forEach(p => {
-      postsCountPerPlatform[p] = postHistoryPosts.filter((post: any) =>
-        post.post_platform_targets?.some((t: any) => t.platform === p)
-      ).length;
-    });
-    const postHistoryStatusCounts: Record<string, number> = {};
-    postHistoryPosts.forEach((post: any) => {
-      postHistoryStatusCounts[post.status] = (postHistoryStatusCounts[post.status] || 0) + 1;
-    });
-
-    const postHistory = {
-      daysBack: 30,
-      totalPosts: postHistoryPosts.length,
-      postsCountPerPlatform,
-      statusCounts: postHistoryStatusCounts,
-    };
-
-    // ===== ASSEMBLE FINAL PAYLOAD =====
-    campaignContext = stripNulls({
-      schemaVersion: "1.0.0",
-      identity,
-      brand,
-      audience,
-      competitors: competitorsPayload,
-      campaign,
-      products: productsPayload.length ? productsPayload : undefined,
-      assets,
-      distribution,
-      postHistory,
-      crmSummary,
-      performanceSummary,
-      recentTrends,
-      historicalInsights,
-      monetizationFlags,
-      callbackUrl: `${supabaseUrl}/functions/v1/zapier-callback`,
-    });
-
+      // ===== ASSEMBLE FINAL CONTEXT =====
+      campaignContext = stripNulls({
+        schemaVersion: "1.0.0",
+        identity, brand, audience,
+        competitors: competitorsPayload,
+        campaign,
+        products: productsPayload.length ? productsPayload : undefined,
+        assets, distribution, postHistory,
+        crmSummary, performanceSummary,
+        recentTrends, historicalInsights, monetizationFlags,
+      });
     } // end real data path
 
-    console.log("Campaign context assembled, preparing for transmission...");
-
-    // ===== SERIALIZE & HASH =====
-    const rawPayloadString = JSON.stringify(campaignContext);
-    const rawPayloadSizeBytes = new Blob([rawPayloadString]).size;
-    const payloadHash = await computePayloadHash(rawPayloadString);
-
-    // ===== COMPRESS + ENCRYPT (if key available) =====
-    let payloadString: string;
-    let payloadSizeBytes: number;
-    let encrypted = false;
-
-    const encryptedEnvelope = await encryptPayload(rawPayloadString);
-    if (encryptedEnvelope) {
-      // Send ONLY flat envelope fields — no internal metrics
-      const flatEnvelope = {
-        encrypted_payload: encryptedEnvelope.encrypted_payload,
-        iv: encryptedEnvelope.iv,
-        authTag: encryptedEnvelope.authTag,
-        v: encryptedEnvelope.v,
-        compression: encryptedEnvelope.compression,
-      };
-      payloadString = JSON.stringify(flatEnvelope);
-      payloadSizeBytes = new Blob([payloadString]).size;
-      encrypted = true;
-      console.log(`Payload encrypted: ${rawPayloadSizeBytes} bytes → ${encryptedEnvelope._compressed_size} gzipped → ${encryptedEnvelope._encrypted_size} encrypted → ${payloadSizeBytes} bytes envelope`);
-    } else {
-      payloadString = rawPayloadString;
-      payloadSizeBytes = rawPayloadSizeBytes;
-      console.log(`Payload sent as plaintext: ${payloadSizeBytes} bytes`);
-    }
-
-    // ===== SEND TO ZAPIER =====
-    const sendResult = await sendWithRetry(resolvedWebhookUrl, payloadString, payloadHash, payloadSizeBytes);
-
-    const deliveryLog = {
-      webhookDeliveryStatus: sendResult.status >= 200 && sendResult.status < 300 ? "success" : "failed",
-      responseCode: sendResult.status,
-      responseBody: sendResult.body,
-      timestamp: new Date().toISOString(),
-      attempts: sendResult.attempts,
-      payloadHash,
-      payloadSizeBytes,
-      rawPayloadSizeBytes,
-      encrypted,
-      compressionRatio: encrypted && encryptedEnvelope ? Math.round((1 - encryptedEnvelope._compressed_size / rawPayloadSizeBytes) * 100) : 0,
-      webhookUrl: resolvedWebhookUrl,
-      attemptLogs: sendResult.attemptLogs,
-    };
-
-    console.log("Zapier delivery log:", JSON.stringify(deliveryLog));
+    console.log("Campaign context assembled successfully.");
 
     return new Response(JSON.stringify({
-      success: deliveryLog.webhookDeliveryStatus === "success",
-      campaignContext: testMode ? campaignContext : undefined,
-      deliveryLog,
+      success: true,
+      campaignContext,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

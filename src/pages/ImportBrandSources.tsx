@@ -43,7 +43,7 @@ import FrameioIcon from "@/components/icons/FrameioIcon";
 import FrameioImportDialog from "@/components/FrameioImportDialog";
 import MiroIcon from "@/components/icons/MiroIcon";
 import MilanoteIcon from "@/components/icons/MilanoteIcon";
-import ZapierIcon from "@/components/icons/ZapierIcon";
+
 import IFTTTIcon from "@/components/icons/IFTTTIcon";
 import HootsuiteIcon from "@/components/icons/HootsuiteIcon";
 
@@ -228,7 +228,7 @@ const socialTools: ToolItem[] = [
   { name: "Frame.io", icon: FrameioIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Miro", icon: MiroIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Milanote", icon: MilanoteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
-  { name: "Zapier", icon: ZapierIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
+  
   { name: "IFTTT", icon: IFTTTIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true, isConnectable: true },
   { name: "Hootsuite", icon: HootsuiteIcon, bgColor: "bg-white dark:bg-gray-800", hasBorder: true },
   
@@ -346,9 +346,6 @@ const ImportBrandSources = () => {
   const [bazaartModalOpen, setBazaartModalOpen] = useState(false);
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [veedModalOpen, setVeedModalOpen] = useState(false);
-  const [zapierModalOpen, setZapierModalOpen] = useState(false);
-  const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
-  const [isConnectingZapier, setIsConnectingZapier] = useState(false);
   const [iftttModalOpen, setIftttModalOpen] = useState(false);
   const [iftttWebhookUrl, setIftttWebhookUrl] = useState("");
   const [isConnectingIfttt, setIsConnectingIfttt] = useState(false);
@@ -1263,11 +1260,6 @@ const ImportBrandSources = () => {
       return;
     }
 
-    // For Zapier, open the webhook URL modal
-    if (toolName === 'Zapier') {
-      setZapierModalOpen(true);
-      return;
-    }
 
     // For IFTTT, open the webhook URL modal
     if (toolName === 'IFTTT') {
@@ -2525,68 +2517,6 @@ const ImportBrandSources = () => {
         />
       )}
 
-      {/* Zapier Webhook URL Dialog */}
-      <Dialog open={zapierModalOpen} onOpenChange={setZapierModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Connect Zapier</DialogTitle>
-            <DialogDescription>
-              Enter your Zapier webhook URL to trigger automations from Klyc. Create a Zap with a "Webhooks by Zapier" trigger to get your URL.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label htmlFor="zapier-webhook">Webhook URL</Label>
-              <Input
-                id="zapier-webhook"
-                placeholder="https://hooks.zapier.com/hooks/catch/..."
-                value={zapierWebhookUrl}
-                onChange={(e) => setZapierWebhookUrl(e.target.value)}
-              />
-            </div>
-            <Button
-              className="w-full"
-              disabled={!zapierWebhookUrl.trim() || isConnectingZapier}
-              onClick={async () => {
-                if (!zapierWebhookUrl.startsWith("https://hooks.zapier.com/")) {
-                  toast.error("Please enter a valid Zapier webhook URL");
-                  return;
-                }
-                setIsConnectingZapier(true);
-                try {
-                  const response = await fetch(zapierWebhookUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    mode: "no-cors",
-                    body: JSON.stringify({
-                      event: "connection_test",
-                      timestamp: new Date().toISOString(),
-                      source: "klyc",
-                    }),
-                  });
-                  setConnectionStatus(prev => ({ ...prev, Zapier: 'connected' }));
-                  toast.success("Zapier connected! Check your Zap history to confirm.");
-                  setZapierModalOpen(false);
-                } catch (err) {
-                  console.error("Zapier webhook error:", err);
-                  toast.error("Failed to connect to Zapier. Please check the URL.");
-                } finally {
-                  setIsConnectingZapier(false);
-                }
-              }}
-            >
-              {isConnectingZapier ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                'Connect'
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* IFTTT Webhook URL Dialog */}
       <Dialog open={iftttModalOpen} onOpenChange={setIftttModalOpen}>
