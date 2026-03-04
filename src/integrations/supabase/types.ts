@@ -1461,6 +1461,30 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_transcripts: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          transcript: string
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          transcript: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          transcript?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_analytics: {
         Row: {
           clicks: number | null
