@@ -37,9 +37,19 @@ export interface StrategyProfile {
   targetAudience?: string;
 }
 
+export interface ApprovalExample {
+  content_id: string;
+  decision: "approved" | "rejected";
+  platform?: string;
+  structure?: string;
+  content_preview?: string;
+  reason?: string;
+  date: string;
+}
+
 export interface ExamplesCache {
-  approvedExamples?: Array<{ content: string; platform?: string; date?: string }>;
-  rejectedExamples?: Array<{ content: string; reason?: string; date?: string }>;
+  approvedExamples?: ApprovalExample[];
+  rejectedExamples?: ApprovalExample[];
 }
 
 export interface AnalyticsHistory {
