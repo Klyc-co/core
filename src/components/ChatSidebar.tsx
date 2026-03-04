@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
-import { MessageSquare, Send, X, Loader2, Mic, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MessageSquare, Send, X, Loader2, Mic, Zap, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ const ChatSidebar = () => {
   const isMobile = useIsMobile();
   const { getEffectiveUserId, selectedClientId } = useClientContext();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" },
   ]);
@@ -55,6 +57,7 @@ const ChatSidebar = () => {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
+  const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,7 +197,34 @@ const ChatSidebar = () => {
         });
         
         if (pipelineResult.success) {
-          toast({ title: "Campaign created!", description: `${pipelineResult.post_queue_ids.length} posts generated and queued.` });
+          const postCount = pipelineResult.post_queue_ids.length;
+          toast({ title: "Campaign created!", description: `${postCount} posts generated and queued.` });
+
+          // Emit activity event
+          await supabase.from("activity_events").insert({
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            event_type: "campaign_ready",
+            event_message: `Campaign pipeline complete: ${postCount} posts ready for review`,
+            metadata: { draft_id: result.draftId, post_count: postCount },
+          });
+
+          // Add "campaign ready" message with action button
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `Your campaign is ready! **${postCount} posts** have been generated and queued. Would you like to preview the posts?`,
+              structured: {
+                intent: "campaign_ready",
+                message: `Your campaign is ready! **${postCount} posts** have been generated and queued. Would you like to preview the posts?`,
+                next_questions: [],
+                draft_updates: {},
+                risk_level: "low",
+                requires_approval: false,
+              },
+            },
+          ]);
+          setPendingQueueNav(true);
         } else {
           toast({ title: "Pipeline issue", description: pipelineResult.error || "Check drafts.", variant: "destructive" });
         }
@@ -419,8 +449,21 @@ const ChatSidebar = () => {
                               {msg.structured.intent.replace("_", " ")}
                             </Badge>
                           )}
+                          {msg.structured?.intent === "campaign_ready" && (
+                            <Button
+                              size="sm"
+                              className="mt-2 w-full text-xs gap-1.5"
+                              onClick={() => {
+                                setPendingQueueNav(false);
+                                navigate("/campaigns/queue");
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3" /> Open Campaign Queue
+                            </Button>
+                          )}
                           {msg.structured?.next_questions &&
                             i === messages.length - 1 &&
+                            msg.structured.intent !== "campaign_ready" &&
                             renderNextQuestions(msg.structured.next_questions)}
                         </>
                       ) : (
