@@ -62,6 +62,17 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import TrelloCallback from "./pages/TrelloCallback";
+import OrchestratorPanel from "./pages/OrchestratorPanel";
+import PostQueueManager from "./pages/PostQueueManager";
+import PublishStatusDashboard from "./pages/PublishStatusDashboard";
+import AiCostMonitor from "./pages/AiCostMonitor";
+import ClientOnboarding from "./pages/ClientOnboarding";
+import ActivityFeed from "./pages/ActivityFeed";
+import CrmContacts from "./pages/CrmContacts";
+import CrmDeals from "./pages/CrmDeals";
+import CrmOrders from "./pages/CrmOrders";
+import ReportsPage from "./pages/ReportsPage";
+import OrchestratorGraph from "./pages/OrchestratorGraph";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +158,23 @@ const App = () => (
             <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
             
             <Route path="/trello-callback" element={<TrelloCallback />} />
+            
+            {/* Orchestrator & System routes */}
+            <Route path="/orchestrator" element={<WithSidebar><OrchestratorPanel /></WithSidebar>} />
+            <Route path="/orchestrator/graph" element={<WithSidebar><OrchestratorGraph /></WithSidebar>} />
+            <Route path="/campaigns/queue" element={<WithSidebar><PostQueueManager /></WithSidebar>} />
+            <Route path="/publishing/status" element={<WithSidebar><PublishStatusDashboard /></WithSidebar>} />
+            <Route path="/analytics/ai-costs" element={<WithSidebar><AiCostMonitor /></WithSidebar>} />
+            <Route path="/activity" element={<WithSidebar><ActivityFeed /></WithSidebar>} />
+            <Route path="/crm/contacts" element={<WithSidebar><CrmContacts /></WithSidebar>} />
+            <Route path="/crm/deals" element={<WithSidebar><CrmDeals /></WithSidebar>} />
+            <Route path="/crm/orders" element={<WithSidebar><CrmOrders /></WithSidebar>} />
+            <Route path="/reports" element={<WithSidebar><ReportsPage /></WithSidebar>} />
+            <Route path="/reports/scheduled" element={<WithSidebar><ReportsPage /></WithSidebar>} />
+            
+            {/* Client onboarding */}
+            <Route path="/client/onboarding" element={<ClientProtected><ClientOnboarding /></ClientProtected>} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
