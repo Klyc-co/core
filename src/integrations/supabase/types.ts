@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_requests: {
+        Row: {
+          campaign_id: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          intent: string | null
+          request_id: string
+          token_count_estimate: number | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          request_id: string
+          token_count_estimate?: number | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          intent?: string | null
+          request_id?: string
+          token_count_estimate?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       airtable_connections: {
         Row: {
           api_token: string
