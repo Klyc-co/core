@@ -56,3 +56,10 @@ export type {
   PlannerOutput,
   ClientBrainSnapshot,
 } from "./campaignPlanner";
+export { generateBatchContent } from "./batchGenerator";
+export type {
+  GeneratedPost,
+  GeneratedContent,
+  BatchResult,
+  BatchFailure,
+} from "./batchGenerator";

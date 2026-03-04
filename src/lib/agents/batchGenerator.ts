@@ -198,14 +198,14 @@ async function generateSinglePost(job: GenerationJob): Promise<GeneratedPost> {
     const variations = generateStructureVariations(template);
     const variation = variations[toneIndex] || variations[0];
 
-    // Build content from variation sections
+    // Build content from variation sections (role, instruction, example_snippet)
     const sections = variation.sections;
-    hook = sections.find((s) => s.section === "hook")?.example || buildFallbackHook(manifest.campaign_goal, template.hook_type);
+    hook = sections.find((s) => s.role === "hook")?.example_snippet || buildFallbackHook(manifest.campaign_goal, template.hook_type);
     body = sections
-      .filter((s) => s.section !== "hook" && s.section !== "cta")
-      .map((s) => s.example)
+      .filter((s) => s.role !== "hook" && s.role !== "cta")
+      .map((s) => s.example_snippet)
       .join("\n\n");
-    cta = sections.find((s) => s.section === "cta")?.example || template.cta_pattern.examples[0] || "";
+    cta = sections.find((s) => s.role === "cta")?.example_snippet || template.cta_pattern.examples[0] || "";
     hashtags = buildHashtags(template.hashtag_pattern.count, platform);
   } else {
     // Fallback for platforms without templates
