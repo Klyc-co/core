@@ -13,7 +13,7 @@ import { computeSocialMetrics } from "./socialAgent";
 import { computeImageMetrics } from "./imageAgent";
 import { computeEditorMetrics } from "./editorAgent";
 import { computeAnalyticsMetrics } from "./analyticsAgent";
-import { loadClientBrain, type ClientBrainContext } from "@/lib/client/clientBrainLoader";
+import { loadClientBrain, type ClientBrainContext, type BudgetedBrainContext } from "@/lib/client/clientBrainLoader";
 import { runCampaignPlanner, type PlannerOutput, type ClientBrainSnapshot } from "./campaignPlanner";
 import { generateBatchContent, type BatchResult, type GeneratedPost } from "./batchGenerator";
 import { schedulePosts, type ScheduleResult } from "@/lib/publishing/publishQueue";
@@ -125,7 +125,8 @@ export async function runCampaignPipeline(
     // ── Step 2: Load Client Brain ──
     stage = "load_brain";
     await emitActivityEvent("campaign_generated", "Loading client brain context", clientId, { stage });
-    const brainContext = await loadClientBrain(clientId);
+    const budgetedBrain = await loadClientBrain(clientId);
+    const brainContext = budgetedBrain.full;
     result.brain_context = brainContext;
 
     if (!brainContext.is_complete) {
@@ -273,6 +274,7 @@ async function runPlannerFromDraft(
     strategy: brainContext.strategy_profile,
     examples: brainContext.examples,
     analytics: brainContext.analytics,
+    product_catalog: brainContext.product_catalog,
   };
 
   // Determine platforms from options, draft tags, or brain preferences

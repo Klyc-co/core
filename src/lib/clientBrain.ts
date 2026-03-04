@@ -6,9 +6,21 @@ export type BrainDocumentType =
   | "strategy_profile"
   | "examples_cache"
   | "analytics_history"
-  | "campaign_history";
+  | "campaign_history"
+  | "product_catalog";
 
 export const BRAIN_DOCUMENT_TYPES: BrainDocumentType[] = [
+  "brand_profile",
+  "voice_profile",
+  "strategy_profile",
+  "examples_cache",
+  "analytics_history",
+  "campaign_history",
+  "product_catalog",
+];
+
+/** Core 6 types required for completeness (product_catalog is optional) */
+export const REQUIRED_BRAIN_TYPES: BrainDocumentType[] = [
   "brand_profile",
   "voice_profile",
   "strategy_profile",
@@ -29,12 +41,15 @@ export interface VoiceProfile {
   sentenceStructure?: string;
   emojiUsage?: string;
   voiceEmbeddingReference?: string;
+  bannedPhrases?: string[];
+  ctaStyle?: string;
 }
 
 export interface StrategyProfile {
   messagingPillars?: string[];
   funnelGoals?: string[];
   targetAudience?: string;
+  complianceConstraints?: string[];
 }
 
 export interface ApprovalExample {
@@ -75,6 +90,16 @@ export interface CampaignHistory {
   }>;
 }
 
+export interface ProductCatalog {
+  products?: Array<{
+    name: string;
+    description?: string;
+    category?: string;
+    valueProps?: string[];
+    targetAudience?: string;
+  }>;
+}
+
 type BrainDataMap = {
   brand_profile: BrandProfile;
   voice_profile: VoiceProfile;
@@ -82,6 +107,7 @@ type BrainDataMap = {
   examples_cache: ExamplesCache;
   analytics_history: AnalyticsHistory;
   campaign_history: CampaignHistory;
+  product_catalog: ProductCatalog;
 };
 
 /**
@@ -106,7 +132,7 @@ export async function loadBrainDocument<T extends BrainDocumentType>(
 }
 
 /**
- * Load the full client brain (all 6 documents).
+ * Load the full client brain (all document types including product_catalog).
  */
 export async function loadFullBrain(clientId: string): Promise<Record<BrainDocumentType, any>> {
   const { data, error } = await supabase
