@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Volume2, VolumeX, Keyboard, Loader2, Check, Edit } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Mic, MicOff, Volume2, VolumeX, Keyboard, Loader2, Check, Edit, Target, Calendar, BarChart3, Layers, Users, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTTS } from "@/hooks/useTTS";
@@ -36,11 +38,139 @@ const CAMPAIGN_STEPS = [
 
 export type InterviewType = "onboarding" | "campaign";
 
+interface CampaignPreview {
+  campaign_name: string;
+  goal: string;
+  theme: string;
+  platforms: string[];
+  duration_days: number;
+  posts_per_week: number;
+  cta: string;
+  audience_segment: string;
+  product_focus: string;
+  estimated_posts: number;
+  predicted_engagement: string;
+}
+
 interface VoiceInterviewModeProps {
   onComplete: (result?: { draftId?: string; approved?: boolean }) => void;
   onSendMessage: (text: string, brainContext?: string) => Promise<{ message: string; draft_updates?: Record<string, any>; next_questions?: any[]; intent?: string }>;
   interviewType?: InterviewType;
   clientId?: string;
+}
+
+function buildCampaignPreview(accumulated: Record<string, any>): CampaignPreview {
+  const platforms = Array.isArray(accumulated.platforms)
+    ? accumulated.platforms
+    : accumulated.platforms
+      ? [accumulated.platforms]
+      : [];
+  const durationDays = accumulated.duration_days || 30;
+  const postsPerWeek = accumulated.posts_per_week || 3;
+  const estimatedPosts = Math.round((durationDays / 7) * postsPerWeek);
+
+  // Simple predicted engagement heuristic
+  let predicted = "Moderate";
+  if (platforms.length >= 3) predicted = "High";
+  if (postsPerWeek >= 5) predicted = "Very High";
+  if (postsPerWeek <= 1) predicted = "Low";
+
+  return {
+    campaign_name: accumulated.campaign_name || "Untitled Campaign",
+    goal: accumulated.goal || "—",
+    theme: accumulated.theme || "—",
+    platforms,
+    duration_days: durationDays,
+    posts_per_week: postsPerWeek,
+    cta: accumulated.cta || "—",
+    audience_segment: accumulated.audience_segment || accumulated.target_audience_description || "—",
+    product_focus: accumulated.product_focus || "—",
+    estimated_posts: estimatedPosts,
+    predicted_engagement: predicted,
+  };
+}
+
+function CampaignPreviewCard({ preview }: { preview: CampaignPreview }) {
+  return (
+    <Card className="border-primary/30 bg-sidebar-accent/50 shadow-sm">
+      <CardHeader className="pb-2 pt-3 px-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2 text-sidebar-foreground">
+          <Megaphone className="h-4 w-4 text-primary" />
+          {preview.campaign_name}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 space-y-2">
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="flex items-start gap-1.5">
+            <Target className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sidebar-foreground/50 font-medium">Goal</p>
+              <p className="text-sidebar-foreground capitalize">{preview.goal}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <Layers className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sidebar-foreground/50 font-medium">Theme</p>
+              <p className="text-sidebar-foreground">{preview.theme}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <Users className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sidebar-foreground/50 font-medium">Audience</p>
+              <p className="text-sidebar-foreground">{preview.audience_segment}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <Calendar className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sidebar-foreground/50 font-medium">Duration</p>
+              <p className="text-sidebar-foreground">{preview.duration_days} days</p>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="bg-sidebar-border" />
+
+        <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap gap-1">
+            {preview.platforms.map((p) => (
+              <Badge key={p} variant="secondary" className="text-[9px] px-1.5 py-0 capitalize">
+                {p}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1 text-center">
+          <div className="bg-sidebar-accent rounded p-1.5">
+            <p className="text-[10px] text-sidebar-foreground/50">Posts</p>
+            <p className="text-sm font-bold text-sidebar-foreground">{preview.estimated_posts}</p>
+          </div>
+          <div className="bg-sidebar-accent rounded p-1.5">
+            <p className="text-[10px] text-sidebar-foreground/50">Per week</p>
+            <p className="text-sm font-bold text-sidebar-foreground">{preview.posts_per_week}</p>
+          </div>
+          <div className="bg-sidebar-accent rounded p-1.5">
+            <p className="text-[10px] text-sidebar-foreground/50">Engagement</p>
+            <p className="text-sm font-bold text-primary">{preview.predicted_engagement}</p>
+          </div>
+        </div>
+
+        {preview.cta !== "—" && (
+          <div className="text-[10px] text-sidebar-foreground/60 italic">
+            CTA: "{preview.cta}"
+          </div>
+        )}
+        {preview.product_focus !== "—" && (
+          <div className="text-[10px] text-sidebar-foreground/60">
+            Product: {preview.product_focus}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function VoiceInterviewMode({
@@ -61,6 +191,8 @@ export default function VoiceInterviewMode({
   const [campaignDraftId, setCampaignDraftId] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [brainContextMin, setBrainContextMin] = useState<string | null>(null);
+  const [accumulatedDraft, setAccumulatedDraft] = useState<Record<string, any>>({});
+  const [campaignPreview, setCampaignPreview] = useState<CampaignPreview | null>(null);
 
   const { isListening, transcript, interimTranscript, startListening, stopListening, isSupported, error: sttError } = useSpeechRecognition();
   const { speak, stop: stopSpeaking, isSpeaking } = useTTS();
@@ -129,6 +261,12 @@ export default function VoiceInterviewMode({
     if (interviewType === "campaign") {
       // Handle campaign draft upsert
       if (draftUpdates.campaign_draft) {
+        // Accumulate draft fields for preview
+        setAccumulatedDraft((prev) => {
+          const merged = { ...prev, ...draftUpdates.campaign_draft };
+          return merged;
+        });
+
         const effectiveClientId = clientId || selectedClientId || undefined;
         const newDraftId = await upsertCampaignDraftFromInterview(
           draftUpdates.campaign_draft,
@@ -195,6 +333,11 @@ export default function VoiceInterviewMode({
 
       if (isComplete || step >= steps.length - 1) {
         if (interviewType === "campaign") {
+          // Build preview from accumulated draft data
+          const finalDraft = result.draft_updates?.campaign_draft
+            ? { ...accumulatedDraft, ...result.draft_updates.campaign_draft }
+            : accumulatedDraft;
+          setCampaignPreview(buildCampaignPreview(finalDraft));
           setShowConfirmation(true);
           if (mode === "voice") await speak(result.message);
           return;
@@ -240,8 +383,10 @@ export default function VoiceInterviewMode({
 
   const handleEditCampaign = () => {
     setShowConfirmation(false);
+    setCampaignPreview(null);
+    // Resume at the first step so user can walk through again
     setStep(0);
-    setAiMessage("Sure, let's revise. Which part would you like to change?");
+    setAiMessage("Sure, let's revise. Which part would you like to change? You can say the topic (e.g. 'platforms' or 'audience').");
   };
 
   const progress = ((step + 1) / steps.length) * 100;
@@ -252,20 +397,23 @@ export default function VoiceInterviewMode({
       <div className="p-3 border-b border-sidebar-border space-y-2">
         <div className="flex items-center justify-between">
           <Badge variant="secondary" className="text-[10px]">
-            Step {step + 1} of {steps.length}
+            {showConfirmation ? "Preview" : `Step ${step + 1} of ${steps.length}`}
           </Badge>
           <span className="text-[10px] text-sidebar-foreground/60">
-            {steps[step]}
+            {showConfirmation ? "Campaign Preview" : steps[step]}
           </span>
         </div>
-        <Progress value={progress} className="h-1.5" />
+        <Progress value={showConfirmation ? 100 : progress} className="h-1.5" />
         {interviewType === "campaign" && (
-          <p className="text-[10px] text-primary/70 font-medium">🎯 Campaign Interview</p>
+          <p className="text-[10px] text-primary/70 font-medium">
+            {showConfirmation ? "✅ Review & Approve" : "🎯 Campaign Interview"}
+          </p>
         )}
       </div>
 
-      {/* AI Message Display */}
+      {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* AI Message */}
         <div className="flex items-start gap-2">
           <div
             className={cn(
@@ -288,8 +436,13 @@ export default function VoiceInterviewMode({
           </div>
         </div>
 
+        {/* Campaign Preview Card */}
+        {showConfirmation && campaignPreview && (
+          <CampaignPreviewCard preview={campaignPreview} />
+        )}
+
         {/* Live Transcript */}
-        {(isListening || interimTranscript || transcript) && (
+        {!showConfirmation && (isListening || interimTranscript || transcript) && (
           <div className="flex justify-end">
             <div className="bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm max-w-[85%]">
               <span className="text-[10px] uppercase tracking-wide text-primary/60 block mb-1">
@@ -314,7 +467,7 @@ export default function VoiceInterviewMode({
               <Check className="h-4 w-4" /> Approve Campaign
             </Button>
             <Button onClick={handleEditCampaign} variant="outline" className="w-full h-11 gap-2 border-sidebar-border">
-              <Edit className="h-4 w-4" /> Edit Answers
+              <Edit className="h-4 w-4" /> Edit Campaign
             </Button>
           </div>
         ) : mode === "voice" ? (
