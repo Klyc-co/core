@@ -69,6 +69,15 @@ const TOOLS = [
             },
             additionalProperties: false,
           },
+          risk_level: {
+            type: "string",
+            enum: ["low", "medium", "high"],
+            description: "Risk level of the proposed action.",
+          },
+          requires_approval: {
+            type: "boolean",
+            description: "Whether this action needs marketer/client approval before execution.",
+          },
         },
         required: ["intent", "message"],
         additionalProperties: false,
@@ -172,6 +181,8 @@ serve(async (req) => {
       message: "I'm here to help! What would you like to work on?",
       next_questions: [] as any[],
       draft_updates: {} as Record<string, any>,
+      risk_level: "low" as string,
+      requires_approval: false,
     };
 
     if (toolCall?.function?.arguments) {
@@ -182,6 +193,8 @@ serve(async (req) => {
           message: parsed.message || structured.message,
           next_questions: parsed.next_questions || [],
           draft_updates: parsed.draft_updates || {},
+          risk_level: parsed.risk_level || "low",
+          requires_approval: parsed.requires_approval ?? false,
         };
       } catch (e) {
         console.error("Failed to parse tool call arguments:", e);

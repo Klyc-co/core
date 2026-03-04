@@ -25,6 +25,8 @@ interface StructuredResponse {
   message: string;
   next_questions: NextQuestion[];
   draft_updates: Record<string, any>;
+  risk_level?: "low" | "medium" | "high";
+  requires_approval?: boolean;
 }
 
 type ChatMessage = {
@@ -61,6 +63,22 @@ const ChatSidebar = () => {
 
     const effectiveClientId = getEffectiveUserId();
 
+    // Resolve marketer_client_id for message persistence
+    let marketerClientId: string | undefined;
+    if (selectedClientId && selectedClientId !== "default") {
+      const { data: mc } = await supabase
+        .from("marketer_clients")
+        .select("id")
+        .eq("client_id", selectedClientId)
+        .maybeSingle();
+      marketerClientId = mc?.id;
+    }
+
+    // Build lightweight context summary from brain
+    const contextSummary = selectedClientId && selectedClientId !== "default"
+      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
+      : undefined;
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
@@ -70,6 +88,8 @@ const ChatSidebar = () => {
       body: JSON.stringify({
         messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
         client_id: effectiveClientId,
+        marketer_client_id: marketerClientId,
+        context_summary: contextSummary,
         draft_id: draftId,
       }),
     });
