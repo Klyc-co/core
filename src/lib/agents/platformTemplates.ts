@@ -655,7 +655,7 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
   strategy_breakdown: "Break down the strategy into clear phases.",
   data_analysis: "Show the data — charts, screenshots, or on-screen graphics.",
   key_takeaways: "3-5 bullet point takeaways the viewer can apply.",
-  how_to_apply: "Bridge from the case study to the viewer's situation.",
+  how_to_apply_casestudy: "Bridge from the case study to the viewer's situation.",
   bold_hook_0_3s: "3-second hook — text on screen + verbal punch.",
   context_3_10s: "Quick context so the tip makes sense.",
   tip_demo_10_45s: "Demonstrate the tip with energy and clarity.",
