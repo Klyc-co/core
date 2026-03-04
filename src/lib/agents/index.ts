@@ -33,3 +33,20 @@ export type {
   StructureVariation,
   VariationSection,
 } from "./platformTemplates";
+export {
+  estimateTokenCost,
+  enforceBudget,
+  getModelPricing,
+  listModelPricing,
+  recordTokenUsage,
+  getUsageHistory,
+  getCalibratedAvgTokens,
+} from "./tokenMonitor";
+export type {
+  TokenEstimate,
+  BudgetEnforcementResult,
+  BudgetAdjustment,
+  BudgetConfig,
+  ModelPricing,
+  TokenUsageRecord,
+} from "./tokenMonitor";
