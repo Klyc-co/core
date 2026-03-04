@@ -86,10 +86,8 @@ const CampaignDraftView = () => {
   const [isPostingToYouTube, setIsPostingToYouTube] = useState(false);
   const [isPostingToLinkedIn, setIsPostingToLinkedIn] = useState(false);
 
-  const handleSendToZapier = async () => {
-    if (!id) return;
-    await triggerZapier(id, "all_data");
-  };
+
+
 
   const handleSendForApproval = async () => {
     if (!id || !user) return;
