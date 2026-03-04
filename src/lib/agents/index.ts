@@ -15,8 +15,8 @@ export { computeSocialMetrics } from "./socialAgent";
 export { computeImageMetrics } from "./imageAgent";
 export { computeEditorMetrics } from "./editorAgent";
 export { computeAnalyticsMetrics } from "./analyticsAgent";
-export { aggregateAgentMetrics, queryAnalytics, generateDashboardSnapshot } from "./orchestrator";
-export type { OrchestratorMetricsReport } from "./orchestrator";
+export { runCampaignPipeline, aggregateAgentMetrics, queryAnalytics, generateDashboardSnapshot } from "./orchestrator";
+export type { OrchestratorMetricsReport, PipelineResult, PipelineStage, PipelineOptions } from "./orchestrator";
 export {
   getTemplatesForPlatform,
   getTemplate,
