@@ -455,9 +455,22 @@ serve(async (req) => {
 
       const postHistory = { daysBack: 30, totalPosts: postHistoryPosts.length, postsCountPerPlatform, statusCounts: postHistoryStatusCounts };
 
+      // ===== LOAD CLIENT BRAIN =====
+      const brainRes = await supabaseAdmin
+        .from("client_brain")
+        .select("document_type, data")
+        .eq("client_id", userId);
+
+      const clientBrain: Record<string, any> = {};
+      if (brainRes.data) {
+        for (const row of brainRes.data) {
+          clientBrain[row.document_type] = row.data;
+        }
+      }
+
       // ===== ASSEMBLE FINAL CONTEXT =====
       campaignContext = stripNulls({
-        schemaVersion: "1.0.0",
+        schemaVersion: "1.1.0",
         identity, brand, audience,
         competitors: competitorsPayload,
         campaign,
@@ -465,6 +478,7 @@ serve(async (req) => {
         assets, distribution, postHistory,
         crmSummary, performanceSummary,
         recentTrends, historicalInsights, monetizationFlags,
+        clientBrain: Object.keys(clientBrain).length > 0 ? clientBrain : undefined,
       });
     } // end real data path
 
