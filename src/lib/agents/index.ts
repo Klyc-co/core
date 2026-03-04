@@ -17,3 +17,19 @@ export { computeEditorMetrics } from "./editorAgent";
 export { computeAnalyticsMetrics } from "./analyticsAgent";
 export { aggregateAgentMetrics, queryAnalytics, generateDashboardSnapshot } from "./orchestrator";
 export type { OrchestratorMetricsReport } from "./orchestrator";
+export {
+  getTemplatesForPlatform,
+  getTemplate,
+  listAllTemplates,
+  generateStructureVariations,
+} from "./platformTemplates";
+export type {
+  ContentStructureTemplate,
+  SocialPlatform,
+  HookType,
+  CtaPattern,
+  HashtagPattern,
+  CharacterLimits,
+  StructureVariation,
+  VariationSection,
+} from "./platformTemplates";
