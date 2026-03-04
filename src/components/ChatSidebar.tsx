@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import VoiceInterviewMode from "@/components/VoiceInterviewMode";
 import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
+import { signRequest } from "@/lib/security/aiRequestSigning";
 
 interface NextQuestion {
   field: string;
@@ -82,19 +83,21 @@ const ChatSidebar = () => {
       ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
       : undefined;
 
+    const signedPayload = signRequest({
+      messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
+      client_id: effectiveClientId,
+      marketer_client_id: marketerClientId,
+      context_summary: contextSummary,
+      draft_id: draftId,
+    });
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
-        client_id: effectiveClientId,
-        marketer_client_id: marketerClientId,
-        context_summary: contextSummary,
-        draft_id: draftId,
-      }),
+      body: JSON.stringify(signedPayload),
     });
 
     if (!resp.ok) {
