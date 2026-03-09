@@ -591,6 +591,46 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
+          {/* Product Description for Sample Campaigns */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Product</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Tell us about your product to discover winning campaigns from similar brands.
+              </p>
+              <Textarea
+                placeholder="e.g. A premium organic skincare line targeting millennials, focused on sustainability and clean ingredients..."
+                value={productDescription}
+                onChange={(e) => setProductDescription(e.target.value)}
+                rows={3}
+                className="resize-none mb-4"
+              />
+              <Button 
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleFetchSampleCampaigns}
+                disabled={!productDescription.trim() || isLoadingSamples}
+              >
+                {isLoadingSamples ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Finding sample campaigns...
+                  </>
+                ) : (
+                  <>
+                    <Trophy className="w-4 h-4" />
+                    Find Sample Winning Campaigns
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Pre-generation Sample Campaigns */}
+          {showSamplesPreGenerate && sampleCampaigns.length > 0 && (
+            <SampleCampaigns campaigns={sampleCampaigns} />
+          )}
+
           {/* Products */}
           <Card>
             <CardContent className="p-6">
@@ -619,7 +659,7 @@ const GenerateCampaignIdeas = () => {
 
           {/* Generate Button */}
           <Button 
-            className="w-full gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 py-6 text-lg disabled:opacity-50"
+            className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
             onClick={handleGenerate}
             disabled={!selectedContentType || isLoading}
           >
