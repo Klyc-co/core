@@ -777,7 +777,22 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
-          {/* Products */}
+          {/* Target Audience */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Target Audience</h2>
+              <Input
+                placeholder="e.g. Young professionals aged 25-35 interested in fitness"
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Describe your target audience to help generate more relevant campaign ideas.
+              </p>
+            </CardContent>
+          </Card>
+
+
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold text-foreground mb-4">Products</h2>
