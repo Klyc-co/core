@@ -73,6 +73,7 @@ const GenerateCampaignIdeas = () => {
   const [isRegeneratingPrompt, setIsRegeneratingPrompt] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [sampleCampaigns, setSampleCampaigns] = useState<Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }>>([]);
   const { getEffectiveUserId } = useClientContext();
 
   // Voiceover state
