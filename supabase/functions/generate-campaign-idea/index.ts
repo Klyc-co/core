@@ -49,6 +49,8 @@ serve(async (req) => {
 
     let systemPrompt = `You are an expert marketing strategist and campaign creator. Generate creative, actionable campaign ideas based on the user's input.
 
+You must also provide 3 sample campaigns that have performed well for similar products or industries. These should be real-world inspired examples with concrete metrics.
+
 Always respond with valid JSON in the exact format specified. Do not include any markdown formatting or code blocks.`;
 
     let userPrompt = `Generate a campaign idea for the following:
