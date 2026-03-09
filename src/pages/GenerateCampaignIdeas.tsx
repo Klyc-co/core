@@ -190,6 +190,7 @@ const GenerateCampaignIdeas = () => {
       setCampaignGoals(data.campaignGoals || "");
       setTargetAudienceDescription(data.targetAudienceDescription || "");
       setCampaignObjective(data.campaignObjective || "");
+      setSampleCampaigns(data.sampleCampaigns || []);
       
       if (selectedContentType === "social-video" || selectedContentType === "video-ad") {
         setVideoScript(data.videoScript || "");
