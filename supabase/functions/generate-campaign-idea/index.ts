@@ -109,7 +109,12 @@ Respond with this exact JSON structure:
   "campaignGoals": "Goal 1\\nGoal 2\\nGoal 3\\nGoal 4",
   "targetAudienceDescription": "Detailed target audience description",
   "campaignObjective": "Clear campaign objective statement",
-  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
+  "sampleCampaigns": [
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" }
+  ]
 }`;
     }
 
