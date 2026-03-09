@@ -166,7 +166,35 @@ const GenerateCampaignIdeas = () => {
     loadProductAssets();
   }, [selectedProduct]);
 
-  const handleGenerate = async () => {
+  const handleFetchSampleCampaigns = async () => {
+    if (!productDescription.trim()) return;
+    
+    setIsLoadingSamples(true);
+    setSampleCampaigns([]);
+    setShowSamplesPreGenerate(false);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-sample-campaigns', {
+        body: { productDescription },
+      });
+
+      if (error) throw new Error(error.message || "Failed to fetch sample campaigns");
+
+      setSampleCampaigns(data.sampleCampaigns || []);
+      setShowSamplesPreGenerate(true);
+    } catch (error) {
+      console.error("Error fetching sample campaigns:", error);
+      toast({
+        title: "Failed to fetch sample campaigns",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSamples(false);
+    }
+  };
+
+
     if (!selectedContentType) return;
     
     setIsLoading(true);
