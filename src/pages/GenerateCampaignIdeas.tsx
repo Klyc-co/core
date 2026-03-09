@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink } from "lucide-react";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -73,6 +73,7 @@ const GenerateCampaignIdeas = () => {
   const [isRegeneratingPrompt, setIsRegeneratingPrompt] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [sampleCampaigns, setSampleCampaigns] = useState<Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }>>([]);
   const { getEffectiveUserId } = useClientContext();
 
   // Voiceover state
@@ -189,6 +190,7 @@ const GenerateCampaignIdeas = () => {
       setCampaignGoals(data.campaignGoals || "");
       setTargetAudienceDescription(data.targetAudienceDescription || "");
       setCampaignObjective(data.campaignObjective || "");
+      setSampleCampaigns(data.sampleCampaigns || []);
       
       if (selectedContentType === "social-video" || selectedContentType === "video-ad") {
         setVideoScript(data.videoScript || "");
@@ -788,6 +790,8 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
+              <SampleCampaigns campaigns={sampleCampaigns} />
+
               {/* Save Buttons */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
@@ -1033,6 +1037,8 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
+              <SampleCampaigns campaigns={sampleCampaigns} />
+
               {/* Save Buttons */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
@@ -1100,6 +1106,8 @@ const GenerateCampaignIdeas = () => {
                 campaignObjective={campaignObjective}
                 setCampaignObjective={setCampaignObjective}
               />
+
+              <SampleCampaigns campaigns={sampleCampaigns} />
 
               {/* Save Buttons */}
               <Button 
@@ -1298,6 +1306,8 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
+              <SampleCampaigns campaigns={sampleCampaigns} />
+
               {/* Save Buttons */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
@@ -1405,5 +1415,52 @@ const CampaignStrategy = ({
     </CardContent>
   </Card>
 );
+// Sample Campaigns Component
+const SampleCampaigns = ({ campaigns }: { campaigns: Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }> }) => {
+  if (!campaigns || campaigns.length === 0) return null;
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="border-l-4 border-accent pl-4 mb-6">
+          <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Sample Winning Campaigns
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">Real-world campaigns that performed well for similar products</p>
+        </div>
+
+        <div className="grid gap-4">
+          {campaigns.map((sample, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-border bg-muted/30 p-5 space-y-3 hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold text-foreground">{sample.campaign}</h4>
+                  <p className="text-sm text-muted-foreground">{sample.brand}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
+                  {sample.platform}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-foreground">{sample.result}</span>
+              </div>
+
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="font-medium text-foreground">Why it worked: </span>
+                {sample.whyItWorked}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default GenerateCampaignIdeas;

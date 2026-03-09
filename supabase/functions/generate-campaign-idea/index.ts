@@ -49,6 +49,8 @@ serve(async (req) => {
 
     let systemPrompt = `You are an expert marketing strategist and campaign creator. Generate creative, actionable campaign ideas based on the user's input.
 
+You must also provide 3 sample campaigns that have performed well for similar products or industries. These should be real-world inspired examples with concrete metrics.
+
 Always respond with valid JSON in the exact format specified. Do not include any markdown formatting or code blocks.`;
 
     let userPrompt = `Generate a campaign idea for the following:
@@ -74,7 +76,12 @@ Respond with this exact JSON structure:
   "campaignGoals": "Goal 1\\nGoal 2\\nGoal 3\\nGoal 4",
   "targetAudienceDescription": "Detailed target audience description",
   "campaignObjective": "Clear campaign objective statement",
-  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
+  "sampleCampaigns": [
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved (e.g. 2.5M views, 12% engagement rate)", "whyItWorked": "Brief explanation of success factors" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" }
+  ]
 }`;
     } else if (contentType === "visual-post") {
       userPrompt += `
@@ -86,7 +93,12 @@ Respond with this exact JSON structure:
   "campaignGoals": "Goal 1\\nGoal 2\\nGoal 3\\nGoal 4",
   "targetAudienceDescription": "Detailed target audience description",
   "campaignObjective": "Clear campaign objective statement",
-  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
+  "sampleCampaigns": [
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" }
+  ]
 }`;
     } else if (contentType === "written") {
       userPrompt += `
@@ -97,7 +109,12 @@ Respond with this exact JSON structure:
   "campaignGoals": "Goal 1\\nGoal 2\\nGoal 3\\nGoal 4",
   "targetAudienceDescription": "Detailed target audience description",
   "campaignObjective": "Clear campaign objective statement",
-  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
+  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
+  "sampleCampaigns": [
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" },
+    { "brand": "Brand name", "campaign": "Campaign title", "platform": "Platform used", "result": "Key metric achieved", "whyItWorked": "Brief explanation" }
+  ]
 }`;
     }
 
