@@ -740,7 +740,12 @@ const GenerateCampaignIdeas = () => {
 
           {/* Pre-generation Sample Campaigns */}
           {showSamplesPreGenerate && sampleCampaigns.length > 0 && (
-            <SampleCampaigns campaigns={sampleCampaigns} />
+            <SampleCampaigns 
+              campaigns={sampleCampaigns} 
+              selectable 
+              selectedIndex={selectedSampleCampaignIndex} 
+              onSelect={(i) => setSelectedSampleCampaignIndex(prev => prev === i ? null : i)} 
+            />
           )}
 
           {/* Select Content Type */}
