@@ -74,6 +74,9 @@ const GenerateCampaignIdeas = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [sampleCampaigns, setSampleCampaigns] = useState<Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }>>([]);
+  const [productDescription, setProductDescription] = useState("");
+  const [isLoadingSamples, setIsLoadingSamples] = useState(false);
+  const [showSamplesPreGenerate, setShowSamplesPreGenerate] = useState(false);
   const { getEffectiveUserId } = useClientContext();
 
   // Voiceover state
