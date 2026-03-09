@@ -371,11 +371,19 @@ const GenerateCampaignIdeas = () => {
     setShowResults(false);
     
     try {
+      const inspirationCampaign = selectedSampleCampaignIndex !== null && sampleCampaigns[selectedSampleCampaignIndex]
+        ? sampleCampaigns[selectedSampleCampaignIndex]
+        : null;
+
+      const inspirationText = inspirationCampaign
+        ? `\nUse this winning campaign as inspiration: "${inspirationCampaign.campaign}" by ${inspirationCampaign.brand} on ${inspirationCampaign.platform} which achieved ${inspirationCampaign.result}. Key success factor: ${inspirationCampaign.whyItWorked}`
+        : "";
+
       const { data, error } = await supabase.functions.invoke('generate-campaign-idea', {
         body: {
           contentType: selectedContentType,
           targetAudience,
-          prompt: customPrompt,
+          prompt: (customPrompt + inspirationText).trim(),
           productInfo: selectedProduct || null,
         },
       });
