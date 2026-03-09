@@ -1037,6 +1037,8 @@ const GenerateCampaignIdeas = () => {
                 setCampaignObjective={setCampaignObjective}
               />
 
+              <SampleCampaigns campaigns={sampleCampaigns} />
+
               {/* Save Buttons */}
               <Button 
                 className="w-full gap-2 py-6 text-lg"
