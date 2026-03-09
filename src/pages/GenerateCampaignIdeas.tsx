@@ -127,7 +127,17 @@ const CampaignStrategy = ({
 );
 
 // Sample Campaigns Component
-const SampleCampaigns = ({ campaigns }: { campaigns: Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }> }) => {
+const SampleCampaigns = ({ 
+  campaigns, 
+  selectable = false, 
+  selectedIndex, 
+  onSelect 
+}: { 
+  campaigns: Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }>; 
+  selectable?: boolean;
+  selectedIndex?: number | null;
+  onSelect?: (index: number) => void;
+}) => {
   if (!campaigns || campaigns.length === 0) return null;
 
   return (
@@ -138,36 +148,54 @@ const SampleCampaigns = ({ campaigns }: { campaigns: Array<{ brand: string; camp
             <Trophy className="w-5 h-5 text-primary" />
             Sample Winning Campaigns
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">Real-world campaigns that performed well for similar products</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {selectable ? "Select a campaign to use as inspiration for your generated idea" : "Real-world campaigns that performed well for similar products"}
+          </p>
         </div>
 
         <div className="grid gap-4">
-          {campaigns.map((sample, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-border bg-muted/30 p-5 space-y-3 hover:border-primary/40 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="font-semibold text-foreground">{sample.campaign}</h4>
-                  <p className="text-sm text-muted-foreground">{sample.brand}</p>
+          {campaigns.map((sample, index) => {
+            const isSelected = selectable && selectedIndex === index;
+            return (
+              <div
+                key={index}
+                onClick={() => selectable && onSelect?.(index)}
+                className={`rounded-xl border p-5 space-y-3 transition-colors ${
+                  isSelected
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                    : "border-border bg-muted/30 hover:border-primary/40"
+                } ${selectable ? "cursor-pointer" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold text-foreground">{sample.campaign}</h4>
+                    <p className="text-sm text-muted-foreground">{sample.brand}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isSelected && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground whitespace-nowrap">
+                        <Check className="w-3 h-3" />
+                        Selected
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
+                      {sample.platform}
+                    </span>
+                  </div>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
-                  {sample.platform}
-                </span>
-              </div>
 
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-foreground">{sample.result}</span>
-              </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className="font-medium text-foreground">{sample.result}</span>
+                </div>
 
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                <span className="font-medium text-foreground">Why it worked: </span>
-                {sample.whyItWorked}
-              </p>
-            </div>
-          ))}
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-medium text-foreground">Why it worked: </span>
+                  {sample.whyItWorked}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
