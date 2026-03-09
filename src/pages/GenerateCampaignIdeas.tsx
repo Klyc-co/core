@@ -340,6 +340,7 @@ const GenerateCampaignIdeas = () => {
     setIsLoadingSamples(true);
     setSampleCampaigns([]);
     setShowSamplesPreGenerate(false);
+    setSelectedSampleCampaignIndex(null);
     
     try {
       const { data, error } = await supabase.functions.invoke('fetch-sample-campaigns', {
