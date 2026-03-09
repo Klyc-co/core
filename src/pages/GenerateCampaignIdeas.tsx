@@ -35,6 +35,145 @@ const contentTypes = [
   { id: "video-ad", label: "Video Ad", icon: Film },
 ];
 
+// Campaign Strategy Component (shared between content types)
+const CampaignStrategy = ({ 
+  tags, 
+  removeTag, 
+  newTag, 
+  setNewTag, 
+  addTag,
+  campaignGoals,
+  setCampaignGoals,
+  targetAudienceDescription,
+  setTargetAudienceDescription,
+  campaignObjective,
+  setCampaignObjective,
+}: {
+  tags: string[];
+  removeTag: (tag: string) => void;
+  newTag: string;
+  setNewTag: (value: string) => void;
+  addTag: () => void;
+  campaignGoals: string;
+  setCampaignGoals: (value: string) => void;
+  targetAudienceDescription: string;
+  setTargetAudienceDescription: (value: string) => void;
+  campaignObjective: string;
+  setCampaignObjective: (value: string) => void;
+}) => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="border-l-4 border-primary pl-4 mb-6">
+        <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
+          <Textarea
+            value={campaignGoals}
+            onChange={(e) => setCampaignGoals(e.target.value)}
+            placeholder="AI-generated campaign goals will appear here..."
+            rows={4}
+            className="resize-none bg-muted/50"
+          />
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
+          <Textarea
+            value={targetAudienceDescription}
+            onChange={(e) => setTargetAudienceDescription(e.target.value)}
+            placeholder="AI-generated target audience description will appear here..."
+            rows={3}
+            className="resize-none bg-muted/50"
+          />
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
+          <Textarea
+            value={campaignObjective}
+            onChange={(e) => setCampaignObjective(e.target.value)}
+            placeholder="AI-generated campaign objective will appear here..."
+            rows={3}
+            className="resize-none bg-muted/50"
+          />
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-foreground mb-3">Tags & Keywords</h4>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
+                {tag}
+                <button onClick={() => removeTag(tag)} className="hover:text-primary/70">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <Input
+            placeholder="Add a new tag (e.g., #viral, #trending)"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addTag()}
+            className="max-w-sm"
+          />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Sample Campaigns Component
+const SampleCampaigns = ({ campaigns }: { campaigns: Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }> }) => {
+  if (!campaigns || campaigns.length === 0) return null;
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="border-l-4 border-accent pl-4 mb-6">
+          <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Sample Winning Campaigns
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">Real-world campaigns that performed well for similar products</p>
+        </div>
+
+        <div className="grid gap-4">
+          {campaigns.map((sample, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-border bg-muted/30 p-5 space-y-3 hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold text-foreground">{sample.campaign}</h4>
+                  <p className="text-sm text-muted-foreground">{sample.brand}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
+                  {sample.platform}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-foreground">{sample.result}</span>
+              </div>
+
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="font-medium text-foreground">Why it worked: </span>
+                {sample.whyItWorked}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const GenerateCampaignIdeas = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -195,6 +334,7 @@ const GenerateCampaignIdeas = () => {
   };
 
 
+  const handleGenerate = async () => {
     if (!selectedContentType) return;
     
     setIsLoading(true);
@@ -1396,142 +1536,5 @@ const GenerateCampaignIdeas = () => {
   );
 };
 
-// Campaign Strategy Component (shared between content types)
-const CampaignStrategy = ({ 
-  tags, 
-  removeTag, 
-  newTag, 
-  setNewTag, 
-  addTag,
-  campaignGoals,
-  setCampaignGoals,
-  targetAudienceDescription,
-  setTargetAudienceDescription,
-  campaignObjective,
-  setCampaignObjective,
-}: {
-  tags: string[];
-  removeTag: (tag: string) => void;
-  newTag: string;
-  setNewTag: (value: string) => void;
-  addTag: () => void;
-  campaignGoals: string;
-  setCampaignGoals: (value: string) => void;
-  targetAudienceDescription: string;
-  setTargetAudienceDescription: (value: string) => void;
-  campaignObjective: string;
-  setCampaignObjective: (value: string) => void;
-}) => (
-  <Card>
-    <CardContent className="p-6">
-      <div className="border-l-4 border-primary pl-4 mb-6">
-        <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
-          <Textarea
-            value={campaignGoals}
-            onChange={(e) => setCampaignGoals(e.target.value)}
-            placeholder="AI-generated campaign goals will appear here..."
-            rows={4}
-            className="resize-none bg-muted/50"
-          />
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-foreground mb-2">Target Audience</h4>
-          <Textarea
-            value={targetAudienceDescription}
-            onChange={(e) => setTargetAudienceDescription(e.target.value)}
-            placeholder="AI-generated target audience description will appear here..."
-            rows={3}
-            className="resize-none bg-muted/50"
-          />
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
-          <Textarea
-            value={campaignObjective}
-            onChange={(e) => setCampaignObjective(e.target.value)}
-            placeholder="AI-generated campaign objective will appear here..."
-            rows={3}
-            className="resize-none bg-muted/50"
-          />
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-foreground mb-3">Tags & Keywords</h4>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {tags.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                {tag}
-                <button onClick={() => removeTag(tag)} className="hover:text-primary/70">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-          <Input
-            placeholder="Add a new tag (e.g., #viral, #trending)"
-            value={newTag}
-            onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addTag()}
-            className="max-w-sm"
-          />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-// Sample Campaigns Component
-const SampleCampaigns = ({ campaigns }: { campaigns: Array<{ brand: string; campaign: string; platform: string; result: string; whyItWorked: string }> }) => {
-  if (!campaigns || campaigns.length === 0) return null;
-
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="border-l-4 border-accent pl-4 mb-6">
-          <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary" />
-            Sample Winning Campaigns
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">Real-world campaigns that performed well for similar products</p>
-        </div>
-
-        <div className="grid gap-4">
-          {campaigns.map((sample, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-border bg-muted/30 p-5 space-y-3 hover:border-primary/40 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="font-semibold text-foreground">{sample.campaign}</h4>
-                  <p className="text-sm text-muted-foreground">{sample.brand}</p>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
-                  {sample.platform}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-foreground">{sample.result}</span>
-              </div>
-
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                <span className="font-medium text-foreground">Why it worked: </span>
-                {sample.whyItWorked}
-              </p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 export default GenerateCampaignIdeas;
+
