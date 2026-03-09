@@ -674,63 +674,6 @@ const GenerateCampaignIdeas = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Select Content Type */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Select Content Type</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {contentTypes.map((type) => {
-                  const Icon = type.icon;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => {
-                        setSelectedContentType(type.id);
-                        setShowResults(false);
-                      }}
-                      className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
-                        selectedContentType === type.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
-                      }`}
-                    >
-                      <Icon className="w-7 h-7 mb-3 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">{type.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Target Audience */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Target Audience</h2>
-              <Textarea
-                placeholder="Describe your target audience..."
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Prompt */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Prompt</h2>
-              <Textarea
-                placeholder="Add any specific details or requirements for your campaign idea..."
-                value={customPrompt}
-                onChange={(e) => setCustomPrompt(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
-            </CardContent>
-          </Card>
-
           {/* Product Description for Sample Campaigns */}
           <Card>
             <CardContent className="p-6">
@@ -770,6 +713,35 @@ const GenerateCampaignIdeas = () => {
           {showSamplesPreGenerate && sampleCampaigns.length > 0 && (
             <SampleCampaigns campaigns={sampleCampaigns} />
           )}
+
+          {/* Select Content Type */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Select Content Type</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {contentTypes.map((type) => {
+                  const Icon = type.icon;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => {
+                        setSelectedContentType(type.id);
+                        setShowResults(false);
+                      }}
+                      className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
+                        selectedContentType === type.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      }`}
+                    >
+                      <Icon className="w-7 h-7 mb-3 text-foreground" />
+                      <span className="text-sm font-medium text-foreground">{type.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Products */}
           <Card>
