@@ -334,6 +334,7 @@ const GenerateCampaignIdeas = () => {
   };
 
 
+  const handleGenerate = async () => {
     if (!selectedContentType) return;
     
     setIsLoading(true);
