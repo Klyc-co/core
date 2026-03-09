@@ -244,6 +244,7 @@ const GenerateCampaignIdeas = () => {
   const [productDescription, setProductDescription] = useState("");
   const [isLoadingSamples, setIsLoadingSamples] = useState(false);
   const [showSamplesPreGenerate, setShowSamplesPreGenerate] = useState(false);
+  const [selectedSampleCampaignIndex, setSelectedSampleCampaignIndex] = useState<number | null>(null);
   const { getEffectiveUserId } = useClientContext();
 
   // Voiceover state
