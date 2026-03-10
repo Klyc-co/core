@@ -2,6 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingHeader from "@/components/landing/LandingHeader";
+import atlasImg from "@/assets/team/atlas.png";
+import fylixImg from "@/assets/team/fylix.png";
+import sloaneImg from "@/assets/team/sloane.png";
+import irisImg from "@/assets/team/iris.png";
+import lyraImg from "@/assets/team/lyra.png";
 
 const specialists = [
   {
@@ -10,6 +15,7 @@ const specialists = [
     description:
       "Atlas uncovers the truth layer behind every campaign. He identifies audience behavior, trend momentum, competitor signals, and insight opportunities so the rest of the system starts from real data, not guesses.",
     items: ["Audience research", "Trend discovery", "Competitor analysis", "Insight packs"],
+    image: atlasImg,
   },
   {
     name: "Fylix",
@@ -17,6 +23,7 @@ const specialists = [
     description:
       "Fylix translates strategy into platform-native execution. He adapts messaging for the unique style, structure, and behavior of each channel so content feels native everywhere it appears.",
     items: ["LinkedIn content", "X content", "Instagram formatting", "TikTok / YouTube adaptation"],
+    image: fylixImg,
   },
   {
     name: "Sloane",
@@ -24,6 +31,7 @@ const specialists = [
     description:
       "Sloane turns insights into direction. She develops messaging pillars, hooks, CTAs, and content angles that align with awareness, lead generation, authority, and nurture goals.",
     items: ["Positioning", "Messaging pillars", "Hooks and CTAs", "Campaign direction"],
+    image: sloaneImg,
   },
   {
     name: "Iris",
@@ -31,6 +39,7 @@ const specialists = [
     description:
       "Iris leads visual direction across the platform. She defines image concepts, carousel structures, creative styling, and repurposing logic so every campaign looks intentional and brand-right.",
     items: ["Visual direction", "Image concepts", "Carousel layouts", "Repurposing plans"],
+    image: irisImg,
   },
   {
     name: "Lyra",
@@ -38,6 +47,7 @@ const specialists = [
     description:
       "Lyra monitors early engagement signals and identifies what is gaining traction. She helps Klyc understand when to iterate, boost, or double down based on real performance momentum.",
     items: ["Early velocity tracking", "Engagement signals", "Boost recommendations", "Optimization loops"],
+    image: lyraImg,
   },
 ];
 
@@ -64,7 +74,6 @@ const MeetTheTeam = () => {
       <section className="px-4 sm:px-6 pb-20">
         <div className="max-w-4xl mx-auto">
           <div className="rounded-3xl border border-border bg-card p-8 sm:p-12 shadow-sm flex flex-col md:flex-row gap-8 items-center">
-            {/* Placeholder */}
             <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-secondary flex-shrink-0 flex items-center justify-center">
               <User className="w-16 h-16 text-muted-foreground/40" />
             </div>
@@ -81,7 +90,7 @@ const MeetTheTeam = () => {
         </div>
       </section>
 
-      {/* Specialist Agents */}
+      {/* Specialist Agents — full body shots */}
       <section className="px-4 sm:px-6 pb-24">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-14">
@@ -96,9 +105,13 @@ const MeetTheTeam = () => {
                   idx % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
                 } items-stretch`}
               >
-                {/* Placeholder */}
-                <div className="md:w-80 flex-shrink-0 bg-secondary flex items-center justify-center min-h-[240px]">
-                  <User className="w-20 h-20 text-muted-foreground/30" />
+                {/* Full body image */}
+                <div className="md:w-80 flex-shrink-0 bg-secondary flex items-center justify-center min-h-[320px] p-6">
+                  <img
+                    src={agent.image}
+                    alt={agent.name}
+                    className="h-72 md:h-80 object-contain"
+                  />
                 </div>
 
                 {/* Content */}

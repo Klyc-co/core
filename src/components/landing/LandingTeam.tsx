@@ -1,32 +1,42 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, User } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import atlasImg from "@/assets/team/atlas.png";
+import fylixImg from "@/assets/team/fylix.png";
+import sloaneImg from "@/assets/team/sloane.png";
+import irisImg from "@/assets/team/iris.png";
+import lyraImg from "@/assets/team/lyra.png";
 
 const agents = [
   {
     name: "Atlas",
     title: "Research & Insights Agent",
     description: "Finds trends, audience insights, and competitor intelligence.",
+    image: atlasImg,
   },
   {
     name: "Fylix",
     title: "Platform Content Agent",
     description: "Creates platform-native content for every channel.",
+    image: fylixImg,
   },
   {
     name: "Sloane",
     title: "Strategy & Messaging Agent",
     description: "Shapes positioning, hooks, CTAs, and campaign direction.",
+    image: sloaneImg,
   },
   {
     name: "Iris",
     title: "Creative Media Agent",
     description: "Leads visual concepts, creative direction, and repurposing.",
+    image: irisImg,
   },
   {
     name: "Lyra",
     title: "Social Performance Agent",
     description: "Tracks momentum, engagement signals, and optimization opportunities.",
+    image: lyraImg,
   },
 ];
 
@@ -51,9 +61,13 @@ const LandingTeam = () => {
               key={agent.name}
               className="group rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300"
             >
-              {/* Image placeholder */}
-              <div className="w-full aspect-square rounded-xl bg-secondary flex items-center justify-center mb-5 overflow-hidden">
-                <User className="w-12 h-12 text-muted-foreground/40" />
+              {/* Headshot — cropped to upper portion */}
+              <div className="w-full aspect-square rounded-xl bg-secondary overflow-hidden mb-5">
+                <img
+                  src={agent.image}
+                  alt={agent.name}
+                  className="w-full h-full object-cover object-top scale-125 translate-y-[-5%]"
+                />
               </div>
 
               <h3 className="text-lg font-semibold text-foreground mb-1">
