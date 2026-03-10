@@ -56,6 +56,7 @@ import FacebookAnalytics from "./pages/FacebookAnalytics";
 import TwitterAnalytics from "./pages/TwitterAnalytics";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import FullAnalytics from "./pages/FullAnalytics";
+import MeetTheTeam from "./pages/MeetTheTeam";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -99,6 +100,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/meet-the-team" element={<MeetTheTeam />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin/login" element={<AdminLogin />} />
