@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowLeft, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingHeader from "@/components/landing/LandingHeader";
+import klycImg from "@/assets/team/klyc.png";
 import atlasImg from "@/assets/team/atlas.png";
 import fylixImg from "@/assets/team/fylix.png";
 import sloaneImg from "@/assets/team/sloane.png";
