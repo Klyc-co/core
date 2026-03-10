@@ -15,10 +15,10 @@ const agents = [
     image: atlasImg,
   },
   {
-    name: "Fylix",
-    title: "Platform Content Agent",
-    description: "Creates platform-native content for every channel.",
-    image: fylixImg,
+    name: "Iris",
+    title: "Creative Media Agent",
+    description: "Leads visual concepts, creative direction, and repurposing.",
+    image: irisImg,
   },
   {
     name: "Sloane",
@@ -27,10 +27,10 @@ const agents = [
     image: sloaneImg,
   },
   {
-    name: "Iris",
-    title: "Creative Media Agent",
-    description: "Leads visual concepts, creative direction, and repurposing.",
-    image: irisImg,
+    name: "Fylix",
+    title: "Platform Content Agent",
+    description: "Creates platform-native content for every channel.",
+    image: fylixImg,
   },
   {
     name: "Lyra",
