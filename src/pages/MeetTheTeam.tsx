@@ -18,12 +18,12 @@ const specialists = [
     image: atlasImg,
   },
   {
-    name: "Fylix",
-    title: "Platform Content Agent",
+    name: "Iris",
+    title: "Creative Media Agent",
     description:
-      "Fylix translates strategy into platform-native execution. He adapts messaging for the unique style, structure, and behavior of each channel so content feels native everywhere it appears.",
-    items: ["LinkedIn content", "X content", "Instagram formatting", "TikTok / YouTube adaptation"],
-    image: fylixImg,
+      "Iris leads visual direction across the platform. She defines image concepts, carousel structures, creative styling, and repurposing logic so every campaign looks intentional and brand-right.",
+    items: ["Visual direction", "Image concepts", "Carousel layouts", "Repurposing plans"],
+    image: irisImg,
   },
   {
     name: "Sloane",
@@ -34,12 +34,12 @@ const specialists = [
     image: sloaneImg,
   },
   {
-    name: "Iris",
-    title: "Creative Media Agent",
+    name: "Fylix",
+    title: "Platform Content Agent",
     description:
-      "Iris leads visual direction across the platform. She defines image concepts, carousel structures, creative styling, and repurposing logic so every campaign looks intentional and brand-right.",
-    items: ["Visual direction", "Image concepts", "Carousel layouts", "Repurposing plans"],
-    image: irisImg,
+      "Fylix translates strategy into platform-native execution. He adapts messaging for the unique style, structure, and behavior of each channel so content feels native everywhere it appears.",
+    items: ["LinkedIn content", "X content", "Instagram formatting", "TikTok / YouTube adaptation"],
+    image: fylixImg,
   },
   {
     name: "Lyra",
