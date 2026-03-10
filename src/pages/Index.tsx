@@ -33,6 +33,7 @@ const Index = () => {
       <LandingCostSection />
       <LandingInfrastructure />
       <LandingVirality />
+      <LandingTeam />
       <LandingSpeed />
       <LandingDistributed />
       <LandingBuiltFor />
