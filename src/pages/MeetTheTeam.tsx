@@ -75,8 +75,8 @@ const MeetTheTeam = () => {
       <section className="px-4 sm:px-6 pb-20">
         <div className="max-w-4xl mx-auto">
           <div className="rounded-3xl border border-border bg-card p-8 sm:p-12 shadow-sm flex flex-col md:flex-row gap-8 items-center">
-            <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-secondary flex-shrink-0 flex items-center justify-center">
-              <User className="w-16 h-16 text-muted-foreground/40" />
+            <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-secondary flex-shrink-0 overflow-hidden flex items-center justify-center p-3">
+              <img src={klycImg} alt="Klyc" className="h-full object-contain" />
             </div>
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">Klyc</h2>
