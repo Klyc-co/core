@@ -598,6 +598,10 @@ async function handleSinglePageFallback(
     }
   }
 
+  // Generate AI business summary from fallback content
+  const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
+  const businessSummary = await generateBusinessSummary(fallbackPages, url);
+
   await supabase
     .from('brand_imports')
     .update({ 
@@ -618,6 +622,7 @@ async function handleSinglePageFallback(
       importId,
       pagesScanned: 1,
       assetsCount: limitedAssets.length,
+      businessSummary,
       summary: {
         colors: limitedAssets.filter(a => a.asset_type === 'color').length,
         fonts: limitedAssets.filter(a => a.asset_type === 'font').length,
