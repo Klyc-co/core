@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface StepGenerateContentProps {
-  onNext: (posts: any[]) => void;
+  onNext: () => void;
 }
 
 const platformIcons: Record<string, any> = {

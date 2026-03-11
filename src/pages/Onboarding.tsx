@@ -86,8 +86,7 @@ const Onboarding = () => {
         {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
         {step === 7 && <StepPricing onNext={() => setStep(8)} />}
         {step === 8 && <StepPayment onNext={() => setStep(9)} />}
-        {step === 9 && <StepGenerateContent onNext={(posts) => { setGeneratedPosts(posts); setStep(10); }} />}
-        {step === 10 && <StepPendingApprovals posts={generatedPosts} />}
+        {step === 9 && <StepGenerateContent onNext={() => navigate("/home")} />}
       </div>
     </div>
   );
