@@ -25,7 +25,7 @@ const LandingTeam = () => {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 bg-clip-text text-transparent" style={{
             backgroundImage: "linear-gradient(135deg, #2dd4a8, #6b8de3, #a855f7)",
           }}>
-            Tools Behind Klyc
+            Strategy Tools Behind Klyc
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             Five specialist systems. One marketing engine.
