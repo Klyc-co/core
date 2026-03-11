@@ -31,25 +31,16 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
           </p>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border p-8 shadow-sm space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-foreground mb-2">{businessName}</h2>
-            <p className="text-foreground/80 leading-relaxed">{description}</p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SummaryCard label="Who they serve" value={audience} />
-            <SummaryCard label="What they offer" value={valueProposition} />
-            <SummaryCard label="What makes them different" value={positioning} />
-            <SummaryCard label="Brand voice" value={voice} />
-          </div>
+        <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
+          <h2 className="text-xl font-bold text-foreground mb-4">{businessName}</h2>
+          <p className="text-foreground/80 leading-relaxed text-[15px]">
+            {description} They serve {audience.toLowerCase()}. Their core offering centers around {valueProposition.toLowerCase()}. What sets them apart is {positioning.toLowerCase()}. Their brand communicates with a {voice.toLowerCase()} tone.
+          </p>
 
           {scanData?.assetsCount > 0 && (
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{scanData.assetsCount}</span> brand assets were automatically saved to your library.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground mt-6 pt-4 border-t border-border">
+              <span className="font-semibold text-foreground">{scanData.assetsCount}</span> brand assets were automatically saved to your library.
+            </p>
           )}
         </div>
 
