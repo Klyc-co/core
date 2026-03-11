@@ -21,7 +21,7 @@ const Onboarding = () => {
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [scanData, setScanData] = useState<any>(null);
-  const [generatedPosts, setGeneratedPosts] = useState<any[]>([]);
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { setTheme } = useTheme();

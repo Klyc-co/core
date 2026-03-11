@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
