@@ -67,7 +67,7 @@ const LandingTeam = () => {
         </div>
 
         {/* Desktop system map */}
-        <div className="hidden lg:block relative w-full" style={{ height: 620 }}>
+        <div className="hidden lg:block relative w-full" style={{ height: 700 }}>
           {/* SVG connector lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 620" fill="none" preserveAspectRatio="xMidYMid meet">
             <defs>
