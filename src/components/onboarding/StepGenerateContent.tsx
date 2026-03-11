@@ -150,12 +150,11 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
 
             <div className="flex justify-center">
               <Button
-                onClick={() => onNext(posts)}
+                onClick={() => onNext()}
                 size="lg"
                 className="h-12 px-10 text-base font-semibold"
               >
-                View Pending Approvals
-                <ArrowRight className="w-4 h-4 ml-2" />
+                Finish
               </Button>
             </div>
           </>
