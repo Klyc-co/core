@@ -7,6 +7,8 @@ import AddClientDialog from "@/components/AddClientDialog";
 import { WebsiteAnalyticsSummary } from "@/components/WebsiteAnalyticsSummary";
 import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSummary";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
+import PendingApprovalsList from "@/components/dashboard/PendingApprovalsList";
+import WeeklyContentCalendar from "@/components/dashboard/WeeklyContentCalendar";
 
 const Home = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -48,25 +50,30 @@ const Home = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} onAddClient={() => setAddClientOpen(true)} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="mb-6">
-          <WebsiteAnalyticsSummary 
-            showFullButton 
-            onFullClick={handleFullAnalyticsClick}
-            onConnectClick={handleConnectGA}
-          />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+        {/* Top row: Approvals + Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <PendingApprovalsList />
+          </div>
+          <div className="lg:col-span-2 space-y-6">
+            <WebsiteAnalyticsSummary 
+              showFullButton 
+              onFullClick={handleFullAnalyticsClick}
+              onConnectClick={handleConnectGA}
+            />
+            <SocialMediaAnalyticsSummary 
+              showFullButton 
+              onFullClick={handleFullAnalyticsClick}
+            />
+          </div>
         </div>
 
-        <div className="mb-6 sm:mb-10">
-          <SocialMediaAnalyticsSummary 
-            showFullButton 
-            onFullClick={handleFullAnalyticsClick}
-          />
-        </div>
+        {/* Weekly Content Calendar */}
+        <WeeklyContentCalendar />
 
-        <div>
-          <LiveCampaignsFeed showFullButton limit={6} />
-        </div>
+        {/* Live Campaigns */}
+        <LiveCampaignsFeed showFullButton limit={6} />
       </main>
 
       <AddClientDialog
