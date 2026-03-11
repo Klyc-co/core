@@ -140,7 +140,7 @@ const LandingTeam = () => {
               position: "absolute",
               width: 210,
               ...(pos.top !== undefined && { top: pos.top }),
-              ...(pos.bottom !== undefined && { bottom: pos.bottom }),
+              ...('bottom' in pos && pos.bottom !== undefined && { bottom: pos.bottom }),
               ...(pos.left !== undefined && { left: pos.left }),
               ...(pos.right !== undefined && { right: pos.right }),
               ...(pos.translateX && { transform: `translateX(${pos.translateX})` }),
