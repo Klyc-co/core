@@ -261,19 +261,23 @@ Deno.serve(async (req) => {
 
     // Insert assets
     if (limitedAssets.length > 0) {
-      // Insert in batches to avoid timeout
       const batchSize = 50;
       for (let i = 0; i < limitedAssets.length; i += batchSize) {
         const batch = limitedAssets.slice(i, i + batchSize);
         const { error: assetsError } = await supabase
           .from('brand_assets')
           .insert(batch);
-
         if (assetsError) {
           console.error('Failed to insert assets batch:', assetsError);
         }
       }
     }
+
+    // Step 5: Generate AI business summary from crawled content
+    const businessSummary = await generateBusinessSummary(
+      crawlResult.data,
+      formattedUrl
+    );
 
     // Update import status
     await supabase
@@ -297,6 +301,7 @@ Deno.serve(async (req) => {
         importId: importRecord.id,
         pagesScanned: crawlResult.data.length,
         assetsCount: limitedAssets.length,
+        businessSummary,
         summary: {
           colors: colorAssets.length,
           fonts: fontAssets.length,
@@ -593,6 +598,10 @@ async function handleSinglePageFallback(
     }
   }
 
+  // Generate AI business summary from fallback content
+  const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
+  const businessSummary = await generateBusinessSummary(fallbackPages, url);
+
   await supabase
     .from('brand_imports')
     .update({ 
@@ -613,6 +622,7 @@ async function handleSinglePageFallback(
       importId,
       pagesScanned: 1,
       assetsCount: limitedAssets.length,
+      businessSummary,
       summary: {
         colors: limitedAssets.filter(a => a.asset_type === 'color').length,
         fonts: limitedAssets.filter(a => a.asset_type === 'font').length,
@@ -622,4 +632,93 @@ async function handleSinglePageFallback(
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+// Generate a rich business summary paragraph using AI from crawled content
+async function generateBusinessSummary(
+  pages: PageData[],
+  websiteUrl: string
+): Promise<{ businessName: string; description: string }> {
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured for summary generation");
+      return { businessName: "Your Business", description: "" };
+    }
+
+    // Collect content from crawled pages (truncate to avoid token limits)
+    let combinedContent = "";
+    for (const page of pages.slice(0, 10)) {
+      const title = page.metadata?.title || "";
+      const desc = page.metadata?.description || "";
+      const markdown = (page.markdown || "").substring(0, 2000);
+      combinedContent += `--- Page: ${title} ---\n${desc}\n${markdown}\n\n`;
+      if (combinedContent.length > 12000) break;
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content: `You are a business analyst. Given website content, write a thorough business profile. Return the company name and a detailed paragraph description (7-10 sentences). The description should read like a professional analyst wrote it after studying the website. Include: what the company does, who they serve, their main products/services, what makes them unique, and their market position. Write in third person. Be specific — reference actual details from the content, not generic filler.`,
+          },
+          {
+            role: "user",
+            content: `Website URL: ${websiteUrl}\n\nCrawled content:\n${combinedContent}`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "create_business_summary",
+              description: "Create a business summary from website content",
+              parameters: {
+                type: "object",
+                properties: {
+                  businessName: {
+                    type: "string",
+                    description: "The official company/brand name",
+                  },
+                  description: {
+                    type: "string",
+                    description: "A detailed 7-10 sentence paragraph describing the business, what they do, who they serve, their products, and what sets them apart. Written in third person with specific details from the website.",
+                  },
+                },
+                required: ["businessName", "description"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "create_business_summary" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI summary generation failed:", response.status);
+      return { businessName: "Your Business", description: "" };
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      console.error("No tool call in AI summary response");
+      return { businessName: "Your Business", description: "" };
+    }
+
+    const result = JSON.parse(toolCall.function.arguments);
+    console.log("Generated business summary for:", result.businessName);
+    return result;
+  } catch (e) {
+    console.error("Business summary generation error:", e);
+    return { businessName: "Your Business", description: "" };
+  }
 }
