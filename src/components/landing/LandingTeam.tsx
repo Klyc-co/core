@@ -103,7 +103,7 @@ const LandingTeam = () => {
                   />
                   <circle
                     cx="400"
-                    cy="310"
+                    cy="350"
                     r={isHovered ? 6 : 3}
                     fill="hsl(185, 75%, 55%)"
                     opacity={isHovered ? 0.6 : 0.15}
