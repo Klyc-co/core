@@ -105,6 +105,7 @@ const PendingApprovals = () => {
         image_url: p.image_url,
         post_text: p.post_text,
         content_type: p.content_type,
+        scheduled_at: p.scheduled_at,
         video_url: p.video_url,
         media_urls: p.media_urls,
         scheduled_campaigns: null,
