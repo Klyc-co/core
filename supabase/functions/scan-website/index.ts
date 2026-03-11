@@ -261,19 +261,23 @@ Deno.serve(async (req) => {
 
     // Insert assets
     if (limitedAssets.length > 0) {
-      // Insert in batches to avoid timeout
       const batchSize = 50;
       for (let i = 0; i < limitedAssets.length; i += batchSize) {
         const batch = limitedAssets.slice(i, i + batchSize);
         const { error: assetsError } = await supabase
           .from('brand_assets')
           .insert(batch);
-
         if (assetsError) {
           console.error('Failed to insert assets batch:', assetsError);
         }
       }
     }
+
+    // Step 5: Generate AI business summary from crawled content
+    const businessSummary = await generateBusinessSummary(
+      crawlResult.data,
+      formattedUrl
+    );
 
     // Update import status
     await supabase
@@ -297,6 +301,7 @@ Deno.serve(async (req) => {
         importId: importRecord.id,
         pagesScanned: crawlResult.data.length,
         assetsCount: limitedAssets.length,
+        businessSummary,
         summary: {
           colors: colorAssets.length,
           fonts: fontAssets.length,
