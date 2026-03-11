@@ -71,7 +71,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/home`,
+            emailRedirectTo: `${window.location.origin}/onboarding`,
           },
         });
         if (error) throw error;
