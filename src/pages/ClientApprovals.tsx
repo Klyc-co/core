@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Eye, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Eye, Loader2, Image as ImageIcon } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 interface Approval {
@@ -24,7 +24,9 @@ interface Approval {
   status: string;
   notes: string | null;
   created_at: string;
-  campaign_drafts: {
+  source: "campaign_approval" | "post_queue";
+  // campaign_approval fields
+  campaign_drafts?: {
     id: string;
     campaign_idea: string | null;
     content_type: string | null;
@@ -32,12 +34,16 @@ interface Approval {
     video_script: string | null;
     post_caption: string | null;
   } | null;
-  scheduled_campaigns: {
+  scheduled_campaigns?: {
     id: string;
     campaign_name: string;
     platforms: string[];
     scheduled_date: string;
   } | null;
+  // post_queue fields
+  post_text?: string | null;
+  image_url?: string | null;
+  content_type?: string | null;
 }
 
 const ClientApprovals = () => {
@@ -63,18 +69,46 @@ const ClientApprovals = () => {
 
   const fetchApprovals = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("campaign_approvals")
-        .select(`
-          *,
-          campaign_drafts (*),
-          scheduled_campaigns (*)
-        `)
-        .eq("client_id", userId)
-        .order("created_at", { ascending: false });
+      // Fetch both campaign_approvals and post_queue pending items in parallel
+      const [campaignRes, postQueueRes] = await Promise.all([
+        supabase
+          .from("campaign_approvals")
+          .select(`*, campaign_drafts (*), scheduled_campaigns (*)`)
+          .eq("client_id", userId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("post_queue")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "pending_approval")
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setApprovals(data || []);
+      if (campaignRes.error) throw campaignRes.error;
+      if (postQueueRes.error) throw postQueueRes.error;
+
+      const campaignApprovals: Approval[] = (campaignRes.data || []).map((a: any) => ({
+        ...a,
+        source: "campaign_approval" as const,
+      }));
+
+      const postQueueApprovals: Approval[] = (postQueueRes.data || []).map((p: any) => ({
+        id: p.id,
+        status: "pending",
+        notes: p.approval_notes,
+        created_at: p.created_at,
+        source: "post_queue" as const,
+        post_text: p.post_text,
+        image_url: p.image_url,
+        content_type: p.content_type,
+      }));
+
+      // Merge and sort by date
+      const all = [...campaignApprovals, ...postQueueApprovals].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setApprovals(all);
     } catch (error) {
       console.error("Error fetching approvals:", error);
     } finally {
@@ -87,50 +121,55 @@ const ClientApprovals = () => {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("campaign_approvals")
-        .update({
-          status,
-          notes: reviewNotes || null,
-        })
-        .eq("id", selectedApproval.id);
+      if (selectedApproval.source === "post_queue") {
+        const newStatus = status === "approved" ? "approved" : "draft";
+        const { error } = await supabase
+          .from("post_queue")
+          .update({
+            status: newStatus,
+            approval_notes: reviewNotes || null,
+            approved_by: status === "approved" ? user.id : null,
+            approved_at: status === "approved" ? new Date().toISOString() : null,
+          })
+          .eq("id", selectedApproval.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("campaign_approvals")
+          .update({ status, notes: reviewNotes || null })
+          .eq("id", selectedApproval.id);
+        if (error) throw error;
 
-      if (error) throw error;
+        const contentId = selectedApproval.campaign_drafts?.id
+          || selectedApproval.scheduled_campaigns?.id
+          || selectedApproval.id;
+        const contentPreview = selectedApproval.campaign_drafts?.post_caption
+          || selectedApproval.campaign_drafts?.campaign_idea
+          || selectedApproval.scheduled_campaigns?.campaign_name
+          || "";
+        const platforms = selectedApproval.scheduled_campaigns?.platforms || [];
 
-      // ── Persist decision into Client Brain examples_cache ──
-      const contentId = selectedApproval.campaign_drafts?.id
-        || selectedApproval.scheduled_campaigns?.id
-        || selectedApproval.id;
-      const contentPreview = selectedApproval.campaign_drafts?.post_caption
-        || selectedApproval.campaign_drafts?.campaign_idea
-        || selectedApproval.scheduled_campaigns?.campaign_name
-        || "";
-      const platforms = selectedApproval.scheduled_campaigns?.platforms || [];
-
-      await recordApprovalDecision(user.id, {
-        content_id: contentId || selectedApproval.id,
-        decision: status,
-        platform: platforms[0] || selectedApproval.campaign_drafts?.content_type || undefined,
-        content_preview: contentPreview || undefined,
-        reason: status === "rejected" ? (reviewNotes || "No reason provided") : undefined,
-      });
+        await recordApprovalDecision(user.id, {
+          content_id: contentId || selectedApproval.id,
+          decision: status,
+          platform: platforms[0] || selectedApproval.campaign_drafts?.content_type || undefined,
+          content_preview: contentPreview || undefined,
+          reason: status === "rejected" ? (reviewNotes || "No reason provided") : undefined,
+        });
+      }
 
       toast({
-        title: status === "approved" ? "Campaign Approved!" : "Campaign Rejected",
-        description: status === "approved" 
-          ? "The campaign has been approved and your marketer will be notified."
-          : "Your feedback has been sent to your marketer.",
+        title: status === "approved" ? "Approved!" : "Rejected",
+        description: status === "approved"
+          ? "The content has been approved."
+          : "Your feedback has been recorded.",
       });
 
       setSelectedApproval(null);
       setReviewNotes("");
       fetchApprovals(user.id);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -147,17 +186,37 @@ const ClientApprovals = () => {
     }
   };
 
+  const getTitle = (approval: Approval) => {
+    if (approval.source === "post_queue") {
+      // Extract title from post_text (format: **Title**\n\nCaption)
+      const match = approval.post_text?.match(/\*\*(.+?)\*\*/);
+      return match?.[1] || "Generated Post";
+    }
+    return approval.scheduled_campaigns?.campaign_name
+      || approval.campaign_drafts?.campaign_idea?.slice(0, 50)
+      || "Untitled Campaign";
+  };
+
+  const getDescription = (approval: Approval) => {
+    if (approval.source === "post_queue") {
+      // Get caption (after the title)
+      const text = approval.post_text?.replace(/\*\*.+?\*\*\n\n/, "") || "";
+      return text;
+    }
+    return approval.campaign_drafts?.campaign_idea || "";
+  };
+
   const pendingCount = approvals.filter(a => a.status === "pending").length;
 
   return (
     <div className="min-h-screen bg-background">
       <ClientHeader user={user} />
-      
+
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Approvals</h1>
           <p className="text-muted-foreground">
-            Review and approve campaigns before they go live
+            Review and approve content before it goes live
             {pendingCount > 0 && (
               <span className="ml-2 text-amber-500 font-medium">
                 ({pendingCount} pending)
@@ -178,7 +237,7 @@ const ClientApprovals = () => {
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">No approvals yet</h3>
               <p className="text-muted-foreground">
-                When your marketing team sends campaigns for approval, they'll appear here.
+                When content is generated, it will appear here for your review.
               </p>
             </CardContent>
           </Card>
@@ -188,36 +247,56 @@ const ClientApprovals = () => {
               <Card key={approval.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-foreground">
-                          {approval.scheduled_campaigns?.campaign_name || 
-                           approval.campaign_drafts?.campaign_idea?.slice(0, 50) || 
-                           "Untitled Campaign"}
-                        </h3>
-                        {getStatusBadge(approval.status)}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {new Date(approval.created_at).toLocaleDateString()}
+                    <div className="flex items-start gap-4 flex-1">
+                      {/* Image thumbnail for post_queue items */}
+                      {approval.source === "post_queue" && approval.image_url && (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-secondary">
+                          <img
+                            src={approval.image_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                        {approval.campaign_drafts?.content_type && (
-                          <Badge variant="outline">
-                            {approval.campaign_drafts.content_type}
-                          </Badge>
-                        )}
-                        {approval.scheduled_campaigns?.platforms.map(p => (
-                          <Badge key={p} variant="outline">{p}</Badge>
-                        ))}
-                      </div>
-
-                      {approval.campaign_drafts?.campaign_idea && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {approval.campaign_drafts.campaign_idea}
-                        </p>
                       )}
+                      {approval.source === "post_queue" && !approval.image_url && (
+                        <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-secondary flex items-center justify-center">
+                          <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+                      )}
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-foreground">
+                            {getTitle(approval)}
+                          </h3>
+                          {getStatusBadge(approval.status)}
+                          {approval.source === "post_queue" && (
+                            <Badge variant="outline" className="text-xs">AI Generated</Badge>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {new Date(approval.created_at).toLocaleDateString()}
+                          </div>
+                          {approval.content_type && (
+                            <Badge variant="outline">{approval.content_type}</Badge>
+                          )}
+                          {approval.campaign_drafts?.content_type && (
+                            <Badge variant="outline">
+                              {approval.campaign_drafts.content_type}
+                            </Badge>
+                          )}
+                          {approval.scheduled_campaigns?.platforms.map(p => (
+                            <Badge key={p} variant="outline">{p}</Badge>
+                          ))}
+                        </div>
+
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {getDescription(approval)}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex gap-2 ml-4">
@@ -244,14 +323,35 @@ const ClientApprovals = () => {
         <Dialog open={!!selectedApproval} onOpenChange={() => setSelectedApproval(null)}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Review Campaign</DialogTitle>
+              <DialogTitle>Review Content</DialogTitle>
               <DialogDescription>
-                Review the campaign details and approve or request changes.
+                Review the content details and approve or request changes.
               </DialogDescription>
             </DialogHeader>
 
             {selectedApproval && (
               <div className="space-y-6 py-4">
+                {/* Post queue image */}
+                {selectedApproval.source === "post_queue" && selectedApproval.image_url && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-2">Generated Image</h4>
+                    <img
+                      src={selectedApproval.image_url}
+                      alt=""
+                      className="w-full max-h-64 object-contain rounded-lg bg-secondary"
+                    />
+                  </div>
+                )}
+
+                {/* Post queue text */}
+                {selectedApproval.source === "post_queue" && selectedApproval.post_text && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Post Content</h4>
+                    <p className="text-foreground whitespace-pre-wrap">{selectedApproval.post_text}</p>
+                  </div>
+                )}
+
+                {/* Campaign approval fields */}
                 {selectedApproval.campaign_drafts?.campaign_idea && (
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-1">Campaign Idea</h4>
@@ -285,7 +385,7 @@ const ClientApprovals = () => {
                   <Textarea
                     value={reviewNotes}
                     onChange={(e) => setReviewNotes(e.target.value)}
-                    placeholder="Add any notes or feedback for your marketing team..."
+                    placeholder="Add any notes or feedback..."
                     className="min-h-[100px]"
                   />
                 </div>
@@ -312,7 +412,7 @@ const ClientApprovals = () => {
                 ) : (
                   <CheckCircle className="w-4 h-4 mr-2" />
                 )}
-                Approve Campaign
+                Approve
               </Button>
             </DialogFooter>
           </DialogContent>
