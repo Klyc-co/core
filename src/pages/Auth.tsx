@@ -29,7 +29,14 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-      if (session) {
+        if (!session) return;
+        // New signup → send to onboarding
+        if (event === "SIGNED_IN" && !isLogin) {
+          navigate("/onboarding");
+          return;
+        }
+        // Existing login or page load with session
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
           const role = session.user.user_metadata?.role;
           if (role === "client") {
             navigate("/client/dashboard");
@@ -52,7 +59,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
