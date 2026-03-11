@@ -136,14 +136,15 @@ const LandingTeam = () => {
           {tools.map((tool, i) => {
             const pos = desktopPositions[i];
             const isHovered = hoveredTool === tool.id;
+            const posAny = pos as any;
             const style: React.CSSProperties = {
               position: "absolute",
               width: 210,
-              ...(pos.top !== undefined && { top: pos.top }),
-              ...('bottom' in pos && pos.bottom !== undefined && { bottom: pos.bottom }),
-              ...(pos.left !== undefined && { left: pos.left }),
-              ...(pos.right !== undefined && { right: pos.right }),
-              ...(pos.translateX && { transform: `translateX(${pos.translateX})` }),
+              ...(posAny.top !== undefined && { top: posAny.top }),
+              ...(posAny.bottom !== undefined && { bottom: posAny.bottom }),
+              ...(posAny.left !== undefined && { left: posAny.left }),
+              ...(posAny.right !== undefined && { right: posAny.right }),
+              ...(posAny.translateX && { transform: `translateX(${posAny.translateX})` }),
             };
 
             return (
