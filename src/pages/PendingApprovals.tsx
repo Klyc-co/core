@@ -26,6 +26,7 @@ interface PendingApproval {
   image_url?: string | null;
   post_text?: string | null;
   content_type?: string;
+  scheduled_at?: string | null;
   video_url?: string | null;
   media_urls?: string[] | null;
   scheduled_campaigns: {
