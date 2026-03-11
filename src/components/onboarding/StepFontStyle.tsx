@@ -1,57 +1,93 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepFontStyleProps {
+  scanData?: any;
   onNext: (fonts: string[]) => void;
 }
 
-const fontStyles = [
-  {
-    id: "clean-modern-sans",
-    name: "Clean Modern Sans",
-    description: "Minimal, crisp, startup-ready sans serif with strong readability.",
-    sample: "Aa Bb Cc 123",
-    fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
-    weight: 400,
-  },
-  {
-    id: "editorial-serif",
-    name: "Editorial Serif",
-    description: "Elegant serif style for premium storytelling and authority.",
-    sample: "Aa Bb Cc 123",
-    fontFamily: "Georgia, 'Times New Roman', serif",
-    weight: 400,
-  },
-  {
-    id: "bold-geometric",
-    name: "Bold Geometric",
-    description: "Structured, modern, high-confidence type for strong statements.",
-    sample: "Aa Bb Cc 123",
-    fontFamily: "'Sora', 'Arial Black', sans-serif",
-    weight: 700,
-  },
-  {
-    id: "humanist-sans",
-    name: "Humanist Sans",
-    description: "Warm, approachable, softer modern type with personality.",
-    sample: "Aa Bb Cc 123",
-    fontFamily: "'Segoe UI', 'Trebuchet MS', sans-serif",
-    weight: 400,
-  },
-  {
-    id: "luxury-contrast",
-    name: "Luxury Contrast",
-    description: "Refined high-end type pairing style with a premium feel.",
-    sample: "Aa Bb Cc 123",
-    fontFamily: "'Playfair Display', Georgia, serif",
-    weight: 600,
-  },
-];
+/**
+ * Build a short, punchy sample phrase from the scan data.
+ * Falls back to the business name or a generic line.
+ */
+function buildSamplePhrase(scanData: any | undefined): string {
+  const name =
+    scanData?.businessSummary?.businessName ||
+    scanData?.summary?.businessName ||
+    "";
 
-const StepFontStyle = ({ onNext }: StepFontStyleProps) => {
+  const description =
+    scanData?.businessSummary?.description ||
+    scanData?.summary?.description ||
+    "";
+
+  // Pull the first meaningful sentence fragment from the description
+  if (name && description) {
+    // Grab a short punchy excerpt – first sentence, trimmed to ~50 chars
+    const firstSentence = description.split(/[.!?]/)[0]?.trim() || "";
+    const shortExcerpt =
+      firstSentence.length > 60
+        ? firstSentence.slice(0, 57).replace(/\s+\S*$/, "") + "…"
+        : firstSentence;
+    return shortExcerpt || name;
+  }
+
+  if (name) return name;
+  return "Your Brand Here";
+}
+
+const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const samplePhrase = useMemo(() => buildSamplePhrase(scanData), [scanData]);
+
+  const fontStyles = useMemo(
+    () => [
+      {
+        id: "clean-modern-sans",
+        name: "Clean Modern Sans",
+        description:
+          "Minimal, crisp, startup-ready sans serif with strong readability.",
+        fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+        weight: 400,
+      },
+      {
+        id: "editorial-serif",
+        name: "Editorial Serif",
+        description:
+          "Elegant serif style for premium storytelling and authority.",
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        weight: 400,
+      },
+      {
+        id: "bold-geometric",
+        name: "Bold Geometric",
+        description:
+          "Structured, modern, high-confidence type for strong statements.",
+        fontFamily: "'Sora', 'Arial Black', sans-serif",
+        weight: 700,
+      },
+      {
+        id: "humanist-sans",
+        name: "Humanist Sans",
+        description:
+          "Warm, approachable, softer modern type with personality.",
+        fontFamily: "'Segoe UI', 'Trebuchet MS', sans-serif",
+        weight: 400,
+      },
+      {
+        id: "luxury-contrast",
+        name: "Luxury Contrast",
+        description:
+          "Refined high-end type pairing style with a premium feel.",
+        fontFamily: "'Playfair Display', Georgia, serif",
+        weight: 600,
+      },
+    ],
+    []
+  );
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -70,7 +106,8 @@ const StepFontStyle = ({ onNext }: StepFontStyleProps) => {
             Choose your type direction.
           </h1>
           <p className="text-muted-foreground">
-            We scanned your website and found your current visual language. Select the font styles Klyc can use moving forward.
+            We scanned your website and found your current visual language.
+            Select the font styles Klyc can use moving forward.
           </p>
         </div>
 
@@ -86,19 +123,26 @@ const StepFontStyle = ({ onNext }: StepFontStyleProps) => {
                   : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
               )}
             >
-              {/* Type sample */}
-              <div className="w-32 flex-shrink-0 text-center">
+              {/* Type sample – uses real words from the scanned website */}
+              <div className="w-44 flex-shrink-0">
                 <span
-                  className="text-2xl text-foreground"
-                  style={{ fontFamily: font.fontFamily, fontWeight: font.weight }}
+                  className="text-xl leading-tight text-foreground block"
+                  style={{
+                    fontFamily: font.fontFamily,
+                    fontWeight: font.weight,
+                  }}
                 >
-                  {font.sample}
+                  {samplePhrase}
                 </span>
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-foreground mb-0.5">{font.name}</h3>
-                <p className="text-xs text-muted-foreground">{font.description}</p>
+                <h3 className="text-sm font-semibold text-foreground mb-0.5">
+                  {font.name}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {font.description}
+                </p>
               </div>
 
               {selected.has(font.id) && (
