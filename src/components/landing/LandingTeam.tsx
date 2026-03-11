@@ -69,7 +69,7 @@ const LandingTeam = () => {
         {/* Desktop system map */}
         <div className="hidden lg:block relative w-full" style={{ height: 700 }}>
           {/* SVG connector lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 620" fill="none" preserveAspectRatio="xMidYMid meet">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 700" fill="none" preserveAspectRatio="xMidYMid meet">
             <defs>
               <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(185, 75%, 45%)" stopOpacity="0.18" />
