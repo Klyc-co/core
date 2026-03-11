@@ -3,6 +3,15 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import deepContrastImg from "@/assets/styles/deep-contrast.png";
+import softEditorialImg from "@/assets/styles/soft-editorial.png";
+import cinematicMoodyImg from "@/assets/styles/cinematic-moody.png";
+import brightCommercialImg from "@/assets/styles/bright-commercial.png";
+import documentaryRealImg from "@/assets/styles/documentary-real.png";
+import modernMinimalImg from "@/assets/styles/modern-minimal.png";
+import boldLifestyleImg from "@/assets/styles/bold-lifestyle.png";
+import luxuryTextureImg from "@/assets/styles/luxury-texture.png";
+
 interface StepVisualStyleProps {
   onNext: (styles: string[]) => void;
 }
@@ -12,49 +21,49 @@ const visualStyles = [
     id: "deep-contrast",
     name: "Deep Contrast",
     description: "Hard tungsten lighting. Orange-teal tones. High contrast. Fine grain. Shallow focus.",
-    gradient: "linear-gradient(135deg, #f97316, #0d9488)",
+    image: deepContrastImg,
   },
   {
     id: "soft-editorial",
     name: "Soft Editorial",
     description: "Diffuse natural light. Clean whites. Soft skin tones. Minimal contrast. Luxury magazine feel.",
-    gradient: "linear-gradient(135deg, #fef3c7, #fce7f3)",
+    image: softEditorialImg,
   },
   {
     id: "cinematic-moody",
     name: "Cinematic Moody",
     description: "Low-key lighting. Deep shadows. Rich blacks. Subtle color separation. Dramatic storytelling.",
-    gradient: "linear-gradient(135deg, #1e1b4b, #312e81)",
+    image: cinematicMoodyImg,
   },
   {
     id: "bright-commercial",
     name: "Bright Commercial",
     description: "High-key lighting. Crisp clarity. Product-forward framing. Clean highlights. Ad-ready aesthetic.",
-    gradient: "linear-gradient(135deg, #60a5fa, #34d399)",
+    image: brightCommercialImg,
   },
   {
     id: "documentary-real",
     name: "Documentary Real",
     description: "Natural available light. Authentic texture. Real-world environments. Honest and grounded.",
-    gradient: "linear-gradient(135deg, #78716c, #a8a29e)",
+    image: documentaryRealImg,
   },
   {
     id: "modern-minimal",
     name: "Modern Minimal",
     description: "Neutral backgrounds. Clean composition. Soft shadows. Limited palette. Premium simple design.",
-    gradient: "linear-gradient(135deg, #e5e7eb, #f9fafb)",
+    image: modernMinimalImg,
   },
   {
     id: "bold-lifestyle",
     name: "Bold Lifestyle",
     description: "Dynamic framing. Vibrant color. Human energy. Social-first composition. Strong personality.",
-    gradient: "linear-gradient(135deg, #ec4899, #f59e0b)",
+    image: boldLifestyleImg,
   },
   {
     id: "luxury-texture",
     name: "Luxury Texture",
     description: "Rich materials. Warm highlights. Elegant framing. Refined color balance. High-end premium feel.",
-    gradient: "linear-gradient(135deg, #92400e, #d4a053)",
+    image: luxuryTextureImg,
   },
 ];
 
@@ -72,7 +81,7 @@ const StepVisualStyle = ({ onNext }: StepVisualStyleProps) => {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-4xl animate-fade-in">
+      <div className="w-full max-w-5xl animate-fade-in">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-foreground mb-3">
             Choose your visual style.
@@ -94,16 +103,19 @@ const StepVisualStyle = ({ onNext }: StepVisualStyleProps) => {
                   : "border-border hover:border-primary/40 hover:shadow-sm"
               )}
             >
-              {/* Visual preview area */}
-              <div
-                className="h-28 w-full"
-                style={{ background: style.gradient }}
-              />
+              {/* Vertical iPhone-style image */}
+              <div className="aspect-[9/16] w-full overflow-hidden">
+                <img
+                  src={style.image}
+                  alt={style.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
               {/* Check overlay */}
               {selected.has(style.id) && (
-                <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md">
+                  <Check className="w-4 h-4 text-primary-foreground" />
                 </div>
               )}
 
