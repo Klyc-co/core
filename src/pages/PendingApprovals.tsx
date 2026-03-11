@@ -15,6 +15,9 @@ interface PendingApproval {
   created_at: string;
   updated_at: string;
   client_id: string;
+  source: "campaign" | "post";
+  image_url?: string | null;
+  post_text?: string | null;
   scheduled_campaigns: {
     id: string;
     campaign_name: string;
@@ -61,18 +64,48 @@ const PendingApprovals = () => {
 
   const fetchApprovals = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("campaign_approvals")
-        .select(`
-          *,
-          scheduled_campaigns (*),
-          campaign_drafts (*)
-        `)
-        .eq("marketer_id", userId)
-        .order("created_at", { ascending: false });
+      const [campaignRes, postQueueRes] = await Promise.all([
+        supabase
+          .from("campaign_approvals")
+          .select(`
+            *,
+            scheduled_campaigns (*),
+            campaign_drafts (*)
+          `)
+          .eq("marketer_id", userId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("post_queue")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "pending_approval")
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setApprovals(data || []);
+      const campaignApprovals: PendingApproval[] = (campaignRes.data || []).map((a: any) => ({
+        ...a,
+        source: "campaign" as const,
+      }));
+
+      const postApprovals: PendingApproval[] = (postQueueRes.data || []).map((p: any) => ({
+        id: p.id,
+        status: "pending",
+        notes: p.approval_notes,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        client_id: p.client_id || "",
+        source: "post" as const,
+        image_url: p.image_url,
+        post_text: p.post_text,
+        scheduled_campaigns: null,
+        campaign_drafts: null,
+      }));
+
+      const merged = [...campaignApprovals, ...postApprovals].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setApprovals(merged);
     } catch (error) {
       console.error("Error fetching approvals:", error);
     } finally {
