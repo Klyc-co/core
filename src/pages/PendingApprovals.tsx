@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2, Send, Pencil, Eye, Rocket, Save, X } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2, Send, Pencil, Eye, Rocket, Save, X, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
 
 interface PendingApproval {
@@ -22,6 +26,7 @@ interface PendingApproval {
   image_url?: string | null;
   post_text?: string | null;
   content_type?: string;
+  scheduled_at?: string | null;
   video_url?: string | null;
   media_urls?: string[] | null;
   scheduled_campaigns: {
@@ -55,6 +60,7 @@ const PendingApprovals = () => {
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -99,6 +105,7 @@ const PendingApprovals = () => {
         image_url: p.image_url,
         post_text: p.post_text,
         content_type: p.content_type,
+        scheduled_at: p.scheduled_at,
         video_url: p.video_url,
         media_urls: p.media_urls,
         scheduled_campaigns: null,
@@ -123,6 +130,11 @@ const PendingApprovals = () => {
       approval.source === "post"
         ? approval.post_text || ""
         : approval.campaign_drafts?.post_caption || approval.campaign_drafts?.campaign_idea || ""
+    );
+    setScheduleDate(
+      approval.scheduled_at ? new Date(approval.scheduled_at)
+      : approval.scheduled_campaigns?.scheduled_date ? new Date(approval.scheduled_campaigns.scheduled_date)
+      : new Date(Date.now() + 86400000) // default tomorrow
     );
     setIsEditing(false);
   };
@@ -157,13 +169,20 @@ const PendingApprovals = () => {
   };
 
   const handleApprove = async () => {
-    if (!selected) return;
+    if (!selected || !scheduleDate) {
+      toast.error("Please select a launch date first");
+      return;
+    }
     setSaving(true);
     try {
       if (selected.source === "post") {
         const { error } = await supabase
           .from("post_queue")
-          .update({ status: "approved", approved_at: new Date().toISOString() })
+          .update({
+            status: "scheduled",
+            approved_at: new Date().toISOString(),
+            scheduled_at: scheduleDate.toISOString(),
+          })
           .eq("id", selected.id);
         if (error) throw error;
       } else {
@@ -173,9 +192,10 @@ const PendingApprovals = () => {
           .eq("id", selected.id);
         if (error) throw error;
       }
-      toast.success("Approved!");
-      setApprovals(prev => prev.map(a => a.id === selected.id ? { ...a, status: "approved" } : a));
+      toast.success("Approved & scheduled!");
+      setApprovals(prev => prev.filter(a => a.id !== selected.id));
       setSelected(null);
+      navigate("/home");
     } catch (err) {
       toast.error("Failed to approve");
     } finally {
@@ -407,6 +427,41 @@ const PendingApprovals = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Launch Date */}
+                <div className="border border-border rounded-lg p-4">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-3">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                    Launch Date
+                  </label>
+                  {selected.status === "pending" ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduleDate && "text-muted-foreground")}>
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {scheduleDate ? format(scheduleDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduleDate}
+                          onSelect={setScheduleDate}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <p className="text-sm text-foreground">
+                      {selected.scheduled_at
+                        ? format(new Date(selected.scheduled_at), "PPP")
+                        : selected.scheduled_campaigns?.scheduled_date
+                          ? format(new Date(selected.scheduled_campaigns.scheduled_date), "PPP")
+                          : "Not set"}
+                    </p>
+                  )}
+                </div>
 
                 {/* Meta info */}
                 <div className="text-xs text-muted-foreground border-t border-border pt-3">
