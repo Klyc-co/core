@@ -13,7 +13,7 @@ import StepFontStyle from "@/components/onboarding/StepFontStyle";
 import StepPricing from "@/components/onboarding/StepPricing";
 import StepPayment from "@/components/onboarding/StepPayment";
 import StepGenerateContent from "@/components/onboarding/StepGenerateContent";
-import StepPendingApprovals from "@/components/onboarding/StepPendingApprovals";
+
 
 const TOTAL_STEPS = 10;
 
