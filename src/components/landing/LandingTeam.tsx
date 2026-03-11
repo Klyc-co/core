@@ -35,13 +35,14 @@ const tools = [
   },
 ];
 
-// Balanced positions: top-left, top-right, left, right, bottom-center
+// Pentagon positions equally spaced around center (400, 340) with radius ~250
+// Angles: -90°, -18°, 54°, 126°, 198° (pentagon, top-center start)
 const desktopPositions = [
-  { top: "2%", left: "10%", lineEnd: { x: 180, y: 80 } },
-  { top: "2%", right: "10%", lineEnd: { x: 620, y: 80 } },
-  { top: "42%", left: "2%", lineEnd: { x: 130, y: 310 } },
-  { top: "42%", right: "2%", lineEnd: { x: 670, y: 310 } },
-  { bottom: "2%", left: "50%", translateX: "-50%", lineEnd: { x: 400, y: 530 } },
+  { top: "2%",   left: "50%", translateX: "-50%", lineEnd: { x: 400, y: 90 } },   // top center
+  { top: "18%",  right: "2%", lineEnd: { x: 660, y: 180 } },                       // top right
+  { top: "55%",  right: "8%", lineEnd: { x: 620, y: 470 } },                       // bottom right
+  { top: "55%",  left: "8%",  lineEnd: { x: 180, y: 470 } },                       // bottom left
+  { top: "18%",  left: "2%",  lineEnd: { x: 140, y: 180 } },                       // top left
 ];
 
 const LandingTeam = () => {
@@ -66,9 +67,9 @@ const LandingTeam = () => {
         </div>
 
         {/* Desktop system map */}
-        <div className="hidden lg:block relative w-full" style={{ height: 620 }}>
+        <div className="hidden lg:block relative w-full" style={{ height: 700 }}>
           {/* SVG connector lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 620" fill="none" preserveAspectRatio="xMidYMid meet">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 700" fill="none" preserveAspectRatio="xMidYMid meet">
             <defs>
               <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(185, 75%, 45%)" stopOpacity="0.18" />
@@ -82,7 +83,7 @@ const LandingTeam = () => {
             </defs>
 
             {/* Radial glow behind hub */}
-            <circle cx="400" cy="310" r="180" fill="url(#hubGlow)" />
+            <circle cx="400" cy="350" r="200" fill="url(#hubGlow)" />
 
             {/* Connector lines */}
             {desktopPositions.map((pos, i) => {
@@ -93,7 +94,7 @@ const LandingTeam = () => {
                     x1={pos.lineEnd.x}
                     y1={pos.lineEnd.y}
                     x2="400"
-                    y2="310"
+                    y2="350"
                     stroke="url(#lineGrad)"
                     strokeWidth={isHovered ? 2 : 1}
                     opacity={isHovered ? 0.7 : 0.15}
@@ -102,7 +103,7 @@ const LandingTeam = () => {
                   />
                   <circle
                     cx="400"
-                    cy="310"
+                    cy="350"
                     r={isHovered ? 6 : 3}
                     fill="hsl(185, 75%, 55%)"
                     opacity={isHovered ? 0.6 : 0.15}
@@ -135,14 +136,15 @@ const LandingTeam = () => {
           {tools.map((tool, i) => {
             const pos = desktopPositions[i];
             const isHovered = hoveredTool === tool.id;
+            const posAny = pos as any;
             const style: React.CSSProperties = {
               position: "absolute",
               width: 210,
-              ...(pos.top !== undefined && { top: pos.top }),
-              ...(pos.bottom !== undefined && { bottom: pos.bottom }),
-              ...(pos.left !== undefined && { left: pos.left }),
-              ...(pos.right !== undefined && { right: pos.right }),
-              ...(pos.translateX && { transform: `translateX(${pos.translateX})` }),
+              ...(posAny.top !== undefined && { top: posAny.top }),
+              ...(posAny.bottom !== undefined && { bottom: posAny.bottom }),
+              ...(posAny.left !== undefined && { left: posAny.left }),
+              ...(posAny.right !== undefined && { right: posAny.right }),
+              ...(posAny.translateX && { transform: `translateX(${posAny.translateX})` }),
             };
 
             return (
