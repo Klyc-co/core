@@ -384,7 +384,7 @@ const ChatSidebar = () => {
       <div
         className={cn(
           "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-50",
-          isMobile ? "w-[85vw] max-w-80" : "w-80"
+          isMobile ? "w-[85vw] max-w-80" : "w-[22rem]"
         )}
       >
         {/* Header */}
