@@ -15,6 +15,9 @@ interface PendingApproval {
   created_at: string;
   updated_at: string;
   client_id: string;
+  source: "campaign" | "post";
+  image_url?: string | null;
+  post_text?: string | null;
   scheduled_campaigns: {
     id: string;
     campaign_name: string;
@@ -61,18 +64,48 @@ const PendingApprovals = () => {
 
   const fetchApprovals = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("campaign_approvals")
-        .select(`
-          *,
-          scheduled_campaigns (*),
-          campaign_drafts (*)
-        `)
-        .eq("marketer_id", userId)
-        .order("created_at", { ascending: false });
+      const [campaignRes, postQueueRes] = await Promise.all([
+        supabase
+          .from("campaign_approvals")
+          .select(`
+            *,
+            scheduled_campaigns (*),
+            campaign_drafts (*)
+          `)
+          .eq("marketer_id", userId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("post_queue")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "pending_approval")
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setApprovals(data || []);
+      const campaignApprovals: PendingApproval[] = (campaignRes.data || []).map((a: any) => ({
+        ...a,
+        source: "campaign" as const,
+      }));
+
+      const postApprovals: PendingApproval[] = (postQueueRes.data || []).map((p: any) => ({
+        id: p.id,
+        status: "pending",
+        notes: p.approval_notes,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        client_id: p.client_id || "",
+        source: "post" as const,
+        image_url: p.image_url,
+        post_text: p.post_text,
+        scheduled_campaigns: null,
+        campaign_drafts: null,
+      }));
+
+      const merged = [...campaignApprovals, ...postApprovals].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setApprovals(merged);
     } catch (error) {
       console.error("Error fetching approvals:", error);
     } finally {
@@ -171,65 +204,78 @@ const PendingApprovals = () => {
         ) : (
           <div className="space-y-4">
             {approvals.map((approval) => {
-              const campaignName = approval.scheduled_campaigns?.campaign_name 
-                || approval.campaign_drafts?.campaign_idea 
-                || "Untitled Campaign";
-              const isDraft = !!approval.campaign_drafts && !approval.scheduled_campaigns;
+              const isPost = approval.source === "post";
+              const campaignName = isPost
+                ? (approval.post_text?.slice(0, 60) || "AI Generated Post")
+                : (approval.scheduled_campaigns?.campaign_name 
+                  || approval.campaign_drafts?.campaign_idea 
+                  || "Untitled Campaign");
+              const isDraft = !isPost && !!approval.campaign_drafts && !approval.scheduled_campaigns;
               
               return (
                 <Card key={approval.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-foreground">
-                            {campaignName}
-                          </h3>
-                          {getStatusBadge(approval.status)}
-                          {isDraft && (
-                            <Badge variant="outline" className="text-xs">
-                              Draft
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            Sent {new Date(approval.created_at).toLocaleDateString()}
+                      <div className="flex-1 flex gap-4">
+                        {isPost && approval.image_url && (
+                          <img src={approval.image_url} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-foreground">
+                              {campaignName}
+                            </h3>
+                            {getStatusBadge(approval.status)}
+                            {isPost && (
+                              <Badge variant="outline" className="text-xs">
+                                AI Post
+                              </Badge>
+                            )}
+                            {isDraft && (
+                              <Badge variant="outline" className="text-xs">
+                                Draft
+                              </Badge>
+                            )}
                           </div>
-                          {approval.scheduled_campaigns?.scheduled_date && (
-                            <span>
-                              Scheduled for {new Date(approval.scheduled_campaigns.scheduled_date).toLocaleDateString()}
-                            </span>
-                          )}
-                          {isDraft && approval.campaign_drafts?.content_type && (
-                            <span className="capitalize">
-                              {approval.campaign_drafts.content_type.replace("-", " ")}
-                            </span>
-                          )}
-                        </div>
-
-                        {approval.scheduled_campaigns?.platforms && (
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {approval.scheduled_campaigns.platforms.map((platform) => (
-                              <span
-                                key={platform}
-                                className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
-                              >
-                                {platform}
+                          
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              Sent {new Date(approval.created_at).toLocaleDateString()}
+                            </div>
+                            {approval.scheduled_campaigns?.scheduled_date && (
+                              <span>
+                                Scheduled for {new Date(approval.scheduled_campaigns.scheduled_date).toLocaleDateString()}
                               </span>
-                            ))}
+                            )}
+                            {isDraft && approval.campaign_drafts?.content_type && (
+                              <span className="capitalize">
+                                {approval.campaign_drafts.content_type.replace("-", " ")}
+                              </span>
+                            )}
                           </div>
-                        )}
 
-                        {approval.notes && approval.status !== "pending" && (
-                          <div className="mt-3 p-3 bg-secondary/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">
-                              <span className="font-medium">Client Feedback:</span> {approval.notes}
-                            </p>
-                          </div>
-                        )}
+                          {!isPost && approval.scheduled_campaigns?.platforms && (
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {approval.scheduled_campaigns.platforms.map((platform) => (
+                                <span
+                                  key={platform}
+                                  className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
+                                >
+                                  {platform}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {approval.notes && approval.status !== "pending" && (
+                            <div className="mt-3 p-3 bg-secondary/50 rounded-lg">
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-medium">Client Feedback:</span> {approval.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex gap-2 ml-4">
