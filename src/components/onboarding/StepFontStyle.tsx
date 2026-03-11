@@ -12,36 +12,25 @@ interface StepFontStyleProps {
  * Build a short, punchy sample phrase from the scan data.
  * Falls back to the business name or a generic line.
  */
-function buildSamplePhrase(scanData: any | undefined): string {
+function buildSampleWord(scanData: any | undefined): string {
   const name =
     scanData?.businessSummary?.businessName ||
     scanData?.summary?.businessName ||
     "";
 
-  const description =
-    scanData?.businessSummary?.description ||
-    scanData?.summary?.description ||
-    "";
-
-  // Pull the first meaningful sentence fragment from the description
-  if (name && description) {
-    // Grab a short punchy excerpt – first sentence, trimmed to ~50 chars
-    const firstSentence = description.split(/[.!?]/)[0]?.trim() || "";
-    const shortExcerpt =
-      firstSentence.length > 60
-        ? firstSentence.slice(0, 57).replace(/\s+\S*$/, "") + "…"
-        : firstSentence;
-    return shortExcerpt || name;
+  // Use just the first word of the business name
+  if (name) {
+    const firstWord = name.trim().split(/\s+/)[0];
+    return firstWord || "Brand";
   }
 
-  if (name) return name;
-  return "Your Brand Here";
+  return "Brand";
 }
 
 const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const samplePhrase = useMemo(() => buildSamplePhrase(scanData), [scanData]);
+  const samplePhrase = useMemo(() => buildSampleWord(scanData), [scanData]);
 
   const fontStyles = useMemo(
     () => [
