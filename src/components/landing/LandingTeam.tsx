@@ -48,7 +48,7 @@ const LandingTeam = () => {
         </div>
 
         {/* Tool cards grid below */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mx-auto">
           {tools.map((tool) => {
             const isHovered = hoveredTool === tool.id;
             return (
