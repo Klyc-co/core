@@ -131,6 +131,11 @@ const PendingApprovals = () => {
         ? approval.post_text || ""
         : approval.campaign_drafts?.post_caption || approval.campaign_drafts?.campaign_idea || ""
     );
+    setScheduleDate(
+      approval.scheduled_at ? new Date(approval.scheduled_at)
+      : approval.scheduled_campaigns?.scheduled_date ? new Date(approval.scheduled_campaigns.scheduled_date)
+      : new Date(Date.now() + 86400000) // default tomorrow
+    );
     setIsEditing(false);
   };
 
