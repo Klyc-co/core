@@ -35,13 +35,14 @@ const tools = [
   },
 ];
 
-// Balanced positions: top-left, top-right, left, right, bottom-center
+// Pentagon positions equally spaced around center (400, 340) with radius ~250
+// Angles: -90°, -18°, 54°, 126°, 198° (pentagon, top-center start)
 const desktopPositions = [
-  { top: "2%", left: "10%", lineEnd: { x: 180, y: 80 } },
-  { top: "2%", right: "10%", lineEnd: { x: 620, y: 80 } },
-  { top: "42%", left: "2%", lineEnd: { x: 130, y: 310 } },
-  { top: "42%", right: "2%", lineEnd: { x: 670, y: 310 } },
-  { bottom: "2%", left: "50%", translateX: "-50%", lineEnd: { x: 400, y: 530 } },
+  { top: "2%",   left: "50%", translateX: "-50%", lineEnd: { x: 400, y: 90 } },   // top center
+  { top: "18%",  right: "2%", lineEnd: { x: 660, y: 180 } },                       // top right
+  { top: "55%",  right: "8%", lineEnd: { x: 620, y: 470 } },                       // bottom right
+  { top: "55%",  left: "8%",  lineEnd: { x: 180, y: 470 } },                       // bottom left
+  { top: "18%",  left: "2%",  lineEnd: { x: 140, y: 180 } },                       // top left
 ];
 
 const LandingTeam = () => {
