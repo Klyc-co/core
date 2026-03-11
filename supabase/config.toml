@@ -328,3 +328,7 @@ verify_jwt = false
 [functions.zapier-query-posts]
 verify_jwt = false
 
+[functions.generate-onboarding-posts]
+verify_jwt = false
+
+
