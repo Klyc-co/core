@@ -60,6 +60,7 @@ const PendingApprovals = () => {
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
