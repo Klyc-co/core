@@ -1,31 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface StepGenerateContentProps {
   onNext: (posts: any[]) => void;
 }
-
-const mockPosts = [
-  {
-    id: 1,
-    title: "Brand Story Introduction",
-    description: "Introduce your brand's origin story and mission to build authentic connection with your audience.",
-    platforms: ["LinkedIn", "Instagram", "Facebook"],
-  },
-  {
-    id: 2,
-    title: "Product/Service Spotlight",
-    description: "Highlight your key offering with benefit-driven messaging and a strong visual hook.",
-    platforms: ["Instagram", "TikTok", "Facebook"],
-  },
-  {
-    id: 3,
-    title: "Industry Insight & Authority",
-    description: "Share a valuable insight from your industry to position your brand as a thought leader.",
-    platforms: ["LinkedIn", "YouTube", "Facebook"],
-  },
-];
 
 const platformIcons: Record<string, any> = {
   LinkedIn: Linkedin,
@@ -38,13 +19,56 @@ const platformIcons: Record<string, any> = {
 const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const statusMessages = [
+    "Analyzing your brand profile...",
+    "Crafting content strategy...",
+    "Writing post captions...",
+    "Generating visuals with AI...",
+    "Polishing your content...",
+    "Almost there...",
+  ];
 
   const handleGenerate = async () => {
     setGenerating(true);
-    // Simulate generation delay
-    await new Promise((r) => setTimeout(r, 3000));
-    setGenerated(true);
-    setGenerating(false);
+    setStatusMessage(statusMessages[0]);
+
+    // Rotate status messages
+    let msgIndex = 0;
+    const interval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % statusMessages.length;
+      setStatusMessage(statusMessages[msgIndex]);
+    }, 3000);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-onboarding-posts", {
+        body: {
+          businessSummary: "",
+          businessType: "",
+          websiteUrl: "",
+        },
+      });
+
+      clearInterval(interval);
+
+      if (error) throw error;
+
+      if (data?.posts && data.posts.length > 0) {
+        setPosts(data.posts);
+        setGenerated(true);
+      } else {
+        throw new Error("No posts returned");
+      }
+    } catch (e: any) {
+      clearInterval(interval);
+      console.error("Generation error:", e);
+      toast.error("Content generation failed. Please try again.");
+    } finally {
+      setGenerating(false);
+      setStatusMessage("");
+    }
   };
 
   return (
@@ -60,7 +84,7 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
         </div>
 
         {!generated ? (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             <Button
               onClick={handleGenerate}
               disabled={generating}
@@ -70,7 +94,7 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
               {generating ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Generating your content...
+                  Generating...
                 </>
               ) : (
                 <>
@@ -79,22 +103,35 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
                 </>
               )}
             </Button>
+            {generating && statusMessage && (
+              <p className="text-sm text-muted-foreground animate-fade-in">
+                {statusMessage}
+              </p>
+            )}
           </div>
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-3 mb-10">
-              {mockPosts.map((post) => (
+              {posts.map((post, idx) => (
                 <div
-                  key={post.id}
+                  key={idx}
                   className="bg-card rounded-2xl border border-border p-5 shadow-sm flex flex-col animate-fade-in"
                 >
-                  <div className="w-full h-32 rounded-xl bg-secondary/50 mb-4 flex items-center justify-center">
-                    <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+                  <div className="w-full h-40 rounded-xl bg-secondary/50 mb-4 overflow-hidden flex items-center justify-center">
+                    {post.imageUrl ? (
+                      <img
+                        src={post.imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+                    )}
                   </div>
                   <h3 className="text-sm font-semibold text-foreground mb-1">{post.title}</h3>
-                  <p className="text-xs text-muted-foreground mb-4 flex-1">{post.description}</p>
+                  <p className="text-xs text-muted-foreground mb-4 flex-1 line-clamp-3">{post.caption}</p>
                   <div className="flex gap-1.5">
-                    {post.platforms.map((p) => {
+                    {(post.platforms || []).map((p: string) => {
                       const Icon = platformIcons[p];
                       return (
                         <div
@@ -113,7 +150,7 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
 
             <div className="flex justify-center">
               <Button
-                onClick={() => onNext(mockPosts)}
+                onClick={() => onNext(posts)}
                 size="lg"
                 className="h-12 px-10 text-base font-semibold"
               >
