@@ -19,7 +19,7 @@ const AppLayoutContent = ({ children, showSidebar = true }: AppLayoutProps) => {
   return (
     <div className="min-h-screen w-full flex flex-col">
       {showSidebar && <ChatSidebar />}
-      <div className={`flex-1 flex flex-col transition-[margin] duration-200 ${shouldApplyMargin ? "ml-80" : ""}`}>
+      <div className={`flex-1 flex flex-col transition-[margin] duration-200 ${<div className={`flex-1 flex flex-col transition-[margin] duration-200 ${shouldApplyMargin ? "ml-[22rem]" : ""}`}>}`}>
         {children}
         <Footer />
       </div>
