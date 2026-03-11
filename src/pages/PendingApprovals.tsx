@@ -169,13 +169,20 @@ const PendingApprovals = () => {
   };
 
   const handleApprove = async () => {
-    if (!selected) return;
+    if (!selected || !scheduleDate) {
+      toast.error("Please select a launch date first");
+      return;
+    }
     setSaving(true);
     try {
       if (selected.source === "post") {
         const { error } = await supabase
           .from("post_queue")
-          .update({ status: "approved", approved_at: new Date().toISOString() })
+          .update({
+            status: "scheduled",
+            approved_at: new Date().toISOString(),
+            scheduled_at: scheduleDate.toISOString(),
+          })
           .eq("id", selected.id);
         if (error) throw error;
       } else {
@@ -185,9 +192,10 @@ const PendingApprovals = () => {
           .eq("id", selected.id);
         if (error) throw error;
       }
-      toast.success("Approved!");
-      setApprovals(prev => prev.map(a => a.id === selected.id ? { ...a, status: "approved" } : a));
+      toast.success("Approved & scheduled!");
+      setApprovals(prev => prev.filter(a => a.id !== selected.id));
       setSelected(null);
+      navigate("/home");
     } catch (err) {
       toast.error("Failed to approve");
     } finally {
