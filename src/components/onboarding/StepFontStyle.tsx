@@ -30,7 +30,7 @@ function buildSampleWord(scanData: any | undefined): string {
 const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const samplePhrase = useMemo(() => buildSamplePhrase(scanData), [scanData]);
+  const samplePhrase = useMemo(() => buildSampleWord(scanData), [scanData]);
 
   const fontStyles = useMemo(
     () => [
