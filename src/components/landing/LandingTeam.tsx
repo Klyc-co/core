@@ -94,7 +94,7 @@ const LandingTeam = () => {
                     x1={pos.lineEnd.x}
                     y1={pos.lineEnd.y}
                     x2="400"
-                    y2="310"
+                    y2="350"
                     stroke="url(#lineGrad)"
                     strokeWidth={isHovered ? 2 : 1}
                     opacity={isHovered ? 0.7 : 0.15}
