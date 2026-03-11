@@ -1,17 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay, isToday, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, CalendarDays, Trash2, Send, Pencil, Check, X, Clock, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Linkedin,
+  Instagram,
+  Facebook,
+  Youtube,
+  Globe,
+  Mail,
+  Play,
+  MoreHorizontal,
+  Trash2,
+  Send,
+  Pencil,
+  Loader2,
+  CalendarDays,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
+
+interface ScheduledPost {
+  id: string;
+  post_text: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  content_type: string;
+  scheduled_at: string;
+  status: string;
+}
 
 interface ScheduledCampaign {
   id: string;
@@ -20,469 +49,379 @@ interface ScheduledCampaign {
   scheduled_date: string;
   scheduled_time: string;
   status: string;
-  created_at: string;
+  image_url?: string;
+  video_url?: string;
+  post_caption?: string;
 }
 
-const platformColors: Record<string, string> = {
-  instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
-  facebook: "bg-[#1877F2]",
-  twitter: "bg-neutral-900",
-  linkedin: "bg-[#0A66C2]",
-  tiktok: "bg-neutral-900",
-  youtube: "bg-[#FF0000]",
-  pinterest: "bg-[#E60023]",
-  threads: "bg-neutral-900",
+type CalendarItem = {
+  id: string;
+  type: "post" | "campaign";
+  title: string;
+  time: string;
+  imageUrl: string | null;
+  videoUrl: string | null;
+  contentType: string;
+  platform: string;
+  status: string;
+  raw: ScheduledPost | ScheduledCampaign;
+};
+
+const platformMeta: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+  linkedin: { icon: <Linkedin className="w-3.5 h-3.5" />, label: "Post", color: "text-[#0A66C2]" },
+  instagram: { icon: <Instagram className="w-3.5 h-3.5" />, label: "Post", color: "text-[#E4405F]" },
+  facebook: { icon: <Facebook className="w-3.5 h-3.5" />, label: "Post", color: "text-[#1877F2]" },
+  youtube: { icon: <Youtube className="w-3.5 h-3.5" />, label: "Video", color: "text-[#FF0000]" },
+  blog: { icon: <Globe className="w-3.5 h-3.5" />, label: "Blog", color: "text-muted-foreground" },
+  email: { icon: <Mail className="w-3.5 h-3.5" />, label: "Email", color: "text-muted-foreground" },
+};
+
+const detectPlatform = (contentType: string): string => {
+  const t = contentType.toLowerCase();
+  if (t.includes("linkedin")) return "linkedin";
+  if (t.includes("instagram")) return "instagram";
+  if (t.includes("facebook")) return "facebook";
+  if (t.includes("youtube")) return "youtube";
+  if (t.includes("blog") || t.includes("article")) return "blog";
+  if (t.includes("email")) return "email";
+  return "linkedin";
 };
 
 const Schedule = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [campaigns, setCampaigns] = useState<ScheduledCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [publishingId, setPublishingId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDate, setEditDate] = useState<Date | undefined>();
-  const [editTime, setEditTime] = useState("");
-  const [editPeriod, setEditPeriod] = useState<"AM" | "PM">("AM");
+
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        navigate("/auth");
-      } else {
-        setUser(user);
-        fetchCampaigns(user.id);
-      }
+      if (!user) navigate("/auth");
+      else setUser(user);
     });
   }, [navigate]);
 
-  const fetchCampaigns = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("scheduled_campaigns")
-      .select("*")
-      .eq("user_id", userId)
-      .order("scheduled_date", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching campaigns:", error);
-    } else {
-      setCampaigns(data as ScheduledCampaign[]);
-    }
-    setIsLoading(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("scheduled_campaigns")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to delete campaign", variant: "destructive" });
-    } else {
-      setCampaigns(campaigns.filter(c => c.id !== id));
-      toast({ title: "Deleted", description: "Campaign has been removed" });
-    }
-  };
-
-  const startEditing = (campaign: ScheduledCampaign) => {
-    setEditingId(campaign.id);
-    setEditDate(new Date(campaign.scheduled_date + "T00:00:00"));
-    // Parse time - could be "10:45:00" (24h) or "10:45 AM" format
-    const timeParts = campaign.scheduled_time.match(/(\d{1,2}):(\d{2})/);
-    if (timeParts) {
-      let hour = parseInt(timeParts[1]);
-      const min = timeParts[2];
-      if (hour >= 12) {
-        setEditPeriod("PM");
-        if (hour > 12) hour -= 12;
-      } else {
-        setEditPeriod("AM");
-        if (hour === 0) hour = 12;
-      }
-      setEditTime(`${hour}:${min}`);
-    } else {
-      setEditTime("12:00");
-      setEditPeriod("AM");
-    }
-  };
-
-  const cancelEditing = () => {
-    setEditingId(null);
-    setEditTime("");
-    setEditDate(undefined);
-  };
-
-  const saveEditing = async (id: string) => {
-    if (!editDate || !editTime) return;
-
-    // Convert to 24h format for DB
-    const timeParts = editTime.match(/(\d{1,2}):(\d{2})/);
-    if (!timeParts) {
-      toast({ title: "Invalid time", description: "Please enter a valid time like 9:30", variant: "destructive" });
-      return;
-    }
-    let hour = parseInt(timeParts[1]);
-    const min = timeParts[2];
-    if (editPeriod === "PM" && hour < 12) hour += 12;
-    if (editPeriod === "AM" && hour === 12) hour = 0;
-    const time24 = `${String(hour).padStart(2, "0")}:${min}:00`;
-
-    const dateStr = format(editDate, "yyyy-MM-dd");
-
-    const { error } = await supabase
-      .from("scheduled_campaigns")
-      .update({ scheduled_date: dateStr, scheduled_time: time24 })
-      .eq("id", id);
-
-    if (error) {
-      toast({ title: "Error", description: "Failed to update schedule", variant: "destructive" });
-    } else {
-      setCampaigns(campaigns.map(c =>
-        c.id === id ? { ...c, scheduled_date: dateStr, scheduled_time: time24 } : c
-      ));
-      toast({ title: "Updated", description: "Schedule has been updated" });
-      setEditingId(null);
-    }
-  };
-
-  const handlePostNow = async (campaign: ScheduledCampaign) => {
+  useEffect(() => {
     if (!user) return;
-    setPublishingId(campaign.id);
+    const fetchAll = async () => {
+      setLoading(true);
+      const from = days[0].toISOString();
+      const to = addDays(days[6], 1).toISOString();
+      const fromDate = format(days[0], "yyyy-MM-dd");
+      const toDate = format(addDays(days[6], 1), "yyyy-MM-dd");
 
-    try {
-      // 1. Fetch full campaign data including media URLs
-      const { data: fullCampaign, error: fetchError } = await supabase
-        .from("scheduled_campaigns")
-        .select("*")
-        .eq("id", campaign.id)
-        .single();
+      const [postsRes, campaignsRes] = await Promise.all([
+        supabase
+          .from("post_queue")
+          .select("id, post_text, image_url, video_url, content_type, scheduled_at, status")
+          .eq("user_id", user.id)
+          .gte("scheduled_at", from)
+          .lt("scheduled_at", to)
+          .in("status", ["scheduled", "approved", "pending_approval", "published"])
+          .order("scheduled_at", { ascending: true }),
+        supabase
+          .from("scheduled_campaigns")
+          .select("id, campaign_name, platforms, scheduled_date, scheduled_time, status, image_url, video_url, post_caption")
+          .eq("user_id", user.id)
+          .gte("scheduled_date", fromDate)
+          .lt("scheduled_date", toDate)
+          .order("scheduled_date", { ascending: true }),
+      ]);
 
-      if (fetchError || !fullCampaign) {
-        throw new Error("Failed to fetch campaign details");
-      }
+      setPosts((postsRes.data as ScheduledPost[]) || []);
+      setCampaigns((campaignsRes.data as ScheduledCampaign[]) || []);
+      setLoading(false);
+    };
+    fetchAll();
+  }, [user, weekStart]);
 
-      // 2. Create a post_queue entry with media
-      const hasVideo = !!(fullCampaign as any).video_url;
-      const hasImage = !!(fullCampaign as any).image_url;
-      const contentType = hasVideo ? "video" : hasImage ? "image" : "text";
-
-      const { data: postQueue, error: pqError } = await supabase
-        .from("post_queue")
-        .insert({
-          user_id: user.id,
-          post_text: (fullCampaign as any).post_caption || campaign.campaign_name,
-          content_type: contentType,
-          status: "draft",
-          video_url: (fullCampaign as any).video_url || null,
-          image_url: (fullCampaign as any).image_url || null,
-          media_urls: (fullCampaign as any).media_urls || [],
-        })
-        .select()
-        .single();
-
-      if (pqError || !postQueue) {
-        throw new Error(pqError?.message || "Failed to create post queue entry");
-      }
-
-      // 2. Create platform targets
-      const targets = campaign.platforms.map(platform => ({
-        post_queue_id: postQueue.id,
-        platform,
-        status: "pending",
+  // Merge posts + campaigns into unified calendar items per day
+  const itemsForDay = (day: Date): CalendarItem[] => {
+    const postItems: CalendarItem[] = posts
+      .filter((p) => p.scheduled_at && isSameDay(new Date(p.scheduled_at), day))
+      .map((p) => ({
+        id: p.id,
+        type: "post" as const,
+        title: p.post_text?.slice(0, 120) || p.content_type,
+        time: p.scheduled_at ? format(new Date(p.scheduled_at), "h:mma").toLowerCase() : "",
+        imageUrl: p.image_url,
+        videoUrl: p.video_url,
+        contentType: p.content_type,
+        platform: detectPlatform(p.content_type),
+        status: p.status,
+        raw: p,
       }));
 
-      const { error: targetError } = await supabase
-        .from("post_platform_targets")
-        .insert(targets);
-
-      if (targetError) {
-        throw new Error(targetError.message);
-      }
-
-      // 3. Call publish-post edge function
-      const { data, error } = await supabase.functions.invoke("publish-post", {
-        body: { postQueueId: postQueue.id },
+    const campaignItems: CalendarItem[] = campaigns
+      .filter((c) => isSameDay(new Date(c.scheduled_date + "T00:00:00"), day))
+      .map((c) => {
+        const platform = c.platforms?.[0] || "linkedin";
+        const timeParts = c.scheduled_time?.match(/(\d{1,2}):(\d{2})/);
+        let timeStr = "";
+        if (timeParts) {
+          let h = parseInt(timeParts[1]);
+          const m = timeParts[2];
+          const ampm = h >= 12 ? "pm" : "am";
+          if (h > 12) h -= 12;
+          if (h === 0) h = 12;
+          timeStr = `${h}:${m}${ampm}`;
+        }
+        return {
+          id: c.id,
+          type: "campaign" as const,
+          title: c.post_caption || c.campaign_name,
+          time: timeStr,
+          imageUrl: c.image_url || null,
+          videoUrl: c.video_url || null,
+          contentType: platform,
+          platform,
+          status: c.status,
+          raw: c,
+        };
       });
 
-      if (error) {
-        throw new Error(error.message);
+    // Deduplicate by checking if a campaign already has a matching post
+    const postTexts = new Set(postItems.map((p) => p.title.slice(0, 40)));
+    const uniqueCampaigns = campaignItems.filter((c) => !postTexts.has(c.title.slice(0, 40)));
+
+    return [...postItems, ...uniqueCampaigns].sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const handleDelete = async (item: CalendarItem) => {
+    const table = item.type === "post" ? "post_queue" : "scheduled_campaigns";
+    const { error } = await supabase.from(table).delete().eq("id", item.id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+    } else {
+      if (item.type === "post") setPosts((p) => p.filter((x) => x.id !== item.id));
+      else setCampaigns((c) => c.filter((x) => x.id !== item.id));
+      toast({ title: "Deleted", description: "Item removed from schedule" });
+    }
+  };
+
+  const handlePostNow = async (item: CalendarItem) => {
+    if (!user) return;
+    setPublishingId(item.id);
+    try {
+      let postQueueId = item.type === "post" ? item.id : null;
+
+      if (item.type === "campaign") {
+        const campaign = item.raw as ScheduledCampaign;
+        const { data: pq, error: pqError } = await supabase
+          .from("post_queue")
+          .insert({
+            user_id: user.id,
+            post_text: campaign.post_caption || campaign.campaign_name,
+            content_type: campaign.video_url ? "video" : campaign.image_url ? "image" : "text",
+            status: "draft",
+            video_url: campaign.video_url || null,
+            image_url: campaign.image_url || null,
+          })
+          .select()
+          .single();
+        if (pqError || !pq) throw new Error("Failed to create post");
+        postQueueId = pq.id;
+
+        const targets = campaign.platforms.map((p) => ({ post_queue_id: pq.id, platform: p, status: "pending" }));
+        await supabase.from("post_platform_targets").insert(targets);
       }
 
-      // 4. Update scheduled campaign status
-      await supabase
-        .from("scheduled_campaigns")
-        .update({ status: data?.status === "published" ? "published" : data?.status || "attempted" })
-        .eq("id", campaign.id);
+      const { data, error } = await supabase.functions.invoke("publish-post", {
+        body: { postQueueId },
+      });
 
-      setCampaigns(campaigns.map(c =>
-        c.id === campaign.id ? { ...c, status: data?.status || "attempted" } : c
-      ));
+      if (error) throw new Error(error.message);
 
-      if (data?.results) {
-        const successes = data.results.filter((r: any) => r.success);
-        const failures = data.results.filter((r: any) => !r.success);
+      toast({ title: "Published!", description: "Post has been sent live." });
 
-        if (successes.length > 0) {
-          toast({
-            title: "Published!",
-            description: `Posted to: ${successes.map((r: any) => r.platform).join(", ")}${failures.length > 0 ? `. Failed: ${failures.map((r: any) => `${r.platform} (${r.error})`).join(", ")}` : ""}`,
-          });
-        } else {
-          toast({
-            title: "Publishing failed",
-            description: failures.map((r: any) => `${r.platform}: ${r.error}`).join("; "),
-            variant: "destructive",
-          });
-        }
+      // Refresh
+      if (item.type === "post") {
+        setPosts((p) => p.map((x) => (x.id === item.id ? { ...x, status: "published" } : x)));
+      } else {
+        setCampaigns((c) => c.map((x) => (x.id === item.id ? { ...x, status: "published" } : x)));
       }
     } catch (err: any) {
-      console.error("Post now error:", err);
-      toast({
-        title: "Publishing failed",
-        description: err.message || "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
     } finally {
       setPublishingId(null);
     }
   };
 
-  const formatDisplayTime = (timeStr: string) => {
-    const match = timeStr.match(/(\d{1,2}):(\d{2})/);
-    if (!match) return timeStr;
-    let hour = parseInt(match[1]);
-    const min = match[2];
-    const period = hour >= 12 ? "PM" : "AM";
-    if (hour > 12) hour -= 12;
-    if (hour === 0) hour = 12;
-    return `${hour}:${min} ${period}`;
-  };
-
-  const campaignDates = campaigns.map(c => new Date(c.scheduled_date + "T00:00:00"));
+  const weekLabel = `${format(days[0], "MMM d")} – ${format(days[6], "MMM d, yyyy")}`;
 
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
-        <div className="flex items-center gap-4 mb-2">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/campaigns")}
-            className="text-primary hover:text-primary/80"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Campaigns
-          </Button>
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/campaigns")} className="h-8 w-8">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Content Calendar</h1>
+              <p className="text-sm text-muted-foreground">{weekLabel}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="text-xs h-8">
+              Today
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(subWeeks(weekStart, 1))}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Scheduled Campaigns</h1>
-          <p className="text-muted-foreground">View and manage all your scheduled campaigns</p>
-        </div>
+        {/* Week grid */}
+        <div className="grid grid-cols-7 gap-0 border border-border rounded-xl overflow-hidden bg-card">
+          {/* Day headers */}
+          {days.map((day) => {
+            const today = isToday(day);
+            return (
+              <div
+                key={day.toISOString() + "-header"}
+                className={`px-3 py-3 text-center border-b border-border ${
+                  today ? "bg-primary/5" : "bg-muted/30"
+                } ${days.indexOf(day) < 6 ? "border-r border-border" : ""}`}
+              >
+                <p className={`text-xs font-medium uppercase tracking-wide ${today ? "text-primary" : "text-muted-foreground"}`}>
+                  {format(day, "EEE")}
+                </p>
+                <p className={`text-sm font-semibold mt-0.5 ${today ? "text-primary" : "text-foreground"}`}>
+                  {format(day, "MMM d")}
+                </p>
+              </div>
+            );
+          })}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Scheduled Campaigns List */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CalendarDays className="w-5 h-5" />
-                  All Scheduled Campaigns
-                </h2>
-
-                {isLoading ? (
-                  <p className="text-muted-foreground text-center py-8">Loading campaigns...</p>
-                ) : campaigns.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                      No scheduled campaigns yet. Create a campaign and schedule it to see it here.
-                    </CardContent>
-                  </Card>
+          {/* Day columns with posts */}
+          {days.map((day, dayIdx) => {
+            const items = itemsForDay(day);
+            const today = isToday(day);
+            return (
+              <div
+                key={day.toISOString() + "-body"}
+                className={`min-h-[520px] p-2 ${today ? "bg-primary/[0.02]" : ""} ${
+                  dayIdx < 6 ? "border-r border-border" : ""
+                }`}
+              >
+                {loading ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+                    <div className="h-20 rounded-lg bg-muted/30 animate-pulse" />
+                  </div>
+                ) : items.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground/40 text-center pt-8">No content</p>
                 ) : (
-                  <div className="space-y-4">
-                    {campaigns.map((campaign) => (
-                      <Card key={campaign.id} className="overflow-hidden">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-2 flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-foreground">{campaign.campaign_name}</h3>
-                                {campaign.status === "published" && (
-                                  <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-600">Published</span>
-                                )}
-                                {campaign.status === "failed" && (
-                                  <span className="px-2 py-0.5 rounded text-xs bg-destructive/20 text-destructive">Failed</span>
-                                )}
-                                {campaign.status === "partial" && (
-                                  <span className="px-2 py-0.5 rounded text-xs bg-yellow-500/20 text-yellow-600">Partial</span>
-                                )}
-                              </div>
-
-                              {editingId === campaign.id ? (
-                                <div className="space-y-3">
-                                  {/* Date picker */}
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="outline" size="sm" className="w-full justify-start text-left">
-                                        <CalendarDays className="w-4 h-4 mr-2" />
-                                        {editDate ? format(editDate, "PPP") : "Pick a date"}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar
-                                        mode="single"
-                                        selected={editDate}
-                                        onSelect={setEditDate}
-                                        className="p-3 pointer-events-auto"
-                                        disabled={(d) => {
-                                          const today = new Date();
-                                          today.setHours(0, 0, 0, 0);
-                                          return d < today;
-                                        }}
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-
-                                  {/* Time input */}
-                                  <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                      <Input
-                                        placeholder="e.g. 9:30"
-                                        className="pl-9 h-9"
-                                        value={editTime}
-                                        onChange={(e) => {
-                                          let val = e.target.value.replace(/[^0-9:]/g, "");
-                                          if (val.length === 2 && !val.includes(":")) val += ":";
-                                          if (val.length > 5) val = val.slice(0, 5);
-                                          setEditTime(val);
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex rounded-lg border overflow-hidden">
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          "px-3 py-1.5 text-sm font-medium transition-colors",
-                                          editPeriod === "AM"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-background text-muted-foreground hover:bg-muted"
-                                        )}
-                                        onClick={() => setEditPeriod("AM")}
-                                      >
-                                        AM
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          "px-3 py-1.5 text-sm font-medium transition-colors",
-                                          editPeriod === "PM"
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-background text-muted-foreground hover:bg-muted"
-                                        )}
-                                        onClick={() => setEditPeriod("PM")}
-                                      >
-                                        PM
-                                      </button>
-                                    </div>
+                  <div className="space-y-2.5">
+                    {items.map((item) => {
+                      const meta = platformMeta[item.platform] || platformMeta.linkedin;
+                      const isPublished = item.status === "published";
+                      return (
+                        <div
+                          key={item.id}
+                          className={`group rounded-lg border bg-card overflow-hidden transition-all hover:shadow-md hover:border-primary/30 ${
+                            isPublished ? "opacity-60" : ""
+                          }`}
+                        >
+                          {/* Media */}
+                          {(item.imageUrl || item.videoUrl) && (
+                            <div className="relative aspect-[4/3] overflow-hidden">
+                              <img
+                                src={item.imageUrl || ""}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                              {item.videoUrl && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                  <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+                                    <Play className="w-4 h-4 text-white fill-white" />
                                   </div>
-
-                                  <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => saveEditing(campaign.id)} className="gap-1">
-                                      <Check className="w-3 h-3" /> Save
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={cancelEditing} className="gap-1">
-                                      <X className="w-3 h-3" /> Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <CalendarDays className="w-4 h-4" />
-                                  <span>
-                                    {format(new Date(campaign.scheduled_date + "T00:00:00"), "PPP")} at {formatDisplayTime(campaign.scheduled_time)}
-                                  </span>
-                                  {campaign.status === "scheduled" && (
-                                    <button
-                                      onClick={() => startEditing(campaign)}
-                                      className="text-primary hover:text-primary/80"
-                                    >
-                                      <Pencil className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
                                 </div>
                               )}
+                            </div>
+                          )}
 
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {campaign.platforms.map((platform) => (
-                                  <span
-                                    key={platform}
-                                    className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
-                                  >
-                                    {platform}
-                                  </span>
-                                ))}
+                          {/* Content */}
+                          <div className="p-2.5">
+                            {/* Platform + type + time */}
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className={meta.color}>{meta.icon}</span>
+                                <span className="text-[11px] font-medium text-muted-foreground">{meta.label}</span>
+                                {item.contentType.toLowerCase().includes("ai") && (
+                                  <Badge variant="secondary" className="h-4 px-1 text-[9px] font-medium">AI</Badge>
+                                )}
                               </div>
+                              <span className="text-[11px] text-muted-foreground">{item.time}</span>
                             </div>
 
-                            <div className="flex items-center gap-1">
-                              {campaign.status === "scheduled" && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => handlePostNow(campaign)}
-                                  disabled={publishingId === campaign.id}
-                                  className="gap-1.5"
-                                >
-                                  {publishingId === campaign.id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Send className="w-4 h-4" />
-                                  )}
-                                  Post Now
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(campaign.id)}
-                                className="text-muted-foreground hover:text-destructive"
+                            {/* Text preview */}
+                            <p className="text-xs text-foreground leading-relaxed line-clamp-3 mb-2">
+                              {item.title}
+                            </p>
+
+                            {/* Status + actions */}
+                            <div className="flex items-center justify-between">
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] h-5 capitalize ${
+                                  isPublished
+                                    ? "border-green-500/30 text-green-600 bg-green-500/5"
+                                    : item.status === "pending_approval"
+                                    ? "border-amber-500/30 text-amber-600 bg-amber-500/5"
+                                    : "border-primary/20 text-primary bg-primary/5"
+                                }`}
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                                {item.status.replace("_", " ")}
+                              </Badge>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted">
+                                    <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-36">
+                                  {!isPublished && (
+                                    <DropdownMenuItem onClick={() => handlePostNow(item)} disabled={publishingId === item.id}>
+                                      {publishingId === item.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                      ) : (
+                                        <Send className="w-3.5 h-3.5 mr-2" />
+                                      )}
+                                      Post Now
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(item)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Calendar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardContent className="p-6">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-md pointer-events-auto"
-                  modifiers={{
-                    scheduled: campaignDates,
-                  }}
-                  modifiersClassNames={{
-                    scheduled: "bg-primary/20 text-primary font-bold",
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>
