@@ -428,6 +428,41 @@ const PendingApprovals = () => {
                   </div>
                 )}
 
+                {/* Launch Date */}
+                <div className="border border-border rounded-lg p-4">
+                  <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-3">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                    Launch Date
+                  </label>
+                  {selected.status === "pending" ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduleDate && "text-muted-foreground")}>
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {scheduleDate ? format(scheduleDate, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduleDate}
+                          onSelect={setScheduleDate}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <p className="text-sm text-foreground">
+                      {selected.scheduled_at
+                        ? format(new Date(selected.scheduled_at), "PPP")
+                        : selected.scheduled_campaigns?.scheduled_date
+                          ? format(new Date(selected.scheduled_campaigns.scheduled_date), "PPP")
+                          : "Not set"}
+                    </p>
+                  )}
+                </div>
+
                 {/* Meta info */}
                 <div className="text-xs text-muted-foreground border-t border-border pt-3">
                   Created {new Date(selected.created_at).toLocaleString()}
