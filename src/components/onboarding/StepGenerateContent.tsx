@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface StepGenerateContentProps {
-  onNext: (posts: any[]) => void;
+  onNext: () => void;
 }
 
 const platformIcons: Record<string, any> = {
@@ -150,12 +150,11 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
 
             <div className="flex justify-center">
               <Button
-                onClick={() => onNext(posts)}
+                onClick={() => onNext()}
                 size="lg"
                 className="h-12 px-10 text-base font-semibold"
               >
-                View Pending Approvals
-                <ArrowRight className="w-4 h-4 ml-2" />
+                Finish
               </Button>
             </div>
           </>
