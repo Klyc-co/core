@@ -7,13 +7,8 @@ interface StepBusinessSummaryProps {
 }
 
 const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => {
-  const summary = scanData?.summary || {};
-  const businessName = summary.businessName || "Your Business";
-  const description = summary.description || "We analyzed your website and built a comprehensive business profile.";
-  const audience = summary.audience || "Your target market";
-  const valueProposition = summary.valueProposition || "What makes you unique";
-  const positioning = summary.positioning || "Your market positioning";
-  const voice = summary.voice || "Your brand voice";
+  const businessName = scanData?.businessSummary?.businessName || "Your Business";
+  const description = scanData?.businessSummary?.description || "";
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -24,18 +19,22 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
             <CheckCircle2 className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-3">
-            Here's what Klyc understands about your business.
+            Here's what we found.
           </h1>
           <p className="text-muted-foreground">
-            Review this summary and make sure we captured your company correctly.
+            We scanned your website and built this profile. Make sure it looks right.
           </p>
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
           <h2 className="text-xl font-bold text-foreground mb-4">{businessName}</h2>
-          <p className="text-foreground/80 leading-relaxed text-[15px]">
-            {description} They serve {audience.toLowerCase()}. Their core offering centers around {valueProposition.toLowerCase()}. What sets them apart is {positioning.toLowerCase()}. Their brand communicates with a {voice.toLowerCase()} tone.
-          </p>
+          {description ? (
+            <p className="text-foreground/80 leading-relaxed text-[15px]">{description}</p>
+          ) : (
+            <p className="text-muted-foreground italic text-[15px]">
+              We couldn't generate a full summary from your website. You can add details manually later.
+            </p>
+          )}
 
           {scanData?.assetsCount > 0 && (
             <p className="text-sm text-muted-foreground mt-6 pt-4 border-t border-border">
@@ -58,12 +57,5 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
     </div>
   );
 };
-
-const SummaryCard = ({ label, value }: { label: string; value: string }) => (
-  <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
-    <p className="text-sm text-foreground leading-relaxed">{value}</p>
-  </div>
-);
 
 export default StepBusinessSummary;
