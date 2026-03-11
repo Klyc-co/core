@@ -74,6 +74,7 @@ import CrmDeals from "./pages/CrmDeals";
 import CrmOrders from "./pages/CrmOrders";
 import ReportsPage from "./pages/ReportsPage";
 import OrchestratorGraph from "./pages/OrchestratorGraph";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
