@@ -51,29 +51,25 @@ const Home = () => {
       <AppHeader user={user} onAddClient={() => setAddClientOpen(true)} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
-        {/* Top row: Approvals + Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <PendingApprovalsList />
-          </div>
-          <div className="lg:col-span-2 space-y-6">
-            <WebsiteAnalyticsSummary 
-              showFullButton 
-              onFullClick={handleFullAnalyticsClick}
-              onConnectClick={handleConnectGA}
-            />
-            <SocialMediaAnalyticsSummary 
-              showFullButton 
-              onFullClick={handleFullAnalyticsClick}
-            />
-          </div>
-        </div>
+        {/* Pending Approvals */}
+        <PendingApprovalsList />
 
         {/* Weekly Content Calendar */}
         <WeeklyContentCalendar />
 
         {/* Live Campaigns */}
         <LiveCampaignsFeed showFullButton limit={6} />
+
+        {/* Analytics */}
+        <WebsiteAnalyticsSummary 
+          showFullButton 
+          onFullClick={handleFullAnalyticsClick}
+          onConnectClick={handleConnectGA}
+        />
+        <SocialMediaAnalyticsSummary 
+          showFullButton 
+          onFullClick={handleFullAnalyticsClick}
+        />
       </main>
 
       <AddClientDialog
