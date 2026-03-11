@@ -5,7 +5,10 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2, Send } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2, Send, Pencil, Eye, Rocket, Save, X } from "lucide-react";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 
 interface PendingApproval {
@@ -18,6 +21,9 @@ interface PendingApproval {
   source: "campaign" | "post";
   image_url?: string | null;
   post_text?: string | null;
+  content_type?: string;
+  video_url?: string | null;
+  media_urls?: string[] | null;
   scheduled_campaigns: {
     id: string;
     campaign_name: string;
@@ -28,28 +34,27 @@ interface PendingApproval {
   campaign_drafts: {
     id: string;
     campaign_idea: string | null;
+    campaign_objective: string | null;
     content_type: string | null;
+    post_caption: string | null;
+    image_prompt: string | null;
+    video_script: string | null;
+    article_outline: string | null;
+    target_audience: string | null;
     created_at: string;
   } | null;
 }
-
-const platformColors: Record<string, string> = {
-  instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
-  facebook: "bg-[#1877F2]",
-  twitter: "bg-neutral-900",
-  linkedin: "bg-[#0A66C2]",
-  tiktok: "bg-neutral-900",
-  youtube: "bg-[#FF0000]",
-  pinterest: "bg-[#E60023]",
-  threads: "bg-neutral-900",
-  snapchat: "bg-[#FFFC00]",
-};
 
 const PendingApprovals = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<PendingApproval | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -67,11 +72,7 @@ const PendingApprovals = () => {
       const [campaignRes, postQueueRes] = await Promise.all([
         supabase
           .from("campaign_approvals")
-          .select(`
-            *,
-            scheduled_campaigns (*),
-            campaign_drafts (*)
-          `)
+          .select(`*, scheduled_campaigns (*), campaign_drafts (*)`)
           .eq("marketer_id", userId)
           .order("created_at", { ascending: false }),
         supabase
@@ -97,6 +98,9 @@ const PendingApprovals = () => {
         source: "post" as const,
         image_url: p.image_url,
         post_text: p.post_text,
+        content_type: p.content_type,
+        video_url: p.video_url,
+        media_urls: p.media_urls,
         scheduled_campaigns: null,
         campaign_drafts: null,
       }));
@@ -113,29 +117,115 @@ const PendingApprovals = () => {
     }
   };
 
+  const openDetail = (approval: PendingApproval) => {
+    setSelected(approval);
+    setEditText(
+      approval.source === "post"
+        ? approval.post_text || ""
+        : approval.campaign_drafts?.post_caption || approval.campaign_drafts?.campaign_idea || ""
+    );
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      if (selected.source === "post") {
+        const { error } = await supabase
+          .from("post_queue")
+          .update({ post_text: editText, updated_at: new Date().toISOString() })
+          .eq("id", selected.id);
+        if (error) throw error;
+        setSelected({ ...selected, post_text: editText });
+        setApprovals(prev => prev.map(a => a.id === selected.id ? { ...a, post_text: editText } : a));
+      } else if (selected.campaign_drafts) {
+        const { error } = await supabase
+          .from("campaign_drafts")
+          .update({ post_caption: editText, updated_at: new Date().toISOString() })
+          .eq("id", selected.campaign_drafts.id);
+        if (error) throw error;
+      }
+      toast.success("Changes saved");
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      if (selected.source === "post") {
+        const { error } = await supabase
+          .from("post_queue")
+          .update({ status: "approved", approved_at: new Date().toISOString() })
+          .eq("id", selected.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("campaign_approvals")
+          .update({ status: "approved", updated_at: new Date().toISOString() })
+          .eq("id", selected.id);
+        if (error) throw error;
+      }
+      toast.success("Approved!");
+      setApprovals(prev => prev.map(a => a.id === selected.id ? { ...a, status: "approved" } : a));
+      setSelected(null);
+    } catch (err) {
+      toast.error("Failed to approve");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!selected || !user) return;
+    setPublishing(true);
+    try {
+      if (selected.source === "post") {
+        // Move to scheduled status first if not already approved
+        const { error: updateErr } = await supabase
+          .from("post_queue")
+          .update({
+            status: "scheduled",
+            approved_at: new Date().toISOString(),
+            scheduled_at: new Date().toISOString(),
+          })
+          .eq("id", selected.id);
+        if (updateErr) throw updateErr;
+
+        // Call publish edge function
+        const { error } = await supabase.functions.invoke("publish-post", {
+          body: { postId: selected.id },
+        });
+        if (error) throw error;
+        toast.success("Post published successfully!");
+      } else {
+        toast.info("Use the Schedule page to publish campaign drafts");
+      }
+      setApprovals(prev => prev.filter(a => a.id !== selected.id));
+      setSelected(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to publish");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return (
-          <Badge className="bg-green-500 text-white gap-1">
-            <CheckCircle className="w-3 h-3" />
-            Approved
-          </Badge>
-        );
+        return <Badge className="bg-green-500 text-white gap-1"><CheckCircle className="w-3 h-3" />Approved</Badge>;
       case "rejected":
-        return (
-          <Badge variant="destructive" className="gap-1">
-            <XCircle className="w-3 h-3" />
-            Changes Requested
-          </Badge>
-        );
+        return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" />Changes Requested</Badge>;
       default:
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <Clock className="w-3 h-3" />
-            Pending Review
-          </Badge>
-        );
+        return <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" />Pending Review</Badge>;
     }
   };
 
@@ -146,39 +236,22 @@ const PendingApprovals = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
-      
+
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex items-center gap-4 mb-2">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/campaigns")}
-            className="text-primary hover:text-primary/80"
-          >
+          <Button variant="ghost" onClick={() => navigate("/campaigns")} className="text-primary hover:text-primary/80">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Campaigns
           </Button>
         </div>
-        
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Pending Approvals</h1>
-          <p className="text-muted-foreground">
-            Track campaigns sent for client approval
-          </p>
-          
-          {/* Status Summary */}
+          <p className="text-muted-foreground">Track campaigns sent for client approval</p>
           <div className="flex gap-4 mt-4">
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>{pendingCount} Pending</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>{approvedCount} Approved</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <XCircle className="w-4 h-4 text-red-500" />
-              <span>{rejectedCount} Changes Requested</span>
-            </div>
+            <div className="flex items-center gap-2 text-sm"><Clock className="w-4 h-4 text-amber-500" /><span>{pendingCount} Pending</span></div>
+            <div className="flex items-center gap-2 text-sm"><CheckCircle className="w-4 h-4 text-green-500" /><span>{approvedCount} Approved</span></div>
+            <div className="flex items-center gap-2 text-sm"><XCircle className="w-4 h-4 text-red-500" /><span>{rejectedCount} Changes Requested</span></div>
           </div>
         </div>
 
@@ -189,115 +262,44 @@ const PendingApprovals = () => {
         ) : approvals.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mx-auto mb-4">
-                <Send className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Send className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">No approvals yet</h3>
-              <p className="text-muted-foreground mb-4">
-                When you send campaigns for client approval, they'll appear here.
-              </p>
-              <Button onClick={() => navigate("/campaigns/new")}>
-                Create New Campaign
-              </Button>
+              <p className="text-muted-foreground mb-4">When you send campaigns for client approval, they'll appear here.</p>
+              <Button onClick={() => navigate("/campaigns/new")}>Create New Campaign</Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {approvals.map((approval) => {
               const isPost = approval.source === "post";
-              const campaignName = isPost
+              const title = isPost
                 ? (approval.post_text?.slice(0, 60) || "AI Generated Post")
-                : (approval.scheduled_campaigns?.campaign_name 
-                  || approval.campaign_drafts?.campaign_idea 
-                  || "Untitled Campaign");
-              const isDraft = !isPost && !!approval.campaign_drafts && !approval.scheduled_campaigns;
-              
+                : (approval.scheduled_campaigns?.campaign_name || approval.campaign_drafts?.campaign_idea || "Untitled Campaign");
+
               return (
-                <Card key={approval.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 flex gap-4">
-                        {isPost && approval.image_url && (
-                          <img src={approval.image_url} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-foreground">
-                              {campaignName}
-                            </h3>
-                            {getStatusBadge(approval.status)}
-                            {isPost && (
-                              <Badge variant="outline" className="text-xs">
-                                AI Post
-                              </Badge>
-                            )}
-                            {isDraft && (
-                              <Badge variant="outline" className="text-xs">
-                                Draft
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              Sent {new Date(approval.created_at).toLocaleDateString()}
-                            </div>
-                            {approval.scheduled_campaigns?.scheduled_date && (
-                              <span>
-                                Scheduled for {new Date(approval.scheduled_campaigns.scheduled_date).toLocaleDateString()}
-                              </span>
-                            )}
-                            {isDraft && approval.campaign_drafts?.content_type && (
-                              <span className="capitalize">
-                                {approval.campaign_drafts.content_type.replace("-", " ")}
-                              </span>
-                            )}
-                          </div>
-
-                          {!isPost && approval.scheduled_campaigns?.platforms && (
-                            <div className="flex flex-wrap gap-1.5 mb-3">
-                              {approval.scheduled_campaigns.platforms.map((platform) => (
-                                <span
-                                  key={platform}
-                                  className={`px-2 py-0.5 rounded text-xs text-white ${platformColors[platform] || "bg-secondary"}`}
-                                >
-                                  {platform}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {approval.notes && approval.status !== "pending" && (
-                            <div className="mt-3 p-3 bg-secondary/50 rounded-lg">
-                              <p className="text-sm text-muted-foreground">
-                                <span className="font-medium">Client Feedback:</span> {approval.notes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 ml-4">
-                        {isDraft && approval.campaign_drafts && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/campaigns/drafts/${approval.campaign_drafts!.id}`)}
-                          >
-                            View Draft
-                          </Button>
-                        )}
-                        {approval.status === "approved" && approval.scheduled_campaigns && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate("/campaigns/schedule")}
-                          >
-                            View in Schedule
-                          </Button>
-                        )}
-                      </div>
+                <Card
+                  key={approval.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer group overflow-hidden"
+                  onClick={() => openDetail(approval)}
+                >
+                  {isPost && approval.image_url && (
+                    <div className="aspect-video bg-secondary overflow-hidden">
+                      <img src={approval.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  )}
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getStatusBadge(approval.status)}
+                      {isPost && <Badge variant="outline" className="text-[10px]">AI Post</Badge>}
+                    </div>
+                    <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-2">{title}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(approval.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                    <div className="mt-3 flex items-center gap-1.5 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Eye className="w-3.5 h-3.5" /> View & Edit
                     </div>
                   </CardContent>
                 </Card>
@@ -306,6 +308,148 @@ const PendingApprovals = () => {
           </div>
         )}
       </main>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) { setSelected(null); setIsEditing(false); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  {selected.source === "post" ? "Post Detail" : "Campaign Detail"}
+                  {getStatusBadge(selected.status)}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {/* Image */}
+                {selected.source === "post" && selected.image_url && (
+                  <div className="rounded-xl overflow-hidden border border-border">
+                    <img src={selected.image_url} alt="" className="w-full max-h-[400px] object-contain bg-secondary" />
+                  </div>
+                )}
+
+                {/* Video */}
+                {selected.source === "post" && selected.video_url && (
+                  <div className="rounded-xl overflow-hidden border border-border">
+                    <video src={selected.video_url} controls className="w-full max-h-[400px]" />
+                  </div>
+                )}
+
+                {/* Caption / Text */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-foreground">
+                      {selected.source === "post" ? "Post Caption" : "Campaign Content"}
+                    </label>
+                    {!isEditing && (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsEditing(true)}>
+                        <Pencil className="w-3 h-3 mr-1" /> Edit
+                      </Button>
+                    )}
+                  </div>
+
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={6}
+                        className="resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSave} disabled={saving}>
+                          <Save className="w-3 h-3 mr-1" />
+                          {saving ? "Saving..." : "Save"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
+                          <X className="w-3 h-3 mr-1" /> Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-secondary/30 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                      {selected.source === "post"
+                        ? selected.post_text || "No caption"
+                        : selected.campaign_drafts?.post_caption
+                          || selected.campaign_drafts?.campaign_idea
+                          || "No content"}
+                    </div>
+                  )}
+                </div>
+
+                {/* Campaign-specific details */}
+                {selected.source === "campaign" && selected.campaign_drafts && (
+                  <div className="space-y-3">
+                    {selected.campaign_drafts.target_audience && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Target Audience</label>
+                        <p className="text-sm text-foreground mt-1">{selected.campaign_drafts.target_audience}</p>
+                      </div>
+                    )}
+                    {selected.campaign_drafts.campaign_objective && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Objective</label>
+                        <p className="text-sm text-foreground mt-1">{selected.campaign_drafts.campaign_objective}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Platforms */}
+                {selected.scheduled_campaigns?.platforms && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Platforms</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {selected.scheduled_campaigns.platforms.map((p) => (
+                        <Badge key={p} variant="secondary" className="capitalize text-xs">{p}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Meta info */}
+                <div className="text-xs text-muted-foreground border-t border-border pt-3">
+                  Created {new Date(selected.created_at).toLocaleString()}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-3 pt-2">
+                  {selected.status === "pending" && (
+                    <Button onClick={handleApprove} disabled={saving} className="flex-1">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {saving ? "Approving..." : "Approve"}
+                    </Button>
+                  )}
+                  {selected.source === "post" && (
+                    <Button
+                      onClick={handlePublish}
+                      disabled={publishing}
+                      variant={selected.status === "pending" ? "outline" : "default"}
+                      className="flex-1"
+                    >
+                      <Rocket className="w-4 h-4 mr-2" />
+                      {publishing ? "Publishing..." : "Publish Now"}
+                    </Button>
+                  )}
+                  {selected.source === "campaign" && selected.campaign_drafts && (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setSelected(null);
+                        navigate(`/campaigns/drafts/${selected.campaign_drafts!.id}`);
+                      }}
+                    >
+                      Open Full Draft
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
