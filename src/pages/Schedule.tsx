@@ -282,146 +282,141 @@ const Schedule = () => {
           </div>
         </div>
 
-        {/* Week grid */}
-        <div className="grid grid-cols-7 gap-0 border border-border rounded-xl overflow-hidden bg-card">
-          {/* Day headers */}
-          {days.map((day) => {
-            const today = isToday(day);
-            return (
-              <div
-                key={day.toISOString() + "-header"}
-                className={`px-3 py-3 text-center border-b border-border ${
-                  today ? "bg-primary/5" : "bg-muted/30"
-                } ${days.indexOf(day) < 6 ? "border-r border-border" : ""}`}
-              >
-                <p className={`text-xs font-medium uppercase tracking-wide ${today ? "text-primary" : "text-muted-foreground"}`}>
-                  {format(day, "EEE")}
-                </p>
-                <p className={`text-sm font-semibold mt-0.5 ${today ? "text-primary" : "text-foreground"}`}>
-                  {format(day, "MMM d")}
-                </p>
-              </div>
-            );
-          })}
-
-          {/* Day columns with posts */}
-          {days.map((day, dayIdx) => {
-            const items = itemsForDay(day);
-            const today = isToday(day);
-            return (
-              <div
-                key={day.toISOString() + "-body"}
-                className={`min-h-[520px] p-2 ${today ? "bg-primary/[0.02]" : ""} ${
-                  dayIdx < 6 ? "border-r border-border" : ""
-                }`}
-              >
-                {loading ? (
-                  <div className="space-y-3 pt-2">
-                    <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
-                    <div className="h-20 rounded-lg bg-muted/30 animate-pulse" />
+        {/* Week grid — horizontal scroll, wide open columns */}
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-5" style={{ minWidth: "1400px" }}>
+            {days.map((day, dayIdx) => {
+              const items = itemsForDay(day);
+              const today = isToday(day);
+              return (
+                <div
+                  key={day.toISOString()}
+                  className="flex-1 min-w-[260px]"
+                >
+                  {/* Day header */}
+                  <div className={`text-center mb-4 pb-3 ${today ? "" : ""}`}>
+                    <p className={`text-xs font-medium uppercase tracking-widest ${today ? "text-primary" : "text-muted-foreground"}`}>
+                      {format(day, "EEEE")}
+                    </p>
+                    <p className={`text-2xl font-bold mt-1 ${today ? "text-primary" : "text-foreground"}`}>
+                      {format(day, "d")}
+                    </p>
+                    {today && (
+                      <div className="mx-auto mt-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
                   </div>
-                ) : items.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground/40 text-center pt-8">No content</p>
-                ) : (
-                  <div className="space-y-2.5">
-                    {items.map((item) => {
-                      const meta = platformMeta[item.platform] || platformMeta.linkedin;
-                      const isPublished = item.status === "published";
-                      return (
-                        <div
-                          key={item.id}
-                          className={`group rounded-lg border bg-card overflow-hidden transition-all hover:shadow-md hover:border-primary/30 ${
-                            isPublished ? "opacity-60" : ""
-                          }`}
-                        >
-                          {/* Media */}
-                          {(item.imageUrl || item.videoUrl) && (
-                            <div className="relative aspect-[4/3] overflow-hidden">
-                              <img
-                                src={item.imageUrl || ""}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                              {item.videoUrl && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                  <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
-                                    <Play className="w-4 h-4 text-white fill-white" />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
 
-                          {/* Content */}
-                          <div className="p-2.5">
-                            {/* Platform + type + time */}
-                            <div className="flex items-center justify-between mb-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className={meta.color}>{meta.icon}</span>
-                                <span className="text-[11px] font-medium text-muted-foreground">{meta.label}</span>
-                                {item.contentType.toLowerCase().includes("ai") && (
-                                  <Badge variant="secondary" className="h-4 px-1 text-[9px] font-medium">AI</Badge>
+                  {/* Content stack */}
+                  <div className="space-y-4 min-h-[500px]">
+                    {loading ? (
+                      <>
+                        <div className="h-48 rounded-2xl bg-muted/30 animate-pulse" />
+                        <div className="h-32 rounded-2xl bg-muted/20 animate-pulse" />
+                      </>
+                    ) : items.length === 0 ? (
+                      <div className="flex items-center justify-center h-32 rounded-2xl bg-muted/10">
+                        <p className="text-xs text-muted-foreground/30">No content</p>
+                      </div>
+                    ) : (
+                      items.map((item) => {
+                        const meta = platformMeta[item.platform] || platformMeta.linkedin;
+                        const isPublished = item.status === "published";
+                        return (
+                          <div
+                            key={item.id}
+                            className={`group rounded-2xl bg-card overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
+                              isPublished ? "opacity-50" : "shadow-sm"
+                            }`}
+                          >
+                            {/* Media */}
+                            {(item.imageUrl || item.videoUrl) && (
+                              <div className="relative aspect-[16/10] overflow-hidden">
+                                <img
+                                  src={item.imageUrl || ""}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                                {item.videoUrl && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                    <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                                      <Play className="w-5 h-5 text-white fill-white" />
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              <span className="text-[11px] text-muted-foreground">{item.time}</span>
-                            </div>
+                            )}
 
-                            {/* Text preview */}
-                            <p className="text-xs text-foreground leading-relaxed line-clamp-3 mb-2">
-                              {item.title}
-                            </p>
-
-                            {/* Status + actions */}
-                            <div className="flex items-center justify-between">
-                              <Badge
-                                variant="outline"
-                                className={`text-[10px] h-5 capitalize ${
-                                  isPublished
-                                    ? "border-green-500/30 text-green-600 bg-green-500/5"
-                                    : item.status === "pending_approval"
-                                    ? "border-amber-500/30 text-amber-600 bg-amber-500/5"
-                                    : "border-primary/20 text-primary bg-primary/5"
-                                }`}
-                              >
-                                {item.status.replace("_", " ")}
-                              </Badge>
-
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted">
-                                    <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-36">
-                                  {!isPublished && (
-                                    <DropdownMenuItem onClick={() => handlePostNow(item)} disabled={publishingId === item.id}>
-                                      {publishingId === item.id ? (
-                                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                                      ) : (
-                                        <Send className="w-3.5 h-3.5 mr-2" />
-                                      )}
-                                      Post Now
-                                    </DropdownMenuItem>
+                            {/* Content */}
+                            <div className="p-4">
+                              {/* Platform + time row */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className={meta.color}>{meta.icon}</span>
+                                  <span className="text-xs font-medium text-muted-foreground">{meta.label}</span>
+                                  {item.contentType.toLowerCase().includes("ai") && (
+                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">AI</Badge>
                                   )}
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(item)}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                </div>
+                                <span className="text-xs text-muted-foreground">{item.time}</span>
+                              </div>
+
+                              {/* Text preview */}
+                              <p className="text-sm text-foreground leading-relaxed line-clamp-4 mb-3">
+                                {item.title}
+                              </p>
+
+                              {/* Status + actions */}
+                              <div className="flex items-center justify-between">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] h-5 capitalize ${
+                                    isPublished
+                                      ? "border-green-500/30 text-green-600 bg-green-500/5"
+                                      : item.status === "pending_approval"
+                                      ? "border-amber-500/30 text-amber-600 bg-amber-500/5"
+                                      : "border-primary/20 text-primary bg-primary/5"
+                                  }`}
+                                >
+                                  {item.status.replace("_", " ")}
+                                </Badge>
+
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-muted">
+                                      <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-36">
+                                    {!isPublished && (
+                                      <DropdownMenuItem onClick={() => handlePostNow(item)} disabled={publishingId === item.id}>
+                                        {publishingId === item.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                                        ) : (
+                                          <Send className="w-3.5 h-3.5 mr-2" />
+                                        )}
+                                        Post Now
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(item)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>
