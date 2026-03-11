@@ -83,7 +83,7 @@ const LandingTeam = () => {
             </defs>
 
             {/* Radial glow behind hub */}
-            <circle cx="400" cy="310" r="180" fill="url(#hubGlow)" />
+            <circle cx="400" cy="350" r="200" fill="url(#hubGlow)" />
 
             {/* Connector lines */}
             {desktopPositions.map((pos, i) => {
