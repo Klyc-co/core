@@ -150,7 +150,7 @@ const LeftNavSidebar = () => {
       )}
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="px-3 space-y-1">
         {mainNav.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -176,7 +176,7 @@ const LeftNavSidebar = () => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-2 shrink-0">
+      <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-auto shrink-0">
         {/* Profile (always visible) */}
         <button
           onClick={() => { navigate("/profile"); if (isMobile) setMobileOpen(false); }}
