@@ -150,7 +150,7 @@ const LeftNavSidebar = () => {
       )}
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="px-3 space-y-1">
         {mainNav.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
