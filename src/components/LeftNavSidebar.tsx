@@ -338,7 +338,7 @@ const LeftNavSidebar = () => {
   // Desktop: always-open left sidebar
   return (
     <>
-      <div className="fixed left-0 top-0 w-[220px] bg-card/80 backdrop-blur-sm border-r border-border z-40 overflow-y-auto" style={{ height: `calc(100vh - ${heightVh}vh)` }}>
+      <div className="fixed left-0 top-0 h-screen w-[220px] bg-card/80 backdrop-blur-sm border-r border-border z-40 overflow-y-auto">
         {navContent}
       </div>
 
