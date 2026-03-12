@@ -49,6 +49,7 @@ import BrandStrategy from "./pages/BrandStrategy";
 import TrendMonitor from "./pages/TrendMonitor";
 import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import ImageEditor from "./pages/ImageEditor";
+import CreativeStudio from "./pages/CreativeStudio";
 import TikTokAnalytics from "./pages/TikTokAnalytics";
 import InstagramAnalytics from "./pages/InstagramAnalytics";
 import YouTubeAnalytics from "./pages/YouTubeAnalytics";
