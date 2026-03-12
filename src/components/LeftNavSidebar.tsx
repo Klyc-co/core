@@ -137,7 +137,7 @@ const LeftNavSidebar = () => {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 pt-5 pb-4">
-        <Logo size="sm" />
+        <Logo size="lg" />
       </div>
 
       {/* Client Switcher */}
