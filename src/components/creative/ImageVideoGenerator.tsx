@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import {
   ArrowLeft,
   Image,
@@ -14,6 +16,9 @@ import {
   Loader2,
   Download,
   RefreshCw,
+  Upload,
+  Library,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,12 +34,77 @@ interface ImageVideoGeneratorProps {
   onBack: () => void;
 }
 
+interface BrandAssetImage {
+  id: string;
+  name: string | null;
+  value: string;
+}
+
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [generating, setGenerating] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+
+  // Inspiration image state
+  const [inspirationUrl, setInspirationUrl] = useState<string | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch brand asset images when library is opened
+  useEffect(() => {
+    if (!showLibrary) return;
+    const fetchLibrary = async () => {
+      setLoadingLibrary(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoadingLibrary(false); return; }
+
+      const { data } = await supabase
+        .from("brand_assets")
+        .select("id, name, value")
+        .eq("user_id", user.id)
+        .eq("asset_type", "image")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      setLibraryImages(data || []);
+      setLoadingLibrary(false);
+    };
+    fetchLibrary();
+  }, [showLibrary]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setUploadingFile(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { publicUrl } = await uploadBrandAssetImage({
+        userId: user.id,
+        file,
+        folder: "inspiration",
+      });
+      setInspirationUrl(publicUrl);
+      toast.success("Image uploaded as inspiration");
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -46,9 +116,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
 
     try {
       if (mode === "image") {
-        const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: { prompt, model: imageModel },
-        });
+        const body: Record<string, any> = { prompt, model: imageModel };
+        if (inspirationUrl) body.inspirationImageUrl = inspirationUrl;
+
+        const { data, error } = await supabase.functions.invoke("generate-image", { body });
         if (error) throw error;
         if (!data?.imageUrl) throw new Error("No image returned");
         setResultUrl(data.imageUrl);
@@ -136,6 +207,103 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
           </p>
         </TabsContent>
       </Tabs>
+
+      {/* Inspiration Image (image mode only) */}
+      {mode === "image" && (
+        <div className="space-y-2">
+          <Label className="text-sm text-muted-foreground">Reference Image (optional)</Label>
+          <p className="text-xs text-muted-foreground">
+            Upload a product photo or pick from your library to guide the AI's style and composition.
+          </p>
+
+          {inspirationUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={inspirationUrl}
+                alt="Inspiration"
+                className="w-24 h-24 rounded-lg object-cover border border-border"
+              />
+              <button
+                onClick={() => setInspirationUrl(null)}
+                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={uploadingFile}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Upload Image
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowLibrary(!showLibrary)}
+              >
+                <Library className="w-4 h-4" />
+                Brand Library
+              </Button>
+            </div>
+          )}
+
+          {/* Library picker */}
+          {showLibrary && !inspirationUrl && (
+            <Card className="p-3 mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">Select from Library</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}>
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              {loadingLibrary ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : libraryImages.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No images in your library yet.
+                </p>
+              ) : (
+                <ScrollArea className="max-h-48">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {libraryImages.map((img) => (
+                      <button
+                        key={img.id}
+                        onClick={() => {
+                          setInspirationUrl(img.value);
+                          setShowLibrary(false);
+                        }}
+                        className="group relative aspect-square rounded-md overflow-hidden border border-border hover:border-primary transition-colors"
+                      >
+                        <img
+                          src={img.value}
+                          alt={img.name || "Library image"}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Prompt + Generate */}
       <div className="flex flex-col lg:flex-row gap-6">
