@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Video, Clock, Loader2, Trash2 } from "lucide-react";
+import { Plus, Video, Clock, Loader2, Trash2, ArrowLeft } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AppHeader from "@/components/AppHeader";
 import {
