@@ -139,7 +139,7 @@ const LeftNavSidebar = () => {
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 pt-5 pb-4">
+      <div className="px-4 pt-3 pb-4">
         <Logo size="lg" />
       </div>
 
