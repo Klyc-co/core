@@ -47,8 +47,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [generating, setGenerating] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
-  // Inspiration image state
-  const [inspirationUrl, setInspirationUrl] = useState<string | null>(null);
+  // Inspiration images state (up to 5)
+  const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
