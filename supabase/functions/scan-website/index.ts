@@ -642,28 +642,40 @@ async function handleSinglePageFallback(
   const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
   const businessSummary = await generateBusinessSummary(fallbackPages, url);
 
-  // Auto-update client_profiles logo_url if a logo was found
+  // Auto-populate client_profiles with all extracted data
   const logoUrl = branding?.logo || branding?.images?.logo || null;
-  if (logoUrl) {
-    console.log('Logo found (fallback), updating client_profiles.logo_url:', logoUrl);
-    const { data: existingProfile } = await supabase
-      .from('client_profiles')
-      .select('id, logo_url')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existingProfile) {
-      if (!existingProfile.logo_url) {
-        await supabase
-          .from('client_profiles')
-          .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
-          .eq('id', existingProfile.id);
-      }
-    } else {
-      await supabase
-        .from('client_profiles')
-        .insert({ user_id: userId, logo_url: logoUrl });
+  const brandColors: string[] = [];
+  if (branding?.colors) {
+    for (const val of Object.values(branding.colors)) {
+      if (val && typeof val === 'string') brandColors.push(val);
     }
+  }
+
+  const profileUpsert: Record<string, any> = {
+    user_id: userId,
+    website: url,
+    updated_at: new Date().toISOString(),
+  };
+  if (logoUrl) profileUpsert.logo_url = logoUrl;
+  if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
+  if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
+    profileUpsert.business_name = businessSummary.businessName;
+  }
+  if (businessSummary.description) profileUpsert.description = businessSummary.description;
+  if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
+  if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
+  if (businessSummary.valueProposition) profileUpsert.value_proposition = businessSummary.valueProposition;
+  if (businessSummary.productCategory) profileUpsert.product_category = businessSummary.productCategory;
+  if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
+  if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
+  if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+
+  console.log('Auto-populating client_profiles (fallback) with fields:', Object.keys(profileUpsert));
+  const { error: profileError } = await supabase
+    .from('client_profiles')
+    .upsert(profileUpsert, { onConflict: 'user_id' });
+  if (profileError) {
+    console.error('Failed to auto-populate client_profiles:', profileError);
   }
 
   await supabase
