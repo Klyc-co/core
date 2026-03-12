@@ -12,7 +12,7 @@ import StrategyToolsSidebar, { type StrategyTool, tools } from "@/components/str
 import ResearchInsightsTool from "@/components/strategy/ResearchInsightsTool";
 import StrategyMessagingTool from "@/components/strategy/StrategyMessagingTool";
 import PlatformContentTool from "@/components/strategy/PlatformContentTool";
-import CreativeMediaTool from "@/components/strategy/CreativeMediaTool";
+import EmailMarketingTool from "@/components/strategy/EmailMarketingTool";
 import SocialPerformanceTool from "@/components/strategy/SocialPerformanceTool";
 import type { User } from "@supabase/supabase-js";
 
@@ -20,7 +20,7 @@ const toolTitles: Record<StrategyTool, string> = {
   research: "Research & Insights",
   messaging: "Strategy & Messaging",
   content: "Platform Content",
-  creative: "Creative Media",
+  email: "Email Marketing",
   performance: "Social Performance",
 };
 
@@ -55,7 +55,7 @@ const BrandStrategy = () => {
       case "research": return <ResearchInsightsTool />;
       case "messaging": return <StrategyMessagingTool />;
       case "content": return <PlatformContentTool />;
-      case "creative": return <CreativeMediaTool />;
+      case "email": return <EmailMarketingTool />;
       case "performance": return <SocialPerformanceTool />;
     }
   };
