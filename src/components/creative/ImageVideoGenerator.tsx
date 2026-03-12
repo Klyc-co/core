@@ -47,7 +47,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
     try {
       if (mode === "image") {
         const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: { prompt, model: "nano-banana" },
+          body: { prompt, model: imageModel },
         });
         if (error) throw error;
         if (!data?.imageUrl) throw new Error("No image returned");
