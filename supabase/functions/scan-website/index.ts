@@ -633,6 +633,30 @@ async function handleSinglePageFallback(
   const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
   const businessSummary = await generateBusinessSummary(fallbackPages, url);
 
+  // Auto-update client_profiles logo_url if a logo was found
+  const logoUrl = branding?.logo || branding?.images?.logo || null;
+  if (logoUrl) {
+    console.log('Logo found (fallback), updating client_profiles.logo_url:', logoUrl);
+    const { data: existingProfile } = await supabase
+      .from('client_profiles')
+      .select('id, logo_url')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingProfile) {
+      if (!existingProfile.logo_url) {
+        await supabase
+          .from('client_profiles')
+          .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
+          .eq('id', existingProfile.id);
+      }
+    } else {
+      await supabase
+        .from('client_profiles')
+        .insert({ user_id: userId, logo_url: logoUrl });
+    }
+  }
+
   await supabase
     .from('brand_imports')
     .update({ 
@@ -642,6 +666,7 @@ async function handleSinglePageFallback(
         assetsCount: limitedAssets.length,
         colorScheme: branding?.colorScheme,
         sourceUrl: url,
+        logoUrl: logoUrl,
         fallback: true
       }
     })
@@ -654,6 +679,7 @@ async function handleSinglePageFallback(
       pagesScanned: 1,
       assetsCount: limitedAssets.length,
       businessSummary,
+      logoUrl,
       summary: {
         colors: limitedAssets.filter(a => a.asset_type === 'color').length,
         fonts: limitedAssets.filter(a => a.asset_type === 'font').length,
