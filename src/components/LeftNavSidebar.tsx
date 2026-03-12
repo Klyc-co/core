@@ -55,7 +55,6 @@ interface Client {
 
 const mainNav = [
   { label: "Home", path: "/home", icon: Briefcase },
-  { label: "Profile", path: "/profile", icon: User },
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
   { label: "Library", path: "/profile/library", icon: BookOpen },
   { label: "Strategy", path: "/brand-strategy", icon: Lightbulb },
