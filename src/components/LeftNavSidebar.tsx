@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { useClientContext } from "@/contexts/ClientContext";
+import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LogOut,
