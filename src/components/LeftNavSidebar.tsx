@@ -20,6 +20,7 @@ import {
   Megaphone,
   BookOpen,
   Lightbulb,
+  Palette,
   Menu,
   X,
   Shield,

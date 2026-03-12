@@ -55,7 +55,7 @@ const BrandStrategy = () => {
       case "research": return <ResearchInsightsTool />;
       case "messaging": return <StrategyMessagingTool />;
       case "content": return <PlatformContentTool />;
-      case "creative": return <CreativeMediaTool />;
+      case "email": return <EmailMarketingTool />;
       case "performance": return <SocialPerformanceTool />;
     }
   };

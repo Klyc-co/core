@@ -153,6 +153,7 @@ const App = () => (
             <Route path="/trend-monitor" element={<WithSidebar><TrendMonitor /></WithSidebar>} />
             <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
             <Route path="/image-editor" element={<WithSidebar><ImageEditor /></WithSidebar>} />
+            <Route path="/creative" element={<WithSidebar><CreativeStudio /></WithSidebar>} />
             <Route path="/profile/tiktok-analytics" element={<WithSidebar><TikTokAnalytics /></WithSidebar>} />
             <Route path="/profile/instagram-analytics" element={<WithSidebar><InstagramAnalytics /></WithSidebar>} />
             <Route path="/profile/youtube-analytics" element={<WithSidebar><YouTubeAnalytics /></WithSidebar>} />
