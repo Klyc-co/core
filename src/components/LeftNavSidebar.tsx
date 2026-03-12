@@ -176,7 +176,7 @@ const LeftNavSidebar = () => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-2 shrink-0">
+      <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-auto shrink-0">
         {/* Profile (always visible) */}
         <button
           onClick={() => { navigate("/profile"); if (isMobile) setMobileOpen(false); }}
