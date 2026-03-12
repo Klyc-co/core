@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
+import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink } from "lucide-react";
+import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -322,11 +323,51 @@ const BottomChatPanel = () => {
     );
   };
 
+  const { heightVh, setHeightVh } = useChatHeight();
+  const isDragging = useRef(false);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const vh = ((window.innerHeight - ev.clientY) / window.innerHeight) * 100;
+      setHeightVh(Math.min(70, Math.max(15, vh)));
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [setHeightVh]);
+
+  const nudgeUp = () => setHeightVh(Math.min(70, heightVh + 10));
+  const nudgeDown = () => setHeightVh(Math.max(15, heightVh - 10));
+
   return (
-    <div className={cn(
-      "fixed bottom-0 right-0 bg-card border-t border-border z-40 flex flex-col",
-      isMobile ? "left-0 h-[30vh]" : "left-[220px] h-[25vh]"
-    )}>
+    <div
+      className={cn(
+        "fixed bottom-0 right-0 bg-card border-t border-border z-40 flex flex-col",
+        isMobile ? "left-0" : "left-[220px]"
+      )}
+      style={{ height: `${isMobile ? Math.max(heightVh, 20) : heightVh}vh` }}
+    >
+      {/* Resize handle */}
+      <div
+        className="flex items-center justify-center gap-3 h-5 cursor-row-resize select-none shrink-0 group hover:bg-muted/50 transition-colors"
+        onMouseDown={handleDragStart}
+      >
+        <button onClick={nudgeUp} className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+        <div className="w-8 h-1 rounded-full bg-border group-hover:bg-muted-foreground/30 transition-colors" />
+        <button onClick={nudgeDown} className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       {/* Slim header bar */}
       <div className="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0">
         <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
