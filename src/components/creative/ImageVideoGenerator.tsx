@@ -121,7 +121,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
     try {
       if (mode === "image") {
         const body: Record<string, any> = { prompt, model: imageModel };
-        if (inspirationUrl) body.inspirationImageUrl = inspirationUrl;
+        if (inspirationUrls.length > 0) body.inspirationImageUrl = inspirationUrls[0];
 
         const { data, error } = await supabase.functions.invoke("generate-image", { body });
         if (error) throw error;
