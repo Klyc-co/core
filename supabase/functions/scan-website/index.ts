@@ -279,6 +279,35 @@ Deno.serve(async (req) => {
       formattedUrl
     );
 
+    // Step 6: Auto-update client_profiles logo_url if a logo was found
+    const logoUrl = homepageBranding?.logo || homepageBranding?.images?.logo || null;
+    if (logoUrl) {
+      console.log('Logo found, updating client_profiles.logo_url:', logoUrl);
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('client_profiles')
+        .select('id, logo_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingProfile) {
+        // Only update if no logo is currently set
+        if (!existingProfile.logo_url) {
+          await supabase
+            .from('client_profiles')
+            .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
+            .eq('id', existingProfile.id);
+          console.log('Profile logo_url updated');
+        }
+      } else {
+        // Create profile with logo
+        await supabase
+          .from('client_profiles')
+          .insert({ user_id: user.id, logo_url: logoUrl });
+        console.log('Profile created with logo_url');
+      }
+    }
+
     // Update import status
     await supabase
       .from('brand_imports')
@@ -288,7 +317,8 @@ Deno.serve(async (req) => {
           pagesScanned: crawlResult.data.length,
           assetsCount: limitedAssets.length,
           colorScheme: homepageBranding?.colorScheme,
-          sourceUrl: formattedUrl
+          sourceUrl: formattedUrl,
+          logoUrl: logoUrl
         }
       })
       .eq('id', importRecord.id);
@@ -302,6 +332,7 @@ Deno.serve(async (req) => {
         pagesScanned: crawlResult.data.length,
         assetsCount: limitedAssets.length,
         businessSummary,
+        logoUrl,
         summary: {
           colors: colorAssets.length,
           fonts: fontAssets.length,
