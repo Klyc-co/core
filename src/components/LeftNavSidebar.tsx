@@ -55,7 +55,6 @@ interface Client {
 
 const mainNav = [
   { label: "Home", path: "/home", icon: Briefcase },
-  { label: "Profile", path: "/profile", icon: User },
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
   { label: "Library", path: "/profile/library", icon: BookOpen },
   { label: "Strategy", path: "/brand-strategy", icon: Lightbulb },
@@ -176,6 +175,18 @@ const LeftNavSidebar = () => {
 
       {/* Bottom Section */}
       <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-2">
+        {/* Profile */}
+        <button
+          onClick={() => { navigate("/profile"); if (isMobile) setMobileOpen(false); }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
+            isActive("/profile") && "bg-primary/10 text-primary"
+          )}
+        >
+          <User className="w-4 h-4 shrink-0" />
+          Profile
+        </button>
+
         {/* Switch Users */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
