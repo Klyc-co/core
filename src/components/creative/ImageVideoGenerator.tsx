@@ -107,10 +107,28 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="mt-4">
-          <p className="text-sm text-muted-foreground mb-3">
+        <TabsContent value="image" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
             Describe the image you want to create. Be specific about colors, style, composition, and subject matter.
           </p>
+          <div className="flex items-center gap-3">
+            <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
+            <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {IMAGE_MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <div className="flex flex-col">
+                      <span>{m.label}</span>
+                      <span className="text-xs text-muted-foreground">{m.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </TabsContent>
         <TabsContent value="video" className="mt-4">
           <p className="text-sm text-muted-foreground mb-3">
