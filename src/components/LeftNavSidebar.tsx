@@ -67,6 +67,7 @@ const LeftNavSidebar = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
+  const { heightVh } = useChatHeight();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
