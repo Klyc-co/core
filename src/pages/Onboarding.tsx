@@ -10,12 +10,10 @@ import StepBusinessSummary from "@/components/onboarding/StepBusinessSummary";
 import StepBusinessType from "@/components/onboarding/StepBusinessType";
 import StepVisualStyle from "@/components/onboarding/StepVisualStyle";
 import StepFontStyle from "@/components/onboarding/StepFontStyle";
-import StepPricing from "@/components/onboarding/StepPricing";
-import StepPayment from "@/components/onboarding/StepPayment";
 import StepGenerateContent from "@/components/onboarding/StepGenerateContent";
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 8;
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
