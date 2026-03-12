@@ -695,7 +695,17 @@ async function handleSinglePageFallback(
 async function generateBusinessSummary(
   pages: PageData[],
   websiteUrl: string
-): Promise<{ businessName: string; description: string }> {
+): Promise<{
+  businessName: string;
+  description: string;
+  industry?: string;
+  targetAudience?: string;
+  valueProposition?: string;
+  productCategory?: string;
+  geographyMarkets?: string;
+  marketingGoals?: string;
+  mainCompetitors?: string;
+}> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -724,7 +734,7 @@ async function generateBusinessSummary(
         messages: [
           {
             role: "system",
-            content: `You are a business analyst. Given website content, write a thorough business profile. Return the company name and a detailed paragraph description (7-10 sentences). The description should read like a professional analyst wrote it after studying the website. Include: what the company does, who they serve, their main products/services, what makes them unique, and their market position. Write in third person. Be specific — reference actual details from the content, not generic filler.`,
+            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string. For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc. For targetAudience, describe who their customers/users are. For valueProposition, describe what makes them unique and why customers choose them. For productCategory, describe their main product/service category. For geographyMarkets, mention any geographic markets they serve. For marketingGoals, infer from their messaging what they aim to achieve. For mainCompetitors, list any competitors mentioned or inferred from the industry.`,
           },
           {
             role: "user",
@@ -736,7 +746,7 @@ async function generateBusinessSummary(
             type: "function",
             function: {
               name: "create_business_summary",
-              description: "Create a business summary from website content",
+              description: "Create a comprehensive business profile from website content",
               parameters: {
                 type: "object",
                 properties: {
@@ -747,6 +757,34 @@ async function generateBusinessSummary(
                   description: {
                     type: "string",
                     description: "A detailed 7-10 sentence paragraph describing the business, what they do, who they serve, their products, and what sets them apart. Written in third person with specific details from the website.",
+                  },
+                  industry: {
+                    type: "string",
+                    description: "The industry or sector the business operates in (e.g., Technology, Healthcare, E-commerce)",
+                  },
+                  targetAudience: {
+                    type: "string",
+                    description: "Description of who their target customers/users are",
+                  },
+                  valueProposition: {
+                    type: "string",
+                    description: "What makes them unique and why customers choose them",
+                  },
+                  productCategory: {
+                    type: "string",
+                    description: "Their main product or service category",
+                  },
+                  geographyMarkets: {
+                    type: "string",
+                    description: "Geographic markets they serve (e.g., Global, North America, UK)",
+                  },
+                  marketingGoals: {
+                    type: "string",
+                    description: "Inferred marketing goals from their messaging",
+                  },
+                  mainCompetitors: {
+                    type: "string",
+                    description: "Known or inferred competitors in their space",
                   },
                 },
                 required: ["businessName", "description"],
