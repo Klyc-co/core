@@ -671,6 +671,8 @@ async function handleSinglePageFallback(
   if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
   if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
   if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+  if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
+  if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
 
   console.log('Auto-populating client_profiles (fallback) with fields:', Object.keys(profileUpsert));
   const { error: profileError } = await supabase
