@@ -726,6 +726,30 @@ async function generateBusinessSummary(
   geographyMarkets?: string;
   marketingGoals?: string;
   mainCompetitors?: string;
+  audienceData?: {
+    audienceType?: string;
+    mainAudienceSummary?: string;
+    secondaryAudiences?: string;
+    ageRange?: number[];
+    incomeLevel?: string;
+    femalePercent?: string;
+    malePercent?: string;
+    geographicFocus?: string;
+    coreValuesInterests?: string;
+    lifestyleSummary?: string;
+    purchaseFrequency?: string;
+    preferredChannels?: string;
+    commonObjections?: string;
+  };
+  valueData?: {
+    corePromise?: string;
+    elevatorPitch?: string;
+    customerPainPoints?: string;
+    howWeSolveIt?: string;
+    benefitFocus?: string;
+    uniqueValueDrivers?: string;
+    proofPoints?: string;
+  };
 }> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
