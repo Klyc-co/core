@@ -20,7 +20,7 @@ const toolTitles: Record<StrategyTool, string> = {
   research: "Research & Insights",
   messaging: "Strategy & Messaging",
   content: "Platform Content",
-  creative: "Creative Media",
+  email: "Email Marketing",
   performance: "Social Performance",
 };
 
