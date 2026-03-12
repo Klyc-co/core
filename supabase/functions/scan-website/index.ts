@@ -779,7 +779,37 @@ async function generateBusinessSummary(
         messages: [
           {
             role: "system",
-            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string. For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc. For targetAudience, describe who their customers/users are. For valueProposition, describe what makes them unique and why customers choose them. For productCategory, describe their main product/service category. For geographyMarkets, mention any geographic markets they serve. For marketingGoals, infer from their messaging what they aim to achieve. For mainCompetitors, list any competitors mentioned or inferred from the industry.`,
+            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string.
+
+For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc.
+For targetAudience, describe who their customers/users are.
+For valueProposition, describe what makes them unique and why customers choose them.
+For productCategory, describe their main product/service category.
+For geographyMarkets, mention any geographic markets they serve.
+For marketingGoals, infer from their messaging what they aim to achieve.
+For mainCompetitors, list any competitors mentioned or inferred from the industry.
+
+AUDIENCE DATA (fill as much as possible):
+- audienceType: one of "B2C - Individual Consumers", "B2B - Businesses", "B2B2C - Both", "Non-profit / NGO", "Government", "Other"
+- mainAudienceSummary: detailed description of their primary target audience
+- secondaryAudiences: any secondary audience segments
+- ageRange: estimated median age of target audience as a single number array like [30]
+- incomeLevel: estimated income level (e.g., "Middle", "Upper-middle", "High")
+- geographicFocus: where their audience is located
+- coreValuesInterests: what their audience cares about
+- lifestyleSummary: lifestyle description of typical customer
+- purchaseFrequency: one of "Daily", "Weekly", "Monthly", "Quarterly", "Yearly", "One-time"
+- preferredChannels: marketing channels that would work best
+- commonObjections: likely objections customers might have
+
+VALUE PROPOSITION DATA (fill as much as possible):
+- corePromise: the main promise to customers (1-2 sentences)
+- elevatorPitch: a concise elevator pitch (2-3 sentences)
+- customerPainPoints: what problems their customers face
+- howWeSolveIt: how the company solves those problems
+- benefitFocus: one of "Cost Savings", "Time Savings", "Quality/Performance", "Convenience", "Status/Prestige", "Sustainability", "Health/Wellness", "Safety/Security", "Innovation", "Other"
+- uniqueValueDrivers: what differentiates them from competitors
+- proofPoints: evidence, testimonials, stats that support their claims`,
           },
           {
             role: "user",
