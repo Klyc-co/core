@@ -215,31 +215,39 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
       {/* Inspiration Image (image mode only) */}
       {mode === "image" && (
         <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">Reference Image (optional)</Label>
+          <Label className="text-sm text-muted-foreground">Reference Images (optional, up to 5)</Label>
           <p className="text-xs text-muted-foreground">
-            Upload a product photo or pick from your library to guide the AI's style and composition.
+            Upload product photos or pick from your library to guide the AI's style and composition.
           </p>
 
-          {inspirationUrl ? (
-            <div className="relative inline-block">
-              <img
-                src={inspirationUrl}
-                alt="Inspiration"
-                className="w-24 h-24 rounded-lg object-cover border border-border"
-              />
-              <button
-                onClick={() => setInspirationUrl(null)}
-                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+          {/* Selected inspiration thumbnails */}
+          {inspirationUrls.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {inspirationUrls.map((url, idx) => (
+                <div key={idx} className="relative inline-block">
+                  <img
+                    src={url}
+                    alt={`Inspiration ${idx + 1}`}
+                    className="w-20 h-20 rounded-lg object-cover border border-border"
+                  />
+                  <button
+                    onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
-          ) : (
+          )}
+
+          {inspirationUrls.length < 5 && (
             <div className="flex gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={handleFileUpload}
               />
@@ -262,11 +270,12 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
                 <Library className="w-4 h-4" />
                 Brand Library
               </Button>
+              <span className="text-xs text-muted-foreground self-center">{inspirationUrls.length}/5</span>
             </div>
           )}
 
           {/* Library picker */}
-          {showLibrary && !inspirationUrl && (
+          {showLibrary && inspirationUrls.length < 5 && (
             <Card className="p-3 mt-2">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">Select from Library</span>
@@ -285,18 +294,23 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
               ) : (
                 <ScrollArea className="max-h-48">
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {libraryImages.map((img) => (
-                      <button
-                        key={img.id}
-                        onClick={() => {
-                          setInspirationUrl(img.value);
-                          setShowLibrary(false);
-                        }}
-                        className="group relative aspect-square rounded-md overflow-hidden border border-border hover:border-primary transition-colors"
-                      >
-                        <img
-                          src={img.value}
-                          alt={img.name || "Library image"}
+                    {libraryImages.map((img) => {
+                      const isSelected = inspirationUrls.includes(img.value);
+                      return (
+                        <button
+                          key={img.id}
+                          disabled={isSelected}
+                          onClick={() => {
+                            setInspirationUrls((prev) => [...prev, img.value]);
+                            if (inspirationUrls.length + 1 >= 5) setShowLibrary(false);
+                          }}
+                          className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${
+                            isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"
+                          }`}
+                        >
+                          <img
+                            src={img.value}
+                            alt={img.name || "Library image"}
                           className="w-full h-full object-cover"
                         />
                       </button>
