@@ -306,6 +306,8 @@ Deno.serve(async (req) => {
     if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
     if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
     if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+    if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
+    if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
 
     console.log('Auto-populating client_profiles with fields:', Object.keys(profileUpsert));
     const { error: profileError } = await supabase
@@ -669,6 +671,8 @@ async function handleSinglePageFallback(
   if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
   if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
   if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+  if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
+  if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
 
   console.log('Auto-populating client_profiles (fallback) with fields:', Object.keys(profileUpsert));
   const { error: profileError } = await supabase
@@ -726,6 +730,30 @@ async function generateBusinessSummary(
   geographyMarkets?: string;
   marketingGoals?: string;
   mainCompetitors?: string;
+  audienceData?: {
+    audienceType?: string;
+    mainAudienceSummary?: string;
+    secondaryAudiences?: string;
+    ageRange?: number[];
+    incomeLevel?: string;
+    femalePercent?: string;
+    malePercent?: string;
+    geographicFocus?: string;
+    coreValuesInterests?: string;
+    lifestyleSummary?: string;
+    purchaseFrequency?: string;
+    preferredChannels?: string;
+    commonObjections?: string;
+  };
+  valueData?: {
+    corePromise?: string;
+    elevatorPitch?: string;
+    customerPainPoints?: string;
+    howWeSolveIt?: string;
+    benefitFocus?: string;
+    uniqueValueDrivers?: string;
+    proofPoints?: string;
+  };
 }> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -755,7 +783,37 @@ async function generateBusinessSummary(
         messages: [
           {
             role: "system",
-            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string. For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc. For targetAudience, describe who their customers/users are. For valueProposition, describe what makes them unique and why customers choose them. For productCategory, describe their main product/service category. For geographyMarkets, mention any geographic markets they serve. For marketingGoals, infer from their messaging what they aim to achieve. For mainCompetitors, list any competitors mentioned or inferred from the industry.`,
+            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string.
+
+For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc.
+For targetAudience, describe who their customers/users are.
+For valueProposition, describe what makes them unique and why customers choose them.
+For productCategory, describe their main product/service category.
+For geographyMarkets, mention any geographic markets they serve.
+For marketingGoals, infer from their messaging what they aim to achieve.
+For mainCompetitors, list any competitors mentioned or inferred from the industry.
+
+AUDIENCE DATA (fill as much as possible):
+- audienceType: one of "B2C - Individual Consumers", "B2B - Businesses", "B2B2C - Both", "Non-profit / NGO", "Government", "Other"
+- mainAudienceSummary: detailed description of their primary target audience
+- secondaryAudiences: any secondary audience segments
+- ageRange: estimated median age of target audience as a single number array like [30]
+- incomeLevel: estimated income level (e.g., "Middle", "Upper-middle", "High")
+- geographicFocus: where their audience is located
+- coreValuesInterests: what their audience cares about
+- lifestyleSummary: lifestyle description of typical customer
+- purchaseFrequency: one of "Daily", "Weekly", "Monthly", "Quarterly", "Yearly", "One-time"
+- preferredChannels: marketing channels that would work best
+- commonObjections: likely objections customers might have
+
+VALUE PROPOSITION DATA (fill as much as possible):
+- corePromise: the main promise to customers (1-2 sentences)
+- elevatorPitch: a concise elevator pitch (2-3 sentences)
+- customerPainPoints: what problems their customers face
+- howWeSolveIt: how the company solves those problems
+- benefitFocus: one of "Cost Savings", "Time Savings", "Quality/Performance", "Convenience", "Status/Prestige", "Sustainability", "Health/Wellness", "Safety/Security", "Innovation", "Other"
+- uniqueValueDrivers: what differentiates them from competitors
+- proofPoints: evidence, testimonials, stats that support their claims`,
           },
           {
             role: "user",
@@ -771,45 +829,47 @@ async function generateBusinessSummary(
               parameters: {
                 type: "object",
                 properties: {
-                  businessName: {
-                    type: "string",
-                    description: "The official company/brand name",
+                  businessName: { type: "string", description: "The official company/brand name" },
+                  description: { type: "string", description: "A detailed 7-10 sentence paragraph describing the business." },
+                  industry: { type: "string", description: "Industry sector (e.g., Technology, Healthcare)" },
+                  targetAudience: { type: "string", description: "Who their target customers are" },
+                  valueProposition: { type: "string", description: "What makes them unique" },
+                  productCategory: { type: "string", description: "Main product/service category" },
+                  geographyMarkets: { type: "string", description: "Geographic markets served" },
+                  marketingGoals: { type: "string", description: "Inferred marketing goals" },
+                  mainCompetitors: { type: "string", description: "Known or inferred competitors" },
+                  audienceData: {
+                    type: "object",
+                    description: "Detailed audience profile",
+                    properties: {
+                      audienceType: { type: "string", description: "B2C, B2B, B2B2C, etc." },
+                      mainAudienceSummary: { type: "string", description: "Detailed primary audience description" },
+                      secondaryAudiences: { type: "string", description: "Secondary audience segments" },
+                      ageRange: { type: "array", items: { type: "number" }, description: "Median age as [number]" },
+                      incomeLevel: { type: "string", description: "Income level estimate" },
+                      geographicFocus: { type: "string", description: "Where audience is located" },
+                      coreValuesInterests: { type: "string", description: "What audience cares about" },
+                      lifestyleSummary: { type: "string", description: "Typical customer lifestyle" },
+                      purchaseFrequency: { type: "string", description: "How often they buy" },
+                      preferredChannels: { type: "string", description: "Best marketing channels" },
+                      commonObjections: { type: "string", description: "Likely customer objections" },
+                    },
                   },
-                  description: {
-                    type: "string",
-                    description: "A detailed 7-10 sentence paragraph describing the business, what they do, who they serve, their products, and what sets them apart. Written in third person with specific details from the website.",
-                  },
-                  industry: {
-                    type: "string",
-                    description: "The industry or sector the business operates in (e.g., Technology, Healthcare, E-commerce)",
-                  },
-                  targetAudience: {
-                    type: "string",
-                    description: "Description of who their target customers/users are",
-                  },
-                  valueProposition: {
-                    type: "string",
-                    description: "What makes them unique and why customers choose them",
-                  },
-                  productCategory: {
-                    type: "string",
-                    description: "Their main product or service category",
-                  },
-                  geographyMarkets: {
-                    type: "string",
-                    description: "Geographic markets they serve (e.g., Global, North America, UK)",
-                  },
-                  marketingGoals: {
-                    type: "string",
-                    description: "Inferred marketing goals from their messaging",
-                  },
-                  mainCompetitors: {
-                    type: "string",
-                    description: "Known or inferred competitors in their space",
+                  valueData: {
+                    type: "object",
+                    description: "Detailed value proposition profile",
+                    properties: {
+                      corePromise: { type: "string", description: "Main promise to customers" },
+                      elevatorPitch: { type: "string", description: "Concise elevator pitch" },
+                      customerPainPoints: { type: "string", description: "Customer problems" },
+                      howWeSolveIt: { type: "string", description: "How they solve problems" },
+                      benefitFocus: { type: "string", description: "Primary benefit category" },
+                      uniqueValueDrivers: { type: "string", description: "Key differentiators" },
+                      proofPoints: { type: "string", description: "Evidence and social proof" },
+                    },
                   },
                 },
                 required: ["businessName", "description"],
-                additionalProperties: false,
               },
             },
           },
