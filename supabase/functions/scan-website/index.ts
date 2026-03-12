@@ -279,33 +279,42 @@ Deno.serve(async (req) => {
       formattedUrl
     );
 
-    // Step 6: Auto-update client_profiles logo_url if a logo was found
+    // Step 6: Auto-populate client_profiles with all extracted data
     const logoUrl = homepageBranding?.logo || homepageBranding?.images?.logo || null;
-    if (logoUrl) {
-      console.log('Logo found, updating client_profiles.logo_url:', logoUrl);
-      // Check if profile exists
-      const { data: existingProfile } = await supabase
-        .from('client_profiles')
-        .select('id, logo_url')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingProfile) {
-        // Only update if no logo is currently set
-        if (!existingProfile.logo_url) {
-          await supabase
-            .from('client_profiles')
-            .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
-            .eq('id', existingProfile.id);
-          console.log('Profile logo_url updated');
-        }
-      } else {
-        // Create profile with logo
-        await supabase
-          .from('client_profiles')
-          .insert({ user_id: user.id, logo_url: logoUrl });
-        console.log('Profile created with logo_url');
+    const brandColors: string[] = [];
+    if (homepageBranding?.colors) {
+      for (const val of Object.values(homepageBranding.colors)) {
+        if (val && typeof val === 'string') brandColors.push(val);
       }
+    }
+
+    const profileUpsert: Record<string, any> = {
+      user_id: user.id,
+      website: formattedUrl,
+      updated_at: new Date().toISOString(),
+    };
+    if (logoUrl) profileUpsert.logo_url = logoUrl;
+    if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
+    if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
+      profileUpsert.business_name = businessSummary.businessName;
+    }
+    if (businessSummary.description) profileUpsert.description = businessSummary.description;
+    if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
+    if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
+    if (businessSummary.valueProposition) profileUpsert.value_proposition = businessSummary.valueProposition;
+    if (businessSummary.productCategory) profileUpsert.product_category = businessSummary.productCategory;
+    if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
+    if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
+    if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+
+    console.log('Auto-populating client_profiles with fields:', Object.keys(profileUpsert));
+    const { error: profileError } = await supabase
+      .from('client_profiles')
+      .upsert(profileUpsert, { onConflict: 'user_id' });
+    if (profileError) {
+      console.error('Failed to auto-populate client_profiles:', profileError);
+    } else {
+      console.log('Client profile auto-populated successfully');
     }
 
     // Update import status
@@ -633,28 +642,40 @@ async function handleSinglePageFallback(
   const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
   const businessSummary = await generateBusinessSummary(fallbackPages, url);
 
-  // Auto-update client_profiles logo_url if a logo was found
+  // Auto-populate client_profiles with all extracted data
   const logoUrl = branding?.logo || branding?.images?.logo || null;
-  if (logoUrl) {
-    console.log('Logo found (fallback), updating client_profiles.logo_url:', logoUrl);
-    const { data: existingProfile } = await supabase
-      .from('client_profiles')
-      .select('id, logo_url')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existingProfile) {
-      if (!existingProfile.logo_url) {
-        await supabase
-          .from('client_profiles')
-          .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
-          .eq('id', existingProfile.id);
-      }
-    } else {
-      await supabase
-        .from('client_profiles')
-        .insert({ user_id: userId, logo_url: logoUrl });
+  const brandColors: string[] = [];
+  if (branding?.colors) {
+    for (const val of Object.values(branding.colors)) {
+      if (val && typeof val === 'string') brandColors.push(val);
     }
+  }
+
+  const profileUpsert: Record<string, any> = {
+    user_id: userId,
+    website: url,
+    updated_at: new Date().toISOString(),
+  };
+  if (logoUrl) profileUpsert.logo_url = logoUrl;
+  if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
+  if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
+    profileUpsert.business_name = businessSummary.businessName;
+  }
+  if (businessSummary.description) profileUpsert.description = businessSummary.description;
+  if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
+  if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
+  if (businessSummary.valueProposition) profileUpsert.value_proposition = businessSummary.valueProposition;
+  if (businessSummary.productCategory) profileUpsert.product_category = businessSummary.productCategory;
+  if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
+  if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
+  if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+
+  console.log('Auto-populating client_profiles (fallback) with fields:', Object.keys(profileUpsert));
+  const { error: profileError } = await supabase
+    .from('client_profiles')
+    .upsert(profileUpsert, { onConflict: 'user_id' });
+  if (profileError) {
+    console.error('Failed to auto-populate client_profiles:', profileError);
   }
 
   await supabase
@@ -695,7 +716,17 @@ async function handleSinglePageFallback(
 async function generateBusinessSummary(
   pages: PageData[],
   websiteUrl: string
-): Promise<{ businessName: string; description: string }> {
+): Promise<{
+  businessName: string;
+  description: string;
+  industry?: string;
+  targetAudience?: string;
+  valueProposition?: string;
+  productCategory?: string;
+  geographyMarkets?: string;
+  marketingGoals?: string;
+  mainCompetitors?: string;
+}> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -724,7 +755,7 @@ async function generateBusinessSummary(
         messages: [
           {
             role: "system",
-            content: `You are a business analyst. Given website content, write a thorough business profile. Return the company name and a detailed paragraph description (7-10 sentences). The description should read like a professional analyst wrote it after studying the website. Include: what the company does, who they serve, their main products/services, what makes them unique, and their market position. Write in third person. Be specific — reference actual details from the content, not generic filler.`,
+            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string. For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc. For targetAudience, describe who their customers/users are. For valueProposition, describe what makes them unique and why customers choose them. For productCategory, describe their main product/service category. For geographyMarkets, mention any geographic markets they serve. For marketingGoals, infer from their messaging what they aim to achieve. For mainCompetitors, list any competitors mentioned or inferred from the industry.`,
           },
           {
             role: "user",
@@ -736,7 +767,7 @@ async function generateBusinessSummary(
             type: "function",
             function: {
               name: "create_business_summary",
-              description: "Create a business summary from website content",
+              description: "Create a comprehensive business profile from website content",
               parameters: {
                 type: "object",
                 properties: {
@@ -747,6 +778,34 @@ async function generateBusinessSummary(
                   description: {
                     type: "string",
                     description: "A detailed 7-10 sentence paragraph describing the business, what they do, who they serve, their products, and what sets them apart. Written in third person with specific details from the website.",
+                  },
+                  industry: {
+                    type: "string",
+                    description: "The industry or sector the business operates in (e.g., Technology, Healthcare, E-commerce)",
+                  },
+                  targetAudience: {
+                    type: "string",
+                    description: "Description of who their target customers/users are",
+                  },
+                  valueProposition: {
+                    type: "string",
+                    description: "What makes them unique and why customers choose them",
+                  },
+                  productCategory: {
+                    type: "string",
+                    description: "Their main product or service category",
+                  },
+                  geographyMarkets: {
+                    type: "string",
+                    description: "Geographic markets they serve (e.g., Global, North America, UK)",
+                  },
+                  marketingGoals: {
+                    type: "string",
+                    description: "Inferred marketing goals from their messaging",
+                  },
+                  mainCompetitors: {
+                    type: "string",
+                    description: "Known or inferred competitors in their space",
                   },
                 },
                 required: ["businessName", "description"],

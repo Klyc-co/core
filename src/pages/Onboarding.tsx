@@ -10,12 +10,10 @@ import StepBusinessSummary from "@/components/onboarding/StepBusinessSummary";
 import StepBusinessType from "@/components/onboarding/StepBusinessType";
 import StepVisualStyle from "@/components/onboarding/StepVisualStyle";
 import StepFontStyle from "@/components/onboarding/StepFontStyle";
-import StepPricing from "@/components/onboarding/StepPricing";
-import StepPayment from "@/components/onboarding/StepPayment";
 import StepGenerateContent from "@/components/onboarding/StepGenerateContent";
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 8;
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
@@ -84,9 +82,7 @@ const Onboarding = () => {
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
         {step === 5 && <StepVisualStyle onNext={() => setStep(6)} />}
         {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
-        {step === 7 && <StepPricing onNext={() => setStep(8)} />}
-        {step === 8 && <StepPayment onNext={() => setStep(9)} />}
-        {step === 9 && <StepGenerateContent onNext={() => navigate("/home")} />}
+        {step === 7 && <StepGenerateContent onNext={() => navigate("/home")} />}
       </div>
     </div>
   );
