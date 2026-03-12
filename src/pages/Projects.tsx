@@ -116,9 +116,16 @@ const Projects = () => {
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-1">Projects</h1>
-            <p className="text-muted-foreground">Create and manage your B-roll videos</p>
+          <div className="flex items-center gap-3">
+            {location.state?.fromCreative && (
+              <Button variant="ghost" size="icon" onClick={() => navigate("/creative")} className="shrink-0">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-1">B-Roll Generator</h1>
+              <p className="text-muted-foreground">Create and manage your B-roll videos</p>
+            </div>
           </div>
           <Button onClick={() => navigate("/projects/new")} variant="glow" size="lg">
             <Plus className="w-4 h-4" />
