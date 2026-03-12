@@ -279,33 +279,42 @@ Deno.serve(async (req) => {
       formattedUrl
     );
 
-    // Step 6: Auto-update client_profiles logo_url if a logo was found
+    // Step 6: Auto-populate client_profiles with all extracted data
     const logoUrl = homepageBranding?.logo || homepageBranding?.images?.logo || null;
-    if (logoUrl) {
-      console.log('Logo found, updating client_profiles.logo_url:', logoUrl);
-      // Check if profile exists
-      const { data: existingProfile } = await supabase
-        .from('client_profiles')
-        .select('id, logo_url')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingProfile) {
-        // Only update if no logo is currently set
-        if (!existingProfile.logo_url) {
-          await supabase
-            .from('client_profiles')
-            .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
-            .eq('id', existingProfile.id);
-          console.log('Profile logo_url updated');
-        }
-      } else {
-        // Create profile with logo
-        await supabase
-          .from('client_profiles')
-          .insert({ user_id: user.id, logo_url: logoUrl });
-        console.log('Profile created with logo_url');
+    const brandColors: string[] = [];
+    if (homepageBranding?.colors) {
+      for (const val of Object.values(homepageBranding.colors)) {
+        if (val && typeof val === 'string') brandColors.push(val);
       }
+    }
+
+    const profileUpsert: Record<string, any> = {
+      user_id: user.id,
+      website: formattedUrl,
+      updated_at: new Date().toISOString(),
+    };
+    if (logoUrl) profileUpsert.logo_url = logoUrl;
+    if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
+    if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
+      profileUpsert.business_name = businessSummary.businessName;
+    }
+    if (businessSummary.description) profileUpsert.description = businessSummary.description;
+    if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
+    if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
+    if (businessSummary.valueProposition) profileUpsert.value_proposition = businessSummary.valueProposition;
+    if (businessSummary.productCategory) profileUpsert.product_category = businessSummary.productCategory;
+    if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
+    if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
+    if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
+
+    console.log('Auto-populating client_profiles with fields:', Object.keys(profileUpsert));
+    const { error: profileError } = await supabase
+      .from('client_profiles')
+      .upsert(profileUpsert, { onConflict: 'user_id' });
+    if (profileError) {
+      console.error('Failed to auto-populate client_profiles:', profileError);
+    } else {
+      console.log('Client profile auto-populated successfully');
     }
 
     // Update import status
