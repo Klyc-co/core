@@ -12,7 +12,7 @@ import StrategyToolsSidebar, { type StrategyTool, tools } from "@/components/str
 import ResearchInsightsTool from "@/components/strategy/ResearchInsightsTool";
 import StrategyMessagingTool from "@/components/strategy/StrategyMessagingTool";
 import PlatformContentTool from "@/components/strategy/PlatformContentTool";
-import CreativeMediaTool from "@/components/strategy/CreativeMediaTool";
+import EmailMarketingTool from "@/components/strategy/EmailMarketingTool";
 import SocialPerformanceTool from "@/components/strategy/SocialPerformanceTool";
 import type { User } from "@supabase/supabase-js";
 
