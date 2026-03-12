@@ -1,12 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Search, MessageSquare, FileEdit, Palette, BarChart3 } from "lucide-react";
+import { Search, MessageSquare, FileEdit, Mail, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const modules = [
   { path: "/brand-strategy", label: "Research", icon: Search },
   { path: "/brand-strategy", label: "Strategy", icon: MessageSquare },
   { path: "/brand-strategy", label: "Content", icon: FileEdit },
-  { path: "/brand-strategy", label: "Creative", icon: Palette },
+  { path: "/brand-strategy", label: "Email", icon: Mail },
   { path: "/brand-strategy", label: "Perform", icon: BarChart3 },
 ];
 
