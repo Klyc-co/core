@@ -18,6 +18,7 @@ const TOTAL_STEPS = 8;
 const Onboarding = () => {
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [userName, setUserName] = useState({ firstName: "", lastName: "" });
   const [scanData, setScanData] = useState<any>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,8 +44,9 @@ const Onboarding = () => {
     setStep(1);
   };
 
-  const handleWebsiteSubmit = (url: string) => {
+  const handleWebsiteSubmit = (url: string, firstName: string, lastName: string) => {
     setWebsiteUrl(url);
+    setUserName({ firstName, lastName });
     setStep(2);
   };
 
@@ -82,7 +84,14 @@ const Onboarding = () => {
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
         {step === 5 && <StepVisualStyle onNext={() => setStep(6)} />}
         {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
-        {step === 7 && <StepGenerateContent onNext={() => navigate("/home")} />}
+        {step === 7 && (
+          <StepGenerateContent
+            scanData={scanData}
+            websiteUrl={websiteUrl}
+            userName={userName}
+            onNext={() => navigate("/home")}
+          />
+        )}
       </div>
     </div>
   );

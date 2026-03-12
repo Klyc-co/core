@@ -1,20 +1,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Globe, ArrowRight, Loader2 } from "lucide-react";
+import { Globe, ArrowRight, User } from "lucide-react";
 import klycMascot from "@/assets/klyc-mascot-waving.png";
 
 interface StepPasteWebsiteProps {
-  onNext: (url: string) => void;
+  onNext: (url: string, firstName: string, lastName: string) => void;
 }
 
 const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
   const [url, setUrl] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) onNext(url.trim());
+    if (url.trim() && firstName.trim()) onNext(url.trim(), firstName.trim(), lastName.trim());
   };
+
+  const isValid = url.trim() && firstName.trim();
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -40,11 +44,33 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
               <span className="text-white text-xs font-bold">K</span>
             </div>
             <p className="text-sm text-foreground leading-relaxed">
-              Please paste in your website so I can scan your business and fill out your profile automatically. This saves you from entering everything manually.
+              Tell me your name and paste your website so I can scan your business and fill out your profile automatically.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First name"
+                  className="pl-11 h-12 text-base"
+                  required
+                />
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last name"
+                  className="h-12 text-base"
+                />
+              </div>
+            </div>
             <div className="relative">
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -56,7 +82,7 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={!url.trim()}>
+            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={!isValid}>
               Scan Your Website
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

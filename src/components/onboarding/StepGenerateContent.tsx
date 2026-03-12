@@ -6,6 +6,9 @@ import { toast } from "sonner";
 
 interface StepGenerateContentProps {
   onNext: () => void;
+  scanData?: any;
+  websiteUrl?: string;
+  userName?: { firstName: string; lastName: string };
 }
 
 const platformIcons: Record<string, any> = {
@@ -16,7 +19,7 @@ const platformIcons: Record<string, any> = {
   TikTok: () => <span className="text-xs font-bold">TT</span>,
 };
 
-const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
+const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGenerateContentProps) => {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -35,7 +38,6 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
     setGenerating(true);
     setStatusMessage(statusMessages[0]);
 
-    // Rotate status messages
     let msgIndex = 0;
     const interval = setInterval(() => {
       msgIndex = (msgIndex + 1) % statusMessages.length;
@@ -43,11 +45,18 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
     }, 3000);
 
     try {
+      const summary = scanData?.summary || {};
+
       const { data, error } = await supabase.functions.invoke("generate-onboarding-posts", {
         body: {
-          businessSummary: "",
-          businessType: "",
-          websiteUrl: "",
+          websiteUrl: websiteUrl || "",
+          businessName: summary.businessName || "",
+          businessDescription: summary.description || "",
+          industry: summary.industry || "",
+          targetAudience: summary.targetAudience || summary.audience || "",
+          valueProposition: summary.valueProposition || "",
+          productCategory: summary.productCategory || "",
+          userName: userName || { firstName: "", lastName: "" },
         },
       });
 
@@ -71,15 +80,17 @@ const StepGenerateContent = ({ onNext }: StepGenerateContentProps) => {
     }
   };
 
+  const displayName = userName?.firstName || "there";
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-3xl animate-fade-in">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-foreground mb-3">
-            Generate this week's content.
+            {displayName}, let's generate your first content.
           </h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Klyc can now create your first content set based on your website, profile, and brand library.
+            Klyc will create 3 custom posts tailored to your business using everything we learned from your website.
           </p>
         </div>
 

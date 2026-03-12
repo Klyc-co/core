@@ -28,9 +28,72 @@ serve(async (req) => {
       userId = user?.id ?? null;
     }
 
-    const { businessSummary, businessType, websiteUrl } = await req.json();
+    const body = await req.json();
+    const {
+      websiteUrl,
+      businessName,
+      businessDescription,
+      industry,
+      targetAudience,
+      valueProposition,
+      productCategory,
+      userName,
+    } = body;
 
-    // Step 1: Generate 3 post concepts using AI
+    // Also load from client_profiles for maximum context
+    let profileData: any = {};
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("client_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (profile) profileData = profile;
+    }
+
+    // Also load brand colors
+    let brandColors: string[] = [];
+    if (userId) {
+      const { data: colorAssets } = await supabase
+        .from("brand_assets")
+        .select("value")
+        .eq("user_id", userId)
+        .eq("asset_type", "color");
+      if (colorAssets) brandColors = colorAssets.map((c: any) => c.value);
+    }
+
+    // Build comprehensive business context
+    const bName = businessName || profileData.business_name || "the business";
+    const bDesc = businessDescription || profileData.description || "";
+    const bIndustry = industry || profileData.industry || "";
+    const bAudience = targetAudience || profileData.target_audience || "";
+    const bValue = valueProposition || profileData.value_proposition || "";
+    const bCategory = productCategory || profileData.product_category || "";
+    const bGoals = profileData.marketing_goals || "";
+    const bCompetitors = profileData.main_competitors || "";
+    const bMarkets = profileData.geography_markets || "";
+    const bWebsite = websiteUrl || profileData.website || "";
+    const colorPalette = brandColors.length > 0 ? brandColors.join(", ") : (profileData.brand_colors || []).join(", ");
+    const ownerName = userName?.firstName ? `${userName.firstName}${userName.lastName ? ' ' + userName.lastName : ''}` : "";
+
+    const businessContext = `
+BUSINESS NAME: ${bName}
+WEBSITE: ${bWebsite}
+INDUSTRY: ${bIndustry}
+PRODUCT CATEGORY: ${bCategory}
+DESCRIPTION: ${bDesc}
+TARGET AUDIENCE: ${bAudience}
+VALUE PROPOSITION: ${bValue}
+MARKETING GOALS: ${bGoals}
+MAIN COMPETITORS: ${bCompetitors}
+GEOGRAPHIC MARKETS: ${bMarkets}
+BRAND COLORS: ${colorPalette || "Not specified"}
+BUSINESS OWNER: ${ownerName || "Not specified"}
+`.trim();
+
+    console.log("Generating posts with full business context for:", bName);
+
+    // Step 1: Generate 3 post concepts using AI with rich business context
     const textResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -42,20 +105,26 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a social media content strategist. Generate exactly 3 unique social media post concepts for a brand. Each post should be platform-optimized and ready to publish.`,
+            content: `You are an elite social media content strategist. You must generate posts that are HIGHLY SPECIFIC to the business provided. Every post must directly reference the business's products, services, industry, or value proposition. Do NOT generate generic marketing content. The posts should feel like they were written by someone who deeply understands this specific business.
+
+Rules:
+- Every caption must mention the business by name or directly reference its specific products/services
+- Image prompts must depict scenes relevant to this exact business type (e.g. if it's a barbecue restaurant, show grills, smoked meats, dining scenes; if it's a tech company, show their specific product category)
+- Tailor the tone to the industry (casual for food/lifestyle, professional for B2B/tech, etc.)
+- If brand colors are provided, reference them in image prompts
+- Make the content something the business owner would be proud to post`,
           },
           {
             role: "user",
-            content: `Generate 3 social media posts for this business:
-Website: ${websiteUrl || "N/A"}
-Business type: ${businessType || "Product"}
-Summary: ${businessSummary || "A modern business looking to grow their social media presence."}
+            content: `Generate 3 social media posts that are SPECIFICALLY tailored to this business. Every post must be directly about THIS business, its products, or its industry. No generic content.
+
+${businessContext}
 
 For each post provide:
-- title (short, catchy)
-- caption (the actual post text, 2-3 sentences, engaging)  
+- title (short, catchy, must relate to this specific business)
+- caption (the actual post text, 2-3 sentences, must reference the business name "${bName}" or its specific products/services. Write as if you are the business posting about themselves)  
 - platforms (array of which platforms it's best for, from: LinkedIn, Instagram, Facebook, TikTok, YouTube)
-- imagePrompt (a detailed visual description for AI image generation, describe a professional marketing image that would accompany this post, be specific about composition, colors, mood)`,
+- imagePrompt (a detailed visual description for AI image generation. Must depict something directly related to this business's industry and offerings. Include brand colors "${colorPalette}" if available. Be specific about the scene - for example if it's a restaurant describe the food, if it's a tech company describe the product in use)`,
           },
         ],
         tools: [
@@ -106,13 +175,13 @@ For each post provide:
     if (!toolCall) throw new Error("No tool call response from AI");
 
     const { posts } = JSON.parse(toolCall.function.arguments);
-    console.log("Generated post concepts:", posts.length);
+    console.log("Generated post concepts:", posts.length, "for business:", bName);
 
-    // Step 2: Generate images for each post using Nano Banana
+    // Step 2: Generate images for each post
     const postsWithImages = await Promise.all(
       posts.map(async (post: any, index: number) => {
         try {
-          console.log(`Generating image ${index + 1}...`);
+          console.log(`Generating image ${index + 1} for ${bName}...`);
           const imgResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -124,7 +193,7 @@ For each post provide:
               messages: [
                 {
                   role: "user",
-                  content: `Generate a professional social media marketing image: ${post.imagePrompt}. The image should be vibrant, polished, and ready for social media. Output only the generated image, no text.`,
+                  content: `Generate a professional social media marketing image: ${post.imagePrompt}. The image should be vibrant, polished, and ready for social media. Do not include any text or words in the image. Output only the generated image.`,
                 },
               ],
               modalities: ["image", "text"],
@@ -140,8 +209,7 @@ For each post provide:
           const imageBase64 = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
           if (!imageBase64 || !imageBase64.startsWith("data:image")) {
-            console.log(`No image returned for post ${index + 1}, retrying with simplified prompt...`);
-            // Retry with simpler prompt
+            console.log(`No image returned for post ${index + 1}, retrying...`);
             const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
               headers: {
@@ -153,7 +221,7 @@ For each post provide:
                 messages: [
                   {
                     role: "user",
-                    content: `Create a beautiful social media image for a ${businessType || "brand"} post about "${post.title}". Professional, clean, vibrant colors. Output only the generated image, no text.`,
+                    content: `Create a beautiful social media image for a ${bIndustry || bCategory || "business"} called "${bName}" about "${post.title}". Professional, clean, vibrant. No text in the image. Output only the generated image.`,
                   },
                 ],
                 modalities: ["image", "text"],
@@ -164,7 +232,6 @@ For each post provide:
               const retryData = await retryResponse.json();
               const retryImage = retryData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
               if (retryImage && retryImage.startsWith("data:image")) {
-                // Upload to storage
                 const uploadedUrl = await uploadImage(supabase, retryImage, userId, index);
                 return { ...post, imageUrl: uploadedUrl };
               }
@@ -172,7 +239,6 @@ For each post provide:
             return { ...post, imageUrl: null };
           }
 
-          // Upload to storage
           const uploadedUrl = await uploadImage(supabase, imageBase64, userId, index);
           return { ...post, imageUrl: uploadedUrl };
         } catch (e) {
@@ -217,7 +283,6 @@ async function uploadImage(
   index: number
 ): Promise<string | null> {
   try {
-    // Extract the actual base64 content
     const base64Content = base64Data.split(",")[1];
     if (!base64Content) return null;
 
