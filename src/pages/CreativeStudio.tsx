@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AppHeader from "@/components/AppHeader";
 import SocialPostWizard from "@/components/social-post-editor/SocialPostWizard";
 import type { User } from "@supabase/supabase-js";
