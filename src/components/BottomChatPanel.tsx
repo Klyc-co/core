@@ -1,5 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
+import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useNavigate } from "react-router-dom";
 import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
