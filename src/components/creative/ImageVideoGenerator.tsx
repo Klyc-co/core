@@ -84,6 +84,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
       toast.error("Please select an image file");
       return;
     }
+    if (inspirationUrls.length >= 5) {
+      toast.error("Maximum 5 reference images allowed");
+      return;
+    }
 
     setUploadingFile(true);
     try {
@@ -95,7 +99,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
         file,
         folder: "inspiration",
       });
-      setInspirationUrl(publicUrl);
+      setInspirationUrls((prev) => [...prev, publicUrl]);
       toast.success("Image uploaded as inspiration");
     } catch (err: any) {
       console.error("Upload error:", err);
