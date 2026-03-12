@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AppHeader from "@/components/AppHeader";
 import SocialPostWizard from "@/components/social-post-editor/SocialPostWizard";
 import type { User } from "@supabase/supabase-js";
@@ -42,9 +43,14 @@ const CreativeStudio = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Creative Studio</h1>
-          <p className="text-sm text-muted-foreground">Create visual content, images, thumbnails, and media assets for campaigns.</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Creative Studio</h1>
+            <p className="text-sm text-muted-foreground">Create visual content, images, thumbnails, and media assets for campaigns.</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/projects")} className="gap-2 shrink-0" size="sm">
+            <FileText className="w-4 h-4" /> Content
+          </Button>
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
