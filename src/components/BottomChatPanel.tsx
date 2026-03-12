@@ -329,9 +329,7 @@ const BottomChatPanel = () => {
     )}>
       {/* Slim header bar */}
       <div className="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0">
-        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-          <MessageSquare className="h-3 w-3 text-primary-foreground" />
-        </div>
+        <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
         <span className="text-sm font-semibold text-foreground">Klyc</span>
         <span className="text-xs text-muted-foreground">AI Command Center</span>
       </div>
