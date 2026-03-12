@@ -253,20 +253,20 @@ const LeftNavSidebar = () => {
           Sign Out
         </button>
 
-        {/* Divider */}
-        <div className="pt-2 mt-1 border-t border-border space-y-0.5">
+        {/* Terms & Privacy side by side */}
+        <div className="pt-2 mt-1 border-t border-border flex gap-1">
           <button
             onClick={() => { navigate("/terms"); if (isMobile) setMobileOpen(false); }}
-            className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
           >
-            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <FileText className="w-3 h-3 shrink-0" />
             Terms
           </button>
           <button
             onClick={() => { navigate("/privacy"); if (isMobile) setMobileOpen(false); }}
-            className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
           >
-            <Shield className="w-3.5 h-3.5 shrink-0" />
+            <Shield className="w-3 h-3 shrink-0" />
             Privacy
           </button>
         </div>
