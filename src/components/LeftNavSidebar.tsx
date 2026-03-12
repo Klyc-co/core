@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { useClientContext } from "@/contexts/ClientContext";
-import { useChatHeight } from "@/contexts/ChatHeightContext";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LogOut,
@@ -67,7 +67,7 @@ const LeftNavSidebar = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
-  const { heightVh } = useChatHeight();
+  
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
@@ -176,7 +176,7 @@ const LeftNavSidebar = () => {
       </nav>
 
       {/* Bottom Section */}
-      <div className="px-3 pb-4 space-y-1 border-t border-border pt-3 mt-auto shrink-0">
+      <div className="px-3 pb-0 space-y-1 border-t border-border pt-3 mt-auto shrink-0">
         {/* Profile (always visible) */}
         <button
           onClick={() => { navigate("/profile"); if (isMobile) setMobileOpen(false); }}
@@ -338,7 +338,7 @@ const LeftNavSidebar = () => {
   // Desktop: always-open left sidebar
   return (
     <>
-      <div className="fixed left-0 top-0 w-[220px] bg-card/80 backdrop-blur-sm border-r border-border z-40 overflow-y-auto" style={{ height: `calc(100vh - ${heightVh}vh)` }}>
+      <div className="fixed left-0 top-0 h-screen w-[220px] bg-card/80 backdrop-blur-sm border-r border-border z-40 overflow-y-auto">
         {navContent}
       </div>
 
