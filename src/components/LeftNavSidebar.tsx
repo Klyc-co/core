@@ -58,9 +58,9 @@ interface Client {
 const mainNav = [
   { label: "Home", path: "/home", icon: Briefcase },
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
+  { label: "Creative", path: "/creative", icon: Palette },
   { label: "Library", path: "/profile/library", icon: BookOpen },
   { label: "Strategy", path: "/brand-strategy", icon: Lightbulb },
-  { label: "Creative", path: "/creative", icon: Palette },
 ];
 
 const LeftNavSidebar = () => {
