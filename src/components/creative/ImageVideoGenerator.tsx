@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Image,
@@ -15,6 +17,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+type ImageModel = "nano-banana" | "runway" | "fooocus";
+
+const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
+  { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
+  { value: "runway", label: "Runway", description: "High-quality cinematic visuals" },
+  { value: "fooocus", label: "Fooocus", description: "Fine-tuned artistic styles" },
+];
+
 interface ImageVideoGeneratorProps {
   onBack: () => void;
 }
@@ -22,6 +32,7 @@ interface ImageVideoGeneratorProps {
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [prompt, setPrompt] = useState("");
+  const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [generating, setGenerating] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
