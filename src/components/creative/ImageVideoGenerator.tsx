@@ -311,10 +311,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
                           <img
                             src={img.value}
                             alt={img.name || "Library image"}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
