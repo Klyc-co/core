@@ -56,8 +56,9 @@ const CampaignCommandCenter = () => {
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  const { execute, isRunning, state: workflowState } = useRunCampaign();
+  const { execute, isRunning, state: workflowState, history } = useRunCampaign();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
