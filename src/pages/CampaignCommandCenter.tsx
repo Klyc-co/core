@@ -18,7 +18,7 @@ import { useRunCampaign } from "@/hooks/use-run-campaign";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import type { NormalizerReport } from "@/types/normalizer-report";
-import { deriveRunStatus } from "@/types/run-status";
+import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
@@ -56,6 +56,7 @@ const CampaignCommandCenter = () => {
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
+  const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
 
   const { execute, isRunning, state: workflowState } = useRunCampaign();
 
@@ -178,13 +179,10 @@ const CampaignCommandCenter = () => {
     const result = await execute(payload);
 
     if (result) {
-      // Bind normalizer report
       setNormalizerReport(result.normalizerReport);
-
-      // Update compression with run timestamp
+      setEnvelope(result.envelope);
       setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
 
-      // Build strategy comparison from report data
       const brief = result.normalizerReport.campaignBrief;
       setStrategy({
         requested: {
@@ -209,7 +207,6 @@ const CampaignCommandCenter = () => {
         },
       });
 
-      // Build market opportunity
       setMarket({
         addressableMarketSize: brief.addressableMarket || "~125K",
         reachableAudience: "32K",
@@ -230,27 +227,28 @@ const CampaignCommandCenter = () => {
     }
   };
 
-  // Derive run status from backend result or local report
-  const runStatusData = workflowState.phase === "success" || workflowState.phase === "partial"
-    ? (workflowState.phase === "success" ? workflowState.result.runStatus : deriveRunStatus({
-        clientId: currentClientId || user?.id || "",
-        clientName: currentClientName || "Default",
-        runTimestamp: compression.lastRunAt,
-        report: normalizerReport,
-      }))
-    : deriveRunStatus({
-        clientId: currentClientId || user?.id || "",
-        clientName: currentClientName || "Default",
-        runTimestamp: compression.lastRunAt,
-        report: normalizerReport,
-      });
+  // Build display envelope — prefer backend, fallback to idle
+  const clientId = currentClientId || user?.id || "";
+  const clientName = currentClientName || "Default";
 
-  // Override status when running
-  const displayRunStatus = isRunning
-    ? { ...runStatusData, status: "running" as const }
-    : workflowState.phase === "error"
-      ? { ...runStatusData, status: "error" as const, verdict: "blocked" as const, verdictReason: workflowState.message }
-      : runStatusData;
+  let displayEnvelope: WorkflowReportEnvelope = envelope || idleEnvelope(clientId, clientName);
+
+  if (isRunning) {
+    displayEnvelope = {
+      ...displayEnvelope,
+      runMetadata: { ...displayEnvelope.runMetadata, status: "running" },
+    };
+  } else if (workflowState.phase === "error") {
+    displayEnvelope = {
+      ...displayEnvelope,
+      runMetadata: { ...displayEnvelope.runMetadata, status: "error" },
+      orchestrationSummary: {
+        ...displayEnvelope.orchestrationSummary,
+        verdict: "blocked",
+        verdictReason: workflowState.message,
+      },
+    };
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -296,7 +294,6 @@ const CampaignCommandCenter = () => {
           </div>
         )}
 
-        {/* Partial Result Warning */}
         {workflowState.phase === "partial" && (
           <div className="mb-4 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
@@ -315,7 +312,7 @@ const CampaignCommandCenter = () => {
               onRerun={handleAnalyze}
               isLoading={isRunning}
             />
-            <RunStatusPanel data={displayRunStatus} />
+            <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
