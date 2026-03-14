@@ -273,6 +273,15 @@ const CampaignCommandCenter = () => {
           <div className="lg:col-span-1 space-y-5">
             <SignalDiscoveryPanel state={signals} onChange={setSignals} />
             <CompressionStatePanel state={compression} onLoadDna={handleLoadDna} onLoadStrategy={handleLoadStrategy} onRerun={handleAnalyze} isLoading={isRunning} />
+            <RunHistorySelector
+              entries={history}
+              activeRunId={activeRunId}
+              onSelect={(entry) => {
+                setEnvelope(entry.result.envelope);
+                setActiveRunId(entry.id);
+                setCompression((prev) => ({ ...prev, lastRunAt: entry.timestamp }));
+              }}
+            />
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">

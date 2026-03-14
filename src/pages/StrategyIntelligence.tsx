@@ -156,6 +156,14 @@ const StrategyIntelligence = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
             <CustomerDNACard />
+            <RunHistorySelector
+              entries={history}
+              activeRunId={activeRunId}
+              onSelect={(entry) => {
+                setEnvelope(entry.result.envelope);
+                setActiveRunId(entry.id);
+              }}
+            />
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-1">
