@@ -9,6 +9,7 @@ import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyR
 import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
+import CampaignTimeline from "@/components/command-center/CampaignTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
@@ -180,6 +181,7 @@ const StrategyIntelligence = () => {
           isIdle={displayEnvelope.runMetadata.status === "idle"}
         />
         <NarrativeSimulationArena />
+        <CampaignTimeline steps={displayEnvelope.agentExecutionSummary.steps} isRunning={isRunning} />
         <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
       </div>
     </div>

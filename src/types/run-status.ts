@@ -45,6 +45,7 @@ export interface AgentStep {
   agent: string;
   status: "pending" | "running" | "complete" | "skipped" | "error";
   durationMs: number | null;
+  confidenceScore: number | null;
   note: string | null;
 }
 
