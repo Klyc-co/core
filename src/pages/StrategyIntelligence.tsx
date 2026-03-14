@@ -27,8 +27,9 @@ const StrategyIntelligence = () => {
   const [loading, setLoading] = useState(true);
   const [contextPayload, setContextPayload] = useState<Partial<WorkflowPayload>>({});
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  const { execute, isRunning, state: workflowState } = useRunCampaign();
+  const { execute, isRunning, state: workflowState, history } = useRunCampaign();
 
   useEffect(() => {
     const checkUser = async () => {
