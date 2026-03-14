@@ -2,12 +2,12 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import type { NormalizerReport } from "@/types/normalizer-report";
-import type { RunStatusData } from "@/types/run-status";
+import type { WorkflowReportEnvelope } from "@/types/run-status";
 import { toast } from "sonner";
 
 export interface WorkflowResult {
   normalizerReport: NormalizerReport;
-  runStatus: RunStatusData;
+  envelope: WorkflowReportEnvelope;
   runTimestamp: string;
 }
 
@@ -43,14 +43,13 @@ export function useRunCampaign() {
         return null;
       }
 
-      // Check for partial results
       const result: WorkflowResult = {
         normalizerReport: data.normalizerReport,
-        runStatus: data.runStatus,
-        runTimestamp: data.runTimestamp,
+        envelope: data.envelope,
+        runTimestamp: data.envelope?.runMetadata?.runTimestamp || new Date().toISOString(),
       };
 
-      if (!result.normalizerReport || !result.runStatus) {
+      if (!result.normalizerReport || !result.envelope) {
         setState({
           phase: "partial",
           result,
