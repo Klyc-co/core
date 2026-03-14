@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import CampaignPerformanceTimeline from "@/components/campaigns/CampaignPerformanceTimeline";
 import { ArrowLeft, Zap, Sparkles } from "lucide-react";
 import SignalDiscoveryPanel, { type SignalDiscoveryState } from "@/components/command-center/SignalDiscoveryPanel";
 import StrategyComparisonPanel, { type StrategyComparison } from "@/components/command-center/StrategyComparisonPanel";
@@ -202,6 +203,14 @@ const CampaignCommandCenter = () => {
             <MarketOpportunityPanel data={market} />
           </div>
         </div>
+
+        {/* Performance Timeline — full width below grid */}
+        {strategy && (
+          <div className="mt-6">
+            <CampaignPerformanceTimeline campaignTitle={signals.campaignGoal || undefined} />
+          </div>
+        )}
+
       </main>
     </div>
   );
