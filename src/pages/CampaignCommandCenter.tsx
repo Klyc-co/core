@@ -11,11 +11,13 @@ import StrategyComparisonPanel, { type StrategyComparison } from "@/components/c
 import MarketOpportunityPanel, { type MarketOpportunity } from "@/components/command-center/MarketOpportunityPanel";
 import CompressionStatePanel, { type CompressionState } from "@/components/command-center/CompressionStatePanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
+import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import type { NormalizerReport } from "@/types/normalizer-report";
+import { deriveRunStatus } from "@/types/run-status";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
@@ -357,6 +359,14 @@ const CampaignCommandCenter = () => {
               onLoadStrategy={handleLoadStrategy}
               onRerun={handleAnalyze}
               isLoading={isAnalyzing}
+            />
+            <RunStatusPanel
+              data={deriveRunStatus({
+                clientId: currentClientId || user?.id || "",
+                clientName: currentClientName || "Default",
+                runTimestamp: compression.lastRunAt,
+                report: normalizerReport,
+              })}
             />
           </div>
           <div className="lg:col-span-2 space-y-5">

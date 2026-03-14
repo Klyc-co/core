@@ -6,12 +6,14 @@ import CustomerDNACard from "@/components/strategy-intelligence/CustomerDNACard"
 import NarrativeSimulationArena from "@/components/strategy-intelligence/NarrativeSimulationArena";
 import PlatformBattleView from "@/components/strategy-intelligence/PlatformBattleView";
 import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyReasoningPanel";
+import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
+import { deriveRunStatus } from "@/types/run-status";
 
 const StrategyIntelligence = () => {
   const navigate = useNavigate();
@@ -110,8 +112,16 @@ const StrategyIntelligence = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-5">
             <CustomerDNACard />
+            <RunStatusPanel
+              data={deriveRunStatus({
+                clientId: currentClientId || user?.id || "",
+                clientName: currentClientName || "Default",
+                runTimestamp: null,
+                report: null,
+              })}
+            />
           </div>
           <div className="lg:col-span-1">
             <PlatformBattleView />
