@@ -11,6 +11,7 @@ import NormalizerReportPanel from "@/components/command-center/NormalizerReportP
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import CampaignTimeline from "@/components/command-center/CampaignTimeline";
 import StrategyPanel from "@/components/command-center/StrategyPanel";
+import StrategyExplanation from "@/components/command-center/StrategyExplanation";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
