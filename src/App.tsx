@@ -29,6 +29,7 @@ import Settings from "./pages/Settings";
 import ProfileOverview from "./pages/ProfileOverview";
 import CompanyInfo from "./pages/CompanyInfo";
 import CampaignCommandCenter from "./pages/CampaignCommandCenter";
+import CampaignKnowledgeCenter from "./pages/CampaignKnowledgeCenter";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
