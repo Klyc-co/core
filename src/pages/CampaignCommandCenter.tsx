@@ -161,6 +161,7 @@ const CampaignCommandCenter = () => {
     if (!result) return;
 
     setEnvelope(result.envelope);
+    setActiveRunId(result.runId);
     setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
 
     // Derive strategy & market panels from envelope's normalized objects
