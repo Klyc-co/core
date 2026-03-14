@@ -17,7 +17,6 @@ import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
-import type { NormalizerReport } from "@/types/normalizer-report";
 import { toast } from "sonner";
 
 const StrategyIntelligence = () => {
@@ -26,7 +25,6 @@ const StrategyIntelligence = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [contextPayload, setContextPayload] = useState<Partial<WorkflowPayload>>({});
-  const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
 
   const { execute, isRunning, state: workflowState } = useRunCampaign();
@@ -51,12 +49,10 @@ const StrategyIntelligence = () => {
           .select("data, document_type")
           .eq("client_id", clientId)
           .limit(10);
-
         const find = (type: string) => {
           const doc = data?.find((d) => d.document_type === type);
           return doc ? JSON.stringify(doc.data).slice(0, 300) : null;
         };
-
         setContextPayload({
           client_id: clientId,
           client_name: currentClientName || "Default",
@@ -68,9 +64,7 @@ const StrategyIntelligence = () => {
           regulatory_summary: find("regulatory"),
           competitor_summary: find("competitor"),
         });
-      } catch {
-        // Context is optional
-      }
+      } catch { /* optional */ }
     };
     loadContext();
   }, [user, currentClientId, currentClientName]);
@@ -88,17 +82,12 @@ const StrategyIntelligence = () => {
       regulatory_summary: contextPayload.regulatory_summary || null,
       competitor_summary: contextPayload.competitor_summary || null,
     };
-
     if (!isPayloadReady(payload)) {
       toast.error("Select a client before running simulation");
       return;
     }
-
     const result = await execute(payload);
-    if (result) {
-      setNormalizerReport(result.normalizerReport);
-      setEnvelope(result.envelope);
-    }
+    if (result) setEnvelope(result.envelope);
   };
 
   if (loading) {
@@ -111,23 +100,14 @@ const StrategyIntelligence = () => {
 
   const clientId = currentClientId || user?.id || "";
   const clientName = currentClientName || "Default";
-
   let displayEnvelope: WorkflowReportEnvelope = envelope || idleEnvelope(clientId, clientName);
-
   if (isRunning) {
-    displayEnvelope = {
-      ...displayEnvelope,
-      runMetadata: { ...displayEnvelope.runMetadata, status: "running" },
-    };
+    displayEnvelope = { ...displayEnvelope, runMetadata: { ...displayEnvelope.runMetadata, status: "running" } };
   } else if (workflowState.phase === "error") {
     displayEnvelope = {
       ...displayEnvelope,
       runMetadata: { ...displayEnvelope.runMetadata, status: "error" },
-      orchestrationSummary: {
-        ...displayEnvelope.orchestrationSummary,
-        verdict: "blocked",
-        verdictReason: workflowState.message,
-      },
+      orchestrationSummary: { ...displayEnvelope.orchestrationSummary, verdict: "blocked", verdictReason: workflowState.message },
     };
   }
 
@@ -141,9 +121,7 @@ const StrategyIntelligence = () => {
               <h1 className="text-xl font-bold text-foreground">Strategy Intelligence</h1>
               <p className="text-xs text-muted-foreground">
                 AI narrative simulation & platform strategy
-                {currentClientName && (
-                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>
-                )}
+                {currentClientName && <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>}
               </p>
             </div>
           </div>
@@ -183,7 +161,7 @@ const StrategyIntelligence = () => {
           </div>
         </div>
         <NarrativeSimulationArena />
-        {normalizerReport && <NormalizerReportPanel report={normalizerReport} />}
+        <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
       </div>
     </div>
   );
