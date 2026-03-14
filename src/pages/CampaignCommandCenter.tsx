@@ -10,10 +10,12 @@ import SignalDiscoveryPanel, { type SignalDiscoveryState } from "@/components/co
 import StrategyComparisonPanel, { type StrategyComparison } from "@/components/command-center/StrategyComparisonPanel";
 import MarketOpportunityPanel, { type MarketOpportunity } from "@/components/command-center/MarketOpportunityPanel";
 import CompressionStatePanel, { type CompressionState } from "@/components/command-center/CompressionStatePanel";
+import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
+import type { NormalizerReport } from "@/types/normalizer-report";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
@@ -51,6 +53,7 @@ const CampaignCommandCenter = () => {
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -221,6 +224,91 @@ const CampaignCommandCenter = () => {
       ],
     });
 
+    // Build normalizer report from payload + signals
+    setNormalizerReport({
+      campaignBrief: {
+        geoFilter: signals.geo || null,
+        industryFilter: signals.industry || null,
+        customerSizeFilter: signals.customerSize || null,
+        competitorFilter: signals.competitor || null,
+        addressableMarket: signals.addressableMarket || null,
+        businessNeed: signals.businessNeed || null,
+        regulatoryDriver: signals.regulatoryDriver || null,
+        productDefinition: signals.productDefinition || null,
+        campaignGoal: signals.campaignGoal || null,
+        requestedPlatforms: signals.industry === "SaaS" ? ["LinkedIn", "Twitter"] : ["Instagram", "TikTok"],
+        recommendedPlatformsHint: ["LinkedIn", "Twitter", "YouTube"],
+        campaignMode: signals.mode,
+        confidenceScore: 78,
+        warnings: [
+          ...(!signals.competitor ? ["No competitor specified – competitive positioning may be generic"] : []),
+          ...(!signals.regulatoryDriver ? ["No regulatory driver – compliance checks skipped"] : []),
+        ],
+      },
+      customerContext: {
+        brandVoiceSummary: compression.customerDnaSummary,
+        productOfferSummary: compression.productSummary || signals.productDefinition || null,
+        audienceSegments: signals.customerSize ? [signals.customerSize] : [],
+        primaryPainPoints: signals.businessNeed ? [signals.businessNeed] : [],
+        proofPoints: [],
+        competitors: signals.competitor ? [signals.competitor] : [],
+        regulations: signals.regulatoryDriver ? [signals.regulatoryDriver] : [],
+        semanticThemes: signals.industry ? [signals.industry, signals.mode] : [signals.mode],
+        trustSignals: compression.customerDnaLoaded ? ["Client Brain loaded"] : [],
+        objections: [],
+        sourceCount: [compression.customerDnaLoaded, compression.strategyProfileLoaded, compression.websiteSummary, compression.productSummary, compression.competitorSummary].filter(Boolean).length,
+        lastUpdated: compression.lastRunAt,
+        contextCoverage: Math.round(
+          ([signals.campaignGoal, signals.industry, signals.geo, signals.customerSize, signals.competitor, signals.productDefinition, compression.customerDnaSummary, compression.productSummary].filter(Boolean).length / 8) * 100
+        ),
+      },
+      orchestratorHints: {
+        requiresResearch: !compression.competitorSummary,
+        requiresProductPositioning: !compression.productSummary && !signals.productDefinition,
+        requiresNarrativeSimulation: true,
+        requiresPlatformEvaluation: true,
+        estimatedCampaignComplexity: signals.regulatoryDriver ? "high" : signals.competitor ? "medium" : "low",
+        missingCriticalInputs: [
+          ...(!signals.campaignGoal ? ["Campaign goal"] : []),
+          ...(!compression.customerDnaLoaded ? ["Customer DNA"] : []),
+          ...(!signals.productDefinition && !compression.productSummary ? ["Product definition"] : []),
+        ],
+      },
+      learningHooks: {
+        explicitInputs: [
+          ...(signals.campaignGoal ? ["Campaign goal"] : []),
+          ...(signals.industry ? ["Industry"] : []),
+          ...(signals.geo ? ["Geography"] : []),
+          ...(signals.competitor ? ["Competitor"] : []),
+        ],
+        inferredSignals: [
+          ...(signals.mode === "proactive" ? ["Proactive mode suggests brand-building intent"] : []),
+          ...(signals.industry === "SaaS" ? ["SaaS industry suggests LinkedIn-first strategy"] : []),
+        ],
+        missingInputs: [
+          ...(!signals.addressableMarket ? ["Addressable market size"] : []),
+          ...(!compression.priorCampaignSummary ? ["Prior campaign history"] : []),
+          ...(!compression.websiteSummary ? ["Website intelligence"] : []),
+        ],
+        confidenceDrivers: [
+          ...(compression.customerDnaLoaded ? ["Customer DNA loaded"] : []),
+          ...(signals.campaignGoal ? ["Clear campaign goal"] : []),
+          ...(signals.industry ? ["Industry specified"] : []),
+        ],
+        compressionNotes: [
+          ...(compression.customerDnaLoaded ? ["DNA compressed from client_brain"] : []),
+          ...(compression.strategyProfileLoaded ? ["Strategy profile pre-loaded"] : []),
+        ],
+        updatableFields: ["competitor", "addressableMarket", "regulatoryDriver", "productDefinition"],
+        sourceReferences: [
+          ...(compression.customerDnaLoaded ? ["client_brain:brand"] : []),
+          ...(compression.strategyProfileLoaded ? ["client_brain:strategy"] : []),
+          ...(compression.websiteSummary ? ["client_brain:website"] : []),
+        ],
+        recommendedNextUpdate: compression.priorCampaignSummary ? null : "Load prior campaign data for better predictions",
+      },
+    });
+
     setCompression((prev) => ({ ...prev, lastRunAt: new Date().toISOString() }));
     setIsAnalyzing(false);
     toast.success("Analysis complete");
@@ -274,6 +362,7 @@ const CampaignCommandCenter = () => {
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
+            <NormalizerReportPanel report={normalizerReport} />
           </div>
         </div>
 
