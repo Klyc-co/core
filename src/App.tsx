@@ -153,6 +153,7 @@ const App = () => (
             <Route path="/campaigns/drafts" element={<WithSidebar><CampaignDrafts /></WithSidebar>} />
             <Route path="/campaigns/drafts/:id" element={<WithSidebar><CampaignDraftView /></WithSidebar>} />
             <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
+            <Route path="/brand-strategy/intelligence" element={<WithSidebar><StrategyIntelligence /></WithSidebar>} />
             <Route path="/trend-monitor" element={<WithSidebar><TrendMonitor /></WithSidebar>} />
             <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
             <Route path="/image-editor" element={<WithSidebar><ImageEditor /></WithSidebar>} />
