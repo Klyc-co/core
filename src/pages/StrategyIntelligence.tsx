@@ -89,7 +89,10 @@ const StrategyIntelligence = () => {
       return;
     }
     const result = await execute(payload);
-    if (result) setEnvelope(result.envelope);
+    if (result) {
+      setEnvelope(result.envelope);
+      setActiveRunId(result.runId);
+    }
   };
 
   if (loading) {
