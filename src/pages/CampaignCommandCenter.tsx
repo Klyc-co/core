@@ -53,6 +53,7 @@ const CampaignCommandCenter = () => {
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
