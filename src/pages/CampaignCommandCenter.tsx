@@ -15,6 +15,7 @@ import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import CampaignTimeline from "@/components/command-center/CampaignTimeline";
 import ContentWorkspace from "@/components/command-center/ContentWorkspace";
+import StrategyExplanation from "@/components/command-center/StrategyExplanation";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { useRunCampaign } from "@/hooks/use-run-campaign";
@@ -294,6 +295,7 @@ const CampaignCommandCenter = () => {
               isIdle={displayEnvelope.runMetadata.status === "idle"}
             />
             <StrategyComparisonPanel data={strategy} />
+            <StrategyExplanation envelope={displayEnvelope} />
             <MarketOpportunityPanel data={market} />
             <CampaignTimeline steps={displayEnvelope.agentExecutionSummary.steps} isRunning={isRunning} />
             <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
