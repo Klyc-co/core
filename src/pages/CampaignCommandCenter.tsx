@@ -203,6 +203,14 @@ const CampaignCommandCenter = () => {
             <MarketOpportunityPanel data={market} />
           </div>
         </div>
+
+        {/* Performance Timeline — full width below grid */}
+        {strategy && (
+          <div className="mt-6">
+            <CampaignPerformanceTimeline campaignTitle={signals.campaignGoal || undefined} />
+          </div>
+        )}
+        </div>
       </main>
     </div>
   );
