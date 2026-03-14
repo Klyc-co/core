@@ -6,12 +6,14 @@ import CustomerDNACard from "@/components/strategy-intelligence/CustomerDNACard"
 import NarrativeSimulationArena from "@/components/strategy-intelligence/NarrativeSimulationArena";
 import PlatformBattleView from "@/components/strategy-intelligence/PlatformBattleView";
 import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyReasoningPanel";
+import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
+import { deriveRunStatus } from "@/types/run-status";
 
 const StrategyIntelligence = () => {
   const navigate = useNavigate();
