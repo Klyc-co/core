@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, History, Sparkles, Send, Rocket, FlaskConical, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Clock, History, Sparkles, Send, Rocket, FlaskConical, Loader2, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -89,6 +89,14 @@ const Campaigns = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Campaigns</h1>
           
           <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
+            <Button 
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-xs sm:text-sm col-span-2 sm:col-span-1"
+              onClick={() => navigate("/campaigns/command")}
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Command Center</span>
+              <span className="sm:hidden">Command</span>
+            </Button>
             <Button 
               className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-xs sm:text-sm"
               onClick={() => navigate("/campaigns/new")}

@@ -28,6 +28,7 @@ import ProjectEdit from "./pages/ProjectEdit";
 import Settings from "./pages/Settings";
 import ProfileOverview from "./pages/ProfileOverview";
 import CompanyInfo from "./pages/CompanyInfo";
+import CampaignCommandCenter from "./pages/CampaignCommandCenter";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
@@ -143,6 +144,7 @@ const App = () => (
             <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
             <Route path="/profile/products/edit/:productId" element={<WithSidebar><EditProduct /></WithSidebar>} />
             <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
+            <Route path="/campaigns/command" element={<WithSidebar><CampaignCommandCenter /></WithSidebar>} />
             <Route path="/campaigns/new" element={<WithSidebar><NewCampaign /></WithSidebar>} />
             <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />
             <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
