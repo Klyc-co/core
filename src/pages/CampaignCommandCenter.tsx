@@ -18,6 +18,7 @@ import { useRunCampaign } from "@/hooks/use-run-campaign";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope, type RawNormalizedObjects } from "@/types/run-status";
+import RunHistorySelector, { type RunHistoryEntry } from "@/components/command-center/RunHistorySelector";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
