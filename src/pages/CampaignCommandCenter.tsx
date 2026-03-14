@@ -11,9 +11,13 @@ import StrategyComparisonPanel, { type StrategyComparison } from "@/components/c
 import MarketOpportunityPanel, { type MarketOpportunity } from "@/components/command-center/MarketOpportunityPanel";
 import CompressionStatePanel, { type CompressionState } from "@/components/command-center/CompressionStatePanel";
 import { toast } from "sonner";
+import { useCurrentClient } from "@/hooks/use-current-client";
+import type { WorkflowPayload } from "@/types/workflow-payload";
+import { isPayloadReady } from "@/types/workflow-payload";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
+  campaignGoal: "",
   geo: "",
   industry: "",
   customerSize: "",
@@ -22,7 +26,6 @@ const DEFAULT_SIGNALS: SignalDiscoveryState = {
   businessNeed: "",
   regulatoryDriver: "",
   productDefinition: "",
-  campaignGoal: "",
   mode: "hybrid",
 };
 
@@ -32,10 +35,16 @@ const DEFAULT_COMPRESSION: CompressionState = {
   strategyProfileLoaded: false,
   strategyProfileName: null,
   lastRunAt: null,
+  websiteSummary: null,
+  productSummary: null,
+  regulatorySummary: null,
+  competitorSummary: null,
+  priorCampaignSummary: null,
 };
 
 const CampaignCommandCenter = () => {
   const navigate = useNavigate();
+  const { currentClientId, currentClientName } = useCurrentClient();
   const [user, setUser] = useState<User | null>(null);
   const [signals, setSignals] = useState<SignalDiscoveryState>(DEFAULT_SIGNALS);
   const [strategy, setStrategy] = useState<StrategyComparison | null>(null);
@@ -50,13 +59,54 @@ const CampaignCommandCenter = () => {
     });
   }, [navigate]);
 
-  const handleLoadDna = async () => {
-    if (!user) return;
+  // Auto-load context when client is set
+  useEffect(() => {
+    if (user && currentClientId) {
+      loadClientContext(currentClientId);
+    }
+  }, [user, currentClientId]);
+
+  /** Load all available context summaries for the active client */
+  const loadClientContext = async (clientId: string) => {
     try {
       const { data } = await supabase
         .from("client_brain")
         .select("data, document_type")
-        .eq("user_id", user.id)
+        .eq("client_id", clientId)
+        .limit(10);
+
+      if (!data || data.length === 0) return;
+
+      const find = (type: string) => {
+        const doc = data.find((d) => d.document_type === type);
+        return doc ? JSON.stringify(doc.data).slice(0, 300) : null;
+      };
+
+      setCompression((prev) => ({
+        ...prev,
+        customerDnaLoaded: Boolean(find("brand")),
+        customerDnaSummary: find("brand"),
+        strategyProfileLoaded: Boolean(find("strategy")),
+        strategyProfileName: find("strategy") ? "Active Strategy" : null,
+        websiteSummary: find("website"),
+        productSummary: find("product"),
+        regulatorySummary: find("regulatory"),
+        competitorSummary: find("competitor"),
+        priorCampaignSummary: find("campaign_history"),
+      }));
+    } catch {
+      // Silently continue – context is optional
+    }
+  };
+
+  const handleLoadDna = async () => {
+    if (!user) return;
+    const clientId = currentClientId || user.id;
+    try {
+      const { data } = await supabase
+        .from("client_brain")
+        .select("data, document_type")
+        .eq("client_id", clientId)
         .in("document_type", ["brand", "voice", "strategy"])
         .limit(3);
 
@@ -75,17 +125,22 @@ const CampaignCommandCenter = () => {
 
   const handleLoadStrategy = async () => {
     if (!user) return;
+    const clientId = currentClientId || user.id;
     try {
       const { data } = await supabase
         .from("client_brain")
         .select("data")
-        .eq("user_id", user.id)
+        .eq("client_id", clientId)
         .eq("document_type", "strategy")
         .limit(1)
         .maybeSingle();
 
       if (data) {
-        setCompression((prev) => ({ ...prev, strategyProfileLoaded: true, strategyProfileName: "Active Strategy" }));
+        setCompression((prev) => ({
+          ...prev,
+          strategyProfileLoaded: true,
+          strategyProfileName: "Active Strategy",
+        }));
         toast.success("Strategy profile loaded");
       } else {
         toast.info("No strategy profile found.");
@@ -95,14 +150,30 @@ const CampaignCommandCenter = () => {
     }
   };
 
+  /** Assemble a typed WorkflowPayload from current UI state */
+  const assemblePayload = (): WorkflowPayload => ({
+    input_as_text: signals.campaignGoal,
+    client_id: currentClientId || user?.id || "",
+    client_name: currentClientName || "Default",
+    compressed_customer_dna: compression.customerDnaSummary,
+    prior_strategy_summary: compression.strategyProfileName ? compression.customerDnaSummary : null,
+    prior_campaign_summary: compression.priorCampaignSummary,
+    website_summary: compression.websiteSummary,
+    product_summary: compression.productSummary || signals.productDefinition || null,
+    regulatory_summary: compression.regulatorySummary || signals.regulatoryDriver || null,
+    competitor_summary: compression.competitorSummary || signals.competitor || null,
+  });
+
   const handleAnalyze = async () => {
-    if (!signals.campaignGoal) {
-      toast.error("Enter a campaign goal to analyze");
+    const payload = assemblePayload();
+    if (!isPayloadReady(payload)) {
+      toast.error("Enter a campaign brief and select a client to analyze");
       return;
     }
-    setIsAnalyzing(true);
 
-    // Simulate analysis (placeholder for AI call)
+    setIsAnalyzing(true);
+    // TODO: Replace with real AI call passing `payload`
+    console.log("[KLYC] Workflow payload ready:", payload);
     await new Promise((r) => setTimeout(r, 1500));
 
     setStrategy({
@@ -170,7 +241,12 @@ const CampaignCommandCenter = () => {
                 <Zap className="w-5 h-5 text-primary" />
                 Campaign Command Center
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">AI-driven campaign intelligence & strategy engine</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                AI-driven campaign intelligence & strategy engine
+                {currentClientName && (
+                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>
+                )}
+              </p>
             </div>
           </div>
           <Button
@@ -185,7 +261,6 @@ const CampaignCommandCenter = () => {
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left Column: Signal Discovery + Compression */}
           <div className="lg:col-span-1 space-y-5">
             <SignalDiscoveryPanel state={signals} onChange={setSignals} />
             <CompressionStatePanel
@@ -196,21 +271,17 @@ const CampaignCommandCenter = () => {
               isLoading={isAnalyzing}
             />
           </div>
-
-          {/* Right Column: Strategy + Market */}
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
           </div>
         </div>
 
-        {/* Performance Timeline — full width below grid */}
         {strategy && (
           <div className="mt-6">
             <CampaignPerformanceTimeline campaignTitle={signals.campaignGoal || undefined} />
           </div>
         )}
-
       </main>
     </div>
   );
