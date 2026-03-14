@@ -10,6 +10,7 @@ import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import CampaignTimeline from "@/components/command-center/CampaignTimeline";
+import StrategyPanel from "@/components/command-center/StrategyPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
@@ -157,6 +158,7 @@ const StrategyIntelligence = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
+            <StrategyPanel data={envelope?.rawNormalizedObjects ?? null} />
             <CustomerDNACard />
             <RunHistorySelector
               entries={history}
