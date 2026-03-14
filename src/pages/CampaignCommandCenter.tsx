@@ -360,6 +360,14 @@ const CampaignCommandCenter = () => {
               onRerun={handleAnalyze}
               isLoading={isAnalyzing}
             />
+            <RunStatusPanel
+              data={deriveRunStatus({
+                clientId: currentClientId || user?.id || "",
+                clientName: currentClientName || "Default",
+                runTimestamp: compression.lastRunAt,
+                report: normalizerReport,
+              })}
+            />
           </div>
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
