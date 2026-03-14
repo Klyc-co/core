@@ -362,6 +362,7 @@ const CampaignCommandCenter = () => {
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
+            <NormalizerReportPanel report={normalizerReport} />
           </div>
         </div>
 
