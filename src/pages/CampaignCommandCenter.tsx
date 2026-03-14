@@ -15,6 +15,7 @@ import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import CampaignTimeline from "@/components/command-center/CampaignTimeline";
 import ContentWorkspace from "@/components/command-center/ContentWorkspace";
+import StrategyExplanation from "@/components/command-center/StrategyExplanation";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { useRunCampaign } from "@/hooks/use-run-campaign";
