@@ -174,6 +174,11 @@ const StrategyIntelligence = () => {
             <StrategyReasoningPanel />
           </div>
         </div>
+        <OrchestrationVisibilityPanel
+          data={displayEnvelope.orchestrationSummary}
+          isRunning={isRunning}
+          isIdle={displayEnvelope.runMetadata.status === "idle"}
+        />
         <NarrativeSimulationArena />
         <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
       </div>
