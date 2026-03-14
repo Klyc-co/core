@@ -101,6 +101,10 @@ const BrandStrategy = () => {
             )}
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">{toolTitles[activeTool]}</h1>
           </div>
+          <Button variant="outline" size="sm" onClick={() => navigate("/brand-strategy/intelligence")} className="shrink-0">
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            Strategy Intelligence
+          </Button>
         </div>
       </div>
 

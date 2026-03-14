@@ -47,6 +47,7 @@ import PendingApprovals from "./pages/PendingApprovals";
 import CampaignDrafts from "./pages/CampaignDrafts";
 import CampaignDraftView from "./pages/CampaignDraftView";
 import BrandStrategy from "./pages/BrandStrategy";
+import StrategyIntelligence from "./pages/StrategyIntelligence";
 import TrendMonitor from "./pages/TrendMonitor";
 import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import ImageEditor from "./pages/ImageEditor";
@@ -152,6 +153,7 @@ const App = () => (
             <Route path="/campaigns/drafts" element={<WithSidebar><CampaignDrafts /></WithSidebar>} />
             <Route path="/campaigns/drafts/:id" element={<WithSidebar><CampaignDraftView /></WithSidebar>} />
             <Route path="/brand-strategy" element={<WithSidebar><BrandStrategy /></WithSidebar>} />
+            <Route path="/brand-strategy/intelligence" element={<WithSidebar><StrategyIntelligence /></WithSidebar>} />
             <Route path="/trend-monitor" element={<WithSidebar><TrendMonitor /></WithSidebar>} />
             <Route path="/competitor-analysis" element={<WithSidebar><CompetitorAnalysis /></WithSidebar>} />
             <Route path="/image-editor" element={<WithSidebar><ImageEditor /></WithSidebar>} />
