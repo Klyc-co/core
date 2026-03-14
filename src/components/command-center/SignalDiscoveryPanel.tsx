@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair } from "lucide-react";
 
 export interface SignalDiscoveryState {
+  /** Maps to input_as_text – the primary campaign brief */
+  campaignGoal: string;
   geo: string;
   industry: string;
   customerSize: string;
@@ -16,7 +17,6 @@ export interface SignalDiscoveryState {
   businessNeed: string;
   regulatoryDriver: string;
   productDefinition: string;
-  campaignGoal: string;
   mode: string;
 }
 
@@ -41,6 +41,17 @@ export default function SignalDiscoveryPanel({ state, onChange }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Campaign Brief – maps to input_as_text */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Campaign Brief</Label>
+          <Textarea
+            className="text-sm min-h-[72px] bg-background/60 border-border/50 resize-none"
+            placeholder="Describe what you want to achieve — this is the primary input for the AI..."
+            value={state.campaignGoal}
+            onChange={(e) => update({ campaignGoal: e.target.value })}
+          />
+        </div>
+
         {/* Row 1: Geo / Industry / Customer Size */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FieldSelect icon={<Globe className="w-3.5 h-3.5" />} label="Geography" value={state.geo} options={GEOS} onChange={(v) => update({ geo: v })} />
@@ -68,17 +79,6 @@ export default function SignalDiscoveryPanel({ state, onChange }: Props) {
             placeholder="What are you marketing? Describe the product or service..."
             value={state.productDefinition}
             onChange={(e) => update({ productDefinition: e.target.value })}
-          />
-        </div>
-
-        {/* Campaign Goal */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Campaign Goal</Label>
-          <Input
-            className="text-sm bg-background/60 border-border/50"
-            placeholder="e.g. Generate 500 qualified leads in 30 days"
-            value={state.campaignGoal}
-            onChange={(e) => update({ campaignGoal: e.target.value })}
           />
         </div>
 
