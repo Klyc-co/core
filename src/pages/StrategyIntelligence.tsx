@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
-import { deriveRunStatus } from "@/types/run-status";
+import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
 import type { NormalizerReport } from "@/types/normalizer-report";
 import { toast } from "sonner";
 
@@ -27,7 +27,7 @@ const StrategyIntelligence = () => {
   const [loading, setLoading] = useState(true);
   const [contextPayload, setContextPayload] = useState<Partial<WorkflowPayload>>({});
   const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
-  const [lastRunTimestamp, setLastRunTimestamp] = useState<string | null>(null);
+  const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
 
   const { execute, isRunning, state: workflowState } = useRunCampaign();
 
@@ -41,7 +41,6 @@ const StrategyIntelligence = () => {
     checkUser();
   }, [navigate]);
 
-  // Auto-load context from client_brain when client changes
   useEffect(() => {
     if (!user) return;
     const clientId = currentClientId || user.id;
@@ -96,10 +95,9 @@ const StrategyIntelligence = () => {
     }
 
     const result = await execute(payload);
-
     if (result) {
       setNormalizerReport(result.normalizerReport);
-      setLastRunTimestamp(result.runTimestamp);
+      setEnvelope(result.envelope);
     }
   };
 
@@ -111,20 +109,27 @@ const StrategyIntelligence = () => {
     );
   }
 
-  const runStatusData = workflowState.phase === "success"
-    ? workflowState.result.runStatus
-    : deriveRunStatus({
-        clientId: currentClientId || user?.id || "",
-        clientName: currentClientName || "Default",
-        runTimestamp: lastRunTimestamp,
-        report: normalizerReport,
-      });
+  const clientId = currentClientId || user?.id || "";
+  const clientName = currentClientName || "Default";
 
-  const displayRunStatus = isRunning
-    ? { ...runStatusData, status: "running" as const }
-    : workflowState.phase === "error"
-      ? { ...runStatusData, status: "error" as const, verdict: "blocked" as const, verdictReason: workflowState.message }
-      : runStatusData;
+  let displayEnvelope: WorkflowReportEnvelope = envelope || idleEnvelope(clientId, clientName);
+
+  if (isRunning) {
+    displayEnvelope = {
+      ...displayEnvelope,
+      runMetadata: { ...displayEnvelope.runMetadata, status: "running" },
+    };
+  } else if (workflowState.phase === "error") {
+    displayEnvelope = {
+      ...displayEnvelope,
+      runMetadata: { ...displayEnvelope.runMetadata, status: "error" },
+      orchestrationSummary: {
+        ...displayEnvelope.orchestrationSummary,
+        verdict: "blocked",
+        verdictReason: workflowState.message,
+      },
+    };
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,7 +160,6 @@ const StrategyIntelligence = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Error Banner */}
         {workflowState.phase === "error" && (
           <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
@@ -169,7 +173,7 @@ const StrategyIntelligence = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
             <CustomerDNACard />
-            <RunStatusPanel data={displayRunStatus} />
+            <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-1">
             <PlatformBattleView />
