@@ -29,6 +29,9 @@ export interface NormalizationChecksum {
 export interface OrchestrationSummary {
   verdict: RunStatusVerdict;
   verdictReason: string;
+  orchestrationStatus: "planned" | "executing" | "complete" | "blocked" | "partial";
+  executionOrder: string[];
+  partialRunAllowed: boolean;
   blockedReasons: string[];
   requiresResearch: boolean;
   requiresProductPositioning: boolean;
