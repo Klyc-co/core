@@ -181,6 +181,7 @@ const StrategyIntelligence = () => {
           isIdle={displayEnvelope.runMetadata.status === "idle"}
         />
         <NarrativeSimulationArena />
+        <CampaignTimeline steps={displayEnvelope.agentExecutionSummary.steps} isRunning={isRunning} />
         <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
       </div>
     </div>
