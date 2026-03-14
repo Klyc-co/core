@@ -17,8 +17,7 @@ import { useCurrentClient } from "@/hooks/use-current-client";
 import { useRunCampaign } from "@/hooks/use-run-campaign";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
-import type { NormalizerReport } from "@/types/normalizer-report";
-import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
+import { idleEnvelope, type WorkflowReportEnvelope, type RawNormalizedObjects } from "@/types/run-status";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
@@ -55,7 +54,6 @@ const CampaignCommandCenter = () => {
   const [strategy, setStrategy] = useState<StrategyComparison | null>(null);
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
-  const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
 
   const { execute, isRunning, state: workflowState } = useRunCampaign();
@@ -68,9 +66,7 @@ const CampaignCommandCenter = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (user && currentClientId) {
-      loadClientContext(currentClientId);
-    }
+    if (user && currentClientId) loadClientContext(currentClientId);
   }, [user, currentClientId]);
 
   const loadClientContext = async (clientId: string) => {
@@ -80,14 +76,11 @@ const CampaignCommandCenter = () => {
         .select("data, document_type")
         .eq("client_id", clientId)
         .limit(10);
-
       if (!data || data.length === 0) return;
-
       const find = (type: string) => {
         const doc = data.find((d) => d.document_type === type);
         return doc ? JSON.stringify(doc.data).slice(0, 300) : null;
       };
-
       setCompression((prev) => ({
         ...prev,
         customerDnaLoaded: Boolean(find("brand")),
@@ -100,9 +93,7 @@ const CampaignCommandCenter = () => {
         competitorSummary: find("competitor"),
         priorCampaignSummary: find("campaign_history"),
       }));
-    } catch {
-      // Context is optional
-    }
+    } catch { /* optional */ }
   };
 
   const handleLoadDna = async () => {
@@ -115,7 +106,6 @@ const CampaignCommandCenter = () => {
         .eq("client_id", clientId)
         .in("document_type", ["brand", "voice", "strategy"])
         .limit(3);
-
       if (data && data.length > 0) {
         const brandDoc = data.find((d) => d.document_type === "brand");
         const summary = brandDoc ? JSON.stringify(brandDoc.data).slice(0, 120) + "…" : "Loaded";
@@ -124,9 +114,7 @@ const CampaignCommandCenter = () => {
       } else {
         toast.info("No Customer DNA found. Set up your Client Brain first.");
       }
-    } catch {
-      toast.error("Failed to load Customer DNA");
-    }
+    } catch { toast.error("Failed to load Customer DNA"); }
   };
 
   const handleLoadStrategy = async () => {
@@ -140,20 +128,11 @@ const CampaignCommandCenter = () => {
         .eq("document_type", "strategy")
         .limit(1)
         .maybeSingle();
-
       if (data) {
-        setCompression((prev) => ({
-          ...prev,
-          strategyProfileLoaded: true,
-          strategyProfileName: "Active Strategy",
-        }));
+        setCompression((prev) => ({ ...prev, strategyProfileLoaded: true, strategyProfileName: "Active Strategy" }));
         toast.success("Strategy profile loaded");
-      } else {
-        toast.info("No strategy profile found.");
-      }
-    } catch {
-      toast.error("Failed to load strategy profile");
-    }
+      } else { toast.info("No strategy profile found."); }
+    } catch { toast.error("Failed to load strategy profile"); }
   };
 
   const assemblePayload = (): WorkflowPayload => ({
@@ -177,32 +156,35 @@ const CampaignCommandCenter = () => {
     }
 
     const result = await execute(payload);
+    if (!result) return;
 
-    if (result) {
-      setNormalizerReport(result.normalizerReport);
-      setEnvelope(result.envelope);
-      setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
+    setEnvelope(result.envelope);
+    setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
 
-      const brief = result.normalizerReport.campaignBrief;
+    // Derive strategy & market panels from envelope's normalized objects
+    const raw = result.envelope.rawNormalizedObjects;
+    const brief = raw?.campaignBrief;
+
+    if (brief) {
       setStrategy({
         requested: {
           summary: signals.campaignGoal,
-          platforms: brief.requestedPlatforms.length ? brief.requestedPlatforms : ["LinkedIn"],
+          platforms: brief.requestedPlatforms?.length ? brief.requestedPlatforms : ["LinkedIn"],
           goal: signals.campaignGoal,
           timeline: "30 days",
         },
         recommended: {
           summary: `Optimized multi-channel approach targeting ${signals.customerSize || "mid-market"} ${signals.industry || "tech"} companies in ${signals.geo || "North America"} with emphasis on ${brief.campaignMode || "hybrid"} outreach.`,
-          platforms: brief.recommendedPlatformsHint,
+          platforms: brief.recommendedPlatformsHint || ["LinkedIn", "YouTube"],
           goal: `${signals.campaignGoal} with optimized ROI`,
           timeline: "45 days (phased rollout)",
           confidenceScore: brief.confidenceScore ?? 0,
-          reasoning: `Based on ${brief.confidenceScore ?? 0}% confidence score and ${result.normalizerReport.customerContext.contextCoverage}% context coverage. ${brief.warnings.length ? `Note: ${brief.warnings[0]}` : ""}`,
-          risks: brief.warnings.slice(0, 3),
+          reasoning: `Based on ${brief.confidenceScore ?? 0}% confidence and ${raw?.customerContext?.contextCoverage ?? 0}% coverage. ${brief.warnings?.length ? `Note: ${brief.warnings[0]}` : ""}`,
+          risks: brief.warnings?.slice(0, 3) || [],
           upsides: [
             "Multi-touch attribution for higher quality leads",
             "Platform diversification reduces single-channel dependency",
-            ...(result.normalizerReport.orchestratorHints.requiresNarrativeSimulation ? ["Narrative simulation will optimize messaging"] : []),
+            ...(raw?.orchestratorHints?.requiresNarrativeSimulation ? ["Narrative simulation will optimize messaging"] : []),
           ],
         },
       });
@@ -212,41 +194,32 @@ const CampaignCommandCenter = () => {
         reachableAudience: "32K",
         recommendedOutbounds: 180,
         estimatedAccounts: 12,
-        platformRankings: brief.recommendedPlatformsHint.map((p, i) => ({
+        platformRankings: (brief.recommendedPlatformsHint || ["LinkedIn", "YouTube"]).map((p, i) => ({
           platform: p,
           score: Math.max(50, 95 - i * 15),
           reason: i === 0 ? "Primary recommended channel" : "Supporting channel",
         })),
         pressureMap: [
-          { factor: "Competitor Activity", intensity: result.normalizerReport.orchestratorHints.requiresResearch ? "high" as const : "medium" as const, note: brief.competitorFilter || "Requires research" },
+          { factor: "Competitor Activity", intensity: (raw?.orchestratorHints?.requiresResearch ? "high" : "medium") as "high" | "medium", note: brief.competitorFilter || "Requires research" },
           { factor: "Market Timing", intensity: "medium" as const, note: "Current market cycle" },
-          { factor: "Regulatory", intensity: brief.regulatoryDriver ? "high" as const : "low" as const, note: brief.regulatoryDriver || "No significant constraints" },
+          { factor: "Regulatory", intensity: (brief.regulatoryDriver ? "high" : "low") as "high" | "low", note: brief.regulatoryDriver || "No significant constraints" },
           { factor: "Content Saturation", intensity: "medium" as const, note: "Moderate noise in primary channels" },
         ],
       });
     }
   };
 
-  // Build display envelope — prefer backend, fallback to idle
   const clientId = currentClientId || user?.id || "";
   const clientName = currentClientName || "Default";
 
   let displayEnvelope: WorkflowReportEnvelope = envelope || idleEnvelope(clientId, clientName);
-
   if (isRunning) {
-    displayEnvelope = {
-      ...displayEnvelope,
-      runMetadata: { ...displayEnvelope.runMetadata, status: "running" },
-    };
+    displayEnvelope = { ...displayEnvelope, runMetadata: { ...displayEnvelope.runMetadata, status: "running" } };
   } else if (workflowState.phase === "error") {
     displayEnvelope = {
       ...displayEnvelope,
       runMetadata: { ...displayEnvelope.runMetadata, status: "error" },
-      orchestrationSummary: {
-        ...displayEnvelope.orchestrationSummary,
-        verdict: "blocked",
-        verdictReason: workflowState.message,
-      },
+      orchestrationSummary: { ...displayEnvelope.orchestrationSummary, verdict: "blocked", verdictReason: workflowState.message },
     };
   }
 
@@ -254,7 +227,6 @@ const CampaignCommandCenter = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/campaigns")}>
@@ -267,23 +239,16 @@ const CampaignCommandCenter = () => {
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
                 AI-driven campaign intelligence & strategy engine
-                {currentClientName && (
-                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>
-                )}
+                {currentClientName && <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>}
               </p>
             </div>
           </div>
-          <Button
-            className="gap-2 bg-primary hover:bg-primary/90"
-            onClick={handleAnalyze}
-            disabled={isRunning}
-          >
+          <Button className="gap-2 bg-primary hover:bg-primary/90" onClick={handleAnalyze} disabled={isRunning}>
             <Sparkles className="w-4 h-4" />
             {isRunning ? "Running Workflow…" : "Run Analysis"}
           </Button>
         </div>
 
-        {/* Error Banner */}
         {workflowState.phase === "error" && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
@@ -301,23 +266,16 @@ const CampaignCommandCenter = () => {
           </div>
         )}
 
-        {/* Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
             <SignalDiscoveryPanel state={signals} onChange={setSignals} />
-            <CompressionStatePanel
-              state={compression}
-              onLoadDna={handleLoadDna}
-              onLoadStrategy={handleLoadStrategy}
-              onRerun={handleAnalyze}
-              isLoading={isRunning}
-            />
+            <CompressionStatePanel state={compression} onLoadDna={handleLoadDna} onLoadStrategy={handleLoadStrategy} onRerun={handleAnalyze} isLoading={isRunning} />
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
-            <NormalizerReportPanel report={normalizerReport} />
+            <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
           </div>
         </div>
 

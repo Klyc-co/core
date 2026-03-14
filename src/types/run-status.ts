@@ -60,6 +60,14 @@ export interface NextActions {
   recommendedNextUpdate: string | null;
 }
 
+// ── Raw Normalized Objects (from normalizer report) ──
+export interface RawNormalizedObjects {
+  campaignBrief?: import("@/types/normalizer-report").CampaignBrief;
+  customerContext?: import("@/types/normalizer-report").CustomerContext;
+  orchestratorHints?: import("@/types/normalizer-report").OrchestratorHints;
+  learningHooks?: import("@/types/normalizer-report").LearningHooks;
+}
+
 // ── Full Envelope ──
 export interface WorkflowReportEnvelope {
   runMetadata: RunMetadata;
@@ -67,6 +75,7 @@ export interface WorkflowReportEnvelope {
   orchestrationSummary: OrchestrationSummary;
   agentExecutionSummary: AgentExecutionSummary;
   nextActions: NextActions;
+  rawNormalizedObjects?: RawNormalizedObjects;
 }
 
 /** Build an idle envelope for pre-run state */
