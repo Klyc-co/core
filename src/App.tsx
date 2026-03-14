@@ -28,6 +28,7 @@ import ProjectEdit from "./pages/ProjectEdit";
 import Settings from "./pages/Settings";
 import ProfileOverview from "./pages/ProfileOverview";
 import CompanyInfo from "./pages/CompanyInfo";
+import CampaignCommandCenter from "./pages/CampaignCommandCenter";
 import TargetAudience from "./pages/TargetAudience";
 import ValueProposition from "./pages/ValueProposition";
 import ImportBrandSources from "./pages/ImportBrandSources";
