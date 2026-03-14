@@ -210,7 +210,7 @@ const CampaignCommandCenter = () => {
             <CampaignPerformanceTimeline campaignTitle={signals.campaignGoal || undefined} />
           </div>
         )}
-        </div>
+
       </main>
     </div>
   );
