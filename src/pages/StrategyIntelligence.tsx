@@ -10,6 +10,7 @@ import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import CampaignTimeline from "@/components/command-center/CampaignTimeline";
+import StrategyPanel from "@/components/command-center/StrategyPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
