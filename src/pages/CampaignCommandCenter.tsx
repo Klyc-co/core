@@ -297,6 +297,7 @@ const CampaignCommandCenter = () => {
             <MarketOpportunityPanel data={market} />
             <CampaignTimeline steps={displayEnvelope.agentExecutionSummary.steps} isRunning={isRunning} />
             <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
+            <ContentWorkspace />
           </div>
         </div>
 
