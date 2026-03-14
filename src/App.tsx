@@ -47,6 +47,7 @@ import PendingApprovals from "./pages/PendingApprovals";
 import CampaignDrafts from "./pages/CampaignDrafts";
 import CampaignDraftView from "./pages/CampaignDraftView";
 import BrandStrategy from "./pages/BrandStrategy";
+import StrategyIntelligence from "./pages/StrategyIntelligence";
 import TrendMonitor from "./pages/TrendMonitor";
 import CompetitorAnalysis from "./pages/CompetitorAnalysis";
 import ImageEditor from "./pages/ImageEditor";
