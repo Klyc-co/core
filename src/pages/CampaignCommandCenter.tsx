@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CampaignPerformanceTimeline from "@/components/campaigns/CampaignPerformanceTimeline";
-import { ArrowLeft, Zap, Sparkles } from "lucide-react";
+import { ArrowLeft, Zap, Sparkles, AlertCircle } from "lucide-react";
 import SignalDiscoveryPanel, { type SignalDiscoveryState } from "@/components/command-center/SignalDiscoveryPanel";
 import StrategyComparisonPanel, { type StrategyComparison } from "@/components/command-center/StrategyComparisonPanel";
 import MarketOpportunityPanel, { type MarketOpportunity } from "@/components/command-center/MarketOpportunityPanel";
@@ -14,6 +14,7 @@ import NormalizerReportPanel from "@/components/command-center/NormalizerReportP
 import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
+import { useRunCampaign } from "@/hooks/use-run-campaign";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import type { NormalizerReport } from "@/types/normalizer-report";
@@ -54,8 +55,9 @@ const CampaignCommandCenter = () => {
   const [strategy, setStrategy] = useState<StrategyComparison | null>(null);
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
+
+  const { execute, isRunning, state: workflowState } = useRunCampaign();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -64,14 +66,12 @@ const CampaignCommandCenter = () => {
     });
   }, [navigate]);
 
-  // Auto-load context when client is set
   useEffect(() => {
     if (user && currentClientId) {
       loadClientContext(currentClientId);
     }
   }, [user, currentClientId]);
 
-  /** Load all available context summaries for the active client */
   const loadClientContext = async (clientId: string) => {
     try {
       const { data } = await supabase
@@ -100,7 +100,7 @@ const CampaignCommandCenter = () => {
         priorCampaignSummary: find("campaign_history"),
       }));
     } catch {
-      // Silently continue – context is optional
+      // Context is optional
     }
   };
 
@@ -155,7 +155,6 @@ const CampaignCommandCenter = () => {
     }
   };
 
-  /** Assemble a typed WorkflowPayload from current UI state */
   const assemblePayload = (): WorkflowPayload => ({
     input_as_text: signals.campaignGoal,
     client_id: currentClientId || user?.id || "",
@@ -176,145 +175,82 @@ const CampaignCommandCenter = () => {
       return;
     }
 
-    setIsAnalyzing(true);
-    // TODO: Replace with real AI call passing `payload`
-    console.log("[KLYC] Workflow payload ready:", payload);
-    await new Promise((r) => setTimeout(r, 1500));
+    const result = await execute(payload);
 
-    setStrategy({
-      requested: {
-        summary: signals.campaignGoal,
-        platforms: signals.industry === "SaaS" ? ["LinkedIn", "Twitter"] : ["Instagram", "TikTok"],
-        goal: signals.campaignGoal,
-        timeline: "30 days",
-      },
-      recommended: {
-        summary: `Optimized multi-channel approach targeting ${signals.customerSize || "mid-market"} ${signals.industry || "tech"} companies in ${signals.geo || "North America"} with emphasis on ${signals.mode} outreach.`,
-        platforms: ["LinkedIn", "Twitter", "YouTube"],
-        goal: `${signals.campaignGoal} with 40% higher predicted ROI`,
-        timeline: "45 days (phased rollout)",
-        confidenceScore: 78,
-        reasoning: `Based on ${signals.industry || "industry"} benchmarks and ${signals.mode} mode selection, a phased multi-platform approach reduces CAC by ~25% while maintaining volume targets. ${signals.regulatoryDriver ? `Regulatory considerations (${signals.regulatoryDriver}) factored into content compliance scoring.` : ""}`,
-        risks: [
-          "Longer timeline may delay initial metrics",
-          signals.competitor ? `Direct competition from ${signals.competitor} in same channels` : "Market saturation risk on primary channels",
-        ],
-        upsides: [
-          "Higher quality lead scoring through multi-touch attribution",
-          "Platform diversification reduces single-channel dependency",
-          "Phased approach allows mid-campaign optimization",
-        ],
-      },
-    });
+    if (result) {
+      // Bind normalizer report
+      setNormalizerReport(result.normalizerReport);
 
-    setMarket({
-      addressableMarketSize: signals.addressableMarket || "~125K",
-      reachableAudience: "32K",
-      recommendedOutbounds: 180,
-      estimatedAccounts: 12,
-      platformRankings: [
-        { platform: "LinkedIn", score: 92, reason: "Highest B2B conversion" },
-        { platform: "Twitter / X", score: 78, reason: "Thought leadership reach" },
-        { platform: "YouTube", score: 65, reason: "Long-form authority" },
-        { platform: "Instagram", score: 45, reason: "Brand awareness" },
-      ],
-      pressureMap: [
-        { factor: "Competitor Activity", intensity: "high", note: signals.competitor ? `${signals.competitor} active on LinkedIn` : "Multiple incumbents active" },
-        { factor: "Market Timing", intensity: "medium", note: "Q1 budget cycle aligns well" },
-        { factor: "Regulatory", intensity: signals.regulatoryDriver ? "high" : "low", note: signals.regulatoryDriver || "No significant constraints" },
-        { factor: "Content Saturation", intensity: "medium", note: "Moderate noise in primary channels" },
-      ],
-    });
+      // Update compression with run timestamp
+      setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
 
-    // Build normalizer report from payload + signals
-    setNormalizerReport({
-      campaignBrief: {
-        geoFilter: signals.geo || null,
-        industryFilter: signals.industry || null,
-        customerSizeFilter: signals.customerSize || null,
-        competitorFilter: signals.competitor || null,
-        addressableMarket: signals.addressableMarket || null,
-        businessNeed: signals.businessNeed || null,
-        regulatoryDriver: signals.regulatoryDriver || null,
-        productDefinition: signals.productDefinition || null,
-        campaignGoal: signals.campaignGoal || null,
-        requestedPlatforms: signals.industry === "SaaS" ? ["LinkedIn", "Twitter"] : ["Instagram", "TikTok"],
-        recommendedPlatformsHint: ["LinkedIn", "Twitter", "YouTube"],
-        campaignMode: signals.mode,
-        confidenceScore: 78,
-        warnings: [
-          ...(!signals.competitor ? ["No competitor specified – competitive positioning may be generic"] : []),
-          ...(!signals.regulatoryDriver ? ["No regulatory driver – compliance checks skipped"] : []),
-        ],
-      },
-      customerContext: {
-        brandVoiceSummary: compression.customerDnaSummary,
-        productOfferSummary: compression.productSummary || signals.productDefinition || null,
-        audienceSegments: signals.customerSize ? [signals.customerSize] : [],
-        primaryPainPoints: signals.businessNeed ? [signals.businessNeed] : [],
-        proofPoints: [],
-        competitors: signals.competitor ? [signals.competitor] : [],
-        regulations: signals.regulatoryDriver ? [signals.regulatoryDriver] : [],
-        semanticThemes: signals.industry ? [signals.industry, signals.mode] : [signals.mode],
-        trustSignals: compression.customerDnaLoaded ? ["Client Brain loaded"] : [],
-        objections: [],
-        sourceCount: [compression.customerDnaLoaded, compression.strategyProfileLoaded, compression.websiteSummary, compression.productSummary, compression.competitorSummary].filter(Boolean).length,
-        lastUpdated: compression.lastRunAt,
-        contextCoverage: Math.round(
-          ([signals.campaignGoal, signals.industry, signals.geo, signals.customerSize, signals.competitor, signals.productDefinition, compression.customerDnaSummary, compression.productSummary].filter(Boolean).length / 8) * 100
-        ),
-      },
-      orchestratorHints: {
-        requiresResearch: !compression.competitorSummary,
-        requiresProductPositioning: !compression.productSummary && !signals.productDefinition,
-        requiresNarrativeSimulation: true,
-        requiresPlatformEvaluation: true,
-        estimatedCampaignComplexity: signals.regulatoryDriver ? "high" : signals.competitor ? "medium" : "low",
-        missingCriticalInputs: [
-          ...(!signals.campaignGoal ? ["Campaign goal"] : []),
-          ...(!compression.customerDnaLoaded ? ["Customer DNA"] : []),
-          ...(!signals.productDefinition && !compression.productSummary ? ["Product definition"] : []),
-        ],
-      },
-      learningHooks: {
-        explicitInputs: [
-          ...(signals.campaignGoal ? ["Campaign goal"] : []),
-          ...(signals.industry ? ["Industry"] : []),
-          ...(signals.geo ? ["Geography"] : []),
-          ...(signals.competitor ? ["Competitor"] : []),
-        ],
-        inferredSignals: [
-          ...(signals.mode === "proactive" ? ["Proactive mode suggests brand-building intent"] : []),
-          ...(signals.industry === "SaaS" ? ["SaaS industry suggests LinkedIn-first strategy"] : []),
-        ],
-        missingInputs: [
-          ...(!signals.addressableMarket ? ["Addressable market size"] : []),
-          ...(!compression.priorCampaignSummary ? ["Prior campaign history"] : []),
-          ...(!compression.websiteSummary ? ["Website intelligence"] : []),
-        ],
-        confidenceDrivers: [
-          ...(compression.customerDnaLoaded ? ["Customer DNA loaded"] : []),
-          ...(signals.campaignGoal ? ["Clear campaign goal"] : []),
-          ...(signals.industry ? ["Industry specified"] : []),
-        ],
-        compressionNotes: [
-          ...(compression.customerDnaLoaded ? ["DNA compressed from client_brain"] : []),
-          ...(compression.strategyProfileLoaded ? ["Strategy profile pre-loaded"] : []),
-        ],
-        updatableFields: ["competitor", "addressableMarket", "regulatoryDriver", "productDefinition"],
-        sourceReferences: [
-          ...(compression.customerDnaLoaded ? ["client_brain:brand"] : []),
-          ...(compression.strategyProfileLoaded ? ["client_brain:strategy"] : []),
-          ...(compression.websiteSummary ? ["client_brain:website"] : []),
-        ],
-        recommendedNextUpdate: compression.priorCampaignSummary ? null : "Load prior campaign data for better predictions",
-      },
-    });
+      // Build strategy comparison from report data
+      const brief = result.normalizerReport.campaignBrief;
+      setStrategy({
+        requested: {
+          summary: signals.campaignGoal,
+          platforms: brief.requestedPlatforms.length ? brief.requestedPlatforms : ["LinkedIn"],
+          goal: signals.campaignGoal,
+          timeline: "30 days",
+        },
+        recommended: {
+          summary: `Optimized multi-channel approach targeting ${signals.customerSize || "mid-market"} ${signals.industry || "tech"} companies in ${signals.geo || "North America"} with emphasis on ${brief.campaignMode || "hybrid"} outreach.`,
+          platforms: brief.recommendedPlatformsHint,
+          goal: `${signals.campaignGoal} with optimized ROI`,
+          timeline: "45 days (phased rollout)",
+          confidenceScore: brief.confidenceScore ?? 0,
+          reasoning: `Based on ${brief.confidenceScore ?? 0}% confidence score and ${result.normalizerReport.customerContext.contextCoverage}% context coverage. ${brief.warnings.length ? `Note: ${brief.warnings[0]}` : ""}`,
+          risks: brief.warnings.slice(0, 3),
+          upsides: [
+            "Multi-touch attribution for higher quality leads",
+            "Platform diversification reduces single-channel dependency",
+            ...(result.normalizerReport.orchestratorHints.requiresNarrativeSimulation ? ["Narrative simulation will optimize messaging"] : []),
+          ],
+        },
+      });
 
-    setCompression((prev) => ({ ...prev, lastRunAt: new Date().toISOString() }));
-    setIsAnalyzing(false);
-    toast.success("Analysis complete");
+      // Build market opportunity
+      setMarket({
+        addressableMarketSize: brief.addressableMarket || "~125K",
+        reachableAudience: "32K",
+        recommendedOutbounds: 180,
+        estimatedAccounts: 12,
+        platformRankings: brief.recommendedPlatformsHint.map((p, i) => ({
+          platform: p,
+          score: Math.max(50, 95 - i * 15),
+          reason: i === 0 ? "Primary recommended channel" : "Supporting channel",
+        })),
+        pressureMap: [
+          { factor: "Competitor Activity", intensity: result.normalizerReport.orchestratorHints.requiresResearch ? "high" as const : "medium" as const, note: brief.competitorFilter || "Requires research" },
+          { factor: "Market Timing", intensity: "medium" as const, note: "Current market cycle" },
+          { factor: "Regulatory", intensity: brief.regulatoryDriver ? "high" as const : "low" as const, note: brief.regulatoryDriver || "No significant constraints" },
+          { factor: "Content Saturation", intensity: "medium" as const, note: "Moderate noise in primary channels" },
+        ],
+      });
+    }
   };
+
+  // Derive run status from backend result or local report
+  const runStatusData = workflowState.phase === "success" || workflowState.phase === "partial"
+    ? (workflowState.phase === "success" ? workflowState.result.runStatus : deriveRunStatus({
+        clientId: currentClientId || user?.id || "",
+        clientName: currentClientName || "Default",
+        runTimestamp: compression.lastRunAt,
+        report: normalizerReport,
+      }))
+    : deriveRunStatus({
+        clientId: currentClientId || user?.id || "",
+        clientName: currentClientName || "Default",
+        runTimestamp: compression.lastRunAt,
+        report: normalizerReport,
+      });
+
+  // Override status when running
+  const displayRunStatus = isRunning
+    ? { ...runStatusData, status: "running" as const }
+    : workflowState.phase === "error"
+      ? { ...runStatusData, status: "error" as const, verdict: "blocked" as const, verdictReason: workflowState.message }
+      : runStatusData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -342,12 +278,31 @@ const CampaignCommandCenter = () => {
           <Button
             className="gap-2 bg-primary hover:bg-primary/90"
             onClick={handleAnalyze}
-            disabled={isAnalyzing}
+            disabled={isRunning}
           >
             <Sparkles className="w-4 h-4" />
-            {isAnalyzing ? "Analyzing..." : "Run Analysis"}
+            {isRunning ? "Running Workflow…" : "Run Analysis"}
           </Button>
         </div>
+
+        {/* Error Banner */}
+        {workflowState.phase === "error" && (
+          <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-destructive">Workflow Error</p>
+              <p className="text-xs text-destructive/80">{workflowState.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Partial Result Warning */}
+        {workflowState.phase === "partial" && (
+          <div className="mb-4 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-yellow-700">{workflowState.warning}</p>
+          </div>
+        )}
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -358,16 +313,9 @@ const CampaignCommandCenter = () => {
               onLoadDna={handleLoadDna}
               onLoadStrategy={handleLoadStrategy}
               onRerun={handleAnalyze}
-              isLoading={isAnalyzing}
+              isLoading={isRunning}
             />
-            <RunStatusPanel
-              data={deriveRunStatus({
-                clientId: currentClientId || user?.id || "",
-                clientName: currentClientName || "Default",
-                runTimestamp: compression.lastRunAt,
-                report: normalizerReport,
-              })}
-            />
+            <RunStatusPanel data={displayRunStatus} />
           </div>
           <div className="lg:col-span-2 space-y-5">
             <StrategyComparisonPanel data={strategy} />

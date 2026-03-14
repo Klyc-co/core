@@ -1,27 +1,35 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Brain, RefreshCw } from "lucide-react";
+import { Brain, RefreshCw, AlertCircle } from "lucide-react";
 import CustomerDNACard from "@/components/strategy-intelligence/CustomerDNACard";
 import NarrativeSimulationArena from "@/components/strategy-intelligence/NarrativeSimulationArena";
 import PlatformBattleView from "@/components/strategy-intelligence/PlatformBattleView";
 import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyReasoningPanel";
 import RunStatusPanel from "@/components/command-center/RunStatusPanel";
+import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
+import { useRunCampaign } from "@/hooks/use-run-campaign";
 import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
+import { isPayloadReady } from "@/types/workflow-payload";
 import { deriveRunStatus } from "@/types/run-status";
+import type { NormalizerReport } from "@/types/normalizer-report";
+import { toast } from "sonner";
 
 const StrategyIntelligence = () => {
   const navigate = useNavigate();
   const { currentClientId, currentClientName } = useCurrentClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSimulating, setIsSimulating] = useState(false);
   const [contextPayload, setContextPayload] = useState<Partial<WorkflowPayload>>({});
+  const [normalizerReport, setNormalizerReport] = useState<NormalizerReport | null>(null);
+  const [lastRunTimestamp, setLastRunTimestamp] = useState<string | null>(null);
+
+  const { execute, isRunning, state: workflowState } = useRunCampaign();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -68,10 +76,31 @@ const StrategyIntelligence = () => {
     loadContext();
   }, [user, currentClientId, currentClientName]);
 
-  const handleRerun = () => {
-    setIsSimulating(true);
-    console.log("[KLYC] Strategy payload context:", contextPayload);
-    setTimeout(() => setIsSimulating(false), 2000);
+  const handleRerun = async () => {
+    const payload: WorkflowPayload = {
+      input_as_text: "Strategy intelligence simulation run",
+      client_id: contextPayload.client_id || currentClientId || user?.id || "",
+      client_name: contextPayload.client_name || currentClientName || "Default",
+      compressed_customer_dna: contextPayload.compressed_customer_dna || null,
+      prior_strategy_summary: contextPayload.prior_strategy_summary || null,
+      prior_campaign_summary: contextPayload.prior_campaign_summary || null,
+      website_summary: contextPayload.website_summary || null,
+      product_summary: contextPayload.product_summary || null,
+      regulatory_summary: contextPayload.regulatory_summary || null,
+      competitor_summary: contextPayload.competitor_summary || null,
+    };
+
+    if (!isPayloadReady(payload)) {
+      toast.error("Select a client before running simulation");
+      return;
+    }
+
+    const result = await execute(payload);
+
+    if (result) {
+      setNormalizerReport(result.normalizerReport);
+      setLastRunTimestamp(result.runTimestamp);
+    }
   };
 
   if (loading) {
@@ -81,6 +110,21 @@ const StrategyIntelligence = () => {
       </div>
     );
   }
+
+  const runStatusData = workflowState.phase === "success"
+    ? workflowState.result.runStatus
+    : deriveRunStatus({
+        clientId: currentClientId || user?.id || "",
+        clientName: currentClientName || "Default",
+        runTimestamp: lastRunTimestamp,
+        report: normalizerReport,
+      });
+
+  const displayRunStatus = isRunning
+    ? { ...runStatusData, status: "running" as const }
+    : workflowState.phase === "error"
+      ? { ...runStatusData, status: "error" as const, verdict: "blocked" as const, verdictReason: workflowState.message }
+      : runStatusData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,26 +146,30 @@ const StrategyIntelligence = () => {
             <Badge variant="outline" className="text-xs font-mono hidden sm:flex">
               Compression: {contextPayload.compressed_customer_dna ? "Active" : "Idle"}
             </Badge>
-            <Button variant="outline" size="sm" onClick={handleRerun} disabled={isSimulating}>
-              {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
-              Re-simulate
+            <Button variant="outline" size="sm" onClick={handleRerun} disabled={isRunning}>
+              {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+              {isRunning ? "Running…" : "Re-simulate"}
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Error Banner */}
+        {workflowState.phase === "error" && (
+          <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-destructive">Workflow Error</p>
+              <p className="text-xs text-destructive/80">{workflowState.message}</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
             <CustomerDNACard />
-            <RunStatusPanel
-              data={deriveRunStatus({
-                clientId: currentClientId || user?.id || "",
-                clientName: currentClientName || "Default",
-                runTimestamp: null,
-                report: null,
-              })}
-            />
+            <RunStatusPanel data={displayRunStatus} />
           </div>
           <div className="lg:col-span-1">
             <PlatformBattleView />
@@ -131,6 +179,7 @@ const StrategyIntelligence = () => {
           </div>
         </div>
         <NarrativeSimulationArena />
+        {normalizerReport && <NormalizerReportPanel report={normalizerReport} />}
       </div>
     </div>
   );
