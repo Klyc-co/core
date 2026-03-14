@@ -259,8 +259,11 @@ Deno.serve(async (req) => {
       metadata: { verdict, confidenceScore, contextCoverage, durationMs },
     });
 
+    // Nest normalizer report inside envelope as rawNormalizedObjects
+    envelope.rawNormalizedObjects = normalizerReport;
+
     return new Response(
-      JSON.stringify({ success: true, normalizerReport, envelope }),
+      JSON.stringify({ success: true, envelope }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
