@@ -222,6 +222,9 @@ Deno.serve(async (req) => {
       orchestrationSummary: {
         verdict,
         verdictReason,
+        orchestrationStatus: verdict === "blocked" ? "blocked" : "complete",
+        executionOrder: agentSteps.filter(s => s.status !== "skipped").map(s => s.agent),
+        partialRunAllowed: missingCriticalInputs.length > 0 && missingCriticalInputs.length < 3,
         blockedReasons: missingCriticalInputs,
         requiresResearch: normalizerReport.orchestratorHints.requiresResearch,
         requiresProductPositioning: normalizerReport.orchestratorHints.requiresProductPositioning,

@@ -103,6 +103,9 @@ export function idleEnvelope(clientId: string, clientName: string): WorkflowRepo
     orchestrationSummary: {
       verdict: "blocked",
       verdictReason: "No analysis has been run yet",
+      orchestrationStatus: "planned",
+      executionOrder: [],
+      partialRunAllowed: false,
       blockedReasons: [],
       requiresResearch: false,
       requiresProductPositioning: false,

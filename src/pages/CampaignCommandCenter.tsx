@@ -286,6 +286,11 @@ const CampaignCommandCenter = () => {
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">
+            <OrchestrationVisibilityPanel
+              data={displayEnvelope.orchestrationSummary}
+              isRunning={isRunning}
+              isIdle={displayEnvelope.runMetadata.status === "idle"}
+            />
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
             <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
