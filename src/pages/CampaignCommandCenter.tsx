@@ -18,6 +18,7 @@ import { useRunCampaign } from "@/hooks/use-run-campaign";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope, type RawNormalizedObjects } from "@/types/run-status";
+import RunHistorySelector, { type RunHistoryEntry } from "@/components/command-center/RunHistorySelector";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_SIGNALS: SignalDiscoveryState = {
@@ -55,8 +56,9 @@ const CampaignCommandCenter = () => {
   const [market, setMarket] = useState<MarketOpportunity | null>(null);
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  const { execute, isRunning, state: workflowState } = useRunCampaign();
+  const { execute, isRunning, state: workflowState, history } = useRunCampaign();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -159,6 +161,7 @@ const CampaignCommandCenter = () => {
     if (!result) return;
 
     setEnvelope(result.envelope);
+    setActiveRunId(result.runId);
     setCompression((prev) => ({ ...prev, lastRunAt: result.runTimestamp }));
 
     // Derive strategy & market panels from envelope's normalized objects
@@ -270,6 +273,15 @@ const CampaignCommandCenter = () => {
           <div className="lg:col-span-1 space-y-5">
             <SignalDiscoveryPanel state={signals} onChange={setSignals} />
             <CompressionStatePanel state={compression} onLoadDna={handleLoadDna} onLoadStrategy={handleLoadStrategy} onRerun={handleAnalyze} isLoading={isRunning} />
+            <RunHistorySelector
+              entries={history}
+              activeRunId={activeRunId}
+              onSelect={(entry) => {
+                setEnvelope(entry.result.envelope);
+                setActiveRunId(entry.id);
+                setCompression((prev) => ({ ...prev, lastRunAt: entry.timestamp }));
+              }}
+            />
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">

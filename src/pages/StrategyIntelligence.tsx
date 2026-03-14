@@ -17,6 +17,7 @@ import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
+import RunHistorySelector, { type RunHistoryEntry } from "@/components/command-center/RunHistorySelector";
 import { toast } from "sonner";
 
 const StrategyIntelligence = () => {
@@ -26,8 +27,9 @@ const StrategyIntelligence = () => {
   const [loading, setLoading] = useState(true);
   const [contextPayload, setContextPayload] = useState<Partial<WorkflowPayload>>({});
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  const { execute, isRunning, state: workflowState } = useRunCampaign();
+  const { execute, isRunning, state: workflowState, history } = useRunCampaign();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -87,7 +89,10 @@ const StrategyIntelligence = () => {
       return;
     }
     const result = await execute(payload);
-    if (result) setEnvelope(result.envelope);
+    if (result) {
+      setEnvelope(result.envelope);
+      setActiveRunId(result.runId);
+    }
   };
 
   if (loading) {
@@ -151,6 +156,14 @@ const StrategyIntelligence = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
             <CustomerDNACard />
+            <RunHistorySelector
+              entries={history}
+              activeRunId={activeRunId}
+              onSelect={(entry) => {
+                setEnvelope(entry.result.envelope);
+                setActiveRunId(entry.id);
+              }}
+            />
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-1">
