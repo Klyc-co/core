@@ -144,6 +144,7 @@ const App = () => (
             <Route path="/profile/products/create-line" element={<WithSidebar><CreateProductLine /></WithSidebar>} />
             <Route path="/profile/products/edit/:productId" element={<WithSidebar><EditProduct /></WithSidebar>} />
             <Route path="/campaigns" element={<WithSidebar><Campaigns /></WithSidebar>} />
+            <Route path="/campaigns/command" element={<WithSidebar><CampaignCommandCenter /></WithSidebar>} />
             <Route path="/campaigns/new" element={<WithSidebar><NewCampaign /></WithSidebar>} />
             <Route path="/campaigns/schedule" element={<WithSidebar><Schedule /></WithSidebar>} />
             <Route path="/campaigns/generate" element={<WithSidebar><GenerateCampaignIdeas /></WithSidebar>} />
