@@ -12,6 +12,7 @@ import MarketOpportunityPanel, { type MarketOpportunity } from "@/components/com
 import CompressionStatePanel, { type CompressionState } from "@/components/command-center/CompressionStatePanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
 import RunStatusPanel from "@/components/command-center/RunStatusPanel";
+import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import { toast } from "sonner";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { useRunCampaign } from "@/hooks/use-run-campaign";
@@ -285,6 +286,11 @@ const CampaignCommandCenter = () => {
             <RunStatusPanel data={displayEnvelope} />
           </div>
           <div className="lg:col-span-2 space-y-5">
+            <OrchestrationVisibilityPanel
+              data={displayEnvelope.orchestrationSummary}
+              isRunning={isRunning}
+              isIdle={displayEnvelope.runMetadata.status === "idle"}
+            />
             <StrategyComparisonPanel data={strategy} />
             <MarketOpportunityPanel data={market} />
             <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />

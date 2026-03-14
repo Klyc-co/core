@@ -8,6 +8,7 @@ import PlatformBattleView from "@/components/strategy-intelligence/PlatformBattl
 import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyReasoningPanel";
 import RunStatusPanel from "@/components/command-center/RunStatusPanel";
 import NormalizerReportPanel from "@/components/command-center/NormalizerReportPanel";
+import OrchestrationVisibilityPanel from "@/components/command-center/OrchestrationVisibilityPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
@@ -173,6 +174,11 @@ const StrategyIntelligence = () => {
             <StrategyReasoningPanel />
           </div>
         </div>
+        <OrchestrationVisibilityPanel
+          data={displayEnvelope.orchestrationSummary}
+          isRunning={isRunning}
+          isIdle={displayEnvelope.runMetadata.status === "idle"}
+        />
         <NarrativeSimulationArena />
         <NormalizerReportPanel report={envelope?.rawNormalizedObjects ?? null} />
       </div>
