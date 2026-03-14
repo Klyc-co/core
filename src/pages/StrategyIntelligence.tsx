@@ -17,6 +17,7 @@ import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
+import RunHistorySelector, { type RunHistoryEntry } from "@/components/command-center/RunHistorySelector";
 import { toast } from "sonner";
 
 const StrategyIntelligence = () => {
