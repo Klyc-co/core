@@ -96,9 +96,16 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col bg-background p-4">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(185_75%_55%/0.1),transparent_50%)]" />
       
+      <div className="flex items-center justify-end gap-4 relative z-10 py-2">
+        <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+        <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center">
+
       <div className="w-full max-w-md relative animate-fade-in">
         <button
           onClick={() => navigate("/")}
