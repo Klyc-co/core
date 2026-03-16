@@ -47,7 +47,8 @@ serve(async (req) => {
       });
     }
 
-    const { projectId } = await req.json();
+    const body = await req.json();
+    projectId = body.projectId;
     console.log("Processing project:", projectId, "User:", user.id);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
