@@ -66,6 +66,8 @@ const Processing = () => {
           setStatus(newStatus);
           if (newStatus === "ready_for_edit") {
             navigate(`/projects/${id}/edit`);
+          } else if (newStatus === "error") {
+            setError(true);
           }
         }
       )
