@@ -156,7 +156,7 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
               </h3>
             </div>
 
-            <ScrollArea className="flex-1 max-h-[360px]">
+            <ScrollArea className="flex-1">
               <div className="p-4 space-y-2">
                 {loadingAssets ? (
                   <div className="flex items-center justify-center py-12 text-muted-foreground">
