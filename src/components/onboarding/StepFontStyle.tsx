@@ -86,22 +86,24 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
 
   const biz = useMemo(() => getBusinessInfo(scanData), [scanData]);
 
-  // Build marketing headline + subline from business data
+  // Build a short, punchy 5-7 word headline — never truncated
   const marketingHeadline = useMemo(() => {
-    if (biz.valueProposition) {
-      // Take first sentence or up to 60 chars
-      const first = biz.valueProposition.split(/[.!?]/)[0].trim();
-      return first.length > 60 ? first.slice(0, 57) + "…" : first;
+    const name = biz.name || "Your Brand";
+    if (biz.industry) {
+      return `${name}. ${biz.industry} Redefined.`;
     }
-    return biz.name;
+    return `${name}. Built Different.`;
   }, [biz]);
 
   const marketingSubline = useMemo(() => {
     if (biz.audience) {
-      return `Built for ${biz.audience.split(",")[0].trim().toLowerCase()}`;
+      const first = biz.audience.split(",")[0].trim();
+      // Keep it short: max 5 words
+      const words = first.split(/\s+/).slice(0, 5).join(" ");
+      return `Made for ${words.toLowerCase()}`;
     }
     if (biz.industry) {
-      return `Leading ${biz.industry.toLowerCase()} solutions`;
+      return `Leading ${biz.industry.toLowerCase()}`;
     }
     return "Elevate your brand today";
   }, [biz]);
@@ -224,7 +226,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
                   <ImageIcon className="w-10 h-10 text-white/30" />
                   <p className="text-xs text-white/40">Preview unavailable</p>
                   {/* Still show text overlay on fallback gradient */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 text-center">
                     <div
                       className={cn("transition-all duration-300", activeFont.spacing)}
                       style={{ fontFamily: activeFont.fontFamily }}
@@ -261,7 +263,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                   {/* Marketing text overlay */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 text-center">
                     <div
                       className={cn("transition-all duration-300", activeFont.spacing)}
                       style={{ fontFamily: activeFont.fontFamily }}
