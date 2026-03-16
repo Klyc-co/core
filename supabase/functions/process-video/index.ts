@@ -73,7 +73,19 @@ serve(async (req) => {
       });
     }
 
-    console.log("Transcribing video:", project.original_video_url);
+    // Create a signed URL so AssemblyAI can download the private video
+    const videoPath = project.original_video_url;
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from("videos")
+      .createSignedUrl(videoPath, 3600); // 1 hour
+
+    if (signedError || !signedData?.signedUrl) {
+      console.error("Failed to create signed URL:", signedError);
+      throw new Error("Failed to create signed URL for video");
+    }
+
+    const videoUrl = signedData.signedUrl;
+    console.log("Transcribing video with signed URL");
 
     // Step 1: Upload video to AssemblyAI for transcription
     const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
@@ -83,7 +95,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        audio_url: project.original_video_url,
+        audio_url: videoUrl,
         speaker_labels: false,
       }),
     });

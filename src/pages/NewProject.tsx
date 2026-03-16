@@ -75,8 +75,8 @@ const NewProject = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(fileName);
+      // Store the storage path (not a public URL) so the edge function can create signed URLs
+      const storagePath = fileName;
 
       // Create project
       const { data: project, error: projectError } = await supabase
@@ -84,7 +84,7 @@ const NewProject = () => {
         .insert({
           owner_id: user.id,
           title: title || `Project ${new Date().toLocaleDateString()}`,
-          original_video_url: publicUrl,
+          original_video_url: storagePath,
           status: "processing",
         })
         .select()
