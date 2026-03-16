@@ -91,6 +91,19 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
     fetchAssets();
   }, []);
 
+  // Measure summary column height
+  useEffect(() => {
+    if (summaryRef.current) {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setSummaryHeight(entry.contentRect.height + 48); // +padding
+        }
+      });
+      observer.observe(summaryRef.current);
+      return () => observer.disconnect();
+    }
+  }, [bulletPoints]);
+
   const isImageUrl = (value: string) =>
     /\.(png|jpg|jpeg|gif|svg|webp|ico)(\?.*)?$/i.test(value) ||
     value.startsWith("http");
