@@ -332,7 +332,7 @@ const BottomChatPanel = () => {
     const onMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       const vh = ((window.innerHeight - ev.clientY) / window.innerHeight) * 100;
-      setHeightVh(Math.min(70, Math.max(15, vh)));
+      setHeightVh(Math.min(70, Math.max(8, vh)));
     };
     const onUp = () => {
       isDragging.current = false;
@@ -344,7 +344,7 @@ const BottomChatPanel = () => {
   }, [setHeightVh]);
 
   const nudgeUp = () => setHeightVh(Math.min(70, heightVh + 10));
-  const nudgeDown = () => setHeightVh(Math.max(15, heightVh - 10));
+  const nudgeDown = () => setHeightVh(Math.max(8, heightVh - 10));
 
   return (
     <div
@@ -368,8 +368,11 @@ const BottomChatPanel = () => {
         </button>
       </div>
 
-      {/* Slim header bar */}
-      <div className="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0">
+      {/* Header bar - always visible, acts as collapsed state */}
+      <div className={cn(
+        "px-4 py-2 flex items-center gap-2 shrink-0",
+        heightVh > 18 && "border-b border-border"
+      )}>
         <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
         <span className="text-sm font-semibold text-foreground">Klyc</span>
         <span className="text-xs text-muted-foreground">AI Command Center</span>
