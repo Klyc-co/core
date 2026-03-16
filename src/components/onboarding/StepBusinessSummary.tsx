@@ -129,7 +129,7 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
             )}
 
             {bulletPoints.length > 0 && (
-              <ul className="space-y-3 mt-auto">
+              <ul className="space-y-3">
                 {bulletPoints.map((bp, i) => (
                   <li key={i} className="flex items-start gap-2.5">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
