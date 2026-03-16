@@ -14,6 +14,8 @@ interface Word {
 }
 
 serve(async (req) => {
+  let projectId: string | null = null;
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
