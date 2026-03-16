@@ -130,7 +130,7 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Business summary */}
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col">
+          <div ref={summaryRef} className="bg-card rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col">
             <h2 className="text-xl font-bold text-foreground mb-3">{businessName}</h2>
 
             {description ? (
