@@ -226,7 +226,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
                   <ImageIcon className="w-10 h-10 text-white/30" />
                   <p className="text-xs text-white/40">Preview unavailable</p>
                   {/* Still show text overlay on fallback gradient */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 text-center">
                     <div
                       className={cn("transition-all duration-300", activeFont.spacing)}
                       style={{ fontFamily: activeFont.fontFamily }}
