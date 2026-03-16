@@ -144,99 +144,65 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-6 justify-center">
-              {/* Left arrow */}
-              <button
-                onClick={() => setActiveIndex((i) => Math.max(0, i - 1))}
-                disabled={activeIndex === 0}
-                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-              >
-                <ChevronLeft className="w-5 h-5 text-foreground" />
-              </button>
-
-              {/* Social media post mockup */}
-              <div className="w-full max-w-md flex-shrink-0">
-                {/* Platform header bar */}
-                <div className={cn(
-                  "rounded-t-2xl px-4 py-2.5 flex items-center gap-2",
-                  platformColors[primaryPlatform] || "bg-muted"
-                )}>
-                  {(() => {
-                    const Icon = platformIcons[primaryPlatform];
-                    return Icon ? <Icon className="w-4 h-4 text-white" /> : null;
-                  })()}
-                  <span className="text-white text-sm font-medium">{primaryPlatform}</span>
-                  <span className="text-white/60 text-xs ml-auto">
-                    Post {activeIndex + 1} of {posts.length}
-                  </span>
-                </div>
-
-                {/* Image area */}
-                <div className="relative aspect-square bg-muted border-x border-border overflow-hidden">
-                  {activePost?.imageUrl ? (
-                    <img
-                      src={activePost.imageUrl}
-                      alt={activePost.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-                      <Sparkles className="w-12 h-12 text-muted-foreground/20" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {posts.map((post, idx) => {
+                const platform = post.platforms?.[0] || "Instagram";
+                const Icon = platformIcons[platform];
+                return (
+                  <div key={idx} className="flex flex-col animate-fade-in">
+                    {/* Platform header bar */}
+                    <div className={cn(
+                      "rounded-t-2xl px-4 py-2.5 flex items-center gap-2",
+                      platformColors[platform] || "bg-muted"
+                    )}>
+                      {Icon && <Icon className="w-4 h-4 text-white" />}
+                      <span className="text-white text-sm font-medium">{platform}</span>
                     </div>
-                  )}
-                </div>
 
-                {/* Caption area */}
-                <div className="bg-card border border-border border-t-0 rounded-b-2xl p-5">
-                  <h3 className="text-base font-bold text-foreground mb-2">
-                    {activePost?.title}
-                  </h3>
-                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                    {activePost?.caption}
-                  </p>
-
-                  {/* Platform badges */}
-                  {activePost?.platforms?.length > 0 && (
-                    <div className="flex gap-2 mt-4 pt-3 border-t border-border">
-                      {activePost.platforms.map((p: string) => {
-                        const Icon = platformIcons[p];
-                        return (
-                          <div
-                            key={p}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-xs text-muted-foreground"
-                          >
-                            {Icon && <Icon className="w-3 h-3" />}
-                            {p}
-                          </div>
-                        );
-                      })}
+                    {/* Image area */}
+                    <div className="relative aspect-square bg-muted border-x border-border overflow-hidden">
+                      {post.imageUrl ? (
+                        <img
+                          src={post.imageUrl}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
+                          <Sparkles className="w-10 h-10 text-muted-foreground/20" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Right arrow */}
-              <button
-                onClick={() => setActiveIndex((i) => Math.min(posts.length - 1, i + 1))}
-                disabled={activeIndex === posts.length - 1}
-                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-              >
-                <ChevronRight className="w-5 h-5 text-foreground" />
-              </button>
-            </div>
+                    {/* Caption area */}
+                    <div className="bg-card border border-border border-t-0 rounded-b-2xl p-4 flex-1 flex flex-col">
+                      <h3 className="text-sm font-bold text-foreground mb-1.5">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap flex-1">
+                        {post.caption}
+                      </p>
 
-            {/* Dots indicator */}
-            <div className="flex justify-center gap-2 mt-4">
-              {posts.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveIndex(i)}
-                  className={cn(
-                    "w-2.5 h-2.5 rounded-full transition-all",
-                    i === activeIndex ? "bg-primary scale-110" : "bg-border hover:bg-muted-foreground/40"
-                  )}
-                />
-              ))}
+                      {post.platforms?.length > 0 && (
+                        <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-border">
+                          {post.platforms.map((p: string) => {
+                            const PIcon = platformIcons[p];
+                            return (
+                              <div
+                                key={p}
+                                className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-[11px] text-muted-foreground"
+                              >
+                                {PIcon && <PIcon className="w-3 h-3" />}
+                                {p}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Finish button */}
