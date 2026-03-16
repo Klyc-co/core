@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { Loader2, Sparkles, Linkedin, Instagram, Facebook, Youtube, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface StepGenerateContentProps {
   onNext: () => void;
@@ -19,11 +20,20 @@ const platformIcons: Record<string, any> = {
   TikTok: () => <span className="text-xs font-bold">TT</span>,
 };
 
+const platformColors: Record<string, string> = {
+  LinkedIn: "bg-blue-600",
+  Instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
+  Facebook: "bg-blue-500",
+  YouTube: "bg-red-600",
+  TikTok: "bg-black",
+};
+
 const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGenerateContentProps) => {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [statusMessage, setStatusMessage] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const statusMessages = [
     "Analyzing your brand profile...",
@@ -45,17 +55,23 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
     }, 3000);
 
     try {
-      const summary = scanData?.summary || {};
+      // Fix: read from businessSummary (AI-generated), not summary (asset counts)
+      const biz = scanData?.businessSummary || {};
+      const fallback =
+        typeof scanData?.summary === "object" && scanData?.summary?.businessName
+          ? scanData.summary
+          : {};
+      const merged = { ...fallback, ...biz };
 
       const { data, error } = await supabase.functions.invoke("generate-onboarding-posts", {
         body: {
           websiteUrl: websiteUrl || "",
-          businessName: summary.businessName || "",
-          businessDescription: summary.description || "",
-          industry: summary.industry || "",
-          targetAudience: summary.targetAudience || summary.audience || "",
-          valueProposition: summary.valueProposition || "",
-          productCategory: summary.productCategory || "",
+          businessName: merged.businessName || "",
+          businessDescription: merged.description || "",
+          industry: merged.industry || "",
+          targetAudience: merged.targetAudience || merged.audience || "",
+          valueProposition: merged.valueProposition || "",
+          productCategory: merged.productCategory || "",
           userName: userName || { firstName: "", lastName: "" },
         },
       });
@@ -81,16 +97,22 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
   };
 
   const displayName = userName?.firstName || "there";
+  const activePost = posts[activeIndex];
+  const primaryPlatform = activePost?.platforms?.[0] || "Instagram";
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-3xl animate-fade-in">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-foreground mb-3">
-            {displayName}, let's generate your first content.
+      <div className="w-full max-w-5xl animate-fade-in">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            {generated
+              ? `Here's your first content, ${displayName}.`
+              : `${displayName}, let's generate your first content.`}
           </h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Klyc will create 3 custom posts tailored to your business using everything we learned from your website.
+            {generated
+              ? "Swipe through your AI-generated posts. These are queued for your approval."
+              : "Klyc will create 3 custom posts tailored to your business using everything we learned."}
           </p>
         </div>
 
@@ -122,50 +144,110 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
           </div>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-3 mb-10">
-              {posts.map((post, idx) => (
-                <div
-                  key={idx}
-                  className="bg-card rounded-2xl border border-border p-5 shadow-sm flex flex-col animate-fade-in"
-                >
-                  <div className="w-full h-40 rounded-xl bg-secondary/50 mb-4 overflow-hidden flex items-center justify-center">
-                    {post.imageUrl ? (
-                      <img
-                        src={post.imageUrl}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Sparkles className="w-8 h-8 text-muted-foreground/30" />
-                    )}
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground mb-1">{post.title}</h3>
-                  <p className="text-xs text-muted-foreground mb-4 flex-1 line-clamp-3">{post.caption}</p>
-                  <div className="flex gap-1.5">
-                    {(post.platforms || []).map((p: string) => {
-                      const Icon = platformIcons[p];
-                      return (
-                        <div
-                          key={p}
-                          className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center"
-                          title={p}
-                        >
-                          {Icon && <Icon className="w-3.5 h-3.5 text-muted-foreground" />}
-                        </div>
-                      );
-                    })}
-                  </div>
+            <div className="flex items-center gap-6 justify-center">
+              {/* Left arrow */}
+              <button
+                onClick={() => setActiveIndex((i) => Math.max(0, i - 1))}
+                disabled={activeIndex === 0}
+                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+              >
+                <ChevronLeft className="w-5 h-5 text-foreground" />
+              </button>
+
+              {/* Social media post mockup */}
+              <div className="w-full max-w-md flex-shrink-0">
+                {/* Platform header bar */}
+                <div className={cn(
+                  "rounded-t-2xl px-4 py-2.5 flex items-center gap-2",
+                  platformColors[primaryPlatform] || "bg-muted"
+                )}>
+                  {(() => {
+                    const Icon = platformIcons[primaryPlatform];
+                    return Icon ? <Icon className="w-4 h-4 text-white" /> : null;
+                  })()}
+                  <span className="text-white text-sm font-medium">{primaryPlatform}</span>
+                  <span className="text-white/60 text-xs ml-auto">
+                    Post {activeIndex + 1} of {posts.length}
+                  </span>
                 </div>
+
+                {/* Image area */}
+                <div className="relative aspect-square bg-muted border-x border-border overflow-hidden">
+                  {activePost?.imageUrl ? (
+                    <img
+                      src={activePost.imageUrl}
+                      alt={activePost.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
+                      <Sparkles className="w-12 h-12 text-muted-foreground/20" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption area */}
+                <div className="bg-card border border-border border-t-0 rounded-b-2xl p-5">
+                  <h3 className="text-base font-bold text-foreground mb-2">
+                    {activePost?.title}
+                  </h3>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                    {activePost?.caption}
+                  </p>
+
+                  {/* Platform badges */}
+                  {activePost?.platforms?.length > 0 && (
+                    <div className="flex gap-2 mt-4 pt-3 border-t border-border">
+                      {activePost.platforms.map((p: string) => {
+                        const Icon = platformIcons[p];
+                        return (
+                          <div
+                            key={p}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-xs text-muted-foreground"
+                          >
+                            {Icon && <Icon className="w-3 h-3" />}
+                            {p}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right arrow */}
+              <button
+                onClick={() => setActiveIndex((i) => Math.min(posts.length - 1, i + 1))}
+                disabled={activeIndex === posts.length - 1}
+                className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+              >
+                <ChevronRight className="w-5 h-5 text-foreground" />
+              </button>
+            </div>
+
+            {/* Dots indicator */}
+            <div className="flex justify-center gap-2 mt-4">
+              {posts.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveIndex(i)}
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full transition-all",
+                    i === activeIndex ? "bg-primary scale-110" : "bg-border hover:bg-muted-foreground/40"
+                  )}
+                />
               ))}
             </div>
 
-            <div className="flex justify-center">
+            {/* Finish button */}
+            <div className="flex justify-center mt-8">
               <Button
                 onClick={() => onNext()}
                 size="lg"
                 className="h-12 px-10 text-base font-semibold"
               >
-                Finish
+                Finish & Go to Dashboard
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </>
