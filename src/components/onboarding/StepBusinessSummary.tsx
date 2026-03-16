@@ -159,7 +159,10 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
           </div>
 
           {/* RIGHT: Brand assets */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
+          <div
+            className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden"
+            style={summaryHeight ? { height: summaryHeight } : undefined}
+          >
             <div className="px-6 pt-6 pb-3 border-b border-border">
               <h3 className="text-base font-semibold text-foreground">
                 Brand Assets
