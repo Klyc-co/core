@@ -87,69 +87,91 @@ serve(async (req) => {
     const videoUrl = signedData.signedUrl;
     console.log("Transcribing video with signed URL");
 
+    let transcript: any = null;
+    let duration = 30; // default fallback
+    let noAudio = false;
+
     // Step 1: Upload video to AssemblyAI for transcription
-    const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
-      method: "POST",
-      headers: {
-        "Authorization": assemblyKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        audio_url: videoUrl,
-        speaker_labels: false,
-      }),
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error("AssemblyAI upload error:", errorText);
-      throw new Error("Failed to start transcription");
-    }
-
-    const transcriptData = await uploadResponse.json();
-    const transcriptId = transcriptData.id;
-    console.log("Transcription started:", transcriptId);
-
-    // Step 2: Poll for transcription completion
-    let transcript = null;
-    let attempts = 0;
-    const maxAttempts = 60;
-
-    while (attempts < maxAttempts) {
-      const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-        headers: { "Authorization": assemblyKey },
+    try {
+      const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+        method: "POST",
+        headers: {
+          "Authorization": assemblyKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          audio_url: videoUrl,
+          speaker_labels: false,
+        }),
       });
 
-      const statusData = await statusResponse.json();
-      console.log("Transcription status:", statusData.status);
-
-      if (statusData.status === "completed") {
-        transcript = statusData;
-        break;
-      } else if (statusData.status === "error") {
-        throw new Error(`Transcription failed: ${statusData.error}`);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error("AssemblyAI upload error:", errorText);
+        throw new Error("Failed to start transcription");
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
+      const transcriptData = await uploadResponse.json();
+      const transcriptId = transcriptData.id;
+      console.log("Transcription started:", transcriptId);
+
+      // Step 2: Poll for transcription completion
+      let attempts = 0;
+      const maxAttempts = 60;
+
+      while (attempts < maxAttempts) {
+        const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+          headers: { "Authorization": assemblyKey },
+        });
+
+        const statusData = await statusResponse.json();
+        console.log("Transcription status:", statusData.status);
+
+        if (statusData.status === "completed") {
+          transcript = statusData;
+          break;
+        } else if (statusData.status === "error") {
+          // Check if it's a "no audio" error — handle gracefully
+          const errMsg = statusData.error || "";
+          if (errMsg.includes("No audio") || errMsg.includes("audio stream")) {
+            console.log("No audio stream found — proceeding with time-based segments");
+            noAudio = true;
+            break;
+          }
+          throw new Error(`Transcription failed: ${statusData.error}`);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        attempts++;
+      }
+
+      if (!transcript && !noAudio) {
+        throw new Error("Transcription timed out");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("No audio") || msg.includes("audio stream")) {
+        console.log("No audio — falling back to time-based segments");
+        noAudio = true;
+      } else {
+        throw err;
+      }
     }
 
-    if (!transcript) {
-      throw new Error("Transcription timed out");
+    if (transcript) {
+      console.log("Transcription complete, duration:", transcript.audio_duration);
+      console.log("Words count:", transcript.words?.length || 0);
+      duration = transcript.audio_duration || 30;
     }
-
-    console.log("Transcription complete, duration:", transcript.audio_duration);
-    console.log("Words count:", transcript.words?.length || 0);
 
     // Update project duration
-    const duration = transcript.audio_duration || 30;
     await supabase
       .from("projects")
       .update({ duration_seconds: duration })
       .eq("id", projectId);
 
     // Step 3: Split transcript into ~5 second segments
-    const words: Word[] = transcript.words || [];
+    const words: Word[] = transcript?.words || [];
     const segmentDuration = 5;
     const segments: Array<{
       start_seconds: number;
@@ -158,56 +180,58 @@ serve(async (req) => {
       words_json: Array<{ text: string; start: number; end: number }>;
     }> = [];
 
-    let currentSegment = {
-      start_seconds: 0,
-      end_seconds: 0,
-      wordTexts: [] as string[],
-      words: [] as Array<{ text: string; start: number; end: number }>,
-    };
+    if (!noAudio && words.length > 0) {
+      let currentSegment = {
+        start_seconds: 0,
+        end_seconds: 0,
+        wordTexts: [] as string[],
+        words: [] as Array<{ text: string; start: number; end: number }>,
+      };
 
-    for (const word of words) {
-      const wordStart = word.start / 1000;
-      const wordEnd = word.end / 1000;
+      for (const word of words) {
+        const wordStart = word.start / 1000;
+        const wordEnd = word.end / 1000;
 
-      if (currentSegment.wordTexts.length === 0) {
-        currentSegment.start_seconds = wordStart;
+        if (currentSegment.wordTexts.length === 0) {
+          currentSegment.start_seconds = wordStart;
+        }
+
+        currentSegment.wordTexts.push(word.text);
+        currentSegment.words.push({
+          text: word.text,
+          start: wordStart,
+          end: wordEnd,
+        });
+        currentSegment.end_seconds = wordEnd;
+
+        if (wordEnd - currentSegment.start_seconds >= segmentDuration) {
+          segments.push({
+            start_seconds: currentSegment.start_seconds,
+            end_seconds: currentSegment.end_seconds,
+            transcript_snippet: currentSegment.wordTexts.join(" "),
+            words_json: currentSegment.words,
+          });
+
+          currentSegment = {
+            start_seconds: 0,
+            end_seconds: 0,
+            wordTexts: [],
+            words: [],
+          };
+        }
       }
 
-      currentSegment.wordTexts.push(word.text);
-      currentSegment.words.push({
-        text: word.text,
-        start: wordStart,
-        end: wordEnd,
-      });
-      currentSegment.end_seconds = wordEnd;
-
-      if (wordEnd - currentSegment.start_seconds >= segmentDuration) {
+      if (currentSegment.wordTexts.length > 0) {
         segments.push({
           start_seconds: currentSegment.start_seconds,
           end_seconds: currentSegment.end_seconds,
           transcript_snippet: currentSegment.wordTexts.join(" "),
           words_json: currentSegment.words,
         });
-
-        currentSegment = {
-          start_seconds: 0,
-          end_seconds: 0,
-          wordTexts: [],
-          words: [],
-        };
       }
     }
 
-    if (currentSegment.wordTexts.length > 0) {
-      segments.push({
-        start_seconds: currentSegment.start_seconds,
-        end_seconds: currentSegment.end_seconds,
-        transcript_snippet: currentSegment.wordTexts.join(" "),
-        words_json: currentSegment.words,
-      });
-    }
-
-    if (segments.length === 0 && transcript.text) {
+    if (segments.length === 0 && transcript?.text) {
       const sentences = transcript.text.split(/[.!?]+/).filter((s: string) => s.trim());
       const segmentCount = Math.ceil(duration / segmentDuration);
       const sentencesPerSegment = Math.ceil(sentences.length / segmentCount);
@@ -224,6 +248,22 @@ serve(async (req) => {
           start_seconds: start,
           end_seconds: end,
           transcript_snippet: segmentSentences.join(". ").trim() || "...",
+          words_json: [],
+        });
+      }
+    }
+
+    // Fallback: no audio or no transcript text — create time-based segments
+    if (segments.length === 0) {
+      console.log("No transcript available — creating time-based segments");
+      const segmentCount = Math.max(1, Math.ceil(duration / segmentDuration));
+      for (let i = 0; i < segmentCount; i++) {
+        const start = i * segmentDuration;
+        const end = Math.min((i + 1) * segmentDuration, duration);
+        segments.push({
+          start_seconds: start,
+          end_seconds: end,
+          transcript_snippet: "(visual only)",
           words_json: [],
         });
       }
