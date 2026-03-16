@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle, ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 
@@ -16,6 +16,7 @@ const Processing = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [status, setStatus] = useState("processing");
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -30,6 +31,11 @@ const Processing = () => {
 
       if (data?.status === "ready_for_edit") {
         navigate(`/projects/${id}/edit`);
+        return true;
+      }
+      if (data?.status === "error") {
+        setError(true);
+        setStatus("error");
         return true;
       }
       return false;
@@ -60,6 +66,8 @@ const Processing = () => {
           setStatus(newStatus);
           if (newStatus === "ready_for_edit") {
             navigate(`/projects/${id}/edit`);
+          } else if (newStatus === "error") {
+            setError(true);
           }
         }
       )
@@ -87,11 +95,20 @@ const Processing = () => {
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-3">
-          Processing your video
+          {error ? "Processing failed" : "Processing your video"}
         </h1>
         <p className="text-muted-foreground mb-10">
-          This usually takes less than a minute
+          {error
+            ? "Something went wrong. Please try uploading your video again."
+            : "This usually takes less than a minute"}
         </p>
+
+        {error && (
+          <div className="mb-6 flex items-center gap-2 justify-center text-destructive">
+            <AlertTriangle className="w-5 h-5" />
+            <span className="text-sm">Video processing encountered an error</span>
+          </div>
+        )}
 
         <div className="glass rounded-2xl p-8 max-w-md mx-auto">
           <div className="space-y-4">
