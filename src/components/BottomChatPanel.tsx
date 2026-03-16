@@ -332,7 +332,7 @@ const BottomChatPanel = () => {
     const onMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       const vh = ((window.innerHeight - ev.clientY) / window.innerHeight) * 100;
-      setHeightVh(Math.min(70, Math.max(15, vh)));
+      setHeightVh(Math.min(70, Math.max(8, vh)));
     };
     const onUp = () => {
       isDragging.current = false;
