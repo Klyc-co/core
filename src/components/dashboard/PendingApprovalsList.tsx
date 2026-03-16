@@ -88,7 +88,7 @@ const PendingApprovalsList = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
