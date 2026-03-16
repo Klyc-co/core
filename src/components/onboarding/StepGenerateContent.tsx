@@ -102,7 +102,7 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-5xl animate-fade-in">
+      <div className="w-full max-w-6xl animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
             {generated
