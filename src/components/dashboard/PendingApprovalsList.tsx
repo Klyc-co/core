@@ -73,7 +73,7 @@ const PendingApprovalsList = () => {
   }, []);
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <Card className="h-full max-h-[320px] flex flex-col overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">

@@ -70,7 +70,7 @@ const WeeklyContentCalendar = () => {
   };
 
   return (
-    <Card>
+    <Card className="max-h-[320px]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
