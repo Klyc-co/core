@@ -368,8 +368,11 @@ const BottomChatPanel = () => {
         </button>
       </div>
 
-      {/* Slim header bar */}
-      <div className="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0">
+      {/* Header bar - always visible, acts as collapsed state */}
+      <div className={cn(
+        "px-4 py-2 flex items-center gap-2 shrink-0",
+        heightVh > 18 && "border-b border-border"
+      )}>
         <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
         <span className="text-sm font-semibold text-foreground">Klyc</span>
         <span className="text-xs text-muted-foreground">AI Command Center</span>
