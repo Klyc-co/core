@@ -33,6 +33,11 @@ const Processing = () => {
         navigate(`/projects/${id}/edit`);
         return true;
       }
+      if (data?.status === "error") {
+        setError(true);
+        setStatus("error");
+        return true;
+      }
       return false;
     };
 
