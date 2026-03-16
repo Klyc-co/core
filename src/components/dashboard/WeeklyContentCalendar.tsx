@@ -30,7 +30,11 @@ const WeeklyContentCalendar = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [weekStart, setWeekStart] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
