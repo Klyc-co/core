@@ -86,22 +86,24 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
 
   const biz = useMemo(() => getBusinessInfo(scanData), [scanData]);
 
-  // Build marketing headline + subline from business data
+  // Build a short, punchy 5-7 word headline — never truncated
   const marketingHeadline = useMemo(() => {
-    if (biz.valueProposition) {
-      // Take first sentence or up to 60 chars
-      const first = biz.valueProposition.split(/[.!?]/)[0].trim();
-      return first.length > 60 ? first.slice(0, 57) + "…" : first;
+    const name = biz.name || "Your Brand";
+    if (biz.industry) {
+      return `${name}. ${biz.industry} Redefined.`;
     }
-    return biz.name;
+    return `${name}. Built Different.`;
   }, [biz]);
 
   const marketingSubline = useMemo(() => {
     if (biz.audience) {
-      return `Built for ${biz.audience.split(",")[0].trim().toLowerCase()}`;
+      const first = biz.audience.split(",")[0].trim();
+      // Keep it short: max 5 words
+      const words = first.split(/\s+/).slice(0, 5).join(" ");
+      return `Made for ${words.toLowerCase()}`;
     }
     if (biz.industry) {
-      return `Leading ${biz.industry.toLowerCase()} solutions`;
+      return `Leading ${biz.industry.toLowerCase()}`;
     }
     return "Elevate your brand today";
   }, [biz]);
