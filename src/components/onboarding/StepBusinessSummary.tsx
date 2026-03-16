@@ -59,8 +59,12 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
   const bulletPoints = [
     audience && { label: "Target Audience", value: audience },
     valueProposition && { label: "Value Proposition", value: valueProposition },
+    industry && { label: "Industry", value: industry },
     positioning && { label: "Positioning", value: positioning },
     voice && { label: "Brand Voice", value: voice },
+    productCategory && { label: "Product Category", value: productCategory },
+    geographyMarkets && { label: "Markets", value: geographyMarkets },
+    mainCompetitors && { label: "Competitors", value: mainCompetitors },
   ].filter(Boolean) as { label: string; value: string }[];
 
   useEffect(() => {
