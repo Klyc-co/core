@@ -312,6 +312,18 @@ Examples of good prompts:
   } catch (error: unknown) {
     console.error("Process video error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    // Mark project as error so the UI can show it
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      const body = await req.clone().json().catch(() => ({}));
+      if (body.projectId) {
+        await sb.from("projects").update({ status: "error" }).eq("id", body.projectId);
+      }
+    } catch (_) { /* best effort */ }
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

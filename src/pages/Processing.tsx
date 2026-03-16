@@ -95,11 +95,20 @@ const Processing = () => {
         </div>
 
         <h1 className="text-2xl font-bold text-foreground mb-3">
-          Processing your video
+          {error ? "Processing failed" : "Processing your video"}
         </h1>
         <p className="text-muted-foreground mb-10">
-          This usually takes less than a minute
+          {error
+            ? "Something went wrong. Please try uploading your video again."
+            : "This usually takes less than a minute"}
         </p>
+
+        {error && (
+          <div className="mb-6 flex items-center gap-2 justify-center text-destructive">
+            <AlertTriangle className="w-5 h-5" />
+            <span className="text-sm">Video processing encountered an error</span>
+          </div>
+        )}
 
         <div className="glass rounded-2xl p-8 max-w-md mx-auto">
           <div className="space-y-4">
