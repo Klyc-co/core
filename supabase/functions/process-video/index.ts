@@ -14,6 +14,8 @@ interface Word {
 }
 
 serve(async (req) => {
+  let projectId: string | null = null;
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -45,7 +47,8 @@ serve(async (req) => {
       });
     }
 
-    const { projectId } = await req.json();
+    const body = await req.json();
+    projectId = body.projectId;
     console.log("Processing project:", projectId, "User:", user.id);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -278,46 +281,44 @@ serve(async (req) => {
       const segment = segments[i];
       console.log(`Generating prompt for segment ${i + 1}/${segments.length}`);
 
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: `You are a creative director creating AI B-roll for vertical short-form videos. 
+      const fallbackPrompt = `Cinematic vertical B-roll for seconds ${Math.round(segment.start_seconds)} to ${Math.round(segment.end_seconds)}, smooth camera movement, natural lighting, strong subject focus, visually engaging composition.`;
+      let visualPrompt = fallbackPrompt;
+
+      if (!noAudio && segment.transcript_snippet !== "(visual only)") {
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: `You are a creative director creating AI B-roll for vertical short-form videos. 
 Write a concise 1-2 sentence visual description that:
 - Matches the emotional tone and content of the transcript
 - Works as vertical 9:16 B-roll footage
 - Is cinematic and visually engaging
 - Contains NO text overlays, NO music references, just pure visuals
-- Describes specific scenes, lighting, camera movements, or subjects
+- Describes specific scenes, lighting, camera movements, or subjects`,
+              },
+              {
+                role: "user",
+                content: `Create a visual B-roll prompt for this transcript: "${segment.transcript_snippet}"`,
+              },
+            ],
+          }),
+        });
 
-Examples of good prompts:
-- "Slow motion aerial shot of a city skyline at golden hour, with lens flares catching the setting sun."
-- "Close-up of hands typing on a laptop keyboard, shallow depth of field, warm office lighting."
-- "Time-lapse of clouds moving over mountains, dramatic shadows sweeping across valleys."`,
-            },
-            {
-              role: "user",
-              content: `Create a visual B-roll prompt for this transcript: "${segment.transcript_snippet}"`,
-            },
-          ],
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        console.error("AI API error:", await aiResponse.text());
-        throw new Error("Failed to generate visual prompt");
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          visualPrompt = aiData.choices?.[0]?.message?.content?.replace(/^\["']|["']$/g, "").trim() || fallbackPrompt;
+        } else {
+          console.error("AI API error, using fallback prompt:", await aiResponse.text());
+        }
       }
-
-      const aiData = await aiResponse.json();
-      const visualPrompt = aiData.choices?.[0]?.message?.content || 
-        "Smooth cinematic footage with soft lighting and gentle movement.";
 
       dbSegments.push({
         project_id: projectId,
@@ -325,7 +326,7 @@ Examples of good prompts:
         start_seconds: segment.start_seconds,
         end_seconds: segment.end_seconds,
         transcript_snippet: segment.transcript_snippet,
-        visual_prompt: visualPrompt.replace(/^["']|["']$/g, "").trim(),
+        visual_prompt: visualPrompt,
         use_broll: false,
         broll_status: "not_generated",
         words_json: segment.words_json,
@@ -358,9 +359,8 @@ Examples of good prompts:
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const sb = createClient(supabaseUrl, supabaseKey);
-      const body = await req.clone().json().catch(() => ({}));
-      if (body.projectId) {
-        await sb.from("projects").update({ status: "error" }).eq("id", body.projectId);
+      if (projectId) {
+        await sb.from("projects").update({ status: "error" }).eq("id", projectId);
       }
     } catch (_) { /* best effort */ }
 
