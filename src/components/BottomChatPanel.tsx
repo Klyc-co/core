@@ -344,7 +344,7 @@ const BottomChatPanel = () => {
   }, [setHeightVh]);
 
   const nudgeUp = () => setHeightVh(Math.min(70, heightVh + 10));
-  const nudgeDown = () => setHeightVh(Math.max(15, heightVh - 10));
+  const nudgeDown = () => setHeightVh(Math.max(8, heightVh - 10));
 
   return (
     <div
