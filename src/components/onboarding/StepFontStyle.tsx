@@ -263,7 +263,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                   {/* Marketing text overlay */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 sm:p-8 text-center">
                     <div
                       className={cn("transition-all duration-300", activeFont.spacing)}
                       style={{ fontFamily: activeFont.fontFamily }}
