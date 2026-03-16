@@ -41,13 +41,20 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
   const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
 
-  const summary = scanData?.summary || scanData?.businessSummary || {};
-  const businessName = summary.businessName || "Your Business";
-  const description = summary.description || "";
-  const audience = summary.audience || summary.targetAudience || "";
-  const valueProposition = summary.valueProposition || "";
-  const positioning = summary.positioning || "";
-  const voice = summary.voice || "";
+  // businessSummary is the AI-generated summary; summary is just asset counts
+  const biz = scanData?.businessSummary || {};
+  const fallback = typeof scanData?.summary === 'object' && scanData?.summary?.businessName ? scanData.summary : {};
+  const merged = { ...fallback, ...biz };
+  const businessName = merged.businessName || "Your Business";
+  const description = merged.description || "";
+  const audience = merged.audience || merged.targetAudience || "";
+  const valueProposition = merged.valueProposition || "";
+  const positioning = merged.positioning || "";
+  const voice = merged.voice || "";
+  const industry = merged.industry || "";
+  const productCategory = merged.productCategory || "";
+  const geographyMarkets = merged.geographyMarkets || "";
+  const mainCompetitors = merged.mainCompetitors || "";
 
   const bulletPoints = [
     audience && { label: "Target Audience", value: audience },
