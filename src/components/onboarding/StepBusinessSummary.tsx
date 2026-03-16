@@ -40,6 +40,8 @@ const assetTypeLabel = (type: string) => {
 const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => {
   const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const [summaryHeight, setSummaryHeight] = useState<number | undefined>(undefined);
 
   // businessSummary is the AI-generated summary; summary is just asset counts
   const biz = scanData?.businessSummary || {};
