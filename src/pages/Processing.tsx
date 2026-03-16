@@ -16,6 +16,7 @@ const Processing = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [status, setStatus] = useState("processing");
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
