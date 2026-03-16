@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle2, Pencil, Palette, Type, Image, FileText, Loader2 } from "lucide-react";
@@ -40,6 +40,8 @@ const assetTypeLabel = (type: string) => {
 const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => {
   const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const [summaryHeight, setSummaryHeight] = useState<number | undefined>(undefined);
 
   // businessSummary is the AI-generated summary; summary is just asset counts
   const biz = scanData?.businessSummary || {};
@@ -89,6 +91,19 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
     fetchAssets();
   }, []);
 
+  // Measure summary column height
+  useEffect(() => {
+    if (summaryRef.current) {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          setSummaryHeight(entry.contentRect.height + 48); // +padding
+        }
+      });
+      observer.observe(summaryRef.current);
+      return () => observer.disconnect();
+    }
+  }, [bulletPoints]);
+
   const isImageUrl = (value: string) =>
     /\.(png|jpg|jpeg|gif|svg|webp|ico)(\?.*)?$/i.test(value) ||
     value.startsWith("http");
@@ -115,7 +130,7 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Business summary */}
-          <div className="bg-card rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col">
+          <div ref={summaryRef} className="bg-card rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col">
             <h2 className="text-xl font-bold text-foreground mb-3">{businessName}</h2>
 
             {description ? (
@@ -144,7 +159,10 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
           </div>
 
           {/* RIGHT: Brand assets */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
+          <div
+            className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden"
+            style={summaryHeight ? { height: summaryHeight } : undefined}
+          >
             <div className="px-6 pt-6 pb-3 border-b border-border">
               <h3 className="text-base font-semibold text-foreground">
                 Brand Assets
