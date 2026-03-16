@@ -359,9 +359,8 @@ Write a concise 1-2 sentence visual description that:
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const sb = createClient(supabaseUrl, supabaseKey);
-      const body = await req.clone().json().catch(() => ({}));
-      if (body.projectId) {
-        await sb.from("projects").update({ status: "error" }).eq("id", body.projectId);
+      if (projectId) {
+        await sb.from("projects").update({ status: "error" }).eq("id", projectId);
       }
     } catch (_) { /* best effort */ }
 
