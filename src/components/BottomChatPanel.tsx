@@ -375,7 +375,7 @@ const BottomChatPanel = () => {
         <span className="text-xs text-muted-foreground">AI Command Center</span>
       </div>
 
-      {interviewMode ? (
+      {heightVh <= 18 ? null : interviewMode ? (
         <VoiceInterviewMode
           interviewType={interviewMode}
           onComplete={handleInterviewComplete}
