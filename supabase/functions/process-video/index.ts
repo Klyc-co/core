@@ -87,62 +87,84 @@ serve(async (req) => {
     const videoUrl = signedData.signedUrl;
     console.log("Transcribing video with signed URL");
 
+    let transcript: any = null;
+    let duration = 30; // default fallback
+    let noAudio = false;
+
     // Step 1: Upload video to AssemblyAI for transcription
-    const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
-      method: "POST",
-      headers: {
-        "Authorization": assemblyKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        audio_url: videoUrl,
-        speaker_labels: false,
-      }),
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error("AssemblyAI upload error:", errorText);
-      throw new Error("Failed to start transcription");
-    }
-
-    const transcriptData = await uploadResponse.json();
-    const transcriptId = transcriptData.id;
-    console.log("Transcription started:", transcriptId);
-
-    // Step 2: Poll for transcription completion
-    let transcript = null;
-    let attempts = 0;
-    const maxAttempts = 60;
-
-    while (attempts < maxAttempts) {
-      const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-        headers: { "Authorization": assemblyKey },
+    try {
+      const uploadResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+        method: "POST",
+        headers: {
+          "Authorization": assemblyKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          audio_url: videoUrl,
+          speaker_labels: false,
+        }),
       });
 
-      const statusData = await statusResponse.json();
-      console.log("Transcription status:", statusData.status);
-
-      if (statusData.status === "completed") {
-        transcript = statusData;
-        break;
-      } else if (statusData.status === "error") {
-        throw new Error(`Transcription failed: ${statusData.error}`);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error("AssemblyAI upload error:", errorText);
+        throw new Error("Failed to start transcription");
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
+      const transcriptData = await uploadResponse.json();
+      const transcriptId = transcriptData.id;
+      console.log("Transcription started:", transcriptId);
+
+      // Step 2: Poll for transcription completion
+      let attempts = 0;
+      const maxAttempts = 60;
+
+      while (attempts < maxAttempts) {
+        const statusResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+          headers: { "Authorization": assemblyKey },
+        });
+
+        const statusData = await statusResponse.json();
+        console.log("Transcription status:", statusData.status);
+
+        if (statusData.status === "completed") {
+          transcript = statusData;
+          break;
+        } else if (statusData.status === "error") {
+          // Check if it's a "no audio" error — handle gracefully
+          const errMsg = statusData.error || "";
+          if (errMsg.includes("No audio") || errMsg.includes("audio stream")) {
+            console.log("No audio stream found — proceeding with time-based segments");
+            noAudio = true;
+            break;
+          }
+          throw new Error(`Transcription failed: ${statusData.error}`);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        attempts++;
+      }
+
+      if (!transcript && !noAudio) {
+        throw new Error("Transcription timed out");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("No audio") || msg.includes("audio stream")) {
+        console.log("No audio — falling back to time-based segments");
+        noAudio = true;
+      } else {
+        throw err;
+      }
     }
 
-    if (!transcript) {
-      throw new Error("Transcription timed out");
+    if (transcript) {
+      console.log("Transcription complete, duration:", transcript.audio_duration);
+      console.log("Words count:", transcript.words?.length || 0);
+      duration = transcript.audio_duration || 30;
     }
-
-    console.log("Transcription complete, duration:", transcript.audio_duration);
-    console.log("Words count:", transcript.words?.length || 0);
 
     // Update project duration
-    const duration = transcript.audio_duration || 30;
     await supabase
       .from("projects")
       .update({ duration_seconds: duration })
