@@ -222,7 +222,7 @@ serve(async (req) => {
 
     if (standalone) {
       console.log("Generating standalone Runway video for user:", user.id);
-      const taskId = await createRunwayVideoTask({ prompt, duration: 5 });
+      const taskId = await createRunwayVideoTask({ prompt, duration: 4 });
       const videoUrl = await pollRunwayVideoTask(taskId);
 
       return new Response(JSON.stringify({
