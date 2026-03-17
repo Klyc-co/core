@@ -19,6 +19,8 @@ import {
   Upload,
   Library,
   X,
+  Save,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +48,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [generating, setGenerating] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [savingToLibrary, setSavingToLibrary] = useState(false);
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
 
   // Inspiration images state (up to 5)
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
@@ -60,8 +64,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
     if (!showLibrary) return;
     const fetchLibrary = async () => {
       setLoadingLibrary(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoadingLibrary(false); return; }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoadingLibrary(false);
+        return;
+      }
 
       const { data } = await supabase
         .from("brand_assets")
@@ -91,7 +100,9 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
 
     setUploadingFile(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { publicUrl } = await uploadBrandAssetImage({
@@ -117,6 +128,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
     }
     setGenerating(true);
     setResultUrl(null);
+    setSavedToLibrary(false);
 
     try {
       if (mode === "image") {
@@ -148,6 +160,63 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
     }
   };
 
+  const handleSaveToLibrary = async () => {
+    if (!resultUrl || mode !== "image") return;
+
+    setSavingToLibrary(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please sign in first");
+        return;
+      }
+
+      let durableUrl = resultUrl;
+
+      if (resultUrl.startsWith("data:")) {
+        const response = await fetch(resultUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `creative-studio-${Date.now()}.png`, {
+          type: blob.type || "image/png",
+        });
+
+        const { publicUrl } = await uploadBrandAssetImage({
+          userId: user.id,
+          file,
+          folder: "creative-studio",
+        });
+
+        durableUrl = publicUrl;
+      }
+
+      const imageName = `Creative Studio - ${new Date().toLocaleDateString()}`;
+      const { error } = await supabase.from("brand_assets").insert({
+        user_id: user.id,
+        asset_type: "image",
+        name: imageName,
+        value: durableUrl,
+        metadata: {
+          source: "creative-studio",
+          model: imageModel,
+          prompt,
+          generated_at: new Date().toISOString(),
+        },
+      });
+
+      if (error) throw error;
+
+      setSavedToLibrary(true);
+      toast.success("Saved to Brand Library");
+    } catch (error) {
+      console.error("Failed to save generated image:", error);
+      toast.error("Failed to save to Brand Library");
+    } finally {
+      setSavingToLibrary(false);
+    }
+  };
+
   const handleDownload = () => {
     if (!resultUrl) return;
     const link = document.createElement("a");
@@ -172,7 +241,14 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
       </div>
 
       {/* Mode Tabs */}
-      <Tabs value={mode} onValueChange={(v) => { setMode(v as "image" | "video"); setResultUrl(null); }}>
+      <Tabs
+        value={mode}
+        onValueChange={(v) => {
+          setMode(v as "image" | "video");
+          setResultUrl(null);
+          setSavedToLibrary(false);
+        }}
+      >
         <TabsList className="grid w-full max-w-xs grid-cols-2">
           <TabsTrigger value="image" className="gap-2">
             <Image className="w-4 h-4" /> Image
@@ -288,9 +364,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : libraryImages.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">
-                  No images in your library yet.
-                </p>
+                <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
               ) : (
                 <ScrollArea className="max-h-48">
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
@@ -365,6 +439,24 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
                 <video src={resultUrl} controls className="w-full rounded-lg" />
               )}
               <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {mode === "image" && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleSaveToLibrary}
+                    disabled={savingToLibrary || savedToLibrary}
+                    title={savedToLibrary ? "Saved to Brand Library" : "Save to Brand Library"}
+                    className="gap-2"
+                  >
+                    {savingToLibrary ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : savedToLibrary ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
+                  </Button>
+                )}
                 <Button size="icon" variant="secondary" onClick={handleDownload} title="Download">
                   <Download className="w-4 h-4" />
                 </Button>
