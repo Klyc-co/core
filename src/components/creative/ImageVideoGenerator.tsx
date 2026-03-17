@@ -286,10 +286,28 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
             </Select>
           </div>
         </TabsContent>
-        <TabsContent value="video" className="mt-4">
-          <p className="text-sm text-muted-foreground mb-3">
+        <TabsContent value="video" className="mt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
             Describe the video clip you want to generate. Include details about motion, scene, and mood.
           </p>
+          <div className="flex items-center gap-3">
+            <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
+            <Select value={videoModel} onValueChange={(v) => setVideoModel(v as VideoModel)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VIDEO_MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <div className="flex flex-col">
+                      <span>{m.label}</span>
+                      <span className="text-xs text-muted-foreground">{m.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </TabsContent>
       </Tabs>
 
