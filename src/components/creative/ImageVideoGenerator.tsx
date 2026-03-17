@@ -25,11 +25,16 @@ import {
 import { toast } from "sonner";
 
 type ImageModel = "nano-banana" | "runway" | "fooocus";
+type VideoModel = "runway";
 
 const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
   { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
   { value: "runway", label: "Runway", description: "High-quality cinematic visuals" },
   { value: "fooocus", label: "Fooocus", description: "Fine-tuned artistic styles" },
+];
+
+const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
+  { value: "runway", label: "Runway", description: "Cinematic text-to-video generation" },
 ];
 
 interface ImageVideoGeneratorProps {
@@ -46,12 +51,12 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
+  const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [savingToLibrary, setSavingToLibrary] = useState(false);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
 
-  // Inspiration images state (up to 5)
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
@@ -59,7 +64,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch brand asset images when library is opened
   useEffect(() => {
     if (!showLibrary) return;
     const fetchLibrary = async () => {
@@ -126,6 +130,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
       toast.error("Please enter a description");
       return;
     }
+
     setGenerating(true);
     setResultUrl(null);
     setSavedToLibrary(false);
@@ -138,20 +143,20 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
         const { data, error } = await supabase.functions.invoke("generate-image", { body });
         if (error) throw error;
         if (!data?.imageUrl) throw new Error("No image returned");
+
         setResultUrl(data.imageUrl);
         toast.success("Image generated!");
-      } else {
-        const { data, error } = await supabase.functions.invoke("generate-broll", {
-          body: { prompt, standalone: true },
-        });
-        if (error) throw error;
-        if (data?.videoUrl) {
-          setResultUrl(data.videoUrl);
-          toast.success("Video generated!");
-        } else {
-          toast.info("Video generation started — this may take a few minutes.");
-        }
+        return;
       }
+
+      const { data, error } = await supabase.functions.invoke("generate-broll", {
+        body: { prompt, standalone: true, model: videoModel },
+      });
+      if (error) throw error;
+      if (!data?.videoUrl) throw new Error("No video returned");
+
+      setResultUrl(data.videoUrl);
+      toast.success("Video generated!");
     } catch (err: any) {
       console.error("Generation error:", err);
       toast.error(err.message || "Generation failed");
