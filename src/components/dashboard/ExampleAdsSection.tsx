@@ -1,59 +1,38 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Play, Megaphone } from "lucide-react";
-import adVideo01 from "@/assets/example-ads/0220_1.mp4";
-import adVideo02 from "@/assets/example-ads/0222.mp4";
-import adVideo03 from "@/assets/example-ads/0309_1.mp4";
-import adVideo04 from "@/assets/example-ads/0318_2.mp4";
-import adVideo05 from "@/assets/example-ads/0323_1.mp4";
-import adVideo06 from "@/assets/example-ads/0326.mp4";
-import adVideo07 from "@/assets/example-ads/1201.mp4";
-import adVideo08 from "@/assets/example-ads/1204.mp4";
-import adVideo09 from "@/assets/example-ads/1210_1_1.mp4";
-import adVideo10 from "@/assets/example-ads/1211.mp4";
-import adVideo11 from "@/assets/example-ads/1216_1.mp4";
-import adVideo12 from "@/assets/example-ads/1217_1.mp4";
-import adVideo13 from "@/assets/example-ads/1218_1.mp4";
-import adVideo14 from "@/assets/example-ads/1219.mp4";
-import adVideo15 from "@/assets/example-ads/1222.mp4";
-import adVideo16 from "@/assets/example-ads/1228_1.mp4";
-import adVideo17 from "@/assets/example-ads/1228_2.mp4";
-import adVideo18 from "@/assets/example-ads/1228.mp4";
-import adVideo19 from "@/assets/example-ads/1229_1.mp4";
-import adVideo20 from "@/assets/example-ads/1229_2.mp4";
 
-const exampleAds = [
-  { title: "Example Ad 01", videoUrl: adVideo01 },
-  { title: "Example Ad 02", videoUrl: adVideo02 },
-  { title: "Example Ad 03", videoUrl: adVideo03 },
-  { title: "Example Ad 04", videoUrl: adVideo04 },
-  { title: "Example Ad 05", videoUrl: adVideo05 },
-  { title: "Example Ad 06", videoUrl: adVideo06 },
-  { title: "Example Ad 07", videoUrl: adVideo07 },
-  { title: "Example Ad 08", videoUrl: adVideo08 },
-  { title: "Example Ad 09", videoUrl: adVideo09 },
-  { title: "Example Ad 10", videoUrl: adVideo10 },
-  { title: "Example Ad 11", videoUrl: adVideo11 },
-  { title: "Example Ad 12", videoUrl: adVideo12 },
-  { title: "Example Ad 13", videoUrl: adVideo13 },
-  { title: "Example Ad 14", videoUrl: adVideo14 },
-  { title: "Example Ad 15", videoUrl: adVideo15 },
-  { title: "Example Ad 16", videoUrl: adVideo16 },
-  { title: "Example Ad 17", videoUrl: adVideo17 },
-  { title: "Example Ad 18", videoUrl: adVideo18 },
-  { title: "Example Ad 19", videoUrl: adVideo19 },
-  { title: "Example Ad 20", videoUrl: adVideo20 },
-].map((ad) => ({
-  ...ad,
-  platform: "Video ad",
-  angle: "Creative reference",
-  result: "Use this as inspiration for pacing and framing",
-}));
+const videoModules = import.meta.glob("../../assets/example-ads/*.mp4", {
+  eager: true,
+  import: "default",
+}) as Record<string, string>;
+
+const getDisplayName = (filePath: string) => {
+  const fileName = filePath.split("/").pop()?.replace(/\.mp4$/i, "") ?? "example-ad";
+  return fileName.replace(/[_-]+/g, " ").trim();
+};
 
 export default function ExampleAdsSection() {
   const navigate = useNavigate();
+
+  const exampleAds = useMemo(
+    () =>
+      Object.entries(videoModules)
+        .sort(([pathA], [pathB]) => pathA.localeCompare(pathB, undefined, { numeric: true }))
+        .map(([filePath, videoUrl], index) => ({
+          id: filePath,
+          title: `Example Ad ${String(index + 1).padStart(2, "0")}`,
+          fileLabel: getDisplayName(filePath),
+          videoUrl,
+          platform: "Video ad",
+          angle: "Creative reference",
+          result: "Use this as inspiration for pacing, framing, and creative structure.",
+        })),
+    []
+  );
 
   return (
     <Card>
@@ -78,7 +57,7 @@ export default function ExampleAdsSection() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {exampleAds.map((ad) => (
             <article
-              key={ad.title}
+              key={ad.id}
               className="overflow-hidden rounded-xl border border-border bg-muted/30 transition-colors hover:border-primary/40"
             >
               <div className="border-b border-border bg-background/80">
@@ -100,7 +79,10 @@ export default function ExampleAdsSection() {
                     <Badge variant="outline" className="w-fit bg-background/80">
                       {ad.platform}
                     </Badge>
-                    <h3 className="font-semibold leading-snug text-foreground">{ad.title}</h3>
+                    <div className="space-y-1">
+                      <h3 className="font-semibold leading-snug text-foreground">{ad.title}</h3>
+                      <p className="text-xs text-muted-foreground">{ad.fileLabel}</p>
+                    </div>
                   </div>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Play className="h-4 w-4" />
