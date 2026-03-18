@@ -116,21 +116,67 @@ async function pollRunwayVideoTask(taskId: string) {
   throw new Error("Runway video generation timed out. Please try again.");
 }
 
+function encodeBase64Url(value: string | Uint8Array) {
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function createKlingJwtToken() {
+  const accessKey = Deno.env.get("KLING_ACCESS_KEY");
+  const secretKey = Deno.env.get("KLING_SECRET_KEY");
+  const legacyApiKey = Deno.env.get("KLING_API_KEY");
+
+  if (accessKey && secretKey) {
+    const now = Math.floor(Date.now() / 1000);
+    const header = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+    const payload = encodeBase64Url(JSON.stringify({
+      iss: accessKey,
+      exp: now + 1800,
+      nbf: now - 5,
+    }));
+    const signingInput = `${header}.${payload}`;
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secretKey),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+
+    const signature = await crypto.subtle.sign(
+      "HMAC",
+      cryptoKey,
+      new TextEncoder().encode(signingInput),
+    );
+
+    return `${signingInput}.${encodeBase64Url(new Uint8Array(signature))}`;
+  }
+
+  if (legacyApiKey) {
+    return legacyApiKey;
+  }
+
+  throw new Error("Kling credentials are not configured");
+}
+
 async function createKlingVideoTask({
   prompt,
   duration = "5",
   aspectRatio = "16:9",
 }: KlingVideoOptions) {
-  const klingKey = Deno.env.get("KLING_API_KEY");
-
-  if (!klingKey) {
-    throw new Error("KLING_API_KEY is not configured");
-  }
+  const klingToken = await createKlingJwtToken();
 
   const klingResponse = await fetch("https://api-singapore.klingai.com/v1/videos/text2video", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${klingKey}`,
+      Authorization: `Bearer ${klingToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -149,7 +195,7 @@ async function createKlingVideoTask({
     console.error("Kling API error:", klingResponse.status, errorText);
 
     if (klingResponse.status === 401) {
-      throw new Error("Invalid Kling API key.");
+      throw new Error("Invalid Kling credentials.");
     }
     if (klingResponse.status === 429) {
       throw new Error("Kling rate limit exceeded. Please try again later.");
@@ -170,11 +216,7 @@ async function createKlingVideoTask({
 }
 
 async function pollKlingVideoTask(taskId: string) {
-  const klingKey = Deno.env.get("KLING_API_KEY");
-
-  if (!klingKey) {
-    throw new Error("KLING_API_KEY is not configured");
-  }
+  const klingToken = await createKlingJwtToken();
 
   let attempts = 0;
   const maxAttempts = 180;
