@@ -224,7 +224,7 @@ async function pollKlingVideoTask(taskId: string) {
   while (attempts < maxAttempts) {
     const statusResponse = await fetch(`https://api-singapore.klingai.com/v1/videos/text2video/${taskId}`, {
       headers: {
-        Authorization: `Bearer ${klingKey}`,
+        Authorization: `Bearer ${klingToken}`,
       },
     });
 
