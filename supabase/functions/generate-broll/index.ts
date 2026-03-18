@@ -13,6 +13,12 @@ type RunwayVideoOptions = {
   audio?: boolean;
 };
 
+type KlingVideoOptions = {
+  prompt: string;
+  duration?: "5" | "10";
+  aspectRatio?: "16:9" | "9:16" | "1:1";
+};
+
 async function createRunwayVideoTask({
   prompt,
   duration,
@@ -108,6 +114,105 @@ async function pollRunwayVideoTask(taskId: string) {
   }
 
   throw new Error("Runway video generation timed out. Please try again.");
+}
+
+async function createKlingVideoTask({
+  prompt,
+  duration = "5",
+  aspectRatio = "16:9",
+}: KlingVideoOptions) {
+  const klingKey = Deno.env.get("KLING_API_KEY");
+
+  if (!klingKey) {
+    throw new Error("KLING_API_KEY is not configured");
+  }
+
+  const klingResponse = await fetch("https://api-singapore.klingai.com/v1/videos/text2video", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${klingKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model_name: "kling-v2-6",
+      prompt,
+      negative_prompt: "",
+      duration,
+      mode: "std",
+      sound: "off",
+      aspect_ratio: aspectRatio,
+    }),
+  });
+
+  if (!klingResponse.ok) {
+    const errorText = await klingResponse.text();
+    console.error("Kling API error:", klingResponse.status, errorText);
+
+    if (klingResponse.status === 401) {
+      throw new Error("Invalid Kling API key.");
+    }
+    if (klingResponse.status === 429) {
+      throw new Error("Kling rate limit exceeded. Please try again later.");
+    }
+
+    throw new Error(`Kling video generation failed: ${klingResponse.status}`);
+  }
+
+  const klingData = await klingResponse.json();
+  const taskId = klingData?.data?.task_id;
+
+  if (!taskId) {
+    throw new Error("Kling did not return a task ID.");
+  }
+
+  console.log("Kling task created:", taskId);
+  return taskId as string;
+}
+
+async function pollKlingVideoTask(taskId: string) {
+  const klingKey = Deno.env.get("KLING_API_KEY");
+
+  if (!klingKey) {
+    throw new Error("KLING_API_KEY is not configured");
+  }
+
+  let attempts = 0;
+  const maxAttempts = 180;
+
+  while (attempts < maxAttempts) {
+    const statusResponse = await fetch(`https://api-singapore.klingai.com/v1/videos/text2video/${taskId}`, {
+      headers: {
+        Authorization: `Bearer ${klingKey}`,
+      },
+    });
+
+    if (!statusResponse.ok) {
+      const errorText = await statusResponse.text();
+      console.error("Kling poll error:", statusResponse.status, errorText);
+      throw new Error(`Failed to check Kling task status: ${statusResponse.status}`);
+    }
+
+    const statusData = await statusResponse.json();
+    const taskStatus = statusData?.data?.task_status;
+    console.log("Kling task status:", taskStatus);
+
+    if (taskStatus === "succeed") {
+      const videoUrl = statusData?.data?.task_result?.videos?.[0]?.url;
+      if (!videoUrl) {
+        throw new Error("Kling task succeeded but no video was returned.");
+      }
+      return videoUrl as string;
+    }
+
+    if (taskStatus === "failed") {
+      throw new Error(statusData?.data?.task_status_msg || "Kling video generation failed.");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    attempts++;
+  }
+
+  throw new Error("Kling video generation timed out. Please try again.");
 }
 
 function getSegmentDuration(segment: { start_seconds: number; end_seconds: number }) {
@@ -213,7 +318,7 @@ serve(async (req) => {
       });
     }
 
-    if (model !== "runway") {
+    if (!["runway", "kling"].includes(model)) {
       return new Response(JSON.stringify({ error: "Unsupported video model" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -221,15 +326,23 @@ serve(async (req) => {
     }
 
     if (standalone) {
-      console.log("Generating standalone Runway video for user:", user.id);
-      const taskId = await createRunwayVideoTask({ prompt, duration: 4 });
-      const videoUrl = await pollRunwayVideoTask(taskId);
+      console.log(`Generating standalone ${model} video for user:`, user.id);
+      const videoUrl = model === "kling"
+        ? await pollKlingVideoTask(await createKlingVideoTask({ prompt }))
+        : await pollRunwayVideoTask(await createRunwayVideoTask({ prompt, duration: 4 }));
 
       return new Response(JSON.stringify({
         message: "Video generated successfully",
         model,
         videoUrl,
       }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (model !== "runway") {
+      return new Response(JSON.stringify({ error: "Kling is currently available for standalone clip generation only" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
