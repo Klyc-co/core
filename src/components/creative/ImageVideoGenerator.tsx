@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 
 type ImageModel = "nano-banana" | "runway" | "fooocus";
-type VideoModel = "runway";
+type VideoModel = "runway" | "kling";
 
 const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
   { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
@@ -35,6 +35,7 @@ const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] 
 
 const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
   { value: "runway", label: "Runway", description: "Cinematic text-to-video generation" },
+  { value: "kling", label: "Kling", description: "Official Kling text-to-video clips" },
 ];
 
 interface ImageVideoGeneratorProps {

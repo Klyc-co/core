@@ -318,7 +318,7 @@ serve(async (req) => {
       });
     }
 
-    if (model !== "runway") {
+    if (!["runway", "kling"].includes(model)) {
       return new Response(JSON.stringify({ error: "Unsupported video model" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -326,15 +326,23 @@ serve(async (req) => {
     }
 
     if (standalone) {
-      console.log("Generating standalone Runway video for user:", user.id);
-      const taskId = await createRunwayVideoTask({ prompt, duration: 4 });
-      const videoUrl = await pollRunwayVideoTask(taskId);
+      console.log(`Generating standalone ${model} video for user:`, user.id);
+      const videoUrl = model === "kling"
+        ? await pollKlingVideoTask(await createKlingVideoTask({ prompt }))
+        : await pollRunwayVideoTask(await createRunwayVideoTask({ prompt, duration: 4 }));
 
       return new Response(JSON.stringify({
         message: "Video generated successfully",
         model,
         videoUrl,
       }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (model !== "runway") {
+      return new Response(JSON.stringify({ error: "Kling is currently available for standalone clip generation only" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
