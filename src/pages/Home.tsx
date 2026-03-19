@@ -8,6 +8,7 @@ import { WebsiteAnalyticsSummary } from "@/components/WebsiteAnalyticsSummary";
 import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSummary";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import ExampleAdsSection from "@/components/dashboard/ExampleAdsSection";
+import AnimatedAdsSection from "@/components/dashboard/AnimatedAdsSection";
 import PendingApprovalsList from "@/components/dashboard/PendingApprovalsList";
 import WeeklyContentCalendar from "@/components/dashboard/WeeklyContentCalendar";
 
