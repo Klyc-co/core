@@ -69,6 +69,9 @@ const Home = () => {
         {/* Example Ads */}
         <ExampleAdsSection />
 
+        {/* Animated Ads */}
+        <AnimatedAdsSection />
+
         {/* Analytics */}
         <WebsiteAnalyticsSummary 
           showFullButton 
