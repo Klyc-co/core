@@ -90,14 +90,6 @@ const Campaigns = () => {
           
           <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
             <Button 
-              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-xs sm:text-sm col-span-2 sm:col-span-1"
-              onClick={() => navigate("/campaigns/command")}
-            >
-              <Zap className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Command Center</span>
-              <span className="sm:hidden">Command</span>
-            </Button>
-            <Button 
               className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-xs sm:text-sm"
               onClick={() => navigate("/campaigns/new")}
             >
