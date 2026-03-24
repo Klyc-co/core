@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap } from "lucide-react";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -696,14 +696,23 @@ const GenerateCampaignIdeas = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Campaigns
           </Button>
-          <Button 
-            variant="outline"
-            onClick={() => navigate("/campaigns/drafts")}
-            className="gap-2"
-          >
-            <FileStack className="w-4 h-4" />
-            Campaign Drafts
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+              onClick={() => navigate("/campaigns/command")}
+            >
+              <Zap className="w-4 h-4" />
+              Command Center
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => navigate("/campaigns/drafts")}
+              className="gap-2"
+            >
+              <FileStack className="w-4 h-4" />
+              Campaign Drafts
+            </Button>
+          </div>
         </div>
         
         <div className="mb-8">
