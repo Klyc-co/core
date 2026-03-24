@@ -19,25 +19,12 @@ interface PastCampaign {
   status: string;
 }
 
-interface CampaignDraftOption {
-  id: string;
-  campaign_idea: string | null;
-  content_type: string | null;
-  created_at: string;
-}
-
 const Campaigns = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [pastCampaigns, setPastCampaigns] = useState<PastCampaign[]>([]);
   const [loadingPast, setLoadingPast] = useState(true);
-  const { isLaunching, lastResult, launch } = useLaunchCampaign();
-  const [launchModalOpen, setLaunchModalOpen] = useState(false);
-  const [selectedDraftId, setSelectedDraftId] = useState<string>("");
-  const [drafts, setDrafts] = useState<CampaignDraftOption[]>([]);
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [showPayload, setShowPayload] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
