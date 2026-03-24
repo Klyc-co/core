@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -41,6 +41,8 @@ import { Textarea } from "@/components/ui/textarea";
 import LibraryAssetPicker from "@/components/LibraryAssetPicker";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
+import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SocialPlatform {
   id: string;
@@ -87,6 +89,10 @@ const NewCampaign = () => {
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const { isLaunching: isLaunchingCampaign, lastResult, launch } = useLaunchCampaign();
+  const [launchModalOpen, setLaunchModalOpen] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [showPayload, setShowPayload] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -436,14 +442,31 @@ const NewCampaign = () => {
 
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Create New Campaign</h1>
-          <Button
-            variant="outline"
-            className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
-            onClick={() => setShowDraftPicker(true)}
-          >
-            <FileText className="w-4 h-4" />
-            Use Draft
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+              onClick={() => { setIsTestMode(false); setLaunchModalOpen(true); }}
+            >
+              <Rocket className="w-4 h-4" />
+              Launch Campaign
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 border-muted-foreground/30"
+              onClick={() => { setIsTestMode(true); setLaunchModalOpen(true); }}
+            >
+              <FlaskConical className="w-4 h-4" />
+              Test Launch
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
+              onClick={() => setShowDraftPicker(true)}
+            >
+              <FileText className="w-4 h-4" />
+              Use Draft
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-8">
