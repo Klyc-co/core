@@ -901,6 +901,71 @@ const NewCampaign = () => {
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Launch Campaign Dialog */}
+      <Dialog open={launchModalOpen} onOpenChange={setLaunchModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
+              {isTestMode ? "Test Campaign Launch" : "Launch Campaign"}
+            </DialogTitle>
+            <DialogDescription>
+              {isTestMode
+                ? "Generate a test campaign context payload and inspect the result."
+                : "Build and process the full campaign context through the KLYC orchestrator."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 flex-1 overflow-auto">
+            <Button
+              className="w-full gap-2"
+              disabled={isLaunchingCampaign}
+              onClick={async () => {
+                await launch(undefined, isTestMode);
+                if (!isTestMode) setLaunchModalOpen(false);
+              }}
+            >
+              {isLaunchingCampaign ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isTestMode ? "Generating..." : "Launching..."}
+                </>
+              ) : (
+                <>
+                  {isTestMode ? <FlaskConical className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
+                  {isTestMode ? "Generate Test Payload" : "Launch Now"}
+                </>
+              )}
+            </Button>
+
+            {isTestMode && lastResult?.campaignContext && (
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setShowPayload(!showPayload)}
+                >
+                  {showPayload ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showPayload ? "Hide" : "Show"} Full Payload
+                </Button>
+                {showPayload && (
+                  <ScrollArea className="h-[300px] rounded border border-border">
+                    <pre className="p-3 text-[10px] leading-tight font-mono text-foreground">
+                      {JSON.stringify(lastResult.campaignContext, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                )}
+              </div>
+            )}
+
+            {lastResult?.error && (
+              <p className="text-sm text-destructive">{lastResult.error}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

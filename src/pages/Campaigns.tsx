@@ -5,13 +5,10 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, History, Sparkles, Send, Rocket, FlaskConical, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Clock, History, Sparkles, Send } from "lucide-react";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
-import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import type { User } from "@supabase/supabase-js";
 import type { User } from "@supabase/supabase-js";
 
 interface PastCampaign {
