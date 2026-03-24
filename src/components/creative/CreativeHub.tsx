@@ -1,7 +1,7 @@
-import { Image, FileText, Film } from "lucide-react";
+import { Image, FileText, Film, UserCheck } from "lucide-react";
 
 interface CreativeHubProps {
-  onSelect: (tool: "image-video" | "flyer" | "broll") => void;
+  onSelect: (tool: "image-video" | "flyer" | "broll" | "hire") => void;
 }
 
 const tools = [
@@ -28,6 +28,14 @@ const tools = [
     icon: Film,
     color: "#a855f7",
     iconBg: "rgba(168,85,247,0.10)",
+  },
+  {
+    id: "hire" as const,
+    title: "Hire a Professional",
+    description: "Hire a KLYC team member to create any kind of video ad for you. Get custom, high-quality creatives tailored to your brand.",
+    icon: UserCheck,
+    color: "#f59e0b",
+    iconBg: "rgba(245,158,11,0.10)",
   },
 ];
 

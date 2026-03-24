@@ -6,9 +6,10 @@ import AppHeader from "@/components/AppHeader";
 import CreativeHub from "@/components/creative/CreativeHub";
 import ImageVideoGenerator from "@/components/creative/ImageVideoGenerator";
 import FlyerGeneratorView from "@/components/creative/FlyerGeneratorView";
+import HireAProfessional from "@/components/creative/HireAProfessional";
 import type { User } from "@supabase/supabase-js";
 
-type ActiveTool = "hub" | "image-video" | "flyer" | "broll";
+type ActiveTool = "hub" | "image-video" | "flyer" | "broll" | "hire";
 
 const CreativeStudio = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const CreativeStudio = () => {
     init();
   }, [navigate]);
 
-  const handleSelect = (tool: "image-video" | "flyer" | "broll") => {
+  const handleSelect = (tool: "image-video" | "flyer" | "broll" | "hire") => {
     if (tool === "broll") {
       navigate("/projects", { state: { fromCreative: true } });
       return;
@@ -70,6 +71,7 @@ const CreativeStudio = () => {
             onBack={() => setActiveTool("hub")}
           />
         )}
+        {activeTool === "hire" && <HireAProfessional onBack={() => setActiveTool("hub")} />}
       </div>
     </div>
   );
