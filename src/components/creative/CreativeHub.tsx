@@ -47,23 +47,22 @@ const CreativeHub = ({ onSelect }: CreativeHubProps) => {
         <p className="text-muted-foreground mt-2">Choose a tool to get started</p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-4 gap-4">
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
             <button
               key={tool.id}
               onClick={() => onSelect(tool.id)}
-              className="group relative flex flex-col items-center text-center p-8 rounded-2xl border border-border bg-card hover:border-border/80 hover:shadow-md transition-all duration-200"
+              className="group flex flex-col items-center text-center p-5 rounded-2xl border border-border bg-card hover:border-border/80 hover:shadow-md transition-all duration-200"
             >
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform"
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"
                 style={{ background: tool.iconBg }}
               >
-                <Icon className="w-8 h-8" style={{ color: tool.color }} />
+                <Icon className="w-6 h-6" style={{ color: tool.color }} />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{tool.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{tool.description}</p>
+              <h3 className="text-sm font-semibold text-foreground">{tool.title}</h3>
             </button>
           );
         })}
