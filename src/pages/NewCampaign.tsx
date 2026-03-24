@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -41,6 +41,8 @@ import { Textarea } from "@/components/ui/textarea";
 import LibraryAssetPicker from "@/components/LibraryAssetPicker";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
+import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SocialPlatform {
   id: string;
@@ -87,6 +89,10 @@ const NewCampaign = () => {
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const { isLaunching: isLaunchingCampaign, lastResult, launch } = useLaunchCampaign();
+  const [launchModalOpen, setLaunchModalOpen] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [showPayload, setShowPayload] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -436,14 +442,31 @@ const NewCampaign = () => {
 
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Create New Campaign</h1>
-          <Button
-            variant="outline"
-            className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
-            onClick={() => setShowDraftPicker(true)}
-          >
-            <FileText className="w-4 h-4" />
-            Use Draft
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+              onClick={() => { setIsTestMode(false); setLaunchModalOpen(true); }}
+            >
+              <Rocket className="w-4 h-4" />
+              Launch Campaign
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 border-muted-foreground/30"
+              onClick={() => { setIsTestMode(true); setLaunchModalOpen(true); }}
+            >
+              <FlaskConical className="w-4 h-4" />
+              Test Launch
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
+              onClick={() => setShowDraftPicker(true)}
+            >
+              <FileText className="w-4 h-4" />
+              Use Draft
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-8">
@@ -878,6 +901,71 @@ const NewCampaign = () => {
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Launch Campaign Dialog */}
+      <Dialog open={launchModalOpen} onOpenChange={setLaunchModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
+              {isTestMode ? "Test Campaign Launch" : "Launch Campaign"}
+            </DialogTitle>
+            <DialogDescription>
+              {isTestMode
+                ? "Generate a test campaign context payload and inspect the result."
+                : "Build and process the full campaign context through the KLYC orchestrator."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 flex-1 overflow-auto">
+            <Button
+              className="w-full gap-2"
+              disabled={isLaunchingCampaign}
+              onClick={async () => {
+                await launch(undefined, isTestMode);
+                if (!isTestMode) setLaunchModalOpen(false);
+              }}
+            >
+              {isLaunchingCampaign ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isTestMode ? "Generating..." : "Launching..."}
+                </>
+              ) : (
+                <>
+                  {isTestMode ? <FlaskConical className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
+                  {isTestMode ? "Generate Test Payload" : "Launch Now"}
+                </>
+              )}
+            </Button>
+
+            {isTestMode && lastResult?.campaignContext && (
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setShowPayload(!showPayload)}
+                >
+                  {showPayload ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showPayload ? "Hide" : "Show"} Full Payload
+                </Button>
+                {showPayload && (
+                  <ScrollArea className="h-[300px] rounded border border-border">
+                    <pre className="p-3 text-[10px] leading-tight font-mono text-foreground">
+                      {JSON.stringify(lastResult.campaignContext, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                )}
+              </div>
+            )}
+
+            {lastResult?.error && (
+              <p className="text-sm text-destructive">{lastResult.error}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
