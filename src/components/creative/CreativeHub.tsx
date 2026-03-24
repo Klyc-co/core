@@ -47,7 +47,7 @@ const CreativeHub = ({ onSelect }: CreativeHubProps) => {
         <p className="text-muted-foreground mt-2">Choose a tool to get started</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
