@@ -7,8 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Clock, History, Sparkles, Send } from "lucide-react";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
-import { Badge } from "@/components/ui/badge";
-import type { User } from "@supabase/supabase-js";
 import type { User } from "@supabase/supabase-js";
 
 interface PastCampaign {
@@ -38,30 +36,13 @@ const Campaigns = () => {
   }, [navigate]);
 
   const loadData = async (userId: string) => {
-    const [pendingRes, pastRes, draftsRes] = await Promise.all([
+    const [pendingRes, pastRes] = await Promise.all([
       supabase.from("campaign_approvals").select("id", { count: "exact", head: true }).eq("marketer_id", userId).eq("status", "pending"),
       supabase.from("scheduled_campaigns").select("id, campaign_name, platforms, scheduled_date, status").eq("user_id", userId).order("scheduled_date", { ascending: false }).limit(10),
-      supabase.from("campaign_drafts").select("id, campaign_idea, content_type, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
     ]);
     setPendingCount(pendingRes.count || 0);
     setPastCampaigns((pastRes.data || []) as PastCampaign[]);
-    setDrafts((draftsRes.data || []) as CampaignDraftOption[]);
     setLoadingPast(false);
-  };
-
-  const openLaunchModal = (testMode: boolean) => {
-    setIsTestMode(testMode);
-    setLaunchModalOpen(true);
-  };
-
-  const handleLaunch = async () => {
-    await launch(
-      selectedDraftId || undefined,
-      isTestMode
-    );
-    if (!isTestMode) {
-      setLaunchModalOpen(false);
-    }
   };
 
   return (
@@ -114,25 +95,6 @@ const Campaigns = () => {
           </div>
         </div>
 
-        {/* Launch & Test Buttons */}
-        <div className="flex gap-3 mb-6">
-          <Button
-            className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
-            onClick={() => openLaunchModal(false)}
-          >
-            <Rocket className="w-4 h-4" />
-            Launch Campaign
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2 border-muted-foreground/30"
-            onClick={() => openLaunchModal(true)}
-          >
-            <FlaskConical className="w-4 h-4" />
-            Test Launch
-          </Button>
-        </div>
-
         {/* Live Campaigns */}
         <div className="mb-6 sm:mb-10">
           <LiveCampaignsFeed />
@@ -176,85 +138,6 @@ const Campaigns = () => {
           )}
         </div>
       </main>
-
-      {/* Launch Campaign Dialog */}
-      <Dialog open={launchModalOpen} onOpenChange={setLaunchModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
-              {isTestMode ? "Test Campaign Launch" : "Launch Campaign"}
-            </DialogTitle>
-            <DialogDescription>
-              {isTestMode
-                ? "Generate a test campaign context payload and inspect the result."
-                : "Build and process the full campaign context through the KLYC orchestrator."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 pt-2 flex-1 overflow-auto">
-            <div className="space-y-2">
-              <Label>Campaign Draft (optional)</Label>
-              <Select value={selectedDraftId} onValueChange={setSelectedDraftId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a draft to include..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {drafts.map(d => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {(d.campaign_idea || "Untitled").slice(0, 60)} — {d.content_type || "unknown"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              className="w-full gap-2"
-              disabled={isLaunching}
-              onClick={handleLaunch}
-            >
-              {isLaunching ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {isTestMode ? "Generating..." : "Launching..."}
-                </>
-              ) : (
-                <>
-                  {isTestMode ? <FlaskConical className="w-4 h-4" /> : <Rocket className="w-4 h-4" />}
-                  {isTestMode ? "Generate Test Payload" : "Launch Now"}
-                </>
-              )}
-            </Button>
-
-            {/* Test Mode Payload Inspector */}
-            {isTestMode && lastResult?.campaignContext && (
-              <div className="space-y-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-xs"
-                  onClick={() => setShowPayload(!showPayload)}
-                >
-                  {showPayload ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  {showPayload ? "Hide" : "Show"} Full Payload
-                </Button>
-                {showPayload && (
-                  <ScrollArea className="h-[300px] rounded border border-border">
-                    <pre className="p-3 text-[10px] leading-tight font-mono text-foreground">
-                      {JSON.stringify(lastResult.campaignContext, null, 2)}
-                    </pre>
-                  </ScrollArea>
-                )}
-              </div>
-            )}
-
-            {lastResult?.error && (
-              <p className="text-sm text-destructive">{lastResult.error}</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
