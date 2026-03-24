@@ -7,8 +7,6 @@ import AddClientDialog from "@/components/AddClientDialog";
 import { WebsiteAnalyticsSummary } from "@/components/WebsiteAnalyticsSummary";
 import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSummary";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
-import ExampleAdsSection from "@/components/dashboard/ExampleAdsSection";
-import AnimatedAdsSection from "@/components/dashboard/AnimatedAdsSection";
 import PendingApprovalsList from "@/components/dashboard/PendingApprovalsList";
 import WeeklyContentCalendar from "@/components/dashboard/WeeklyContentCalendar";
 
@@ -65,12 +63,6 @@ const Home = () => {
 
         {/* Live Campaigns */}
         <LiveCampaignsFeed showFullButton limit={6} />
-
-        {/* Example Ads */}
-        <ExampleAdsSection />
-
-        {/* Animated Ads */}
-        <AnimatedAdsSection />
 
         {/* Analytics */}
         <WebsiteAnalyticsSummary 
