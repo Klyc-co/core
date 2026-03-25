@@ -16,7 +16,7 @@ const types = [
   },
   {
     id: "person",
-    label: "Person",
+    label: "Person/Business",
     description: "A personal brand, creator, or public figure.",
     icon: User,
   },
