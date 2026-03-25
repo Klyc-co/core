@@ -82,7 +82,7 @@ const Onboarding = () => {
         )}
         {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
-        {step === 5 && <StepVisualStyle onNext={() => setStep(6)} />}
+        {step === 5 && <StepVisualStyle scanData={scanData} onNext={() => setStep(6)} />}
         {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
         {step === 7 && (
           <StepGenerateContent
