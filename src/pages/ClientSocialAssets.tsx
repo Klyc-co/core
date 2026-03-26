@@ -304,9 +304,8 @@ const ClientSocialAssets = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          // Modify redirect to come back to client portal
-          const modifiedUrl = authUrl.replace('/profile/import', '/client/profile/social');
-          window.location.href = modifiedUrl;
+          window.open(authUrl, '_blank');
+          toast.info(`Complete ${platform.name} authorization in the new window`);
         } else {
           throw new Error("No auth URL returned");
         }
