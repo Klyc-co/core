@@ -1486,7 +1486,7 @@ const ImportBrandSources = () => {
 
         const authUrl = data?.authUrl || data?.url;
         if (authUrl) {
-          if (platform.name === "Patreon" || platform.name === "Twitch" || platform.name === "Tumblr" || platform.name === "Twitter/X" || platform.name === "Snapchat") {
+          if (platform.name === "Patreon" || platform.name === "Twitch" || platform.name === "Tumblr" || platform.name === "Twitter/X" || platform.name === "Snapchat" || platform.name === "LinkedIn") {
             window.open(authUrl, '_blank');
             toast.info(`Complete ${platform.name} authorization in the new window`);
           } else {
