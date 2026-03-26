@@ -58,7 +58,7 @@ serve(async (req) => {
     authUrl.searchParams.set("client_id", snapchatClientId);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", "https://auth.snapchat.com/oauth2/api/user.display_name https://auth.snapchat.com/oauth2/api/user.external_id");
+    authUrl.searchParams.set("scope", "https://auth.snapchat.com/oauth2/api/user.display_name");
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
