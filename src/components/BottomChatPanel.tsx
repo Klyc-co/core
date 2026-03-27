@@ -332,7 +332,7 @@ const BottomChatPanel = () => {
     const onMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       const vh = ((window.innerHeight - ev.clientY) / window.innerHeight) * 100;
-      setHeightVh(Math.min(70, Math.max(8, vh)));
+      setHeightVh(Math.min(70, Math.max(4, vh)));
     };
     const onUp = () => {
       isDragging.current = false;
@@ -344,7 +344,7 @@ const BottomChatPanel = () => {
   }, [setHeightVh]);
 
   const nudgeUp = () => setHeightVh(Math.min(70, heightVh + 10));
-  const nudgeDown = () => setHeightVh(Math.max(8, heightVh - 10));
+  const nudgeDown = () => setHeightVh(Math.max(4, heightVh - 10));
 
   return (
     <div
