@@ -20,6 +20,7 @@ const Onboarding = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [userName, setUserName] = useState({ firstName: "", lastName: "" });
   const [scanData, setScanData] = useState<any>(null);
+  const [preGeneratedStyles, setPreGeneratedStyles] = useState<Record<string, string> | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -53,6 +54,29 @@ const Onboarding = () => {
   const handleScanComplete = useCallback((data: any) => {
     setScanData(data);
     setStep(3);
+
+    // Pre-generate visual style images in background so they're ready by Step 6
+    const biz = data?.businessSummary || {};
+    const fallback = typeof data?.summary === "object" && data?.summary?.businessName ? data.summary : {};
+    const merged = { ...fallback, ...biz };
+    const parts: string[] = [];
+    if (merged.businessName) parts.push(merged.businessName);
+    if (merged.industry) parts.push(`in the ${merged.industry} industry`);
+    if (merged.description) parts.push(`— ${merged.description}`);
+    if (merged.valueProposition) parts.push(`Value: ${merged.valueProposition}`);
+    const businessContext = parts.length > 0 ? parts.join(" ") : "modern professional business";
+
+    supabase.functions.invoke("generate-style-previews", {
+      body: { businessContext },
+    }).then(({ data: styleData }) => {
+      if (styleData?.styles) {
+        const images: Record<string, string> = {};
+        for (const style of styleData.styles) {
+          if (style.imageUrl) images[style.id] = style.imageUrl;
+        }
+        setPreGeneratedStyles(images);
+      }
+    }).catch((err) => console.error("Background style generation failed:", err));
   }, []);
 
   const handleScanError = useCallback((error: string) => {
@@ -82,7 +106,7 @@ const Onboarding = () => {
         )}
         {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
-        {step === 5 && <StepVisualStyle scanData={scanData} onNext={() => setStep(6)} />}
+        {step === 5 && <StepVisualStyle scanData={scanData} preGeneratedImages={preGeneratedStyles} onNext={() => setStep(6)} />}
         {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
         {step === 7 && (
           <StepGenerateContent
