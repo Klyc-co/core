@@ -8,7 +8,7 @@ interface ChatHeightContextType {
 const ChatHeightContext = createContext<ChatHeightContextType | undefined>(undefined);
 
 export const ChatHeightProvider = ({ children }: { children: ReactNode }) => {
-  const [heightVh, setHeightVh] = useState(25);
+  const [heightVh, setHeightVh] = useState(4);
   return (
     <ChatHeightContext.Provider value={{ heightVh, setHeightVh }}>
       {children}
