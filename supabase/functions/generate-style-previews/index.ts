@@ -67,7 +67,7 @@ async function generateImage(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
+            model: "google/gemini-3.1-flash-image-preview",
             messages: [{ role: "user", content: fullPrompt }],
             modalities: ["image", "text"],
           }),
@@ -114,29 +114,19 @@ serve(async (req) => {
       throw new Error("businessContext is required");
     }
 
-    // Generate all 8 images with staggered requests to avoid rate limits
-    const results: { id: string; imageUrl: string | null }[] = [];
-
-    // Process in batches of 2 to respect rate limits
-    for (let i = 0; i < visualStyles.length; i += 2) {
-      const batch = visualStyles.slice(i, i + 2);
-      const batchResults = await Promise.all(
-        batch.map(async (style) => {
-          const imageUrl = await generateImage(
-            LOVABLE_API_KEY,
-            businessContext,
-            style.prompt
-          );
-          return { id: style.id, imageUrl };
-        })
-      );
-      results.push(...batchResults);
-
-      // Small delay between batches
-      if (i + 2 < visualStyles.length) {
-        await new Promise((r) => setTimeout(r, 1500));
-      }
-    }
+    // Generate all 8 images in parallel (max concurrency) for speed
+    const results = await Promise.all(
+      visualStyles.map(async (style, idx) => {
+        // Tiny stagger to avoid hitting rate limit on simultaneous requests
+        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 300));
+        const imageUrl = await generateImage(
+          LOVABLE_API_KEY,
+          businessContext,
+          style.prompt
+        );
+        return { id: style.id, imageUrl };
+      })
+    );
 
     return new Response(JSON.stringify({ success: true, styles: results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

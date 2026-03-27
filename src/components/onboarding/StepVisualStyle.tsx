@@ -16,6 +16,7 @@ import luxuryTextureImg from "@/assets/styles/luxury-texture.png";
 
 interface StepVisualStyleProps {
   scanData?: any;
+  preGeneratedImages?: Record<string, string> | null;
   onNext: (styles: string[]) => void;
 }
 
@@ -60,15 +61,26 @@ function getBusinessContext(scanData: any): string {
     : "modern professional business";
 }
 
-const StepVisualStyle = ({ scanData, onNext }: StepVisualStyleProps) => {
+const StepVisualStyle = ({ scanData, preGeneratedImages, onNext }: StepVisualStyleProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);
+  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>(preGeneratedImages || {});
+  const [loading, setLoading] = useState(!preGeneratedImages || Object.keys(preGeneratedImages).length === 0);
+  const [loadedCount, setLoadedCount] = useState(preGeneratedImages ? Object.keys(preGeneratedImages).length : 0);
   const hasStarted = useRef(false);
 
+  // If pre-generated images arrive after mount (async), update state
+  useEffect(() => {
+    if (preGeneratedImages && Object.keys(preGeneratedImages).length > 0) {
+      setGeneratedImages(preGeneratedImages);
+      setLoadedCount(Object.keys(preGeneratedImages).length);
+      setLoading(false);
+    }
+  }, [preGeneratedImages]);
+
+  // Only generate if we don't have pre-generated images
   useEffect(() => {
     if (hasStarted.current) return;
+    if (preGeneratedImages && Object.keys(preGeneratedImages).length > 0) return;
     hasStarted.current = true;
 
     const generate = async () => {
@@ -95,14 +107,13 @@ const StepVisualStyle = ({ scanData, onNext }: StepVisualStyleProps) => {
         }
       } catch (err) {
         console.error("Failed to generate style previews:", err);
-        // Fallback to static images — already handled by getImage
       } finally {
         setLoading(false);
       }
     };
 
     generate();
-  }, [scanData]);
+  }, [scanData, preGeneratedImages]);
 
   const getImage = (styleId: string) => {
     return generatedImages[styleId] || fallbackImages[styleId];
