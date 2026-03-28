@@ -73,12 +73,16 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
               </div>
             </div>
             <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              {showSocialInput ? (
+                <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              ) : (
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              )}
               <Input
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://yourcompany.com"
+                placeholder={showSocialInput ? "https://instagram.com/yourbrand" : "https://yourcompany.com"}
                 className="pl-11 h-12 text-base"
                 required
               />
