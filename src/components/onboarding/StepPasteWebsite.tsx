@@ -9,17 +9,22 @@ interface StepPasteWebsiteProps {
 }
 
 const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
-  const [url, setUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [socialUrl, setSocialUrl] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [showSocialInput, setShowSocialInput] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleScanWebsite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim() && firstName.trim()) onNext(url.trim(), firstName.trim(), lastName.trim());
+    if (websiteUrl.trim() && firstName.trim()) onNext(websiteUrl.trim(), firstName.trim(), lastName.trim());
   };
 
-  const isValid = url.trim() && firstName.trim();
+  const handleScanSocial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (socialUrl.trim() && firstName.trim()) onNext(socialUrl.trim(), firstName.trim(), lastName.trim());
+  };
+
+  const hasName = firstName.trim().length > 0;
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -34,7 +39,7 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
             Let's build your profile automatically.
           </h1>
           <p className="text-lg text-muted-foreground max-w-lg">
-            Paste in your website and Klyc will scan your business, auto-fill your profile, and organize your brand library.
+            Paste in your website or social profile and Klyc will scan your business, auto-fill your profile, and organize your brand library.
           </p>
         </div>
 
@@ -45,85 +50,83 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
               <span className="text-white text-xs font-bold">K</span>
             </div>
             <p className="text-sm text-foreground leading-relaxed">
-              Tell me your name and paste your website so I can scan your business and fill out your profile automatically.
+              Tell me your name, then paste your website or social media profile so I can scan and build your profile automatically.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First name"
-                  className="pl-11 h-12 text-base"
-                  required
-                />
-              </div>
-              <div>
-                <Input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last name"
-                  className="h-12 text-base"
-                />
-              </div>
-            </div>
+          {/* Name fields */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
             <div className="relative">
-              {showSocialInput ? (
-                <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              ) : (
-                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              )}
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder={showSocialInput ? "https://instagram.com/yourbrand" : "https://yourcompany.com"}
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
                 className="pl-11 h-12 text-base"
-                required
               />
             </div>
-            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={!isValid}>
-              {showSocialInput ? "Scan Your Profile" : "Scan Your Website"}
-              <ArrowRight className="w-4 h-4 ml-2" />
+            <div>
+              <Input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                className="h-12 text-base"
+              />
+            </div>
+          </div>
+
+          {/* Website input + button */}
+          <form onSubmit={handleScanWebsite} className="space-y-3 mb-5">
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="url"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="https://yourcompany.com"
+                className="pl-11 h-12 text-base"
+              />
+            </div>
+            <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={!hasName || !websiteUrl.trim()}>
+              Scan Website
+              <Globe className="w-4 h-4 ml-2" />
             </Button>
           </form>
 
-          {/* Social fallback */}
-          <div className="mt-6 pt-5 border-t border-border">
-            {!showSocialInput ? (
-              <button
-                type="button"
-                onClick={() => setShowSocialInput(true)}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Don't have a website?{" "}
-                <span className="underline font-medium">Paste your social media profile instead</span>
-              </button>
-            ) : (
-              <div className="space-y-3 animate-fade-in">
-                <p className="text-sm text-muted-foreground text-center">
-                  Paste any public profile link and we'll scan it
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
-                  {["Instagram", "TikTok", "YouTube", "LinkedIn", "Facebook", "X (Twitter)"].map((p) => (
-                    <span key={p} className="px-2 py-1 rounded-full bg-secondary border border-border">{p}</span>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setShowSocialInput(false); setUrl(""); }}
-                  className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors underline"
-                >
-                  I have a website instead
-                </button>
-              </div>
-            )}
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">or</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
+
+          {/* Social input + button */}
+          <form onSubmit={handleScanSocial} className="space-y-3">
+            <p className="text-sm text-muted-foreground text-center mb-1">
+              Don't have a website? Paste your social media profile instead
+            </p>
+            <div className="flex flex-wrap justify-center gap-1.5 mb-2">
+              {["Instagram", "TikTok", "YouTube", "LinkedIn", "Facebook", "X"].map((p) => (
+                <span key={p} className="px-2 py-0.5 rounded-full bg-secondary border border-border text-[11px] text-muted-foreground">{p}</span>
+              ))}
+            </div>
+            <div className="relative">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="url"
+                value={socialUrl}
+                onChange={(e) => setSocialUrl(e.target.value)}
+                placeholder="https://instagram.com/yourbrand"
+                className="pl-11 h-12 text-base"
+              />
+            </div>
+            <Button type="submit" variant="outline" className="w-full h-12 text-base font-semibold" disabled={!hasName || !socialUrl.trim()}>
+              Scan Social Profile
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </form>
         </div>
       </div>
     </div>
