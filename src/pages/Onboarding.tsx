@@ -21,6 +21,7 @@ const Onboarding = () => {
   const [userName, setUserName] = useState({ firstName: "", lastName: "" });
   const [scanData, setScanData] = useState<any>(null);
   const [preGeneratedStyles, setPreGeneratedStyles] = useState<Record<string, string> | null>(null);
+  const [preGeneratedFontImage, setPreGeneratedFontImage] = useState<string | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ const Onboarding = () => {
     if (merged.valueProposition) parts.push(`Value: ${merged.valueProposition}`);
     const businessContext = parts.length > 0 ? parts.join(" ") : "modern professional business";
 
+    // Pre-generate visual style images
     supabase.functions.invoke("generate-style-previews", {
       body: { businessContext },
     }).then(({ data: styleData }) => {
@@ -77,6 +79,21 @@ const Onboarding = () => {
         setPreGeneratedStyles(images);
       }
     }).catch((err) => console.error("Background style generation failed:", err));
+
+    // Pre-generate font preview background image
+    const fontImagePrompt = [
+      `A professional, high-quality marketing hero photograph for a ${merged.industry || "business"} company called "${merged.businessName || "a brand"}".`,
+      merged.description ? `The business: ${merged.description.slice(0, 200)}.` : "",
+      "Create a visually stunning, cinematic-quality background image suitable for a social media post.",
+      "The image should be atmospheric, with depth and mood. No text, no logos, no words. Just a beautiful visual.",
+      "Dark enough in areas to allow white text overlay. Aspect ratio 4:5 portrait.",
+    ].filter(Boolean).join(" ");
+
+    supabase.functions.invoke("generate-image", {
+      body: { prompt: fontImagePrompt, model: "nano-banana" },
+    }).then(({ data: imgData }) => {
+      if (imgData?.imageUrl) setPreGeneratedFontImage(imgData.imageUrl);
+    }).catch((err) => console.error("Background font image generation failed:", err));
   }, []);
 
   const handleScanError = useCallback((error: string) => {
@@ -107,7 +124,7 @@ const Onboarding = () => {
         {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
         {step === 5 && <StepVisualStyle scanData={scanData} preGeneratedImages={preGeneratedStyles} onNext={() => setStep(6)} />}
-        {step === 6 && <StepFontStyle scanData={scanData} onNext={() => setStep(7)} />}
+        {step === 6 && <StepFontStyle scanData={scanData} preGeneratedImage={preGeneratedFontImage} onNext={() => setStep(7)} />}
         {step === 7 && (
           <StepGenerateContent
             scanData={scanData}
