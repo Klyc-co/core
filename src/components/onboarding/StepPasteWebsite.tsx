@@ -12,6 +12,7 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
   const [url, setUrl] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [showSocialInput, setShowSocialInput] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
