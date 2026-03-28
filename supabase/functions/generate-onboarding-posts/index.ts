@@ -116,15 +116,20 @@ Rules:
           },
           {
             role: "user",
-            content: `Generate 3 social media posts that are SPECIFICALLY tailored to this business. Every post must be directly about THIS business, its products, or its industry. No generic content.
+            content: `Generate exactly 3 social media posts that are SPECIFICALLY tailored to this business. Every post must be directly about THIS business, its products, or its industry. No generic content.
 
 ${businessContext}
 
+IMPORTANT: You must generate exactly 3 posts in this exact order:
+1. Post 1: An INSTAGRAM post (set platforms to ["Instagram"]). Write in Instagram style - visual-first, engaging caption with emojis, hashtags at the end.
+2. Post 2: A LINKEDIN post (set platforms to ["LinkedIn"]). Write in LinkedIn style - professional, thought-leadership, value-driven, no hashtags spam.
+3. Post 3: A TIKTOK post (set platforms to ["TikTok"]). Write in TikTok style - punchy, trendy, hook-driven, short and catchy.
+
 For each post provide:
 - title (short, catchy, must relate to this specific business)
-- caption (the actual post text, 2-3 sentences, must reference the business name "${bName}" or its specific products/services. Write as if you are the business posting about themselves)  
-- platforms (array of which platforms it's best for, from: LinkedIn, Instagram, Facebook, TikTok, YouTube)
-- imagePrompt (a detailed visual description for AI image generation. Must depict something directly related to this business's industry and offerings. Include brand colors "${colorPalette}" if available. Be specific about the scene - for example if it's a restaurant describe the food, if it's a tech company describe the product in use)`,
+- caption (the actual post text, 2-3 sentences, must reference the business name "${bName}" or its specific products/services. Write as if you are the business posting about themselves. Match the platform's tone and style.)  
+- platforms (array with the single assigned platform: "Instagram", "LinkedIn", or "TikTok")
+- imagePrompt (a detailed visual description for AI image generation. Must depict something directly related to this business's industry and offerings. Include brand colors "${colorPalette}" if available. Be specific about the scene.)`,
           },
         ],
         tools: [
