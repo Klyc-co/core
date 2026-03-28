@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Globe, ArrowRight, User } from "lucide-react";
+import { Globe, ArrowRight, User, Link } from "lucide-react";
 import klycMascot from "@/assets/klyc-mascot-waving.png";
 
 interface StepPasteWebsiteProps {
@@ -12,6 +12,7 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
   const [url, setUrl] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [showSocialInput, setShowSocialInput] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,21 +73,57 @@ const StepPasteWebsite = ({ onNext }: StepPasteWebsiteProps) => {
               </div>
             </div>
             <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              {showSocialInput ? (
+                <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              ) : (
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              )}
               <Input
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://yourcompany.com"
+                placeholder={showSocialInput ? "https://instagram.com/yourbrand" : "https://yourcompany.com"}
                 className="pl-11 h-12 text-base"
                 required
               />
             </div>
             <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={!isValid}>
-              Scan Your Website
+              {showSocialInput ? "Scan Your Profile" : "Scan Your Website"}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </form>
+
+          {/* Social fallback */}
+          <div className="mt-6 pt-5 border-t border-border">
+            {!showSocialInput ? (
+              <button
+                type="button"
+                onClick={() => setShowSocialInput(true)}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Don't have a website?{" "}
+                <span className="underline font-medium">Paste your social media profile instead</span>
+              </button>
+            ) : (
+              <div className="space-y-3 animate-fade-in">
+                <p className="text-sm text-muted-foreground text-center">
+                  Paste any public profile link and we'll scan it
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+                  {["Instagram", "TikTok", "YouTube", "LinkedIn", "Facebook", "X (Twitter)"].map((p) => (
+                    <span key={p} className="px-2 py-1 rounded-full bg-secondary border border-border">{p}</span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowSocialInput(false); setUrl(""); }}
+                  className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                >
+                  I have a website instead
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
