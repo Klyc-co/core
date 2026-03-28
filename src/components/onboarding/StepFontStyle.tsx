@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface StepFontStyleProps {
   scanData?: any;
+  preGeneratedImage?: string | null;
   onNext: (fonts: string[]) => void;
 }
 
@@ -78,11 +79,19 @@ const fontStyles = [
   },
 ];
 
-const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
+const StepFontStyle = ({ scanData, preGeneratedImage, onNext }: StepFontStyleProps) => {
   const [selected, setSelected] = useState<string>("clean-modern-sans");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageLoading, setImageLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState<string | null>(preGeneratedImage || null);
+  const [imageLoading, setImageLoading] = useState(!preGeneratedImage);
   const [imageError, setImageError] = useState(false);
+
+  // Use pre-generated image when it arrives
+  useEffect(() => {
+    if (preGeneratedImage && !imageUrl) {
+      setImageUrl(preGeneratedImage);
+      setImageLoading(false);
+    }
+  }, [preGeneratedImage]);
 
   const biz = useMemo(() => getBusinessInfo(scanData), [scanData]);
 
@@ -108,8 +117,9 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
     return "Elevate your brand today";
   }, [biz]);
 
-  // Generate business-representative image
+  // Only generate image if no pre-generated one was provided
   useEffect(() => {
+    if (imageUrl) return; // Already have an image (pre-generated or previously loaded)
     let cancelled = false;
 
     const generateImage = async () => {
@@ -119,25 +129,17 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
       try {
         const imagePrompt = [
           `A professional, high-quality marketing hero photograph for a ${biz.industry || "business"} company called "${biz.name}".`,
-          biz.description
-            ? `The business: ${biz.description.slice(0, 200)}.`
-            : "",
+          biz.description ? `The business: ${biz.description.slice(0, 200)}.` : "",
           "Create a visually stunning, cinematic-quality background image suitable for a social media post.",
           "The image should be atmospheric, with depth and mood. No text, no logos, no words. Just a beautiful visual.",
           "Dark enough in areas to allow white text overlay. Aspect ratio 4:5 portrait.",
-        ]
-          .filter(Boolean)
-          .join(" ");
+        ].filter(Boolean).join(" ");
 
         const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: {
-            prompt: imagePrompt,
-            model: "nano-banana",
-          },
+          body: { prompt: imagePrompt, model: "nano-banana" },
         });
 
         if (cancelled) return;
-
         if (error) throw error;
         if (data?.imageUrl) {
           setImageUrl(data.imageUrl);
@@ -154,7 +156,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
 
     generateImage();
     return () => { cancelled = true; };
-  }, [biz]);
+  }, [biz, imageUrl]);
 
   const activeFont = fontStyles.find((f) => f.id === selected) || fontStyles[0];
 
@@ -164,7 +166,7 @@ const StepFontStyle = ({ scanData, onNext }: StepFontStyleProps) => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Choose your type direction.
+            Font Style
           </h1>
           <p className="text-muted-foreground">
             Pick a text style. See it live on your brand's marketing visual.
