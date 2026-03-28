@@ -122,13 +122,13 @@ ${businessContext}
 
 IMPORTANT: You must generate exactly 3 posts in this exact order:
 1. Post 1: An INSTAGRAM post (set platforms to ["Instagram"]). Write in Instagram style - visual-first, engaging caption with emojis, hashtags at the end.
-2. Post 2: A LINKEDIN post (set platforms to ["LinkedIn"]). Write in LinkedIn style - professional, thought-leadership, value-driven, no hashtags spam.
+2. Post 2: A YOUTUBE post (set platforms to ["YouTube"]). Write in YouTube style - attention-grabbing title, informative description, call-to-action to subscribe/watch.
 3. Post 3: A TIKTOK post (set platforms to ["TikTok"]). Write in TikTok style - punchy, trendy, hook-driven, short and catchy.
 
 For each post provide:
 - title (short, catchy, must relate to this specific business)
 - caption (the actual post text, 2-3 sentences, must reference the business name "${bName}" or its specific products/services. Write as if you are the business posting about themselves. Match the platform's tone and style.)  
-- platforms (array with the single assigned platform: "Instagram", "LinkedIn", or "TikTok")
+- platforms (array with the single assigned platform: "Instagram", "YouTube", or "TikTok")
 - imagePrompt (a detailed visual description for AI image generation. Must depict something directly related to this business's industry and offerings. Include brand colors "${colorPalette}" if available. Be specific about the scene.)`,
           },
         ],
