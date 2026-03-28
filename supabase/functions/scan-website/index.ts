@@ -86,200 +86,150 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get Firecrawl API key
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY_1') || Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
-      console.error('FIRECRAWL_API_KEY not configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl is not configured. Please connect Firecrawl in settings.' }),
+        JSON.stringify({ success: false, error: 'Firecrawl is not configured.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Format URL
     let formattedUrl = url.trim();
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    console.log('Starting full website crawl:', formattedUrl);
+    console.log('Starting FAST website scan:', formattedUrl);
 
     // Create brand import record
     const { data: importRecord, error: importError } = await supabase
       .from('brand_imports')
-      .insert({
-        user_id: user.id,
-        website_url: formattedUrl,
-        status: 'scanning'
-      })
+      .insert({ user_id: user.id, website_url: formattedUrl, status: 'scanning' })
       .select()
       .single();
 
     if (importError) {
-      console.error('Failed to create import record:', importError);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to start import' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Step 1: First scrape the homepage with branding to get brand identity
-    console.log('Step 1: Scraping homepage for brand identity...');
-    const brandingResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: formattedUrl,
-        formats: ['branding', 'links'],
-        onlyMainContent: false,
-      }),
-    });
+    // ===== SPEED OPTIMIZATION: Run branding scrape + crawl IN PARALLEL =====
+    console.log('Launching branding scrape + crawl in parallel...');
 
-    const brandingData = await brandingResponse.json();
-    let homepageBranding: BrandingData | null = null;
-    
-    if (brandingResponse.ok && brandingData.success) {
-      // Firecrawl v1 nests data inside data.data for scrape responses
-      const pageData = brandingData.data?.data || brandingData.data;
-      homepageBranding = pageData?.branding || brandingData.branding || null;
-      console.log('Homepage branding response:', JSON.stringify(brandingData, null, 2).substring(0, 500));
-      console.log('Extracted branding:', homepageBranding ? 'Found' : 'Not found');
-      if (homepageBranding?.colors) {
-        console.log('Colors found:', Object.keys(homepageBranding.colors));
-      }
-      if (homepageBranding?.fonts) {
-        console.log('Fonts found:', homepageBranding.fonts.length);
-      }
-    } else {
-      console.error('Branding scrape failed:', brandingData.error || 'Unknown error');
-    }
-
-    // Step 2: Start a crawl to get all pages
-    console.log('Step 2: Starting website crawl...');
-    const crawlResponse = await fetch('https://api.firecrawl.dev/v1/crawl', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: formattedUrl,
-        limit: 50, // Crawl up to 50 pages
-        maxDepth: 3, // Go 3 levels deep
-        scrapeOptions: {
-          formats: ['markdown', 'links'],
+    const [brandingResult, crawlResult] = await Promise.all([
+      // Parallel task 1: Homepage branding scrape
+      fetch('https://api.firecrawl.dev/v1/scrape', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: formattedUrl,
+          formats: ['branding', 'markdown', 'links'],
           onlyMainContent: false,
-        },
-      }),
-    });
+        }),
+      }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
 
-    const crawlData = await crawlResponse.json();
+      // Parallel task 2: Start crawl (reduced: 10 pages, depth 2)
+      fetch('https://api.firecrawl.dev/v1/crawl', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: formattedUrl,
+          limit: 10,
+          maxDepth: 2,
+          scrapeOptions: { formats: ['markdown', 'links'], onlyMainContent: false },
+        }),
+      }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
+    ]);
 
-    if (!crawlResponse.ok || !crawlData.success) {
-      console.error('Crawl initiation failed:', crawlData);
-      // Fall back to single page scrape
-      return await handleSinglePageFallback(supabase, user.id, importRecord.id, formattedUrl, apiKey, homepageBranding);
+    // Extract branding from homepage
+    let homepageBranding: BrandingData | null = null;
+    let homepageData: PageData | null = null;
+    if (brandingResult.success) {
+      const pageData = brandingResult.data?.data || brandingResult.data;
+      homepageBranding = pageData?.branding || brandingResult.branding || null;
+      homepageData = pageData || null;
+      console.log('Branding extracted:', homepageBranding ? 'Yes' : 'No');
     }
 
-    const crawlId = crawlData.id;
-    console.log('Crawl started with ID:', crawlId);
+    // Poll crawl with shorter timeout (45s) and faster interval (1.5s)
+    let crawlPages: PageData[] = [];
+    if (crawlResult.success && crawlResult.id) {
+      const crawlId = crawlResult.id;
+      console.log('Crawl started, polling ID:', crawlId);
+      const maxWaitTime = 45000;
+      const pollInterval = 1500;
+      const startTime = Date.now();
 
-    // Step 3: Poll for crawl completion (with timeout)
-    let crawlResult: CrawlStatusResponse | null = null;
-    const maxWaitTime = 120000; // 2 minutes max
-    const pollInterval = 3000; // 3 seconds
-    const startTime = Date.now();
+      while (Date.now() - startTime < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        try {
+          const statusResponse = await fetch(`https://api.firecrawl.dev/v1/crawl/${crawlId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+          });
+          const statusData: CrawlStatusResponse = await statusResponse.json();
+          console.log(`Crawl: ${statusData.status} (${statusData.completed}/${statusData.total})`);
 
-    while (Date.now() - startTime < maxWaitTime) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      
-      const statusResponse = await fetch(`https://api.firecrawl.dev/v1/crawl/${crawlId}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      });
-
-      const statusData: CrawlStatusResponse = await statusResponse.json();
-      console.log(`Crawl status: ${statusData.status}, completed: ${statusData.completed}/${statusData.total}`);
-
-      if (statusData.status === 'completed') {
-        crawlResult = statusData;
-        break;
-      } else if (statusData.status === 'failed') {
-        console.error('Crawl failed:', statusData);
-        break;
-      }
-    }
-
-    if (!crawlResult || !crawlResult.data) {
-      console.log('Crawl timed out or failed, falling back to single page');
-      return await handleSinglePageFallback(supabase, user.id, importRecord.id, formattedUrl, apiKey, homepageBranding);
-    }
-
-    console.log(`Crawl completed: ${crawlResult.data.length} pages scraped`);
-
-    // Step 4: Process all pages and extract assets
-    const assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }> = [];
-    const seenValues = new Set<string>();
-
-    // Add branding assets from homepage
-    if (homepageBranding) {
-      extractBrandingAssets(homepageBranding, user.id, importRecord.id, assets, seenValues);
-    }
-
-    // Process each crawled page
-    for (const page of crawlResult.data) {
-      const pageUrl = page.metadata?.sourceURL || 'Unknown Page';
-      const pageName = page.metadata?.title || pageUrl.split('/').pop() || 'Page';
-      
-      // Extract images from links
-      if (page.links) {
-        extractImageLinks(page.links, user.id, importRecord.id, assets, seenValues, pageName);
-      }
-
-      // Extract copy from markdown
-      if (page.markdown) {
-        extractCopyFromMarkdown(page.markdown, page.metadata, user.id, importRecord.id, assets, seenValues, pageName);
-      }
-
-      // Extract images from markdown (img tags converted to markdown)
-      if (page.markdown) {
-        extractImagesFromMarkdown(page.markdown, user.id, importRecord.id, assets, seenValues, pageName);
-      }
-    }
-
-    // Limit total assets to prevent overwhelming the database
-    const colorAssets = assets.filter(a => a.asset_type === 'color');
-    const fontAssets = assets.filter(a => a.asset_type === 'font');
-    const imageAssets = assets.filter(a => a.asset_type === 'image').slice(0, 100); // Max 100 images
-    const copyAssets = assets.filter(a => a.asset_type === 'copy').slice(0, 50); // Max 50 copy items
-    
-    const limitedAssets = [...colorAssets, ...fontAssets, ...imageAssets, ...copyAssets];
-
-    // Insert assets
-    if (limitedAssets.length > 0) {
-      const batchSize = 50;
-      for (let i = 0; i < limitedAssets.length; i += batchSize) {
-        const batch = limitedAssets.slice(i, i + batchSize);
-        const { error: assetsError } = await supabase
-          .from('brand_assets')
-          .insert(batch);
-        if (assetsError) {
-          console.error('Failed to insert assets batch:', assetsError);
+          if (statusData.status === 'completed' && statusData.data) {
+            crawlPages = statusData.data;
+            break;
+          } else if (statusData.status === 'failed') {
+            break;
+          }
+        } catch (e) {
+          console.error('Poll error:', e);
         }
       }
     }
 
-    // Step 5: Generate AI business summary from crawled content
-    const businessSummary = await generateBusinessSummary(
-      crawlResult.data,
-      formattedUrl
-    );
+    // If crawl failed/timed out but we have homepage data, use that
+    const allPages: PageData[] = crawlPages.length > 0
+      ? crawlPages
+      : (homepageData ? [homepageData] : []);
 
-    // Step 6: Auto-populate client_profiles with all extracted data
+    console.log(`Processing ${allPages.length} pages`);
+
+    // Process assets
+    const assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }> = [];
+    const seenValues = new Set<string>();
+
+    if (homepageBranding) {
+      extractBrandingAssets(homepageBranding, user.id, importRecord.id, assets, seenValues);
+    }
+
+    for (const page of allPages) {
+      const pageUrl = page.metadata?.sourceURL || 'Unknown';
+      const pageName = page.metadata?.title || pageUrl.split('/').pop() || 'Page';
+      if (page.links) extractImageLinks(page.links, user.id, importRecord.id, assets, seenValues, pageName);
+      if (page.markdown) {
+        extractCopyFromMarkdown(page.markdown, page.metadata, user.id, importRecord.id, assets, seenValues, pageName);
+        extractImagesFromMarkdown(page.markdown, user.id, importRecord.id, assets, seenValues, pageName);
+      }
+    }
+
+    const colorAssets = assets.filter(a => a.asset_type === 'color');
+    const fontAssets = assets.filter(a => a.asset_type === 'font');
+    const imageAssets = assets.filter(a => a.asset_type === 'image').slice(0, 100);
+    const copyAssets = assets.filter(a => a.asset_type === 'copy').slice(0, 50);
+    const limitedAssets = [...colorAssets, ...fontAssets, ...imageAssets, ...copyAssets];
+
+    // ===== SPEED: Insert assets + generate AI summary IN PARALLEL =====
+    const [, businessSummary] = await Promise.all([
+      // Insert assets in background
+      (async () => {
+        if (limitedAssets.length > 0) {
+          const batchSize = 50;
+          for (let i = 0; i < limitedAssets.length; i += batchSize) {
+            await supabase.from('brand_assets').insert(limitedAssets.slice(i, i + batchSize));
+          }
+        }
+      })(),
+      // Generate AI summary (using faster model)
+      generateBusinessSummary(allPages, formattedUrl),
+    ]);
+
+    // Auto-populate client profile
     const logoUrl = homepageBranding?.logo || homepageBranding?.images?.logo || null;
     const brandColors: string[] = [];
     if (homepageBranding?.colors) {
@@ -295,9 +245,7 @@ Deno.serve(async (req) => {
     };
     if (logoUrl) profileUpsert.logo_url = logoUrl;
     if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
-    if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
-      profileUpsert.business_name = businessSummary.businessName;
-    }
+    if (businessSummary.businessName && businessSummary.businessName !== "Your Business") profileUpsert.business_name = businessSummary.businessName;
     if (businessSummary.description) profileUpsert.description = businessSummary.description;
     if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
     if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
@@ -309,38 +257,28 @@ Deno.serve(async (req) => {
     if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
     if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
 
-    console.log('Auto-populating client_profiles with fields:', Object.keys(profileUpsert));
-    const { error: profileError } = await supabase
-      .from('client_profiles')
-      .upsert(profileUpsert, { onConflict: 'user_id' });
-    if (profileError) {
-      console.error('Failed to auto-populate client_profiles:', profileError);
-    } else {
-      console.log('Client profile auto-populated successfully');
-    }
-
-    // Update import status
-    await supabase
-      .from('brand_imports')
-      .update({ 
+    // Update profile + import status in parallel
+    await Promise.all([
+      supabase.from('client_profiles').upsert(profileUpsert, { onConflict: 'user_id' }),
+      supabase.from('brand_imports').update({
         status: 'completed',
         metadata: {
-          pagesScanned: crawlResult.data.length,
+          pagesScanned: allPages.length,
           assetsCount: limitedAssets.length,
           colorScheme: homepageBranding?.colorScheme,
           sourceUrl: formattedUrl,
-          logoUrl: logoUrl
+          logoUrl,
         }
-      })
-      .eq('id', importRecord.id);
+      }).eq('id', importRecord.id),
+    ]);
 
-    console.log(`Full website import completed: ${limitedAssets.length} assets from ${crawlResult.data.length} pages`);
+    console.log(`Scan complete: ${limitedAssets.length} assets from ${allPages.length} pages`);
 
     return new Response(
       JSON.stringify({
         success: true,
         importId: importRecord.id,
-        pagesScanned: crawlResult.data.length,
+        pagesScanned: allPages.length,
         assetsCount: limitedAssets.length,
         businessSummary,
         logoUrl,
@@ -356,413 +294,134 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error scanning website:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to scan website';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Failed to scan website' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-// Helper function to extract branding assets
+// Helper: extract branding assets
 function extractBrandingAssets(
-  branding: BrandingData,
-  userId: string,
-  importId: string,
+  branding: BrandingData, userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
   seenValues: Set<string>
 ) {
-  // Extract colors
   if (branding.colors) {
     const colorNames = ['primary', 'secondary', 'accent', 'background', 'textPrimary', 'textSecondary'] as const;
     for (const colorName of colorNames) {
       const colorValue = branding.colors[colorName];
       if (colorValue && !seenValues.has(colorValue)) {
         seenValues.add(colorValue);
-        assets.push({
-          user_id: userId,
-          brand_import_id: importId,
-          asset_type: 'color',
-          name: colorName.charAt(0).toUpperCase() + colorName.slice(1).replace(/([A-Z])/g, ' $1'),
-          value: colorValue,
-          metadata: { source: 'branding' }
-        });
+        assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'color', name: colorName.charAt(0).toUpperCase() + colorName.slice(1).replace(/([A-Z])/g, ' $1'), value: colorValue, metadata: { source: 'branding' } });
       }
     }
   }
-
-  // Extract fonts
   if (branding.fonts) {
     for (const font of branding.fonts) {
       if (font.family && !seenValues.has(`font:${font.family}`)) {
         seenValues.add(`font:${font.family}`);
-        assets.push({
-          user_id: userId,
-          brand_import_id: importId,
-          asset_type: 'font',
-          name: font.family,
-          value: font.family,
-          metadata: { source: 'branding' }
-        });
+        assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'font', name: font.family, value: font.family, metadata: { source: 'branding' } });
       }
     }
   }
-
-  // Typography fonts
   if (branding.typography?.fontFamilies) {
     const families = branding.typography.fontFamilies;
-    const fontTypes = ['primary', 'heading', 'code'] as const;
-    for (const fontType of fontTypes) {
+    for (const fontType of ['primary', 'heading', 'code'] as const) {
       const family = families[fontType];
       if (family && !seenValues.has(`font:${family}`)) {
         seenValues.add(`font:${family}`);
-        assets.push({
-          user_id: userId,
-          brand_import_id: importId,
-          asset_type: 'font',
-          name: `${fontType.charAt(0).toUpperCase() + fontType.slice(1)} Font`,
-          value: family,
-          metadata: { source: 'typography', type: fontType }
-        });
+        assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'font', name: `${fontType.charAt(0).toUpperCase() + fontType.slice(1)} Font`, value: family, metadata: { source: 'typography', type: fontType } });
       }
     }
   }
-
-  // Extract images (logo, favicon, og image)
   if (branding.images) {
-    const imageTypes = ['logo', 'favicon', 'ogImage'] as const;
-    for (const imageType of imageTypes) {
+    for (const imageType of ['logo', 'favicon', 'ogImage'] as const) {
       const imageUrl = branding.images[imageType];
       if (imageUrl && !seenValues.has(imageUrl)) {
         seenValues.add(imageUrl);
-        assets.push({
-          user_id: userId,
-          brand_import_id: importId,
-          asset_type: 'image',
-          name: imageType.charAt(0).toUpperCase() + imageType.slice(1).replace(/([A-Z])/g, ' $1'),
-          value: imageUrl,
-          metadata: { source: 'branding', type: imageType }
-        });
+        assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'image', name: imageType.charAt(0).toUpperCase() + imageType.slice(1).replace(/([A-Z])/g, ' $1'), value: imageUrl, metadata: { source: 'branding', type: imageType } });
       }
     }
   }
-
-  // Top-level logo
   if (branding.logo && !seenValues.has(branding.logo)) {
     seenValues.add(branding.logo);
-    assets.push({
-      user_id: userId,
-      brand_import_id: importId,
-      asset_type: 'image',
-      name: 'Logo',
-      value: branding.logo,
-      metadata: { source: 'branding', type: 'logo' }
-    });
+    assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'image', name: 'Logo', value: branding.logo, metadata: { source: 'branding', type: 'logo' } });
   }
 }
 
-// Helper function to extract images from links
+// Helper: extract image links
 function extractImageLinks(
-  links: string[],
-  userId: string,
-  importId: string,
+  links: string[], userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
-  seenValues: Set<string>,
-  pageName: string
+  seenValues: Set<string>, pageName: string
 ) {
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.ico', '.avif'];
-  
   for (const link of links) {
     const lowerLink = link.toLowerCase();
     if (imageExtensions.some(ext => lowerLink.includes(ext)) && !seenValues.has(link)) {
       seenValues.add(link);
       const fileName = link.split('/').pop()?.split('?')[0] || 'Image';
-      assets.push({
-        user_id: userId,
-        brand_import_id: importId,
-        asset_type: 'image',
-        name: fileName.length > 50 ? `Image from ${pageName}` : fileName,
-        value: link,
-        metadata: { source: 'links', page: pageName }
-      });
+      assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'image', name: fileName.length > 50 ? `Image from ${pageName}` : fileName, value: link, metadata: { source: 'links', page: pageName } });
     }
   }
 }
 
-// Helper function to extract copy from markdown
+// Helper: extract copy from markdown
 function extractCopyFromMarkdown(
-  markdown: string,
-  metadata: { title?: string; description?: string } | undefined,
-  userId: string,
-  importId: string,
+  markdown: string, metadata: { title?: string; description?: string } | undefined,
+  userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
-  seenValues: Set<string>,
-  pageName: string
+  seenValues: Set<string>, pageName: string
 ) {
-  // Page title
   if (metadata?.title && !seenValues.has(`title:${metadata.title}`)) {
     seenValues.add(`title:${metadata.title}`);
-    assets.push({
-      user_id: userId,
-      brand_import_id: importId,
-      asset_type: 'copy',
-      name: `${pageName} - Title`,
-      value: metadata.title,
-      metadata: { source: 'metadata', page: pageName }
-    });
+    assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'copy', name: `${pageName} - Title`, value: metadata.title, metadata: { source: 'metadata', page: pageName } });
   }
-
-  // Meta description
   if (metadata?.description && !seenValues.has(`desc:${metadata.description}`)) {
     seenValues.add(`desc:${metadata.description}`);
-    assets.push({
-      user_id: userId,
-      brand_import_id: importId,
-      asset_type: 'copy',
-      name: `${pageName} - Description`,
-      value: metadata.description,
-      metadata: { source: 'metadata', page: pageName }
-    });
+    assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'copy', name: `${pageName} - Description`, value: metadata.description, metadata: { source: 'metadata', page: pageName } });
   }
-
-  // Extract headings
   const headings = markdown.match(/^#{1,3}\s+(.+)$/gm) || [];
   for (let i = 0; i < Math.min(headings.length, 3); i++) {
     const heading = headings[i].replace(/^#+\s+/, '').trim();
     if (heading.length > 5 && heading.length < 200 && !seenValues.has(`heading:${heading}`)) {
       seenValues.add(`heading:${heading}`);
-      assets.push({
-        user_id: userId,
-        brand_import_id: importId,
-        asset_type: 'copy',
-        name: `${pageName} - Heading`,
-        value: heading,
-        metadata: { source: 'content', page: pageName }
-      });
+      assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'copy', name: `${pageName} - Heading`, value: heading, metadata: { source: 'content', page: pageName } });
     }
   }
 }
 
-// Helper function to extract images from markdown content
+// Helper: extract images from markdown
 function extractImagesFromMarkdown(
-  markdown: string,
-  userId: string,
-  importId: string,
+  markdown: string, userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
-  seenValues: Set<string>,
-  pageName: string
+  seenValues: Set<string>, pageName: string
 ) {
-  // Match markdown image syntax: ![alt](url)
   const imageMatches = markdown.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g);
-  
   for (const match of imageMatches) {
     const altText = match[1] || 'Image';
     const imageUrl = match[2];
-    
     if (imageUrl && !seenValues.has(imageUrl) && imageUrl.startsWith('http')) {
       seenValues.add(imageUrl);
-      assets.push({
-        user_id: userId,
-        brand_import_id: importId,
-        asset_type: 'image',
-        name: altText.length > 50 ? `Image from ${pageName}` : altText,
-        value: imageUrl,
-        metadata: { source: 'content', page: pageName }
-      });
+      assets.push({ user_id: userId, brand_import_id: importId, asset_type: 'image', name: altText.length > 50 ? `Image from ${pageName}` : altText, value: imageUrl, metadata: { source: 'content', page: pageName } });
     }
   }
 }
 
-// Fallback to single page scrape if crawl fails
-async function handleSinglePageFallback(
-  supabase: any,
-  userId: string,
-  importId: string,
-  url: string,
-  apiKey: string,
-  existingBranding: BrandingData | null
-) {
-  console.log('Falling back to single page scrape...');
-  
-  const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      url,
-      formats: ['markdown', 'branding', 'links'],
-      onlyMainContent: false,
-    }),
-  });
-
-  const scrapeData = await scrapeResponse.json();
-
-  if (!scrapeResponse.ok || !scrapeData.success) {
-    await supabase
-      .from('brand_imports')
-      .update({ status: 'failed', metadata: { error: scrapeData.error || 'Scrape failed' } })
-      .eq('id', importId);
-
-    return new Response(
-      JSON.stringify({ success: false, error: scrapeData.error || 'Failed to scrape website' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  const assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }> = [];
-  const seenValues = new Set<string>();
-  const branding = existingBranding || scrapeData.data?.branding;
-
-  if (branding) {
-    extractBrandingAssets(branding, userId, importId, assets, seenValues);
-  }
-
-  if (scrapeData.data?.links) {
-    extractImageLinks(scrapeData.data.links, userId, importId, assets, seenValues, 'Homepage');
-  }
-
-  if (scrapeData.data?.markdown) {
-    extractCopyFromMarkdown(scrapeData.data.markdown, scrapeData.data.metadata, userId, importId, assets, seenValues, 'Homepage');
-    extractImagesFromMarkdown(scrapeData.data.markdown, userId, importId, assets, seenValues, 'Homepage');
-  }
-
-  const limitedAssets = assets.slice(0, 100);
-
-  if (limitedAssets.length > 0) {
-    const { error: assetsError } = await supabase
-      .from('brand_assets')
-      .insert(limitedAssets);
-
-    if (assetsError) {
-      console.error('Failed to insert assets:', assetsError);
-    }
-  }
-
-  // Generate AI business summary from fallback content
-  const fallbackPages: PageData[] = scrapeData.data ? [scrapeData.data] : [];
-  const businessSummary = await generateBusinessSummary(fallbackPages, url);
-
-  // Auto-populate client_profiles with all extracted data
-  const logoUrl = branding?.logo || branding?.images?.logo || null;
-  const brandColors: string[] = [];
-  if (branding?.colors) {
-    for (const val of Object.values(branding.colors)) {
-      if (val && typeof val === 'string') brandColors.push(val);
-    }
-  }
-
-  const profileUpsert: Record<string, any> = {
-    user_id: userId,
-    website: url,
-    updated_at: new Date().toISOString(),
-  };
-  if (logoUrl) profileUpsert.logo_url = logoUrl;
-  if (brandColors.length > 0) profileUpsert.brand_colors = brandColors;
-  if (businessSummary.businessName && businessSummary.businessName !== "Your Business") {
-    profileUpsert.business_name = businessSummary.businessName;
-  }
-  if (businessSummary.description) profileUpsert.description = businessSummary.description;
-  if (businessSummary.industry) profileUpsert.industry = businessSummary.industry;
-  if (businessSummary.targetAudience) profileUpsert.target_audience = businessSummary.targetAudience;
-  if (businessSummary.valueProposition) profileUpsert.value_proposition = businessSummary.valueProposition;
-  if (businessSummary.productCategory) profileUpsert.product_category = businessSummary.productCategory;
-  if (businessSummary.geographyMarkets) profileUpsert.geography_markets = businessSummary.geographyMarkets;
-  if (businessSummary.marketingGoals) profileUpsert.marketing_goals = businessSummary.marketingGoals;
-  if (businessSummary.mainCompetitors) profileUpsert.main_competitors = businessSummary.mainCompetitors;
-  if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
-  if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
-
-  console.log('Auto-populating client_profiles (fallback) with fields:', Object.keys(profileUpsert));
-  const { error: profileError } = await supabase
-    .from('client_profiles')
-    .upsert(profileUpsert, { onConflict: 'user_id' });
-  if (profileError) {
-    console.error('Failed to auto-populate client_profiles:', profileError);
-  }
-
-  await supabase
-    .from('brand_imports')
-    .update({ 
-      status: 'completed',
-      metadata: {
-        pagesScanned: 1,
-        assetsCount: limitedAssets.length,
-        colorScheme: branding?.colorScheme,
-        sourceUrl: url,
-        logoUrl: logoUrl,
-        fallback: true
-      }
-    })
-    .eq('id', importId);
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      importId,
-      pagesScanned: 1,
-      assetsCount: limitedAssets.length,
-      businessSummary,
-      logoUrl,
-      summary: {
-        colors: limitedAssets.filter(a => a.asset_type === 'color').length,
-        fonts: limitedAssets.filter(a => a.asset_type === 'font').length,
-        images: limitedAssets.filter(a => a.asset_type === 'image').length,
-        copy: limitedAssets.filter(a => a.asset_type === 'copy').length,
-      }
-    }),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-
-// Generate a rich business summary paragraph using AI from crawled content
+// Generate business summary using FAST AI model
 async function generateBusinessSummary(
-  pages: PageData[],
-  websiteUrl: string
+  pages: PageData[], websiteUrl: string
 ): Promise<{
-  businessName: string;
-  description: string;
-  industry?: string;
-  targetAudience?: string;
-  valueProposition?: string;
-  productCategory?: string;
-  geographyMarkets?: string;
-  marketingGoals?: string;
-  mainCompetitors?: string;
-  audienceData?: {
-    audienceType?: string;
-    mainAudienceSummary?: string;
-    secondaryAudiences?: string;
-    ageRange?: number[];
-    incomeLevel?: string;
-    femalePercent?: string;
-    malePercent?: string;
-    geographicFocus?: string;
-    coreValuesInterests?: string;
-    lifestyleSummary?: string;
-    purchaseFrequency?: string;
-    preferredChannels?: string;
-    commonObjections?: string;
-  };
-  valueData?: {
-    corePromise?: string;
-    elevatorPitch?: string;
-    customerPainPoints?: string;
-    howWeSolveIt?: string;
-    benefitFocus?: string;
-    uniqueValueDrivers?: string;
-    proofPoints?: string;
-  };
+  businessName: string; description: string; industry?: string; targetAudience?: string;
+  valueProposition?: string; productCategory?: string; geographyMarkets?: string;
+  marketingGoals?: string; mainCompetitors?: string;
+  audienceData?: Record<string, any>; valueData?: Record<string, any>;
 }> {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured for summary generation");
-      return { businessName: "Your Business", description: "" };
-    }
+    if (!LOVABLE_API_KEY) return { businessName: "Your Business", description: "" };
 
-    // Collect content from crawled pages (truncate to avoid token limits)
     let combinedContent = "";
     for (const page of pages.slice(0, 10)) {
       const title = page.metadata?.title || "";
@@ -774,127 +433,63 @@ async function generateBusinessSummary(
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
-            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible from the content. Be specific — reference actual details from the website content. For fields you cannot determine, return an empty string.
+            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible. Be specific.
 
-For industry, use standard categories like "Technology", "Healthcare", "E-commerce", "Finance", "Education", "Marketing", "Real Estate", etc.
-For targetAudience, describe who their customers/users are.
-For valueProposition, describe what makes them unique and why customers choose them.
-For productCategory, describe their main product/service category.
-For geographyMarkets, mention any geographic markets they serve.
-For marketingGoals, infer from their messaging what they aim to achieve.
-For mainCompetitors, list any competitors mentioned or inferred from the industry.
+For industry, use standard categories like "Technology", "Healthcare", "E-commerce", etc.
+For targetAudience, describe who their customers are.
+For valueProposition, describe what makes them unique.
 
-AUDIENCE DATA (fill as much as possible):
-- audienceType: one of "B2C - Individual Consumers", "B2B - Businesses", "B2B2C - Both", "Non-profit / NGO", "Government", "Other"
-- mainAudienceSummary: detailed description of their primary target audience
-- secondaryAudiences: any secondary audience segments
-- ageRange: estimated median age of target audience as a single number array like [30]
-- incomeLevel: estimated income level (e.g., "Middle", "Upper-middle", "High")
-- geographicFocus: where their audience is located
-- coreValuesInterests: what their audience cares about
-- lifestyleSummary: lifestyle description of typical customer
-- purchaseFrequency: one of "Daily", "Weekly", "Monthly", "Quarterly", "Yearly", "One-time"
-- preferredChannels: marketing channels that would work best
-- commonObjections: likely objections customers might have
+AUDIENCE DATA: audienceType (B2C/B2B/B2B2C), mainAudienceSummary, secondaryAudiences, ageRange [number], incomeLevel, geographicFocus, coreValuesInterests, lifestyleSummary, purchaseFrequency, preferredChannels, commonObjections.
 
-VALUE PROPOSITION DATA (fill as much as possible):
-- corePromise: the main promise to customers (1-2 sentences)
-- elevatorPitch: a concise elevator pitch (2-3 sentences)
-- customerPainPoints: what problems their customers face
-- howWeSolveIt: how the company solves those problems
-- benefitFocus: one of "Cost Savings", "Time Savings", "Quality/Performance", "Convenience", "Status/Prestige", "Sustainability", "Health/Wellness", "Safety/Security", "Innovation", "Other"
-- uniqueValueDrivers: what differentiates them from competitors
-- proofPoints: evidence, testimonials, stats that support their claims`,
+VALUE DATA: corePromise, elevatorPitch, customerPainPoints, howWeSolveIt, benefitFocus, uniqueValueDrivers, proofPoints.`,
           },
-          {
-            role: "user",
-            content: `Website URL: ${websiteUrl}\n\nCrawled content:\n${combinedContent}`,
-          },
+          { role: "user", content: `Website: ${websiteUrl}\n\n${combinedContent}` },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "create_business_summary",
-              description: "Create a comprehensive business profile from website content",
-              parameters: {
-                type: "object",
-                properties: {
-                  businessName: { type: "string", description: "The official company/brand name" },
-                  description: { type: "string", description: "A detailed 7-10 sentence paragraph describing the business." },
-                  industry: { type: "string", description: "Industry sector (e.g., Technology, Healthcare)" },
-                  targetAudience: { type: "string", description: "Who their target customers are" },
-                  valueProposition: { type: "string", description: "What makes them unique" },
-                  productCategory: { type: "string", description: "Main product/service category" },
-                  geographyMarkets: { type: "string", description: "Geographic markets served" },
-                  marketingGoals: { type: "string", description: "Inferred marketing goals" },
-                  mainCompetitors: { type: "string", description: "Known or inferred competitors" },
-                  audienceData: {
-                    type: "object",
-                    description: "Detailed audience profile",
-                    properties: {
-                      audienceType: { type: "string", description: "B2C, B2B, B2B2C, etc." },
-                      mainAudienceSummary: { type: "string", description: "Detailed primary audience description" },
-                      secondaryAudiences: { type: "string", description: "Secondary audience segments" },
-                      ageRange: { type: "array", items: { type: "number" }, description: "Median age as [number]" },
-                      incomeLevel: { type: "string", description: "Income level estimate" },
-                      geographicFocus: { type: "string", description: "Where audience is located" },
-                      coreValuesInterests: { type: "string", description: "What audience cares about" },
-                      lifestyleSummary: { type: "string", description: "Typical customer lifestyle" },
-                      purchaseFrequency: { type: "string", description: "How often they buy" },
-                      preferredChannels: { type: "string", description: "Best marketing channels" },
-                      commonObjections: { type: "string", description: "Likely customer objections" },
-                    },
-                  },
-                  valueData: {
-                    type: "object",
-                    description: "Detailed value proposition profile",
-                    properties: {
-                      corePromise: { type: "string", description: "Main promise to customers" },
-                      elevatorPitch: { type: "string", description: "Concise elevator pitch" },
-                      customerPainPoints: { type: "string", description: "Customer problems" },
-                      howWeSolveIt: { type: "string", description: "How they solve problems" },
-                      benefitFocus: { type: "string", description: "Primary benefit category" },
-                      uniqueValueDrivers: { type: "string", description: "Key differentiators" },
-                      proofPoints: { type: "string", description: "Evidence and social proof" },
-                    },
-                  },
-                },
-                required: ["businessName", "description"],
+        tools: [{
+          type: "function",
+          function: {
+            name: "create_business_summary",
+            description: "Create business profile from website content",
+            parameters: {
+              type: "object",
+              properties: {
+                businessName: { type: "string" },
+                description: { type: "string" },
+                industry: { type: "string" },
+                targetAudience: { type: "string" },
+                valueProposition: { type: "string" },
+                productCategory: { type: "string" },
+                geographyMarkets: { type: "string" },
+                marketingGoals: { type: "string" },
+                mainCompetitors: { type: "string" },
+                audienceData: { type: "object", properties: { audienceType: { type: "string" }, mainAudienceSummary: { type: "string" }, secondaryAudiences: { type: "string" }, ageRange: { type: "array", items: { type: "number" } }, incomeLevel: { type: "string" }, geographicFocus: { type: "string" }, coreValuesInterests: { type: "string" }, lifestyleSummary: { type: "string" }, purchaseFrequency: { type: "string" }, preferredChannels: { type: "string" }, commonObjections: { type: "string" } } },
+                valueData: { type: "object", properties: { corePromise: { type: "string" }, elevatorPitch: { type: "string" }, customerPainPoints: { type: "string" }, howWeSolveIt: { type: "string" }, benefitFocus: { type: "string" }, uniqueValueDrivers: { type: "string" }, proofPoints: { type: "string" } } },
               },
+              required: ["businessName", "description"],
             },
           },
-        ],
+        }],
         tool_choice: { type: "function", function: { name: "create_business_summary" } },
       }),
     });
 
-    if (!response.ok) {
-      console.error("AI summary generation failed:", response.status);
-      return { businessName: "Your Business", description: "" };
-    }
+    if (!response.ok) return { businessName: "Your Business", description: "" };
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      console.error("No tool call in AI summary response");
-      return { businessName: "Your Business", description: "" };
-    }
+    if (!toolCall) return { businessName: "Your Business", description: "" };
 
     const result = JSON.parse(toolCall.function.arguments);
-    console.log("Generated business summary for:", result.businessName);
+    console.log("Summary generated for:", result.businessName);
     return result;
   } catch (e) {
-    console.error("Business summary generation error:", e);
+    console.error("Summary error:", e);
     return { businessName: "Your Business", description: "" };
   }
 }
