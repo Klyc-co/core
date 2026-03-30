@@ -61,6 +61,10 @@ backend/
 | approval | Haiku | 0.3 | Risk assessment, compliance, regulatory flags |
 | analytics | Sonnet | 0.5 | Viral scoring, amplify/monitor/archive |
 
+## Repository
+
+**Production repo**: `klyc-ai/klyc_social_marketing_atscale`
+
 ## API Endpoints
 
 ### Campaign
@@ -86,5 +90,5 @@ bun run dev
 ## Migration History
 
 - **v1**: OpenAI-based multi-agent (ai-controller repo)
-- **v2**: Claude API multi-agent (idea-to-idiom, March 2026)
+- **v2**: Claude API multi-agent (klyc_social_marketing_atscale, March 2026)
 - **v3**: Singular agent with submind profiles (current)
