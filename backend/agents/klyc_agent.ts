@@ -1,4 +1,4 @@
-import { claudeClient, AGENT_MODELS } from '../services/claude_client'
+import { claudeClient } from '../services/claude_client'
 import type { Agent, AgentInput, AgentOutput, AgentStatus } from './agent_interface'
 
 /**
@@ -211,7 +211,15 @@ export class KLYCAgent implements Agent {
   }
 
   /**
-   * Execute a submind that requires Claude API
+   * Execute a submind that requires Claude API.
+   *
+   * Flow:
+   * 1. Build user prompt from profile + input context
+   * 2. Call claudeClient.generateResponse() with system prompt, model, temp
+   * 3. Parse the response text into structured output
+   *
+   * The system prompt IS the submind personality. Claude reads it and
+   * becomes that submind for the duration of this one API call.
    */
   private async executeWithClaude(
     profile: SubmindProfile,
@@ -219,19 +227,36 @@ export class KLYCAgent implements Agent {
   ): Promise<AgentOutput> {
     const userPrompt = this.buildPrompt(profile, input)
 
-    const result = await claudeClient.generate({
-      model: profile.model as 'claude-sonnet-4-20250514' | 'claude-haiku-4-5-20251001',
+    // Call the actual ClaudeClient interface
+    const result = await claudeClient.generateResponse({
+      model: profile.model as string,
       system: profile.systemPrompt,
       prompt: userPrompt,
       temperature: profile.temperature,
       maxTokens: profile.maxTokens,
     })
 
-    if (!result.success) {
-      throw new Error(result.error || `${profile.focus} submind call failed`)
+    // If source is 'fallback', API key wasn't configured
+    if (result.source === 'fallback') {
+      return {
+        agent: profile.focus,
+        status: 'error',
+        data: {
+          error: 'Claude API key not configured — running in fallback mode',
+          fallbackText: result.text,
+        },
+        timestamp: new Date().toISOString(),
+        metadata: {
+          model: 'fallback',
+          temperature: profile.temperature,
+          outputFormat: profile.outputFormat,
+          source: 'fallback',
+        },
+      }
     }
 
-    const parsedData = this.parseOutput(profile, result.content)
+    // Parse Claude's response text into structured data
+    const parsedData = this.parseOutput(profile, result.text)
 
     return {
       agent: profile.focus,
@@ -239,10 +264,12 @@ export class KLYCAgent implements Agent {
       data: parsedData,
       timestamp: new Date().toISOString(),
       metadata: {
-        model: profile.model,
+        model: result.model,
         temperature: profile.temperature,
-        stopReason: result.stopReason,
         outputFormat: profile.outputFormat,
+        source: result.source,
+        usage: result.usage,
+        elapsedMs: result.elapsed_ms,
       },
     }
   }
@@ -398,7 +425,12 @@ export class KLYCAgent implements Agent {
   }
 
   /**
-   * Build the user prompt from profile and input context
+   * Build the user prompt from profile and input context.
+   *
+   * The user prompt contains the DATA — campaign brief, previous
+   * submind outputs, etc. The system prompt (in the profile) contains
+   * the PERSONALITY and INSTRUCTIONS. Together they form the full
+   * message sent to Claude.
    */
   private buildPrompt(profile: SubmindProfile, input: AgentInput): string {
     const sections: string[] = []
@@ -426,7 +458,12 @@ export class KLYCAgent implements Agent {
   }
 
   /**
-   * Parse Claude's response based on the expected output format
+   * Parse Claude's response based on the expected output format.
+   *
+   * Claude returns plain text. If we expect JSON, we try to extract
+   * it — first looking for a JSON object or array pattern, then
+   * falling back to parsing the whole string, and finally returning
+   * the raw text if nothing works.
    */
   private parseOutput(
     profile: SubmindProfile,
