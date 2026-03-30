@@ -18,16 +18,82 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
-### Added
-- `[infra]` Unified CHANGELOG.md in production repo (idea-to-idiom), consolidating ai-controller and Lovable histories
-- `[infra]` Claude API integration as primary LLM backbone (replacing OpenAI)
-- `[backend]` Multi-model architecture supporting model-per-agent configuration
-- `[infra]` Unified backend repository consolidating ai-controller and Lovable repos
+### Added — 2026-03-30 Session (Claude Backend Build)
+
+#### Commits to Production Repo (idea-to-idiom-5e2d779e)
+
+1. **`4aae3de`** — `feat: add unified CHANGELOG.md` — Consolidated ai-controller + idea-to-idiom history into single production changelog
+2. **`8c637b7`** — `feat(backend): add Claude API foundation layer` — Client, types, schemas, security, utilities (8 files)
+3. **`a71c003`** — `feat(agents): add all 9 Claude-powered agents` — Complete agent pipeline rebuilt for Anthropic Claude API (9 files)
+4. **`8838056`** — `feat(orchestrator): add orchestrator, lifecycle, runner, campaign API` — Full orchestration engine (5 files)
+
+#### Claude API Client `[backend]`
+- Added `backend/services/claude_client.ts` — Anthropic Messages API client via raw fetch, no SDK dependency
+- Added multi-model architecture via `AGENT_MODELS` constant map (Haiku for lightweight, Sonnet for creative/analytical)
+- Added fallback mode when `ANTHROPIC_API_KEY` is not configured (returns placeholder, app doesn't crash)
+- Added configurable timeout (default 30s), AbortController-based cancellation
+- Added token usage tracking (`input_tokens`, `output_tokens`) on every response
+- API version pinned to `2023-06-01`
+- Key lookup order: `ANTHROPIC_API_KEY` → `CLAUDE_API_KEY` → fallback
+
+#### Agent Interface `[backend]`
+- Added `backend/agents/agent_interface.ts` — Universal agent contracts (`Agent`, `AgentInput`, `AgentOutput`, `AgentStatus`)
+- Added `backend/agents/base.ts` — Base agent class with status tracking, error counting, lifecycle hooks
+
+#### 9 Agents Rebuilt for Claude `[agent]`
+- Added `backend/agents/normalizer.ts` — Raw input → structured `CampaignBrief` with confidence scoring, coverage analysis, pass/fail gating. No LLM call (pure structural). Workflow version: `normalization-v2-claude`
+- Added `backend/agents/research.ts` — Market opportunity, competitive landscape, trend signals, confidence scoring. Model: `claude-sonnet-4-20250514`
+- Added `backend/agents/product.ts` — Positioning statement, pain-to-capability mapping, differentiators, competitive contrast. Model: `claude-sonnet-4-20250514`
+- Added `backend/agents/narrative.ts` — Generates 3-5 scored candidates across 7 narrative types. JSON array output with `NarrativeRank = score * clarity * trust` ranking. Temperature: 0.8. Model: `claude-sonnet-4-20250514`
+- Added `backend/agents/social.ts` — Platform-native posts for LinkedIn, X, Instagram. JSON array output with copy, CTA, hashtags, tone. Temperature: 0.7. Model: `claude-sonnet-4-20250514`
+- Added `backend/agents/image.ts` — Creative prompt generation with orientation handling (16:9, 1:1, 4:5). Fallback prompts if LLM returns empty. Model: `claude-haiku-3-5-20241022`
+- Added `backend/agents/editor.ts` — QA review returning JSON with `qualityScore`, `brandConsistent`, `riskFlags`, `edits`, `approved`, `notes`. Model: `claude-sonnet-4-20250514`
+- Added `backend/agents/approval.ts` — Risk gating with `readyForApproval`, `riskLevel`, `riskFlags`, `recommendedChanges`, `confidence`. Model: `claude-haiku-3-5-20241022`
+- Added `backend/agents/analytics.ts` — CTR/reach/conversion estimation with viral score formula `VS = 0.25E + 0.25V + 0.20N + 0.15D + 0.10CS + 0.05EE` and amplify/monitor/archive decision. Model: `claude-sonnet-4-20250514`
+
+#### Orchestrator `[backend]`
+- Added `backend/orchestrator/klyc_orchestrator.ts` — 9-agent sequential pipeline. Each agent receives accumulated `previous_output` from all prior successes. Campaign ID generated per run. Integrates lifecycle processor. Version: `v2-claude`
+- Added `backend/orchestrator/campaign_lifecycle.ts` — 17-state machine (`draft` → `learned`). Checkpoint evaluation: `combined = engRate*0.6 + viralVelocity*0.4`, thresholds: boost (≥0.75), continue (≥0.50), pause (≥0.25), archive (<0.25). Learning update with `scale`/`iterate`/`retire` recommendation
+- Added `backend/orchestrator/agent_runner.ts` — Re-exports execution guardrails for backward compatibility
+
+#### Campaign Runner `[backend]`
+- Added `backend/services/campaign-runner.ts` — Full pipeline: Zod validation → merge nested/root payload → build orchestration context → normalize → orchestrate → return result. FIFO run store (50-entry limit). Supports dual `camelCase`/`snake_case` field conventions
+- Added `backend/api/run_campaign.ts` — Campaign execution endpoint with auth check via `Security.authenticate()`, wires campaign runner to orchestrator
+
+#### Types & Schemas `[schema]`
+- Added `backend/models/types.ts` — Complete TypeScript definitions: `Platform` (8), `ContentType` (9), `CampaignObjective` (8), `CampaignStatus` (17), `RequestType` (5), `NarrativeType` (7), `CampaignBrief`, `NormalizedCampaignBrief`, `CustomerDNA`, `StrategyProfile`, `NarrativeCandidate`, `PlatformScore`, `PostPackage`, `CheckpointWindow`, `PerformanceSnapshot`, `LearningUpdate`, `SourceReference`, `CompressedSummary`, `CompressionMetadata`, `OrchestrationContext`, `OrchestrationStep`, `AgentTask`, `WorkflowCallMetadata`, `WorkflowIntakeRequest`, `NormalizationReportEnvelope`, `ValidationErrorPayload`
+- Added `backend/models/campaign-lifecycle.ts` — 14 Zod schemas: `normalizedBriefSchema`, `customerDNASchema`, `researchStageSchema`, `positioningStageSchema`, `narrativeCandidateSchema`, `simulationStageSchema`, `platformScoreSchema`, `postPackageSchema`, `packagingStageSchema`, `approvalStageSchema`, `analyticsSnapshotSchema`, `checkpointEvaluationSchema`, `learningUpdateSchema`, `lifecycleTransitionSchema`. Constants: `LIFECYCLE_STATES`, `CHECKPOINT_WINDOWS`, `NARRATIVE_TYPES`, `PLATFORMS`
+
+#### Utilities `[backend]`
+- Added `backend/utils/response_formatter.ts` — Compressed payload builder mapping agent results to `research`/`narrative`/`social`/`images`/`product`/`editor`/`analytics` keys. Campaign ID via `crypto.randomUUID()` with fallback. Metadata aggregation with success/failure counts
+- Added `backend/utils/execution_guardrails.ts` — Default: 15s timeout, 2 retries, 50 max steps, 20KB response limit. `executeAgent()` with `AbortController`-based timeout and response size validation
+
+#### Security `[backend]`
+- Added `backend/services/security.ts` — Auth via `x-loveable-auth` header or Bearer token. Zod payload validation. Header redaction (allowlist: `x-client-id`, `x-loveable-client`, `x-loveable-source`). Keyword normalization (max 25, deduped). Request ID via `crypto.randomUUID()` with fallback
+
+#### Entry Point `[infra]`
+- Added `backend/index.ts` — Barrel export of all public modules: client, agents, orchestrator, campaign runner, API handler, utilities, types, schemas
 
 ### Changed
-- `[backend]` Migrated LLM provider from OpenAI to Anthropic Claude (primary) with multi-model support
-- `[infra]` Backend source of truth moved to single GitHub repository (idea-to-idiom-5e2d779e)
-- `[ui]` Frontend remains on Lovable for UI changes only
+- `[backend]` Migrated LLM provider from OpenAI (`gpt-4.1-mini` via Responses API) to Anthropic Claude (Messages API) with multi-model support
+- `[infra]` Backend source of truth moved from `klyc-ai/ai-controller` to `klyc-ai/idea-to-idiom-5e2d779e`
+- `[infra]` ai-controller repo retained as fallback only — all new development targets idea-to-idiom
+- `[agent]` Agent timeout increased from 15s to 30s for Claude API (Claude responses are more detailed)
+- `[agent]` Normalizer workflow version bumped from `normalization-v1` to `normalization-v2-claude`
+
+### Architecture Decisions Made This Session
+- Claude API via raw fetch (not Anthropic SDK) for zero-dependency edge deployment
+- Haiku for normalizer, image, approval (fast, cheap); Sonnet for research, product, narrative, social, editor, analytics (quality)
+- Fallback mode returns placeholder text when API key missing — no crashes during development
+- `backend/` directory at repo root, parallel to `src/` (Lovable frontend) and `supabase/` (database)
+- Single `backend/index.ts` barrel export for clean frontend imports
+- All agent JSON parsing uses regex extraction (`/\[[\s\S]*\]/` or `/\{[\s\S]*\}/`) with fallback to raw text
+
+### Pending (Not Yet Implemented)
+- `ANTHROPIC_API_KEY` not yet added to Supabase secrets or `.env`
+- Supabase edge function wiring (connecting `backend/api/run_campaign.ts` to `supabase/functions/`)
+- Frontend integration (connecting Lovable UI components to new `backend/` imports)
+- Repo rename (scheduled as grand event after all work is verified)
 
 ---
 
