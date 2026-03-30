@@ -18,6 +18,79 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ## [Unreleased]
 
+### Added — 2026-03-30 Session 2 (ai-controller Merge + Singular Agent Architecture)
+
+#### Commits to Production Repo (idea-to-idiom-5e2d779e)
+
+5. **`26e3b27`** — `feat(backend): merge core ai-controller files with path adaptations` — Strategy engine, context compression, data models, normalizer adapter, router, campaign run store, legacy archive, tests, PRD, SECURITY, LICENSE, .gitignore, barrel exports (14 files)
+6. **`6945f61`** — `feat(agent): add singular KLYCAgent with 9 submind personalities` — One agent class, 9 SubmindProfile configurations, KLYCOrchestratorV2 with v3-singular-agent pipeline (2 files)
+7. **`1608d69`** — `docs(backend): add final stragglers — docs, tests, legacy archives` — ORCHESTRATOR.md, README.md, active test adaptations, legacy test archives (7 files)
+
+#### ai-controller Merge `[backend]` `[infra]`
+- Added `backend/services/strategy-engine.ts` — Full math engine: opportunity profiling, `rankPlatforms()`, `computePreLaunchScore()`, `scoreNarrativeCandidates()`, `computeViralityCheckpoint()`, `generateLearningDelta()`, cosine similarity, hunting modes (reactive/proactive), strategy comparison with stay/adjust/override decisions
+- Added `backend/services/context-compression.ts` — Three-layer compression (`compressSummaryLayers()`, `compressCampaignContext()`, `compressContentContext()`), SHA-256 hashing, MAX_FIELD_LENGTH=400
+- Added `backend/services/data-models.ts` — Campaign, Content, ResearchSignal, AnalyticsMetric interfaces
+- Added `backend/orchestrator/normalizer-adapter.ts` — Zod schemas for normalizer response, `adaptNormalizerResponse()`, `unwrapPayload()`, string clamping (800 chars)
+- Added `backend/orchestrator/router.ts` — `buildOrchestrationPackage()`, routing signals, complexity evaluation (low/medium/high), orchestration status (ready/partial/blocked)
+- Added `backend/state/campaign-run-store.ts` — `InMemoryCampaignRunStore` with CRUD, timeline metrics, learning updates, clone-on-read safety, FIFO eviction. Import path fixed from `../../core/agents/agent_interface.ts` to `../agents/agent_interface`. Interface renamed to `CampaignRunStoreInterface` to avoid naming conflict with exported store instance
+- Added `backend/_legacy/openai-client-reference.ts` — Archived original OpenAI client as migration reference (not imported by active code)
+- Added `backend/tests/router.test.ts` — Orchestration routing tests with import paths adapted for new repo structure
+- Added `backend/tests/campaign-run-store.test.ts` — State store CRUD + mutation safety tests with adapted imports
+- Updated `backend/index.ts` — Barrel exports expanded with strategy engine, compression, data models, router, adapter, state store modules
+- Updated `.gitignore` — Added `.env`, `.env.*`, `!.env.example`, `**/agent-eval-report*`, `packages`, `pids`, `.file-manifest`, `.devcontainer/`, `.spark-workbench-id`
+- Added `PRD.md` — Updated with Claude model architecture, math formulas, submind pipeline
+- Added `SECURITY.md` — KLYC-branded security policy
+- Added `LICENSE` — MIT license, copyright KLYC AI
+
+#### Singular Agent Architecture `[agent]` `[backend]`
+- Added `backend/agents/klyc_agent.ts` — **THE architectural pivot.** Single `KLYCAgent` class replaces 9 separate agent classes. One agent, 9 `SubmindProfile` configurations. Each profile carries its own system prompt, model assignment, temperature, output format, and max tokens. The agent shifts focus through personality profiles rather than instantiating separate classes.
+  - `SubmindFocus` type: `normalizer | research | product | narrative | social | image | editor | approval | analytics`
+  - `SubmindProfile` interface: `focus`, `description`, `model`, `temperature`, `systemPrompt`, `outputFormat`, `maxTokens`, `requiresLLM`
+  - `SUBMIND_PROFILES` map: all 9 profiles with real system prompts
+  - `run(focus, input)` — single entry point, routes to `executeWithClaude()` or `executeNormalizer()` based on `requiresLLM`
+  - `executeWithClaude()` — builds prompt, calls Claude API, parses response
+  - `executeNormalizer()` — pure TypeScript structural analysis: `classifyRequestType()`, `calculateCoverage()`, `buildNextActions()`
+  - `buildPrompt()` — assembles user prompt from profile context + previous output chain
+  - `parseOutput()` — JSON regex extraction (`/\{[\s\S]*\}/` or `/\[[\s\S]*\]/`) with fallback to raw text
+  - Model assignments: Sonnet (`claude-sonnet-4-20250514`) for research, product, narrative, social, editor, analytics; Haiku (`claude-haiku-4-5-20251001`) for image, approval; `none` for normalizer
+  - Temperature tuning: 0.8 (narrative), 0.7 (research, social), 0.6 (product, image), 0.5 (analytics), 0.4 (editor), 0.3 (approval), 0 (normalizer)
+- Added `backend/orchestrator/klyc_orchestrator_v2.ts` — V3 orchestrator (`v3-singular-agent` version string). Drives the single KLYCAgent through all 9 submind profiles sequentially. Pipeline: normalizer → research → product → narrative → social → image → editor → approval → analytics. Each submind receives accumulated `previousOutputs` from all prior successes.
+  - `runPipeline(initialInput)` — full 9-submind sequential execution with error tolerance (continues on failure, marks as `partial`)
+  - `runSingleSubmind(focus, input)` — isolated submind execution for testing/re-runs
+  - `runPipelineFrom(startingFocus, input)` — resume interrupted pipelines from any submind
+  - `getMetrics(result)` — execution analytics: total time, avg submind time, slowest/fastest submind, success/error counts
+  - Campaign ID generation: `campaign-${timestamp}-${random7}`
+
+#### Documentation & Test Updates `[backend]` `[infra]`
+- Rewrote `backend/ORCHESTRATOR.md` — Updated for v3 singular agent architecture, submind profiles table, pipeline flow diagram
+- Rewrote `backend/README.md` — Updated with submind profiles table, v3 architecture overview, migration history from OpenAI to Claude
+- Adapted `backend/tests/campaign-lifecycle.test.ts` — Import paths updated to `../orchestrator/campaign_lifecycle` and `../agents/agent_interface`
+- Adapted `backend/tests/run-campaign.test.ts` — Import paths updated to `../services/campaign-runner`
+- Archived `backend/tests/_legacy/normalizer-adapter.test.ts` — Adapter-only tests still valid as reference, but imports `OpenAIWorkflowClient` which is no longer active
+- Archived `backend/tests/_legacy/test-orchestrator.ts` — Old orchestrator smoke test stub, references replaced `KLYCOrchestrator`
+- Archived `backend/tests/_legacy/workflow-intake.test.ts` — Workflow intake validation stub, references old client
+
+### Changed
+- `[agent]` **Breaking architecture change**: 9 separate agent classes (`NormalizerAgent`, `ResearchAgent`, `ProductAgent`, `NarrativeAgent`, `SocialAgent`, `ImageAgent`, `EditorAgent`, `ApprovalAgent`, `AnalyticsAgent`) consolidated into single `KLYCAgent` class with 9 `SubmindProfile` configurations. Old individual agent files remain for reference but are superseded by `klyc_agent.ts`.
+- `[backend]` Orchestrator version bumped from `v2-claude` to `v3-singular-agent`. `KLYCOrchestratorV2` replaces `KLYCOrchestrator` as the active pipeline driver.
+- `[infra]` ai-controller merge completed — zero files remaining in ai-controller that haven't been brought over or archived. ai-controller repo is now fully deprecated.
+- `[backend]` Campaign run store interface renamed from `CampaignRunStore` to `CampaignRunStoreInterface` to avoid naming collision with exported instance.
+
+### Architecture Decisions Made This Session
+- **Singular agent with subminds**: One `KLYCAgent` class with 9 personality profiles rather than 9 separate agent classes. The agent is one intelligence that shifts focus, not 9 separate intelligences.
+- **Agent lives in the API**: System prompts are sent to Claude API at call time via the `system` parameter. The repo is the routing/plumbing layer only — the agent intelligence resides in Claude's API responses, shaped by the system prompts defined in `SUBMIND_PROFILES`.
+- **Legacy test archival**: Tests that import `OpenAIWorkflowClient` or old `KLYCOrchestrator` are archived to `tests/_legacy/` rather than deleted or broken. They serve as migration reference.
+- **Import path adaptation over refactoring**: Files from ai-controller were adapted with minimal changes (import paths, interface names) rather than rewritten, preserving battle-tested logic.
+
+### Merge Completion Status
+- **ai-controller → idea-to-idiom merge: COMPLETE**
+- All backend services, agents, orchestrator, state management, tests, documentation, and configuration files have been brought over
+- Import paths adapted for new directory structure
+- OpenAI-dependent code either replaced (agents, orchestrator) or archived (_legacy)
+- Remaining work: repo rename (scheduled as grand event, not yet)
+
+---
+
 ### Added — 2026-03-30 Session (Claude Backend Build)
 
 #### Commits to Production Repo (idea-to-idiom-5e2d779e)
