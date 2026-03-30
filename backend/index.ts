@@ -26,10 +26,43 @@ export { KLYCOrchestrator, orchestrator } from './orchestrator/klyc_orchestrator
 export type { OrchestratorInput, OrchestratorResult } from './orchestrator/klyc_orchestrator'
 export { CampaignLifecycleProcessor } from './orchestrator/campaign_lifecycle'
 export type { CampaignLifecycleResult, CheckpointEvaluation, LifecycleTransition } from './orchestrator/campaign_lifecycle'
+export { buildOrchestrationPackage } from './orchestrator/router'
+export type { RoutingInput, RoutingSignals, OrchestrationPackage, RoutingSignalKey } from './orchestrator/router'
+export { adaptNormalizerResponse } from './orchestrator/normalizer-adapter'
+export type { NormalizerAdapterOptions } from './orchestrator/normalizer-adapter'
 
 // ── Campaign Runner ──
 export { executeCampaignRun, campaignRunStore } from './services/campaign-runner'
 export type { CampaignRunResult, CampaignRunOrchestrator } from './services/campaign-runner'
+
+// ── State Store ──
+export { InMemoryCampaignRunStore, campaignRunStore as runStore } from './state/campaign-run-store'
+export type {
+  CampaignRunRecord, CampaignRunInput, CampaignRunUpdate,
+  CampaignRunStoreInterface, TimelineMetric
+} from './state/campaign-run-store'
+
+// ── Strategy Engine ─���
+export {
+  buildOpportunityProfile, compareRequestedVsRecommendedStrategy,
+  rankPlatforms, computePreLaunchScore, computeNarrativeRank,
+  scoreNarrativeCandidates, computeViralityCheckpoint, generateLearningDelta
+} from './services/strategy-engine'
+export type {
+  OpportunitySignal, OpportunityProfile, RequestedStrategy, RecommendedStrategy,
+  StrategyComparison, PlatformPerformanceInput, RankedPlatform,
+  PreLaunchComponents, PreLaunchWeights, NarrativeCandidateInput,
+  NarrativeCandidateScore, ViralityCheckpointInput, ViralityCheckpointResult,
+  LearningDeltaInput, LearningDelta
+} from './services/strategy-engine'
+
+// ── Context Compression ──
+export {
+  compressSummaryLayers, compressCampaignContext, compressContentContext
+} from './services/context-compression'
+
+// ── Data Models ──
+export type { Campaign, Content, ResearchSignal, AnalyticsMetric } from './services/data-models'
 
 // ── API ──
 export { handleCampaignRun } from './api/run_campaign'
