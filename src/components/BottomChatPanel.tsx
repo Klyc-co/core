@@ -268,6 +268,7 @@ const BottomChatPanel = () => {
     const text = overrideText || input.trim();
     if (!text || isLoading) return;
 
+    setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
@@ -288,9 +289,10 @@ const BottomChatPanel = () => {
       ]);
     } catch (error) {
       console.error("Chat error:", error);
+      setLastFailedText(text);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+        { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." },
       ]);
     } finally {
       setIsLoading(false);
