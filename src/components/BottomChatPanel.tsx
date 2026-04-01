@@ -202,7 +202,20 @@ const BottomChatPanel = () => {
         draft_updates: structured.draft_updates,
         next_questions: structured.next_questions,
         intent: structured.intent,
-    };
+      };
+    } catch (err) {
+      const fallback: StructuredResponse = {
+        intent: "other",
+        message: "Sorry, I encountered an error. Please try again.",
+        next_questions: [],
+        draft_updates: {},
+      };
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: fallback.message, structured: fallback },
+      ]);
+      return { message: fallback.message, draft_updates: {}, next_questions: [], intent: "other" };
+    }
   };
 
   const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
