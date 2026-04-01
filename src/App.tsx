@@ -113,6 +113,8 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+            <Route path="/waitlist" element={<Waitlist />} />
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
