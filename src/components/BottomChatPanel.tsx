@@ -465,6 +465,22 @@ const BottomChatPanel = () => {
                           i === messages.length - 1 &&
                           msg.structured.intent !== "campaign_ready" &&
                           renderNextQuestions(msg.structured.next_questions)}
+                        {/* Retry button on last error message */}
+                        {i === messages.length - 1 && lastFailedText && msg.content.includes("error") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 w-full text-xs gap-1.5"
+                            onClick={() => {
+                              // Remove last error message and retry
+                              setMessages((prev) => prev.slice(0, -1));
+                              handleSend(lastFailedText);
+                            }}
+                            disabled={isLoading}
+                          >
+                            <RefreshCw className="h-3 w-3" /> Retry
+                          </Button>
+                        )}
                       </>
                     ) : (
                       msg.content
