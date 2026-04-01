@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterviewMode";
 import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
-import { signRequest } from "@/lib/security/aiRequestSigning";
+
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
