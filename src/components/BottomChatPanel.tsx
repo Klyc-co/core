@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown } from "lucide-react";
+import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterviewMode";
 import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
-import { signRequest } from "@/lib/security/aiRequestSigning";
+
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -42,7 +42,7 @@ type ChatMessage = {
   structured?: StructuredResponse;
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
+const PIPELINE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-pipeline`;
 
 const BottomChatPanel = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
@@ -58,7 +58,29 @@ const BottomChatPanel = () => {
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
+  const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Health check on mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const resp = await fetch(PIPELINE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ action: "health" }),
+        });
+        const data = await resp.json();
+        console.log("[Klyc Pipeline] Health check:", data);
+      } catch (err) {
+        console.warn("[Klyc Pipeline] Health check failed:", err);
+      }
+    };
+    checkHealth();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -66,42 +88,18 @@ const BottomChatPanel = () => {
     }
   }, [messages]);
 
-  const sendToKlyc = async (allMessages: ChatMessage[]) => {
+  const callPipeline = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    const effectiveClientId = getEffectiveUserId();
-
-    let marketerClientId: string | undefined;
-    if (selectedClientId && selectedClientId !== "default") {
-      const { data: mc } = await supabase
-        .from("marketer_clients")
-        .select("id")
-        .eq("client_id", selectedClientId)
-        .maybeSingle();
-      marketerClientId = mc?.id;
-    }
-
-    const contextSummary = selectedClientId && selectedClientId !== "default"
-      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
-      : undefined;
-
-    const signedPayload = signRequest({
-      messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
-      client_id: effectiveClientId,
-      marketer_client_id: marketerClientId,
-      context_summary: contextSummary,
-      draft_id: draftId,
-    });
-
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetch(PIPELINE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(signedPayload),
+      body: JSON.stringify({ action, ...payload }),
     });
 
     if (!resp.ok) {
@@ -109,7 +107,77 @@ const BottomChatPanel = () => {
       throw new Error(errorData.error || `Request failed (${resp.status})`);
     }
 
-    return (await resp.json()) as StructuredResponse;
+    return await resp.json();
+  };
+
+  const extractResponseText = (data: any): string => {
+    if (data?.stages && Array.isArray(data.stages) && data.stages.length > 0) {
+      const stageData = data.stages[0].data;
+      if (typeof stageData === "string") {
+        try {
+          const parsed = JSON.parse(stageData);
+          return parsed.raw || parsed.content || parsed.message || stageData;
+        } catch {
+          return stageData;
+        }
+      }
+      if (typeof stageData === "object" && stageData !== null) {
+        return stageData.raw || stageData.content || stageData.message || JSON.stringify(stageData);
+      }
+    }
+    if (data?.message) return data.message;
+    if (data?.result) return typeof data.result === "string" ? data.result : JSON.stringify(data.result);
+    return "I processed your request but couldn't extract a readable response.";
+  };
+
+  const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
+    const lastUserMsg = allMessages.filter(m => m.role === "user").pop();
+    const userText = lastUserMsg?.content || "";
+
+    // Detect campaign creation intent
+    const isCampaignCreate = /\b(create|launch|start|build)\b.*\b(campaign|ad|promotion)\b/i.test(userText);
+
+    let pipelineResponse: any;
+
+    if (isCampaignCreate) {
+      pipelineResponse = await callPipeline("create", {
+        input: {
+          campaignBrief: userText,
+          targetAudience: "",
+          productInfo: "",
+          competitiveContext: "",
+          brandVoice: "",
+          keywords: [],
+          platforms: [],
+          objective: "engagement",
+        },
+      });
+    } else {
+      pipelineResponse = await callPipeline("single", {
+        focus: "narrative",
+        input: {
+          campaignBrief: userText,
+          targetAudience: "",
+          productInfo: "",
+          competitiveContext: "",
+          brandVoice: "",
+          keywords: [],
+          platforms: [],
+          objective: "engagement",
+        },
+      });
+    }
+
+    const responseText = extractResponseText(pipelineResponse);
+
+    return {
+      intent: isCampaignCreate ? "launch_campaign" : "other",
+      message: responseText,
+      next_questions: [],
+      draft_updates: {},
+      risk_level: "low",
+      requires_approval: false,
+    };
   };
 
   const sendForInterview = async (text: string, brainContext?: string) => {
@@ -117,70 +185,37 @@ const BottomChatPanel = () => {
     const updated = [...messages, userMsg];
     setMessages(updated);
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) throw new Error("Not authenticated");
+    try {
+      const structured = await sendToKlyc(updated);
 
-    const effectiveClientId = getEffectiveUserId();
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: structured.message, structured },
+      ]);
 
-    let marketerClientId: string | undefined;
-    if (selectedClientId && selectedClientId !== "default") {
-      const { data: mc } = await supabase
-        .from("marketer_clients")
-        .select("id")
-        .eq("client_id", selectedClientId)
-        .maybeSingle();
-      marketerClientId = mc?.id;
+      if (structured.draft_updates?._draft_id) {
+        setDraftId(structured.draft_updates._draft_id);
+      }
+
+      return {
+        message: structured.message,
+        draft_updates: structured.draft_updates,
+        next_questions: structured.next_questions,
+        intent: structured.intent,
+      };
+    } catch (err) {
+      const fallback: StructuredResponse = {
+        intent: "other",
+        message: "Sorry, I encountered an error. Please try again.",
+        next_questions: [],
+        draft_updates: {},
+      };
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: fallback.message, structured: fallback },
+      ]);
+      return { message: fallback.message, draft_updates: {}, next_questions: [], intent: "other" };
     }
-
-    let contextSummary = selectedClientId && selectedClientId !== "default"
-      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
-      : undefined;
-
-    if (brainContext) {
-      contextSummary = (contextSummary ? contextSummary + "\n" : "") +
-        `CLIENT BRAIN CONTEXT (use to guide questions):\n${brainContext}`;
-    }
-
-    const signedPayload = signRequest({
-      messages: updated.map((m) => ({ role: m.role, content: m.content })),
-      client_id: effectiveClientId,
-      marketer_client_id: marketerClientId,
-      context_summary: contextSummary,
-      draft_id: draftId,
-    });
-
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(signedPayload),
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
-    }
-
-    const structured = await resp.json() as StructuredResponse;
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: structured.message, structured },
-    ]);
-
-    if (structured.draft_updates?._draft_id) {
-      setDraftId(structured.draft_updates._draft_id);
-    }
-
-    return {
-      message: structured.message,
-      draft_updates: structured.draft_updates,
-      next_questions: structured.next_questions,
-      intent: structured.intent,
-    };
   };
 
   const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
@@ -233,6 +268,7 @@ const BottomChatPanel = () => {
     const text = overrideText || input.trim();
     if (!text || isLoading) return;
 
+    setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", content: text };
     const updated = [...messages, userMsg];
     setMessages(updated);
@@ -253,9 +289,10 @@ const BottomChatPanel = () => {
       ]);
     } catch (error) {
       console.error("Chat error:", error);
+      setLastFailedText(text);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+        { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." },
       ]);
     } finally {
       setIsLoading(false);
@@ -428,6 +465,22 @@ const BottomChatPanel = () => {
                           i === messages.length - 1 &&
                           msg.structured.intent !== "campaign_ready" &&
                           renderNextQuestions(msg.structured.next_questions)}
+                        {/* Retry button on last error message */}
+                        {i === messages.length - 1 && lastFailedText && msg.content.includes("error") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 w-full text-xs gap-1.5"
+                            onClick={() => {
+                              // Remove last error message and retry
+                              setMessages((prev) => prev.slice(0, -1));
+                              handleSend(lastFailedText);
+                            }}
+                            disabled={isLoading}
+                          >
+                            <RefreshCw className="h-3 w-3" /> Retry
+                          </Button>
+                        )}
                       </>
                     ) : (
                       msg.content
