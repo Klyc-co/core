@@ -185,69 +185,23 @@ const BottomChatPanel = () => {
     const updated = [...messages, userMsg];
     setMessages(updated);
 
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) throw new Error("Not authenticated");
+    try {
+      const structured = await sendToKlyc(updated);
 
-    const effectiveClientId = getEffectiveUserId();
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: structured.message, structured },
+      ]);
 
-    let marketerClientId: string | undefined;
-    if (selectedClientId && selectedClientId !== "default") {
-      const { data: mc } = await supabase
-        .from("marketer_clients")
-        .select("id")
-        .eq("client_id", selectedClientId)
-        .maybeSingle();
-      marketerClientId = mc?.id;
-    }
+      if (structured.draft_updates?._draft_id) {
+        setDraftId(structured.draft_updates._draft_id);
+      }
 
-    let contextSummary = selectedClientId && selectedClientId !== "default"
-      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
-      : undefined;
-
-    if (brainContext) {
-      contextSummary = (contextSummary ? contextSummary + "\n" : "") +
-        `CLIENT BRAIN CONTEXT (use to guide questions):\n${brainContext}`;
-    }
-
-    const signedPayload = signRequest({
-      messages: updated.map((m) => ({ role: m.role, content: m.content })),
-      client_id: effectiveClientId,
-      marketer_client_id: marketerClientId,
-      context_summary: contextSummary,
-      draft_id: draftId,
-    });
-
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(signedPayload),
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
-    }
-
-    const structured = await resp.json() as StructuredResponse;
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: structured.message, structured },
-    ]);
-
-    if (structured.draft_updates?._draft_id) {
-      setDraftId(structured.draft_updates._draft_id);
-    }
-
-    return {
-      message: structured.message,
-      draft_updates: structured.draft_updates,
-      next_questions: structured.next_questions,
-      intent: structured.intent,
+      return {
+        message: structured.message,
+        draft_updates: structured.draft_updates,
+        next_questions: structured.next_questions,
+        intent: structured.intent,
     };
   };
 
