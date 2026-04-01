@@ -66,6 +66,8 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminWaitlist from "./pages/AdminWaitlist";
+import Waitlist from "./pages/Waitlist";
 import TrelloCallback from "./pages/TrelloCallback";
 import OrchestratorPanel from "./pages/OrchestratorPanel";
 import PostQueueManager from "./pages/PostQueueManager";
@@ -111,6 +113,8 @@ const App = () => (
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+            <Route path="/waitlist" element={<Waitlist />} />
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />

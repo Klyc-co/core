@@ -26,10 +26,10 @@ const LandingHero = () => {
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
           <Button
             size="lg"
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate("/waitlist")}
             className="bg-gradient-to-r from-[#6b5ce7] to-[#a855f7] text-white border-0 px-8 sm:px-10 py-6 text-base sm:text-lg rounded-lg font-medium hover:opacity-90"
           >
-            Activate Klyc
+            Join the Waitlist
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <Button

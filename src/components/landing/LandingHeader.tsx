@@ -43,11 +43,11 @@ const LandingHeader = () => {
             Sign In
           </Button>
           <Button
-            onClick={() => navigate("/auth?tab=signup")}
+            onClick={() => navigate("/waitlist")}
             size="sm"
             className="bg-gradient-to-r from-[#6b5ce7] to-[#a855f7] text-white border-0 text-xs sm:text-sm hover:opacity-90"
           >
-            Sign Up
+            Waitlist
           </Button>
         </div>
       </div>

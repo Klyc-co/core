@@ -87,6 +87,9 @@ const AdminDashboard = () => {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin/waitlist")}>
+              Waitlist
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               <ArrowLeft className="w-4 h-4 mr-1" />
               Home
