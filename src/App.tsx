@@ -66,6 +66,8 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminWaitlist from "./pages/AdminWaitlist";
+import Waitlist from "./pages/Waitlist";
 import TrelloCallback from "./pages/TrelloCallback";
 import OrchestratorPanel from "./pages/OrchestratorPanel";
 import PostQueueManager from "./pages/PostQueueManager";
