@@ -42,7 +42,7 @@ type ChatMessage = {
   structured?: StructuredResponse;
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
+const PIPELINE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-pipeline`;
 
 const BottomChatPanel = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
@@ -58,7 +58,29 @@ const BottomChatPanel = () => {
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
+  const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Health check on mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const resp = await fetch(PIPELINE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ action: "health" }),
+        });
+        const data = await resp.json();
+        console.log("[Klyc Pipeline] Health check:", data);
+      } catch (err) {
+        console.warn("[Klyc Pipeline] Health check failed:", err);
+      }
+    };
+    checkHealth();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -66,42 +88,18 @@ const BottomChatPanel = () => {
     }
   }, [messages]);
 
-  const sendToKlyc = async (allMessages: ChatMessage[]) => {
+  const callPipeline = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    const effectiveClientId = getEffectiveUserId();
-
-    let marketerClientId: string | undefined;
-    if (selectedClientId && selectedClientId !== "default") {
-      const { data: mc } = await supabase
-        .from("marketer_clients")
-        .select("id")
-        .eq("client_id", selectedClientId)
-        .maybeSingle();
-      marketerClientId = mc?.id;
-    }
-
-    const contextSummary = selectedClientId && selectedClientId !== "default"
-      ? `Active client: ${selectedClientId}. Draft: ${draftId || "none"}.`
-      : undefined;
-
-    const signedPayload = signRequest({
-      messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
-      client_id: effectiveClientId,
-      marketer_client_id: marketerClientId,
-      context_summary: contextSummary,
-      draft_id: draftId,
-    });
-
-    const resp = await fetch(CHAT_URL, {
+    const resp = await fetch(PIPELINE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(signedPayload),
+      body: JSON.stringify({ action, ...payload }),
     });
 
     if (!resp.ok) {
@@ -109,7 +107,77 @@ const BottomChatPanel = () => {
       throw new Error(errorData.error || `Request failed (${resp.status})`);
     }
 
-    return (await resp.json()) as StructuredResponse;
+    return await resp.json();
+  };
+
+  const extractResponseText = (data: any): string => {
+    if (data?.stages && Array.isArray(data.stages) && data.stages.length > 0) {
+      const stageData = data.stages[0].data;
+      if (typeof stageData === "string") {
+        try {
+          const parsed = JSON.parse(stageData);
+          return parsed.raw || parsed.content || parsed.message || stageData;
+        } catch {
+          return stageData;
+        }
+      }
+      if (typeof stageData === "object" && stageData !== null) {
+        return stageData.raw || stageData.content || stageData.message || JSON.stringify(stageData);
+      }
+    }
+    if (data?.message) return data.message;
+    if (data?.result) return typeof data.result === "string" ? data.result : JSON.stringify(data.result);
+    return "I processed your request but couldn't extract a readable response.";
+  };
+
+  const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
+    const lastUserMsg = allMessages.filter(m => m.role === "user").pop();
+    const userText = lastUserMsg?.content || "";
+
+    // Detect campaign creation intent
+    const isCampaignCreate = /\b(create|launch|start|build)\b.*\b(campaign|ad|promotion)\b/i.test(userText);
+
+    let pipelineResponse: any;
+
+    if (isCampaignCreate) {
+      pipelineResponse = await callPipeline("create", {
+        input: {
+          campaignBrief: userText,
+          targetAudience: "",
+          productInfo: "",
+          competitiveContext: "",
+          brandVoice: "",
+          keywords: [],
+          platforms: [],
+          objective: "engagement",
+        },
+      });
+    } else {
+      pipelineResponse = await callPipeline("single", {
+        focus: "narrative",
+        input: {
+          campaignBrief: userText,
+          targetAudience: "",
+          productInfo: "",
+          competitiveContext: "",
+          brandVoice: "",
+          keywords: [],
+          platforms: [],
+          objective: "engagement",
+        },
+      });
+    }
+
+    const responseText = extractResponseText(pipelineResponse);
+
+    return {
+      intent: isCampaignCreate ? "launch_campaign" : "other",
+      message: responseText,
+      next_questions: [],
+      draft_updates: {},
+      risk_level: "low",
+      requires_approval: false,
+    };
   };
 
   const sendForInterview = async (text: string, brainContext?: string) => {
