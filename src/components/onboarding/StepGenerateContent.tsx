@@ -148,10 +148,11 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName, visualSty
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
               {posts.map((post, idx) => {
                 const platform = post.platforms?.[0] || "Instagram";
                 const Icon = platformIcons[platform];
+                const aspectClass = platform === "YouTube" ? "aspect-video" : platform === "TikTok" ? "aspect-[9/16] max-h-[400px]" : "aspect-square";
                 return (
                   <div key={idx} className="flex flex-col animate-fade-in">
                     {/* Platform header bar */}
@@ -164,7 +165,7 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName, visualSty
                     </div>
 
                     {/* Image area */}
-                    <div className="relative aspect-square bg-muted border-x border-border overflow-hidden">
+                    <div className={cn("relative bg-muted border-x border-border overflow-hidden", aspectClass)}>
                       {post.imageUrl ? (
                         <img
                           src={post.imageUrl}
