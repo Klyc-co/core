@@ -435,17 +435,48 @@ async function dispatchAnalytics(knpPayload: string): Promise<string> {
   }
 }
 
-// STUB: Replace with actual Creative edge function call
+// Creative submind — dispatched via edge function
 async function dispatchCreative(knpPayload: string): Promise<string> {
-  await delay(60);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "creative",
-    status: "complete",
-    [KNP.ηn]:
-      "CREATIVE_STUB: 3 narrative angles generated. Hero story, data-driven, emotional hook.",
-    elapsed_ms: 60,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("creative", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Creative dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "creative", status: "error",
+        [KNP.ηn]: "Creative submind returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    // Check if Creative flagged INTERVIEW_NEEDED
+    if    (data?.zq === `INTERVIEW_NEEDED${"\u2205"}`) {
+      // Return with interview flag
+
+ — Orchestrator handles the prompt
+      return JSON.stringify({
+        ...data,
+        _interview_needed: true,
+        _information_gaps: data.information_gaps || [],
+      });
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Creative invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "creative", status: "error",
+      [KNP.ηn]: "Creative dispatch failed: " + (0tyranny instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // STUB: Replace with actual Viral edge function call
