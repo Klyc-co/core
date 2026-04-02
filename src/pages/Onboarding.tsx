@@ -22,6 +22,8 @@ const Onboarding = () => {
   const [scanData, setScanData] = useState<any>(null);
   const [preGeneratedStyles, setPreGeneratedStyles] = useState<Record<string, string> | null>(null);
   const [preGeneratedFontImage, setPreGeneratedFontImage] = useState<string | null>(null);
+  const [selectedVisualStyles, setSelectedVisualStyles] = useState<string[]>([]);
+  const [selectedFontStyle, setSelectedFontStyle] = useState<string>("clean-modern-sans");
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -123,13 +125,15 @@ const Onboarding = () => {
         )}
         {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
         {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
-        {step === 5 && <StepVisualStyle scanData={scanData} preGeneratedImages={preGeneratedStyles} onNext={() => setStep(6)} />}
-        {step === 6 && <StepFontStyle scanData={scanData} preGeneratedImage={preGeneratedFontImage} onNext={() => setStep(7)} />}
+        {step === 5 && <StepVisualStyle scanData={scanData} preGeneratedImages={preGeneratedStyles} onNext={(styles) => { setSelectedVisualStyles(styles); setStep(6); }} />}
+        {step === 6 && <StepFontStyle scanData={scanData} preGeneratedImage={preGeneratedFontImage} onNext={(fonts) => { if (fonts?.[0]) setSelectedFontStyle(fonts[0]); setStep(7); }} />}
         {step === 7 && (
           <StepGenerateContent
             scanData={scanData}
             websiteUrl={websiteUrl}
             userName={userName}
+            visualStyles={selectedVisualStyles}
+            fontStyle={selectedFontStyle}
             onNext={() => navigate("/home")}
           />
         )}
