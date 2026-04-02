@@ -347,6 +347,53 @@ export type Database = {
           },
         ]
       }
+      campaign_checkpoints: {
+        Row: {
+          actual_viral_score: number | null
+          campaign_id: string | null
+          checkpoint_label: string
+          checkpoint_time: string
+          created_at: string
+          id: string
+          predicted_viral_score: number | null
+          raw_metrics: Json | null
+          threshold_status: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_viral_score?: number | null
+          campaign_id?: string | null
+          checkpoint_label: string
+          checkpoint_time?: string
+          created_at?: string
+          id?: string
+          predicted_viral_score?: number | null
+          raw_metrics?: Json | null
+          threshold_status?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_viral_score?: number | null
+          campaign_id?: string | null
+          checkpoint_label?: string
+          checkpoint_time?: string
+          created_at?: string
+          id?: string
+          predicted_viral_score?: number | null
+          raw_metrics?: Json | null
+          threshold_status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_checkpoints_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_drafts: {
         Row: {
           article_outline: string | null
