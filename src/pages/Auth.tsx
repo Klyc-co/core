@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ const Auth = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get("tab") !== "signup";
   });
+  const [loginType, setLoginType] = useState<"marketer" | "client">("marketer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,106 +100,132 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col bg-background p-4">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(185_75%_55%/0.1),transparent_50%)]" />
       
-      <div className="flex items-center justify-end gap-4 relative z-10 py-2">
-        <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
-        <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
-      </div>
-
       <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-md relative animate-fade-in">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to home</span>
+          </button>
 
-      <div className="w-full max-w-md relative animate-fade-in">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back to home</span>
-        </button>
-        
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Logo size="lg" />
-          </div>
-          <h1 className="text-2xl font-semibold text-foreground mb-2">
-            {isLogin ? "Welcome back" : "Create your account"}
-          </h1>
-          <p className="text-muted-foreground">
-            {isLogin
-              ? "Sign in to continue to your projects"
-              : "Start creating stunning B-roll videos"}
-          </p>
-        </div>
-
-        <div className="glass rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm text-foreground">
-                Email
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="pl-10 bg-secondary border-border"
-                  required
-                />
-              </div>
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm text-foreground">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 bg-secondary border-border"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              variant="glow"
-              size="lg"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  {isLogin ? "Sign in" : "Create account"}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
+            <h1 className="text-2xl font-semibold text-foreground mb-2">
+              {isLogin ? "Welcome back" : "Create your account"}
+            </h1>
+            <p className="text-muted-foreground">
               {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Sign in"}
-            </button>
+                ? "Sign in to your marketer dashboard"
+                : "Start building campaigns with Klyc"}
+            </p>
+          </div>
+
+          {/* Login type toggle */}
+          {isLogin && (
+            <div className="flex rounded-xl bg-secondary p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setLoginType("marketer")}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                  loginType === "marketer"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Marketer
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginType("client")}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                  loginType === "client"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Client
+              </button>
+            </div>
+          )}
+
+          <div className="glass rounded-2xl p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm text-foreground">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="pl-10 bg-secondary border-border"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm text-foreground">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10 bg-secondary border-border"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                variant="glow"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {isLogin
+                      ? loginType === "client"
+                        ? "Sign in as Client"
+                        : "Sign in as Marketer"
+                      : "Create account"}
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

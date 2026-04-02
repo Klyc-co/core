@@ -11,34 +11,10 @@ const LandingHeader = () => {
         <img src={klycLogo} alt="Klyc" className="h-12 sm:h-14" />
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
-            onClick={() => navigate("/terms")}
-            variant="ghost"
-            size="sm"
-            className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] text-xs sm:text-sm hidden sm:inline-flex"
-          >
-            Terms of Service
-          </Button>
-          <Button
-            onClick={() => navigate("/privacy")}
-            variant="ghost"
-            size="sm"
-            className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] text-xs sm:text-sm hidden sm:inline-flex"
-          >
-            Privacy Policy
-          </Button>
-          <Button
-            onClick={() => navigate("/client/auth")}
-            variant="ghost"
-            size="sm"
-            className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] text-xs sm:text-sm"
-          >
-            Client Login
-          </Button>
-          <Button
             onClick={() => navigate("/auth")}
             variant="ghost"
             size="sm"
-            className="text-[#6b7280] hover:text-[#191a1f] hover:bg-[#ebedf0] text-xs sm:text-sm"
+            className="text-muted-foreground hover:text-foreground hover:bg-secondary text-xs sm:text-sm"
           >
             Sign In
           </Button>
