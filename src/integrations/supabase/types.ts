@@ -2759,6 +2759,45 @@ export type Database = {
         }
         Relationships: []
       }
+      viral_log: {
+        Row: {
+          avg_score: number | null
+          campaign_card: Json | null
+          client_id: string | null
+          created_at: string
+          id: string
+          iteration_round: number
+          loop_status: string | null
+          top_score: number | null
+          variant_scores: Json
+          variants_accepted: number | null
+        }
+        Insert: {
+          avg_score?: number | null
+          campaign_card?: Json | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          iteration_round?: number
+          loop_status?: string | null
+          top_score?: number | null
+          variant_scores?: Json
+          variants_accepted?: number | null
+        }
+        Update: {
+          avg_score?: number | null
+          campaign_card?: Json | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          iteration_round?: number
+          loop_status?: string | null
+          top_score?: number | null
+          variant_scores?: Json
+          variants_accepted?: number | null
+        }
+        Relationships: []
+      }
       waitlist: {
         Row: {
           created_at: string
