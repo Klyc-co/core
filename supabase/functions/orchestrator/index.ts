@@ -1369,12 +1369,18 @@ serve(async (req: Request) => {
       ];
       await updateSession(supabase, session.id, { conversation_history: history });
 
+      const soloReply = "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?";
       return jsonRes({
         session_id: session.id,
         mode: "solo",
-        response: "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?",
+        reply: soloReply,
+        response: soloReply,
         intent: "solo_mode_grant",
+        source: "orchestrator",
         subminds_dispatched: [],
+        next_questions: [],
+        requires_approval: false,
+        risk_level: "low",
       });
     }
 
@@ -1387,12 +1393,18 @@ serve(async (req: Request) => {
     if ('checksum' in knpPacket && 'segments' in knpPacket) {
       if (!normalizerValidate(knpPacket as KNPPacket)) {
         await logNormalizerError(supabase, userId, session.id, JSON.stringify(knpPacket).slice(0, 200), "checksum_mismatch");
+        const normErrReply = "I had trouble processing that message. Could you try sending it again?";
         return jsonRes({
           session_id: session.id,
           mode: session.mode,
-          response: "I had trouble processing that message. Could you try sending it again?",
+          reply: normErrReply,
+          response: normErrReply,
           intent: "unknown",
+          source: "orchestrator",
           subminds_dispatched: [],
+          next_questions: [],
+          requires_approval: false,
+          risk_level: "low",
           normalizer_error: true,
         });
       }
@@ -1466,14 +1478,25 @@ serve(async (req: Request) => {
 
     const pipeline = getSubmindPipeline(intent);
 
+    // Build next_questions for general/unknown intents
+    const isGeneralIntent = intent === "general_chat" || intent === "unknown";
+    const nextQuestions = isGeneralIntent
+      ? ["Create a new campaign", "Show me analytics", "Check competitor activity"]
+      : [];
+
     return jsonRes({
       session_id: session.id,
       mode: session.mode,
+      reply: response,
       response,
       intent,
+      source: "orchestrator",
       subminds_dispatched: pipeline.subminds,
       pipeline_parallel: pipeline.parallel,
       knp_compressed: true,
+      next_questions: nextQuestions,
+      requires_approval: false,
+      risk_level: isGeneralIntent ? "low" : "medium",
     });
   } catch (err) {
     console.error("Orchestrator error:", err);
