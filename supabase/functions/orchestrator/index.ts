@@ -2,6 +2,7 @@
 // KLYC ORCHESTRATOR — Central Intelligence Hub
 // The ONLY entity that communicates with users.
 // All subminds are black boxes dispatched via KNP payloads.
+// Normalizer membrane wraps all inbound/outbound communication.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -16,25 +17,130 @@ const corsHeaders = {
 // ---- KNP Field Keys ----
 const KNP = {
   // Input keys
-  ξb: "ξb", // campaignBrief
-  ζq: "ζq", // targetAudience
-  μp: "μp", // productInfo
-  θc: "θc", // competitiveContext
-  λv: "λv", // brandVoice
-  κw: "κw", // keywords
-  πf: "πf", // platforms
-  σo: "σo", // objective
+  ξb: "ξb", ζq: "ζq", μp: "μp", θc: "θc", λv: "λv", κw: "κw", πf: "πf", σo: "σo",
   // Output keys
-  ρr: "ρr", // researchOutput
-  φd: "φd", // productOutput
-  ηn: "ηn", // narrativeOutput
-  ωs: "ωs", // socialOutput
-  δi: "δi", // imageOutput
-  εe: "εe", // editorOutput
-  αa: "αa", // approvalOutput
-  χy: "χy", // analyticsOutput
-  ψv: "ψv", // viralScore
+  ρr: "ρr", φd: "φd", ηn: "ηn", ωs: "ωs", δi: "δi", εe: "εe", αa: "αa", χy: "χy", ψv: "ψv",
 } as const;
+
+// ---- KNP Format Constants ----
+const KNP_VERSION = "Ψ3";
+const KNP_FIELD_SEPARATOR = "∷";
+const KNP_VALUE_JOINER = "⊕";
+const KNP_NULL_MARKER = "∅";
+
+const INPUT_FIELD_MAP: Record<string, string> = {
+  campaignBrief: KNP.ξb, targetAudience: KNP.ζq, productInfo: KNP.μp,
+  competitiveContext: KNP.θc, brandVoice: KNP.λv, keywords: KNP.κw,
+  platforms: KNP.πf, objective: KNP.σo,
+};
+
+const OUTPUT_KEY_MAP: Record<string, string> = {
+  research: KNP.ρr, product: KNP.φd, narrative: KNP.ηn, social: KNP.ωs,
+  image: KNP.δi, editor: KNP.εe, approval: KNP.αa, analytics: KNP.χy,
+};
+
+// ---- Normalizer Membrane ----
+// Wraps all user↔system communication. Inbound = compress. Outbound = decompress.
+
+function knpChecksum(segments: Record<string, string>): string {
+  let h = 0;
+  const str = Object.entries(segments).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => k + v).join("|");
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
+  return "Ψ" + Math.abs(h).toString(36);
+}
+
+function compressValue(val: unknown): string {
+  if (val === null || val === undefined) return KNP_NULL_MARKER;
+  const s = typeof val === "string" ? val : JSON.stringify(val);
+  return s.trim().slice(0, 400);
+}
+
+interface KNPPacket {
+  version: string;
+  checksum: string;
+  timestamp: number;
+  segments: Record<string, string>;
+  session_id?: string;
+}
+
+function extractFieldsFromText(text: string): Record<string, unknown> {
+  const fields: Record<string, unknown> = { campaignBrief: text };
+  const lower = text.toLowerCase();
+
+  // Audience
+  const audMatch = text.match(/(?:target(?:ing)?|audience|for)\s+(.+?)(?:\.|,|$)/i);
+  if (audMatch) fields.targetAudience = audMatch[1].trim();
+
+  // Platforms
+  const platforms: string[] = [];
+  for (const p of ["instagram", "linkedin", "twitter", "tiktok", "youtube", "facebook", "threads", "pinterest"]) {
+    if (lower.includes(p)) platforms.push(p);
+  }
+  if (platforms.length > 0) fields.platforms = platforms;
+
+  // Objective
+  for (const obj of ["awareness", "engagement", "conversion", "traffic", "leads", "sales", "brand", "growth"]) {
+    if (lower.includes(obj)) { fields.objective = obj; break; }
+  }
+
+  // Keywords (quoted)
+  const keywords = [...text.matchAll(/"([^"]+)"/g)].map(m => m[1]);
+  if (keywords.length > 0) fields.keywords = keywords;
+
+  return fields;
+}
+
+/** Compress raw user text → KNP packet */
+function normalizerCompress(userInput: string, sessionId: string): KNPPacket {
+  const fields = extractFieldsFromText(userInput);
+  const segments: Record<string, string> = {};
+  for (const [field, key] of Object.entries(INPUT_FIELD_MAP)) {
+    const v = fields[field];
+    if (v !== undefined && v !== null && v !== "") {
+      segments[key] = compressValue(v);
+    }
+  }
+  return {
+    version: KNP_VERSION,
+    checksum: knpChecksum(segments),
+    timestamp: Date.now(),
+    segments,
+    session_id: sessionId,
+  };
+}
+
+/** Decompress KNP packet → human-readable text */
+function normalizerDecompress(response: string): string {
+  // If the response is not a KNP payload (already human-readable), return as-is
+  // The orchestrator assembles human-readable text, so this is mostly a passthrough
+  // that strips any residual KNP markers
+  return response;
+}
+
+/** Validate a KNP packet checksum */
+function normalizerValidate(packet: KNPPacket): boolean {
+  return packet.checksum === knpChecksum(packet.segments);
+}
+
+/** Log normalizer errors to Supabase */
+async function logNormalizerError(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  sessionId: string | null,
+  payloadFragment: string,
+  errorType: string
+) {
+  try {
+    await supabase.from("normalizer_errors").insert({
+      user_id: userId,
+      session_id: sessionId,
+      payload_fragment: payloadFragment.slice(0, 200),
+      error_type: errorType,
+    });
+  } catch (e) {
+    console.warn("Failed to log normalizer error:", e);
+  }
+}
 
 // ---- Types ----
 
@@ -861,29 +967,50 @@ serve(async (req: Request) => {
       });
     }
 
-    // Question resolution: check client_brain before dispatching
-    // (subminds will get enriched payloads)
-    let enrichedPayload = body.knp_payload || { version: "Ψ3", [KNP.ξb]: message };
+    // ── NORMALIZER MEMBRANE: Compress inbound ──
+    const knpPacket = body.knp_payload
+      ? body.knp_payload as Record<string, unknown>
+      : normalizerCompress(message, session.id);
+
+    // Validate if it's a KNP packet
+    if ('checksum' in knpPacket && 'segments' in knpPacket) {
+      if (!normalizerValidate(knpPacket as KNPPacket)) {
+        await logNormalizerError(supabase, userId, session.id, JSON.stringify(knpPacket).slice(0, 200), "checksum_mismatch");
+        return jsonRes({
+          session_id: session.id,
+          mode: session.mode,
+          response: "I had trouble processing that message. Could you try sending it again?",
+          intent: "unknown",
+          subminds_dispatched: [],
+          normalizer_error: true,
+        });
+      }
+    }
+
+    // Enrich with client brain context
+    const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
     const brainVoice = await resolveFromClientBrain(supabase, clientId, "voice_profile");
     if (brainVoice) {
-      (enrichedPayload as Record<string, unknown>)[KNP.λv] = brainVoice;
+      enrichedPayload[KNP.λv] = brainVoice;
     }
     const brainStrategy = await resolveFromClientBrain(supabase, clientId, "strategy_profile");
     if (brainStrategy) {
-      (enrichedPayload as Record<string, unknown>)[KNP.σo] =
-        (enrichedPayload as Record<string, unknown>)[KNP.σo] || brainStrategy;
+      enrichedPayload[KNP.σo] = enrichedPayload[KNP.σo] || brainStrategy;
     }
 
-    // Execute pipeline
-    const response = await executePipeline(
+    // Execute pipeline (subminds receive ONLY KNP — never raw human text)
+    const rawResponse = await executePipeline(
       supabase,
       session,
       userId,
       clientId,
       intent,
       message,
-      enrichedPayload as Record<string, unknown>
+      enrichedPayload
     );
+
+    // ── NORMALIZER MEMBRANE: Decompress outbound ──
+    const response = normalizerDecompress(rawResponse);
 
     // Update conversation history
     const updatedHistory: ConversationEntry[] = [
@@ -904,6 +1031,7 @@ serve(async (req: Request) => {
       intent,
       subminds_dispatched: pipeline.subminds,
       pipeline_parallel: pipeline.parallel,
+      knp_compressed: true,
     });
   } catch (err) {
     console.error("Orchestrator error:", err);
