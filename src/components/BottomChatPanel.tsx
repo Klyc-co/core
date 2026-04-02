@@ -65,7 +65,7 @@ const BottomChatPanel = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const resp = await fetch(PIPELINE_URL, {
+        const resp = await fetch(ORCHESTRATOR_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -74,9 +74,9 @@ const BottomChatPanel = () => {
           body: JSON.stringify({ action: "health" }),
         });
         const data = await resp.json();
-        console.log("[Klyc Pipeline] Health check:", data);
+        console.log("[Klyc Orchestrator] Health check:", data);
       } catch (err) {
-        console.warn("[Klyc Pipeline] Health check failed:", err);
+        console.warn("[Klyc Orchestrator] Health check failed:", err);
       }
     };
     checkHealth();
@@ -88,12 +88,12 @@ const BottomChatPanel = () => {
     }
   }, [messages]);
 
-  const callPipeline = async (action: string, payload: Record<string, any>) => {
+  const callOrchestrator = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    const resp = await fetch(PIPELINE_URL, {
+    const resp = await fetch(ORCHESTRATOR_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
