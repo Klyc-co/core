@@ -42,7 +42,7 @@ type ChatMessage = {
   structured?: StructuredResponse;
 };
 
-const PIPELINE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-pipeline`;
+const ORCHESTRATOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/orchestrator`;
 
 const BottomChatPanel = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
