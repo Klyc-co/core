@@ -821,8 +821,121 @@ async function executePipeline(
         const parsed = JSON.parse(result);
         results[submind] = parsed;
 
+        // ── Creative ↔ Viral Loop ──
+        // After Creative returns, route to Viral for scoring.
+        // If Viral scores are low, re-dispatch Creative with feedback. Max 3 loops.
+        if (submind === "creative" && parsed.status === "complete" && parsed.variants_structured) {
+          // Check for interview needed flag
+          if (parsed._interview_needed) {
+            const gaps = parsed._information_gaps || [];
+            const gapQuestions: Record<string, { context: string; options: string[] }> = {
+              customer_emotional_trigger: {
+                context: "To make this campaign hit, I need to understand your customer's emotional trigger. I'm guessing:",
+                options: [
+                  "They feel guilty about what they're currently using",
+                  "They want to feel like a responsible/premium buyer",
+                  "They're frustrated by the lack of transparency in the market",
+                ],
+              },
+              brand_voice: {
+                context: "I want to nail your brand voice. Which feels closest?",
+                options: [
+                  "We're the trusted expert — calm, authoritative, no fluff",
+                  "We're the cool friend — casual, witty, relatable",
+                  "We're the challenger — bold, direct, unapologetic",
+                ],
+              },
+              success_metric: {
+                context: "What does success look like for this campaign?",
+                options: ["More sales/conversions", "Brand awareness and reach", "Email signups or leads"],
+              },
+              past_failures: {
+                context: "Have any marketing approaches fallen flat before?",
+                options: [
+                  "Overly corporate tone that felt impersonal",
+                  "Discount-heavy messaging that cheapened the brand",
+                  "Trying to go viral with humor that missed the mark",
+                ],
+              },
+            };
+
+            const firstGap = gaps[0] || "customer_emotional_trigger";
+            const q = gapQuestions[firstGap] || gapQuestions.customer_emotional_trigger;
+            results[submind] = {
+              ...parsed,
+              _interview_question: buildGuidedQuestion(q.context, q.options),
+            };
+            // Skip remaining subminds — need user input
+            break;
+          }
+
+          // Run Creative ↔ Viral loop (max 3 iterations)
+          let creativeResult = parsed;
+          let iteration = parsed.iteration_round || 1;
+          const MAX_LOOPS = 3;
+
+          while (iteration < MAX_LOOPS) {
+            // Dispatch Viral with creative output
+            const viralPayload = JSON.stringify({
+              version: "Ψ3",
+              σo: creativeResult.σo,
+              variants_structured: creativeResult.variants_structured,
+              θc: creativeResult.θc,
+              [KNP.ξb]: accumulatedPayload[KNP.ξb],
+            });
+
+            const viralResult = await SUBMIND_DISPATCH.viral(viralPayload);
+            const viralParsed = JSON.parse(viralResult);
+            results["viral"] = viralParsed;
+
+            // Check viral score — if good enough, break
+            const viralScore = parseFloat(String(viralParsed[KNP.ψv] || viralParsed.viral_score || "0"));
+            if (viralScore >= 0.7) break; // Good enough, no more iterations
+
+            // Low score — re-dispatch Creative with viral feedback
+            iteration++;
+            const creativePayload = JSON.stringify({
+              ...accumulatedPayload,
+              λv: viralParsed.diagnostics || viralParsed[KNP.ψv] || JSON.stringify(viralParsed),
+              πf: String(iteration),
+            });
+
+            const reResult = await SUBMIND_DISPATCH.creative(creativePayload);
+            creativeResult = JSON.parse(reResult);
+            results["creative"] = creativeResult;
+
+            dispatches.push({
+              submind: "creative",
+              status: "complete",
+              knp_sent: creativePayload,
+              knp_received: reResult,
+              dispatched_at: new Date().toISOString(),
+            });
+          }
+
+          // Merge final creative output into accumulated payload
+          for (const key of Object.values(KNP)) {
+            if (creativeResult[key]) {
+              (accumulatedPayload as Record<string, unknown>)[key] = creativeResult[key];
+            }
+          }
+          // Skip viral in the main pipeline since we already ran it
+          const viralIdx = pipeline.subminds.indexOf("viral");
+          if (viralIdx > -1) {
+            // Mark as handled so the loop skips it
+            (accumulatedPayload as Record<string, unknown>)["_viral_handled"] = true;
+          }
+          continue;
+        }
+
+        // Skip viral if already handled by Creative ↔ Viral loop
+        if (submind === "viral" && (accumulatedPayload as Record<string, unknown>)["_viral_handled"]) {
+          dispatch.status = "complete";
+          dispatch.knp_received = JSON.stringify(results["viral"] || {});
+          continue;
+        }
+
         // Inject submind output into accumulated payload for next stage
-        // Check for known output keys and merge them
         for (const key of Object.values(KNP)) {
           if (parsed[key]) {
             (accumulatedPayload as Record<string, unknown>)[key] = parsed[key];
