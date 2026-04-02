@@ -459,7 +459,30 @@ serve(async (req) => {
       }
     }
 
-    // ---- Generate PDF if requested ----
+    // ---- Invoke Learning Engine for checkpoint data ----
+    if (vizType === "DASHBOARD" && contextId !== KNP_NULL_MARKER) {
+      try {
+        const checkpoints = await fetchCheckpoints(supabase, contextId);
+        for (const cp of checkpoints) {
+          if (cp.actualScore > 0 && cp.predictedScore > 0) {
+            await supabase.functions.invoke("learning-engine", {
+              body: {
+                trigger: "checkpoint",
+                payload: {
+                  client_id: contextId,
+                  campaign_id: contextId,
+                  actual_score: cp.actualScore,
+                  predicted_score: cp.predictedScore,
+                  checkpoint_label: cp.label,
+                },
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Learning engine checkpoint dispatch failed:", e);
+      }
+    }
     let pdfUrl: string | null = null;
     const wantsPdf = timeRange.toLowerCase().includes("pdf") ||
                      sourceData.toLowerCase().includes("pdf") ||

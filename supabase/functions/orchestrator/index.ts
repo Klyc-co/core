@@ -732,16 +732,36 @@ async function dispatchApproval(knpPayload: string): Promise<string> {
   }
 }
 
-// STUB: Replace with actual Learning Engine edge function call
+// Learning Engine submind — dispatched via edge function
 async function dispatchLearningEngine(knpPayload: string): Promise<string> {
-  await delay(40);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "learningEngine",
-    status: "complete",
-    data: "LEARNING_STUB: 3 patterns discovered. Strategy adjustments recommended.",
-    elapsed_ms: 40,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("learning-engine", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Learning Engine dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "learningEngine", status: "error",
+        data: "Learning Engine returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Learning Engine invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "learningEngine", status: "error",
+      data: "Learning Engine dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 const SUBMIND_DISPATCH: Record<
@@ -1386,6 +1406,37 @@ serve(async (req: Request) => {
       message,
       enrichedPayload
     );
+
+    // ── Post-pipeline: trigger Learning Engine deduction on campaign creation ──
+    if (intent === "campaign_creation") {
+      try {
+        await supabase.functions.invoke("learning-engine", {
+          body: {
+            trigger: "campaign_launch",
+            payload: {
+              client_id: clientId,
+              brief: message.slice(0, 300),
+              platform: enrichedPayload[KNP.πf] || "",
+              messaging_angle: enrichedPayload[KNP.σo] || "",
+              [KNP.ξb]: message.slice(0, 300),
+              [KNP.θc]: clientId,
+              [KNP.μp]: enrichedPayload[KNP.πf] || "",
+            },
+          },
+        });
+
+        // Write to campaign_memory
+        await supabase.from("campaign_memory").insert({
+          user_id: userId,
+          client_id: clientId,
+          campaign_name: message.slice(0, 100),
+          platform: String(enrichedPayload[KNP.πf] || "multi"),
+          message_summary: message.slice(0, 200),
+        });
+      } catch (e) {
+        console.warn("Post-pipeline learning/memory hooks failed:", e);
+      }
+    }
 
     // ── NORMALIZER MEMBRANE: Decompress outbound ──
     const response = normalizerDecompress(rawResponse);
