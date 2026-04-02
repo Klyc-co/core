@@ -492,6 +492,54 @@ export type Database = {
           },
         ]
       }
+      campaign_memory: {
+        Row: {
+          audience: string | null
+          campaign_name: string | null
+          client_id: string | null
+          conversion_rate: number | null
+          created_at: string
+          engagement_score: number | null
+          id: string
+          industry: string | null
+          launched_at: string | null
+          message_summary: string | null
+          platform: string | null
+          user_id: string
+          viral_score: number | null
+        }
+        Insert: {
+          audience?: string | null
+          campaign_name?: string | null
+          client_id?: string | null
+          conversion_rate?: number | null
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          industry?: string | null
+          launched_at?: string | null
+          message_summary?: string | null
+          platform?: string | null
+          user_id: string
+          viral_score?: number | null
+        }
+        Update: {
+          audience?: string | null
+          campaign_name?: string | null
+          client_id?: string | null
+          conversion_rate?: number | null
+          created_at?: string
+          engagement_score?: number | null
+          id?: string
+          industry?: string | null
+          launched_at?: string | null
+          message_summary?: string | null
+          platform?: string | null
+          user_id?: string
+          viral_score?: number | null
+        }
+        Relationships: []
+      }
       campaign_performance: {
         Row: {
           actual_conversion: number | null
@@ -951,6 +999,45 @@ export type Database = {
           user_id?: string
           value_proposition?: string | null
           weaknesses?: string | null
+        }
+        Relationships: []
+      }
+      competitor_observations: {
+        Row: {
+          client_id: string | null
+          competitor_name: string | null
+          created_at: string
+          engagement_delta: number | null
+          id: string
+          knp_summary: string | null
+          observed_action: string | null
+          observed_at: string | null
+          platform: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          competitor_name?: string | null
+          created_at?: string
+          engagement_delta?: number | null
+          id?: string
+          knp_summary?: string | null
+          observed_action?: string | null
+          observed_at?: string | null
+          platform?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          competitor_name?: string | null
+          created_at?: string
+          engagement_delta?: number | null
+          id?: string
+          knp_summary?: string | null
+          observed_action?: string | null
+          observed_at?: string | null
+          platform?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -2211,6 +2298,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      research_feed: {
+        Row: {
+          campaign_id: string | null
+          client_id: string | null
+          created_at: string
+          finding_type: string | null
+          id: string
+          knp_payload: string | null
+          raw_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          finding_type?: string | null
+          id?: string
+          knp_payload?: string | null
+          raw_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          finding_type?: string | null
+          id?: string
+          knp_payload?: string | null
+          raw_data?: Json | null
+          user_id?: string
+        }
+        Relationships: []
       }
       riverside_connections: {
         Row: {
