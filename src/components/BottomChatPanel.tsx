@@ -112,6 +112,11 @@ const BottomChatPanel = () => {
   };
 
   const extractResponseText = (data: any): string => {
+    if (data?.reply) return data.reply;
+    if (data?.response) return typeof data.response === "string" ? data.response : JSON.stringify(data.response);
+    if (data?.text) return data.text;
+    if (data?.content) return data.content;
+    if (data?.message) return data.message;
     if (data?.stages && Array.isArray(data.stages) && data.stages.length > 0) {
       const stageData = data.stages[0].data;
       if (typeof stageData === "string") {
@@ -126,7 +131,6 @@ const BottomChatPanel = () => {
         return stageData.raw || stageData.content || stageData.message || JSON.stringify(stageData);
       }
     }
-    if (data?.message) return data.message;
     if (data?.result) return typeof data.result === "string" ? data.result : JSON.stringify(data.result);
     return "I processed your request but couldn't extract a readable response.";
   };
@@ -154,7 +158,7 @@ const BottomChatPanel = () => {
     }
 
     return {
-      intent: orchestratorResponse?.intent || "general_chat",
+      intent: orchestratorResponse?.source || "orchestrator",
       message: responseText,
       next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
