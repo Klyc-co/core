@@ -52,6 +52,8 @@ const LandingPowerClose = () => {
             <span className="text-[#e2e5ea]">|</span>
             <a href="/privacy" className="hover:text-[#191a1f] transition-colors font-medium">Privacy Policy</a>
             <span className="text-[#e2e5ea]">|</span>
+            <a href="/team" className="hover:text-[#191a1f] transition-colors font-medium">Team</a>
+            <span className="text-[#e2e5ea]">|</span>
             <a href="/admin/login" className="hover:text-[#191a1f] transition-colors">Admin</a>
           </div>
           <p className="text-[#6b7280]/60 text-xs sm:text-sm">
