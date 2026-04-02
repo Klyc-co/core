@@ -116,6 +116,7 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
             <Route path="/waitlist" element={<Waitlist />} />
+            <Route path="/team" element={<Team />} />
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
