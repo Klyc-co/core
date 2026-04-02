@@ -335,6 +335,23 @@ serve(async (req: Request) => {
     // ---- Generate Content Variants ----
     const variants = await generateVariants(input, brainContext);
 
+    // ---- Log to creative_log for Learning Engine ----
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabase.from("creative_log").insert({
+        client_id: isNull(clientId) ? null : clientId,
+        iteration: iterationRound,
+        variants: variants,
+        model_type: model,
+        voice_type: voice,
+      });
+    } catch (e) {
+      console.warn("Failed to log creative output:", e);
+    }
+
     // ---- Encode Output as KNP ----
     const encodedVariants = encodeVariantsToKnp(variants);
 
