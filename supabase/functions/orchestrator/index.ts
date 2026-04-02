@@ -909,15 +909,35 @@ async function executePipeline(
             const viralParsed = JSON.parse(viralResult);
             results["viral"] = viralParsed;
 
-            // Check viral score — if good enough, break
-            const viralScore = parseFloat(String(viralParsed[KNP.ψv] || viralParsed.viral_score || "0"));
-            if (viralScore >= 0.7) break; // Good enough, no more iterations
+            dispatches.push({
+              submind: "viral",
+              status: "complete",
+              knp_sent: viralPayload,
+              knp_received: viralResult,
+              dispatched_at: new Date().toISOString(),
+            });
 
-            // Low score — re-dispatch Creative with viral feedback
+            // Check loop status from Viral submind
+            const loopStatus = viralParsed.σo_loop || "";
+            const isComplete = loopStatus.includes("LOOP_COMPLETE") || iteration >= MAX_LOOPS;
+
+            if (isComplete) {
+              // Present top 3 scoring variants as smart prompt cards
+              if (viralParsed.top_variants) {
+                results["viral"] = {
+                  ...viralParsed,
+                  _presentation_variants: viralParsed.top_variants.slice(0, 3),
+                  _loop_iterations: iteration,
+                };
+              }
+              break;
+            }
+
+            // LOOP_CONTINUE — re-dispatch Creative with diagnostic feedback
             iteration++;
             const creativePayload = JSON.stringify({
               ...accumulatedPayload,
-              λv: viralParsed.diagnostics || viralParsed[KNP.ψv] || JSON.stringify(viralParsed),
+              λv: viralParsed.diagnostics || JSON.stringify(viralParsed.λv || []),
               πf: String(iteration),
             });
 
