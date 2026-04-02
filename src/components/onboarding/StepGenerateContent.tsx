@@ -10,6 +10,8 @@ interface StepGenerateContentProps {
   scanData?: any;
   websiteUrl?: string;
   userName?: { firstName: string; lastName: string };
+  visualStyles?: string[];
+  fontStyle?: string;
 }
 
 const platformIcons: Record<string, any> = {
@@ -28,7 +30,7 @@ const platformColors: Record<string, string> = {
   TikTok: "bg-black",
 };
 
-const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGenerateContentProps) => {
+const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName, visualStyles, fontStyle }: StepGenerateContentProps) => {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -73,6 +75,8 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
           valueProposition: merged.valueProposition || "",
           productCategory: merged.productCategory || "",
           userName: userName || { firstName: "", lastName: "" },
+          visualStyles: visualStyles || [],
+          fontStyle: fontStyle || "clean-modern-sans",
         },
       });
 
