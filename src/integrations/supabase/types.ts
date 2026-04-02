@@ -984,6 +984,51 @@ export type Database = {
         }
         Relationships: []
       }
+      competitor_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          client_id: string | null
+          client_relevance_score: number | null
+          competitor_name: string | null
+          confidence: number | null
+          id: string
+          inferred_strategy: string | null
+          observed_action: string | null
+          recommendation: string | null
+          subjects_to_elevate: string[] | null
+          surfaced_at: string | null
+          urgency: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          client_id?: string | null
+          client_relevance_score?: number | null
+          competitor_name?: string | null
+          confidence?: number | null
+          id?: string
+          inferred_strategy?: string | null
+          observed_action?: string | null
+          recommendation?: string | null
+          subjects_to_elevate?: string[] | null
+          surfaced_at?: string | null
+          urgency?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          client_id?: string | null
+          client_relevance_score?: number | null
+          competitor_name?: string | null
+          confidence?: number | null
+          id?: string
+          inferred_strategy?: string | null
+          observed_action?: string | null
+          recommendation?: string | null
+          subjects_to_elevate?: string[] | null
+          surfaced_at?: string | null
+          urgency?: string | null
+        }
+        Relationships: []
+      }
       competitor_analyses: {
         Row: {
           analyzed_at: string
@@ -1080,6 +1125,39 @@ export type Database = {
           observed_at?: string | null
           platform?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      creative_log: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          id: string
+          iteration: number | null
+          model_type: string | null
+          session_id: string | null
+          variants: Json | null
+          voice_type: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          iteration?: number | null
+          model_type?: string | null
+          session_id?: string | null
+          variants?: Json | null
+          voice_type?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          iteration?: number | null
+          model_type?: string | null
+          session_id?: string | null
+          variants?: Json | null
+          voice_type?: string | null
         }
         Relationships: []
       }
@@ -1727,6 +1805,57 @@ export type Database = {
           source?: string | null
           status?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      knowledge_graph: {
+        Row: {
+          actual_score: number | null
+          audience_segment: string | null
+          client_id: string | null
+          confidence: number | null
+          delta: number | null
+          id: string
+          industry: string | null
+          messaging_angle: string | null
+          platform: string | null
+          predicted_score: number | null
+          sample_size: number | null
+          timing_pattern: string | null
+          updated_at: string | null
+          voice_type: string | null
+        }
+        Insert: {
+          actual_score?: number | null
+          audience_segment?: string | null
+          client_id?: string | null
+          confidence?: number | null
+          delta?: number | null
+          id?: string
+          industry?: string | null
+          messaging_angle?: string | null
+          platform?: string | null
+          predicted_score?: number | null
+          sample_size?: number | null
+          timing_pattern?: string | null
+          updated_at?: string | null
+          voice_type?: string | null
+        }
+        Update: {
+          actual_score?: number | null
+          audience_segment?: string | null
+          client_id?: string | null
+          confidence?: number | null
+          delta?: number | null
+          id?: string
+          industry?: string | null
+          messaging_angle?: string | null
+          platform?: string | null
+          predicted_score?: number | null
+          sample_size?: number | null
+          timing_pattern?: string | null
+          updated_at?: string | null
+          voice_type?: string | null
         }
         Relationships: []
       }
@@ -2818,6 +2947,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      strategy_insights: {
+        Row: {
+          client_id: string | null
+          confidence: number | null
+          created_at: string | null
+          id: string
+          insight_text: string | null
+          insight_type: string | null
+          supporting_data: Json | null
+        }
+        Insert: {
+          client_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          insight_text?: string | null
+          insight_type?: string | null
+          supporting_data?: Json | null
+        }
+        Update: {
+          client_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          insight_text?: string | null
+          insight_type?: string | null
+          supporting_data?: Json | null
+        }
+        Relationships: []
       }
       strategy_updates: {
         Row: {
