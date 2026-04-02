@@ -384,17 +384,36 @@ async function dispatchResearch(knpPayload: string): Promise<string> {
   });
 }
 
-// STUB: Replace with actual Analytics edge function call
+// Analytics submind — dispatched via edge function
 async function dispatchAnalytics(knpPayload: string): Promise<string> {
-  await delay(40);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "analytics",
-    status: "complete",
-    [KNP.χy]:
-      "ANALYTICS_STUB: Engagement rate 4.2%, CTR 1.8%, top platform: Instagram.",
-    elapsed_ms: 40,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("analytics", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Analytics dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "analytics", status: "error",
+        [KNP.χy]: "Analytics submind returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Analytics invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "analytics", status: "error",
+      [KNP.χy]: "Analytics dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // STUB: Replace with actual Creative edge function call
