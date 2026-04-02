@@ -10,6 +10,8 @@ interface StepGenerateContentProps {
   scanData?: any;
   websiteUrl?: string;
   userName?: { firstName: string; lastName: string };
+  visualStyles?: string[];
+  fontStyle?: string;
 }
 
 const platformIcons: Record<string, any> = {
@@ -28,7 +30,7 @@ const platformColors: Record<string, string> = {
   TikTok: "bg-black",
 };
 
-const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGenerateContentProps) => {
+const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName, visualStyles, fontStyle }: StepGenerateContentProps) => {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -73,6 +75,8 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
           valueProposition: merged.valueProposition || "",
           productCategory: merged.productCategory || "",
           userName: userName || { firstName: "", lastName: "" },
+          visualStyles: visualStyles || [],
+          fontStyle: fontStyle || "clean-modern-sans",
         },
       });
 
@@ -144,10 +148,11 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
               {posts.map((post, idx) => {
                 const platform = post.platforms?.[0] || "Instagram";
                 const Icon = platformIcons[platform];
+                const aspectClass = platform === "YouTube" ? "aspect-video" : platform === "TikTok" ? "aspect-[9/16] max-h-[400px]" : "aspect-square";
                 return (
                   <div key={idx} className="flex flex-col animate-fade-in">
                     {/* Platform header bar */}
@@ -160,7 +165,7 @@ const StepGenerateContent = ({ onNext, scanData, websiteUrl, userName }: StepGen
                     </div>
 
                     {/* Image area */}
-                    <div className="relative aspect-square bg-muted border-x border-border overflow-hidden">
+                    <div className={cn("relative bg-muted border-x border-border overflow-hidden", aspectClass)}>
                       {post.imageUrl ? (
                         <img
                           src={post.imageUrl}
