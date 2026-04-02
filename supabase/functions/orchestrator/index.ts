@@ -600,17 +600,40 @@ async function dispatchImage(knpPayload: string): Promise<string> {
   });
 }
 
-// STUB: Replace with actual Approval edge function call
+// Approval submind (Gatekeeper) — dispatched via edge function
 async function dispatchApproval(knpPayload: string): Promise<string> {
-  await delay(20);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "approval",
-    status: "complete",
-    [KNP.αa]:
-      "APPROVAL_STUB: Content reviewed. Brand compliance: pass. Tone check: pass.",
-    elapsed_ms: 20,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("approval", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Approval dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "approval", status: "error",
+        [KNP.αa]: "Approval submind returned an error: " + error.message,
+        decision: "BLOCKED", urgency: "BLOCKING",
+        reason: "Gatekeeper unavailable — blocking as safety measure",
+        elapsed_ms: 0,
+      });
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Approval invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "approval", status: "error",
+      [KNP.αa]: "Approval dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      decision: "BLOCKED", urgency: "BLOCKING",
+      reason: "Gatekeeper dispatch failed — blocking as safety measure",
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // STUB: Replace with actual Learning Engine edge function call
