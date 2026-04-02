@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 // ─── SmartPrompt ───────────────────────────────────────────────
 
-interface SmartPromptProps {
+export interface SmartPromptProps {
   question: string;
   options: [string, string, string];
   fillInLabel?: string;
