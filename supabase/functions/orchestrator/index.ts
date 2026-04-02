@@ -387,8 +387,8 @@ function getSubmindPipeline(
 // Research submind — dispatched via edge function
 async function dispatchResearch(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -419,8 +419,8 @@ async function dispatchResearch(knpPayload: string): Promise<string> {
 // Analytics submind — dispatched via edge function
 async function dispatchAnalytics(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -451,8 +451,8 @@ async function dispatchAnalytics(knpPayload: string): Promise<string> {
 // Creative submind — dispatched via edge function
 async function dispatchCreative(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -493,8 +493,8 @@ async function dispatchCreative(knpPayload: string): Promise<string> {
 // Viral submind — dispatched via edge function
 async function dispatchViral(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -527,8 +527,8 @@ async function dispatchViral(knpPayload: string): Promise<string> {
 // Product submind — dispatched via edge function
 async function dispatchProduct(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -578,8 +578,8 @@ async function dispatchProduct(knpPayload: string): Promise<string> {
 // Platform submind — dispatched via edge function
 async function dispatchPlatform(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -629,8 +629,8 @@ async function dispatchPlatform(knpPayload: string): Promise<string> {
 // Timing submind — dispatched via edge function
 async function dispatchTiming(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -680,8 +680,8 @@ async function dispatchTiming(knpPayload: string): Promise<string> {
 // Image submind — dispatched via edge function
 async function dispatchImage(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -712,8 +712,8 @@ async function dispatchImage(knpPayload: string): Promise<string> {
 // Approval submind (Gatekeeper) — dispatched via edge function
 async function dispatchApproval(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -748,8 +748,8 @@ async function dispatchApproval(knpPayload: string): Promise<string> {
 // Learning Engine submind — dispatched via edge function
 async function dispatchLearningEngine(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = SUPABASE_URL;
+    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
@@ -808,8 +808,8 @@ function jsonRes(data: unknown, status = 200) {
 
 function createSupabaseClient(authHeader: string | null) {
   return createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    SUPABASE_URL || "",
+    SUPABASE_SERVICE_ROLE_KEY || "",
     {
       global: {
         headers: authHeader ? { Authorization: authHeader } : {},
@@ -1309,8 +1309,8 @@ serve(async (req: Request) => {
 
     // Get user from JWT
     const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      SUPABASE_URL || "",
+      SUPABASE_ANON_KEY || "",
       { global: { headers: authHeader ? { Authorization: authHeader } : {} } }
     );
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
