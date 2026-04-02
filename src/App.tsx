@@ -68,6 +68,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminWaitlist from "./pages/AdminWaitlist";
 import Waitlist from "./pages/Waitlist";
+import Team from "./pages/Team";
 import TrelloCallback from "./pages/TrelloCallback";
 import OrchestratorPanel from "./pages/OrchestratorPanel";
 import PostQueueManager from "./pages/PostQueueManager";
