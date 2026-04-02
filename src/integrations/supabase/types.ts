@@ -225,6 +225,48 @@ export type Database = {
           },
         ]
       }
+      approval_history: {
+        Row: {
+          category: string | null
+          client_id: string | null
+          created_at: string | null
+          decided_at: string | null
+          decision: string | null
+          id: string
+          revoked_at: string | null
+          session_id: string | null
+          user_id: string
+          what_was_originally_asked: string | null
+          what_was_proposed: string | null
+        }
+        Insert: {
+          category?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decision?: string | null
+          id?: string
+          revoked_at?: string | null
+          session_id?: string | null
+          user_id: string
+          what_was_originally_asked?: string | null
+          what_was_proposed?: string | null
+        }
+        Update: {
+          category?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decision?: string | null
+          id?: string
+          revoked_at?: string | null
+          session_id?: string | null
+          user_id?: string
+          what_was_originally_asked?: string | null
+          what_was_proposed?: string | null
+        }
+        Relationships: []
+      }
       brand_assets: {
         Row: {
           asset_type: string
