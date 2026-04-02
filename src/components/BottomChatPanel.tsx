@@ -158,7 +158,7 @@ const BottomChatPanel = () => {
     }
 
     return {
-      intent: orchestratorResponse?.intent || "general_chat",
+      intent: orchestratorResponse?.source || "orchestrator",
       message: responseText,
       next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
