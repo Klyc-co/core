@@ -22,29 +22,33 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import type { ChartDescriptor } from "@/hooks/useKlycOrchestrator";
 
 function InlineChart({ chart }: { chart: ChartDescriptor }) {
-  const ChartComponent = chart.type === "line" ? LineChart : BarChart;
-  const DataComponent = chart.type === "line" ? Line : Bar;
+  const isLine = chart.type === "line";
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 my-2">
       <p className="text-xs font-medium text-foreground mb-2">{chart.title}</p>
       <ResponsiveContainer width="100%" height={180}>
-        <ChartComponent data={chart.data}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-          <XAxis dataKey={chart.xKey} tick={{ fontSize: 10 }} className="text-muted-foreground" />
-          <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
-          <Tooltip />
-          {chart.yKeys.map((key, i) => (
-            <DataComponent
-              key={key}
-              type="monotone"
-              dataKey={key}
-              fill={`hsl(var(--primary))`}
-              stroke={`hsl(var(--primary))`}
-              {...(chart.type === "bar" ? { radius: [4, 4, 0, 0] } : {})}
-            />
-          ))}
-        </ChartComponent>
+        {isLine ? (
+          <LineChart data={chart.data}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis dataKey={chart.xKey} tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip />
+            {chart.yKeys.map((key) => (
+              <Line key={key} type="monotone" dataKey={key} stroke="hsl(var(--primary))" />
+            ))}
+          </LineChart>
+        ) : (
+          <BarChart data={chart.data}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis dataKey={chart.xKey} tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <Tooltip />
+            {chart.yKeys.map((key) => (
+              <Bar key={key} dataKey={key} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            ))}
+          </BarChart>
+        )}
       </ResponsiveContainer>
     </div>
   );

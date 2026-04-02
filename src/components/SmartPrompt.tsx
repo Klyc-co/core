@@ -232,7 +232,7 @@ export const ViralScoreCard = ({
 
 // ─── ApprovalPrompt ────────────────────────────────────────────
 
-interface ApprovalPromptProps {
+export interface ApprovalPromptProps {
   urgency: "BLOCKING" | "ADVISORY" | "INFORMATIONAL";
   category: string;
   proposedAction: string;
