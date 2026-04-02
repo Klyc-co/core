@@ -42,7 +42,7 @@ type ChatMessage = {
   structured?: StructuredResponse;
 };
 
-const PIPELINE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-pipeline`;
+const ORCHESTRATOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/orchestrator`;
 
 const BottomChatPanel = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
@@ -65,7 +65,7 @@ const BottomChatPanel = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const resp = await fetch(PIPELINE_URL, {
+        const resp = await fetch(ORCHESTRATOR_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -74,9 +74,9 @@ const BottomChatPanel = () => {
           body: JSON.stringify({ action: "health" }),
         });
         const data = await resp.json();
-        console.log("[Klyc Pipeline] Health check:", data);
+        console.log("[Klyc Orchestrator] Health check:", data);
       } catch (err) {
-        console.warn("[Klyc Pipeline] Health check failed:", err);
+        console.warn("[Klyc Orchestrator] Health check failed:", err);
       }
     };
     checkHealth();
@@ -88,12 +88,12 @@ const BottomChatPanel = () => {
     }
   }, [messages]);
 
-  const callPipeline = async (action: string, payload: Record<string, any>) => {
+  const callOrchestrator = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    const resp = await fetch(PIPELINE_URL, {
+    const resp = await fetch(ORCHESTRATOR_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -134,49 +134,20 @@ const BottomChatPanel = () => {
     const lastUserMsg = allMessages.filter(m => m.role === "user").pop();
     const userText = lastUserMsg?.content || "";
 
-    // Detect campaign creation intent
-    const isCampaignCreate = /\b(create|launch|start|build)\b.*\b(campaign|ad|promotion)\b/i.test(userText);
+    const orchestratorResponse = await callOrchestrator("chat", {
+      message: userText,
+      client_id: selectedClientId !== "default" ? selectedClientId : undefined,
+    });
 
-    let pipelineResponse: any;
-
-    if (isCampaignCreate) {
-      pipelineResponse = await callPipeline("create", {
-        input: {
-          campaignBrief: userText,
-          targetAudience: "",
-          productInfo: "",
-          competitiveContext: "",
-          brandVoice: "",
-          keywords: [],
-          platforms: [],
-          objective: "engagement",
-        },
-      });
-    } else {
-      pipelineResponse = await callPipeline("single", {
-        focus: "narrative",
-        input: {
-          campaignBrief: userText,
-          targetAudience: "",
-          productInfo: "",
-          competitiveContext: "",
-          brandVoice: "",
-          keywords: [],
-          platforms: [],
-          objective: "engagement",
-        },
-      });
-    }
-
-    const responseText = extractResponseText(pipelineResponse);
+    const responseText = orchestratorResponse?.reply || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
 
     return {
-      intent: isCampaignCreate ? "launch_campaign" : "other",
+      intent: orchestratorResponse?.intent || "general_chat",
       message: responseText,
-      next_questions: [],
-      draft_updates: {},
-      risk_level: "low",
-      requires_approval: false,
+      next_questions: orchestratorResponse?.next_questions || [],
+      draft_updates: orchestratorResponse?.draft_updates || {},
+      risk_level: orchestratorResponse?.risk_level || "low",
+      requires_approval: orchestratorResponse?.requires_approval || false,
     };
   };
 

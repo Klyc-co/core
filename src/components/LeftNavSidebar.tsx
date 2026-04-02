@@ -57,7 +57,7 @@ interface Client {
 
 const mainNav = [
   { label: "Home", path: "/home", icon: Briefcase },
-  { label: "Chat", path: "/chat", icon: MessageSquare },
+  
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
   { label: "Creative", path: "/creative", icon: Palette },
   { label: "Library", path: "/profile/library", icon: BookOpen },
