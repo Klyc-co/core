@@ -1655,6 +1655,81 @@ export type Database = {
         }
         Relationships: []
       }
+      image_assets: {
+        Row: {
+          campaign_id: string | null
+          client_id: string | null
+          created_at: string | null
+          id: string
+          original_url: string
+          platform_specs: Json | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          status: string | null
+          use_context: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_url: string
+          platform_specs?: Json | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          use_context?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          original_url?: string
+          platform_specs?: Json | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          status?: string | null
+          use_context?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      image_queue: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          id: string
+          image_url: string
+          queued_at: string | null
+          source: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          image_url: string
+          queued_at?: string | null
+          source?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          queued_at?: string | null
+          source?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       learning_experiments: {
         Row: {
           client_id: string
