@@ -1273,6 +1273,11 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Fail fast if env vars are missing
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+      return jsonRes({ error: "Server configuration error: Missing environment variables." }, 500);
+    }
+
     const body: OrchestratorRequest = await req.json();
 
     // ---- Health Check ----
