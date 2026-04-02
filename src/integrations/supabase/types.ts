@@ -1649,6 +1649,33 @@ export type Database = {
           },
         ]
       }
+      normalizer_errors: {
+        Row: {
+          created_at: string
+          error_type: string
+          id: string
+          payload_fragment: string | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_type: string
+          id?: string
+          payload_fragment?: string | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_type?: string
+          id?: string
+          payload_fragment?: string | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_pkce_states: {
         Row: {
           code_verifier: string
