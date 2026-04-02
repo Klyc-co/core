@@ -967,29 +967,50 @@ serve(async (req: Request) => {
       });
     }
 
-    // Question resolution: check client_brain before dispatching
-    // (subminds will get enriched payloads)
-    let enrichedPayload = body.knp_payload || { version: "Ψ3", [KNP.ξb]: message };
+    // ── NORMALIZER MEMBRANE: Compress inbound ──
+    const knpPacket = body.knp_payload
+      ? body.knp_payload as Record<string, unknown>
+      : normalizerCompress(message, session.id);
+
+    // Validate if it's a KNP packet
+    if ('checksum' in knpPacket && 'segments' in knpPacket) {
+      if (!normalizerValidate(knpPacket as KNPPacket)) {
+        await logNormalizerError(supabase, userId, session.id, JSON.stringify(knpPacket).slice(0, 200), "checksum_mismatch");
+        return jsonRes({
+          session_id: session.id,
+          mode: session.mode,
+          response: "I had trouble processing that message. Could you try sending it again?",
+          intent: "unknown",
+          subminds_dispatched: [],
+          normalizer_error: true,
+        });
+      }
+    }
+
+    // Enrich with client brain context
+    const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
     const brainVoice = await resolveFromClientBrain(supabase, clientId, "voice_profile");
     if (brainVoice) {
-      (enrichedPayload as Record<string, unknown>)[KNP.λv] = brainVoice;
+      enrichedPayload[KNP.λv] = brainVoice;
     }
     const brainStrategy = await resolveFromClientBrain(supabase, clientId, "strategy_profile");
     if (brainStrategy) {
-      (enrichedPayload as Record<string, unknown>)[KNP.σo] =
-        (enrichedPayload as Record<string, unknown>)[KNP.σo] || brainStrategy;
+      enrichedPayload[KNP.σo] = enrichedPayload[KNP.σo] || brainStrategy;
     }
 
-    // Execute pipeline
-    const response = await executePipeline(
+    // Execute pipeline (subminds receive ONLY KNP — never raw human text)
+    const rawResponse = await executePipeline(
       supabase,
       session,
       userId,
       clientId,
       intent,
       message,
-      enrichedPayload as Record<string, unknown>
+      enrichedPayload
     );
+
+    // ── NORMALIZER MEMBRANE: Decompress outbound ──
+    const response = normalizerDecompress(rawResponse);
 
     // Update conversation history
     const updatedHistory: ConversationEntry[] = [
@@ -1010,6 +1031,7 @@ serve(async (req: Request) => {
       intent,
       subminds_dispatched: pipeline.subminds,
       pipeline_parallel: pipeline.parallel,
+      knp_compressed: true,
     });
   } catch (err) {
     console.error("Orchestrator error:", err);
