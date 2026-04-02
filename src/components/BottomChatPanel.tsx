@@ -140,7 +140,7 @@ const BottomChatPanel = () => {
       client_id: selectedClientId !== "default" ? selectedClientId : undefined,
     });
 
-    const responseText = orchestratorResponse?.reply || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
+    const responseText = orchestratorResponse?.response || orchestratorResponse?.reply || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
 
     return {
       intent: orchestratorResponse?.intent || "general_chat",
