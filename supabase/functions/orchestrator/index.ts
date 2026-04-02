@@ -562,17 +562,55 @@ async function dispatchProduct(knpPayload: string): Promise<string> {
   }
 }
 
-// STUB: Replace with actual Platform edge function call
+// Platform submind — dispatched via edge function
 async function dispatchPlatform(knpPayload: string): Promise<string> {
-  await delay(35);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "platform",
-    status: "complete",
-    [KNP.ωs]:
-      "PLATFORM_STUB: Recommended: Instagram (primary), LinkedIn (secondary). Format: carousel + story.",
-    elapsed_ms: 35,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("platform", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Platform dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "platform", status: "error",
+        [KNP.ωs]: "Platform submind returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    // If new platform detected, route through Approval gate
+    if (data?.new_platforms?.length > 0) {
+      try {
+        const approvalPayload = JSON.stringify({
+          version: "Ψ3",
+          segments: {
+            [KNP.σo]: `New platform(s): ${data.new_platforms.join(", ")}`,
+            [KNP.ξb]: "Platform expansion requires approval",
+            [KNP.θc]: parsed.segments?.[KNP.θc] || parsed[KNP.θc] || "",
+            zq: "NEW_PLATFORM",
+          },
+        });
+        const approvalResult = await dispatchApproval(approvalPayload);
+        data._approval_result = JSON.parse(approvalResult);
+      } catch (approvalErr) {
+        console.warn("Platform approval dispatch failed:", approvalErr);
+      }
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Platform invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "platform", status: "error",
+      [KNP.ωs]: "Platform dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // STUB: Replace with actual Timing edge function call
