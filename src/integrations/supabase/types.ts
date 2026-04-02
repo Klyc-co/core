@@ -1706,6 +1706,42 @@ export type Database = {
         }
         Relationships: []
       }
+      orchestrator_sessions: {
+        Row: {
+          active_submind_dispatches: Json
+          client_id: string
+          conversation_history: Json
+          created_at: string
+          id: string
+          mode: string
+          solo_permission_scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_submind_dispatches?: Json
+          client_id: string
+          conversation_history?: Json
+          created_at?: string
+          id?: string
+          mode?: string
+          solo_permission_scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_submind_dispatches?: Json
+          client_id?: string
+          conversation_history?: Json
+          created_at?: string
+          id?: string
+          mode?: string
+          solo_permission_scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_analytics: {
         Row: {
           clicks: number | null
@@ -2367,6 +2403,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      solo_mode_logs: {
+        Row: {
+          created_at: string
+          decision_point: string
+          id: string
+          knp_payload_sent: Json | null
+          knp_response_received: Json | null
+          reasoning: string | null
+          session_id: string
+          submind_called: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision_point: string
+          id?: string
+          knp_payload_sent?: Json | null
+          knp_response_received?: Json | null
+          reasoning?: string | null
+          session_id: string
+          submind_called?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision_point?: string
+          id?: string
+          knp_payload_sent?: Json | null
+          knp_response_received?: Json | null
+          reasoning?: string | null
+          session_id?: string
+          submind_called?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solo_mode_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "orchestrator_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       strategy_updates: {
         Row: {
