@@ -2,6 +2,11 @@
 // KLYC LEARNING ENGINE — Autonomous Intelligence Node
 // Four functions: Campaign Learning, AZR Learning, Competitor
 // Monitoring, Proactive Intelligence. Only speaks KNP.
+//
+// PREREQUISITE: The pg_cron and pg_net extensions must be
+// enabled manually in the backend under Database → Extensions
+// before the scheduled cron job will fire. This cannot be done
+// via code or migrations.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
