@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 // ─── SmartPrompt ───────────────────────────────────────────────
 
-interface SmartPromptProps {
+export interface SmartPromptProps {
   question: string;
   options: [string, string, string];
   fillInLabel?: string;
@@ -113,7 +113,7 @@ export const SmartPrompt = ({
 
 // ─── ViralScoreCard ────────────────────────────────────────────
 
-interface ViralScoreCardProps {
+export interface ViralScoreCardProps {
   campaignName: string;
   platform: string;
   headlineText: string;
@@ -232,7 +232,7 @@ export const ViralScoreCard = ({
 
 // ─── ApprovalPrompt ────────────────────────────────────────────
 
-interface ApprovalPromptProps {
+export interface ApprovalPromptProps {
   urgency: "BLOCKING" | "ADVISORY" | "INFORMATIONAL";
   category: string;
   proposedAction: string;
