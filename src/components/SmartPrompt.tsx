@@ -113,7 +113,7 @@ export const SmartPrompt = ({
 
 // ─── ViralScoreCard ────────────────────────────────────────────
 
-interface ViralScoreCardProps {
+export interface ViralScoreCardProps {
   campaignName: string;
   platform: string;
   headlineText: string;
