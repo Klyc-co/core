@@ -82,6 +82,7 @@ import CrmOrders from "./pages/CrmOrders";
 import ReportsPage from "./pages/ReportsPage";
 import OrchestratorGraph from "./pages/OrchestratorGraph";
 import Onboarding from "./pages/Onboarding";
+import KlycChatPage from "./pages/KlycChatPage";
 
 const queryClient = new QueryClient();
 
@@ -189,6 +190,7 @@ const App = () => (
             <Route path="/crm/orders" element={<WithSidebar><CrmOrders /></WithSidebar>} />
             <Route path="/reports" element={<WithSidebar><ReportsPage /></WithSidebar>} />
             <Route path="/reports/scheduled" element={<WithSidebar><ReportsPage /></WithSidebar>} />
+            <Route path="/chat" element={<WithSidebar><KlycChatPage /></WithSidebar>} />
             
             {/* Client onboarding */}
             <Route path="/client/onboarding" element={<ClientProtected><ClientOnboarding /></ClientProtected>} />
