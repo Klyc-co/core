@@ -97,7 +97,7 @@
  
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
-       <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
          <DialogHeader>
            <DialogTitle className="flex items-center gap-2">
              <ImageIcon className="w-5 h-5 text-primary" />
@@ -108,7 +108,7 @@
            </DialogDescription>
          </DialogHeader>
  
-         <div className="flex-1 overflow-y-auto border rounded-lg p-4">
+         <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg p-4">
            {loading ? (
              <div className="flex items-center justify-center h-full">
                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
