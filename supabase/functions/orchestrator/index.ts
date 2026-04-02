@@ -664,17 +664,36 @@ async function dispatchTiming(knpPayload: string): Promise<string> {
   }
 }
 
-// STUB: Replace with actual Image edge function call
+// Image submind — dispatched via edge function
 async function dispatchImage(knpPayload: string): Promise<string> {
-  await delay(55);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "image",
-    status: "complete",
-    [KNP.δi]:
-      "IMAGE_STUB: 3 visual concepts generated. Brand-aligned color palette applied.",
-    elapsed_ms: 55,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("image", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Image dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "image", status: "error",
+        [KNP.δi]: "Image submind returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Image invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "image", status: "error",
+      [KNP.δi]: "Image dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // Approval submind (Gatekeeper) — dispatched via edge function
