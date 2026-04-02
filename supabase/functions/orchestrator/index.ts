@@ -1310,18 +1310,21 @@ serve(async (req: Request) => {
 
     // Auth
     const authHeader = req.headers.get("Authorization");
-    const supabase = createSupabaseClient(authHeader);
-
-    // Get user from JWT
-    const supabaseUser = createClient(
-      SUPABASE_URL || "",
-      SUPABASE_ANON_KEY || "",
-      { global: { headers: authHeader ? { Authorization: authHeader } : {} } }
-    );
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return jsonRes({ error: "Unauthorized" }, 401);
     }
+    const supabase = createSupabaseClient(authHeader);
+
+    // Validate JWT via getClaims (local validation, no network call)
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return jsonRes({ error: "Unauthorized" }, 401);
+    }
+    const user = { id: claimsData.claims.sub as string };
 
     const userId = user.id;
     const clientId = body.client_id || userId;
