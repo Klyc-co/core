@@ -14,6 +14,7 @@ const Auth = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get("tab") !== "signup";
   });
+  const [loginType, setLoginType] = useState<"marketer" | "client">("marketer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
