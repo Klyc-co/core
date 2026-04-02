@@ -2157,6 +2157,66 @@ export type Database = {
         }
         Relationships: []
       }
+      product_profiles: {
+        Row: {
+          audience_outcome: string | null
+          category: string | null
+          certifications: string[] | null
+          client_id: string | null
+          created_at: string | null
+          differentiators: string[] | null
+          green_claims: string[] | null
+          id: string
+          key_features: string[] | null
+          moat_data: Json | null
+          price_point: string | null
+          product_name: string | null
+          red_claims: string[] | null
+          updated_at: string | null
+          user_id: string
+          voice_indicators: Json | null
+          yellow_claims: string[] | null
+        }
+        Insert: {
+          audience_outcome?: string | null
+          category?: string | null
+          certifications?: string[] | null
+          client_id?: string | null
+          created_at?: string | null
+          differentiators?: string[] | null
+          green_claims?: string[] | null
+          id?: string
+          key_features?: string[] | null
+          moat_data?: Json | null
+          price_point?: string | null
+          product_name?: string | null
+          red_claims?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          voice_indicators?: Json | null
+          yellow_claims?: string[] | null
+        }
+        Update: {
+          audience_outcome?: string | null
+          category?: string | null
+          certifications?: string[] | null
+          client_id?: string | null
+          created_at?: string | null
+          differentiators?: string[] | null
+          green_claims?: string[] | null
+          id?: string
+          key_features?: string[] | null
+          moat_data?: Json | null
+          price_point?: string | null
+          product_name?: string | null
+          red_claims?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          voice_indicators?: Json | null
+          yellow_claims?: string[] | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string

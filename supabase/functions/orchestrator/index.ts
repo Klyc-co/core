@@ -511,17 +511,55 @@ async function dispatchViral(knpPayload: string): Promise<string> {
   }
 }
 
-// STUB: Replace with actual Product edge function call
+// Product submind — dispatched via edge function
 async function dispatchProduct(knpPayload: string): Promise<string> {
-  await delay(45);
-  return JSON.stringify({
-    version: "Ψ3",
-    submind: "product",
-    status: "complete",
-    [KNP.φd]:
-      "PRODUCT_STUB: Product positioning analyzed. USP extracted. Competitor gaps identified.",
-    elapsed_ms: 45,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
+    const { data, error } = await supabase.functions.invoke("product", {
+      body: parsed,
+    });
+
+    if (error) {
+      console.error("Product dispatch error:", error);
+      return JSON.stringify({
+        version: "Ψ3", submind: "product", status: "error",
+        [KNP.φd]: "Product submind returned an error: " + error.message,
+        elapsed_ms: 0,
+      });
+    }
+
+    // If moat data is ready, dispatch Analytics for radar chart
+    if (data?.moat_ready && data?.moat_data) {
+      try {
+        const analyticsPayload = JSON.stringify({
+          version: "Ψ3",
+          segments: {
+            [KNP.σo]: JSON.stringify(data.moat_data),
+            [KNP.θc]: "RADAR",
+            [KNP.πf]: "moat_analysis",
+          },
+        });
+        const analyticsResult = await dispatchAnalytics(analyticsPayload);
+        // Attach analytics result to product response
+        data._moat_visualization = JSON.parse(analyticsResult);
+      } catch (analyticsErr) {
+        console.warn("Moat analytics dispatch failed:", analyticsErr);
+      }
+    }
+
+    return JSON.stringify(data);
+  } catch (e) {
+    console.error("Product invocation failed:", e);
+    return JSON.stringify({
+      version: "Ψ3", submind: "product", status: "error",
+      [KNP.φd]: "Product dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
+      elapsed_ms: 0,
+    });
+  }
 }
 
 // STUB: Replace with actual Platform edge function call
