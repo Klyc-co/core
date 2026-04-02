@@ -8,17 +8,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-// ---- Environment Variable Validation ----
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+// ---- Runtime Config ----
+type RuntimeConfig = {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  anonKey: string;
+};
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
-  console.error("Missing required environment variables:", {
-    hasSupabaseUrl: !!SUPABASE_URL,
-    hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
-    hasAnonKey: !!SUPABASE_ANON_KEY,
-  });
+function requireRuntimeConfig(): RuntimeConfig {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    throw new Error("Server configuration error: Missing required environment variables.");
+  }
+
+  return { supabaseUrl, serviceRoleKey, anonKey };
 }
 
 const corsHeaders = {
@@ -387,9 +393,7 @@ function getSubmindPipeline(
 // Research submind — dispatched via edge function
 async function dispatchResearch(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("research", {
@@ -419,9 +423,7 @@ async function dispatchResearch(knpPayload: string): Promise<string> {
 // Analytics submind — dispatched via edge function
 async function dispatchAnalytics(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("analytics", {
@@ -451,9 +453,7 @@ async function dispatchAnalytics(knpPayload: string): Promise<string> {
 // Creative submind — dispatched via edge function
 async function dispatchCreative(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("creative", {
@@ -493,9 +493,7 @@ async function dispatchCreative(knpPayload: string): Promise<string> {
 // Viral submind — dispatched via edge function
 async function dispatchViral(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("viral", {
@@ -527,9 +525,7 @@ async function dispatchViral(knpPayload: string): Promise<string> {
 // Product submind — dispatched via edge function
 async function dispatchProduct(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("product", {
@@ -578,9 +574,7 @@ async function dispatchProduct(knpPayload: string): Promise<string> {
 // Platform submind — dispatched via edge function
 async function dispatchPlatform(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("platform", {
@@ -629,9 +623,7 @@ async function dispatchPlatform(knpPayload: string): Promise<string> {
 // Timing submind — dispatched via edge function
 async function dispatchTiming(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("timing", {
@@ -680,9 +672,7 @@ async function dispatchTiming(knpPayload: string): Promise<string> {
 // Image submind — dispatched via edge function
 async function dispatchImage(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("image", {
@@ -712,9 +702,7 @@ async function dispatchImage(knpPayload: string): Promise<string> {
 // Approval submind (Gatekeeper) — dispatched via edge function
 async function dispatchApproval(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("approval", {
@@ -748,9 +736,7 @@ async function dispatchApproval(knpPayload: string): Promise<string> {
 // Learning Engine submind — dispatched via edge function
 async function dispatchLearningEngine(knpPayload: string): Promise<string> {
   try {
-    const supabaseUrl = SUPABASE_URL;
-    const serviceKey = SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createServiceClient();
 
     const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
     const { data, error } = await supabase.functions.invoke("learning-engine", {
@@ -806,16 +792,26 @@ function jsonRes(data: unknown, status = 200) {
   });
 }
 
+function createServiceClient(authHeader: string | null = null) {
+  const { supabaseUrl, serviceRoleKey } = requireRuntimeConfig();
+  return createClient(supabaseUrl, serviceRoleKey, {
+    global: {
+      headers: authHeader ? { Authorization: authHeader } : {},
+    },
+  });
+}
+
+function createAuthClient(authHeader: string) {
+  const { supabaseUrl, anonKey } = requireRuntimeConfig();
+  return createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: { Authorization: authHeader },
+    },
+  });
+}
+
 function createSupabaseClient(authHeader: string | null) {
-  return createClient(
-    SUPABASE_URL || "",
-    SUPABASE_SERVICE_ROLE_KEY || "",
-    {
-      global: {
-        headers: authHeader ? { Authorization: authHeader } : {},
-      },
-    }
-  );
+  return createServiceClient(authHeader);
 }
 
 // ---- Session Management ----
@@ -1273,10 +1269,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Fail fast if env vars are missing
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
-      return jsonRes({ error: "Server configuration error: Missing environment variables." }, 500);
-    }
+    // Resolve runtime config inside the request lifecycle
+    requireRuntimeConfig();
 
     const body: OrchestratorRequest = await req.json();
 
@@ -1317,9 +1311,7 @@ serve(async (req: Request) => {
 
     // Validate JWT via getClaims (local validation, no network call)
     const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabaseAuth = createAuthClient(authHeader);
     const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
     if (claimsError || !claimsData?.claims?.sub) {
       return jsonRes({ error: "Unauthorized" }, 401);
