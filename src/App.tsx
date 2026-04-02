@@ -68,6 +68,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminWaitlist from "./pages/AdminWaitlist";
 import Waitlist from "./pages/Waitlist";
+import Team from "./pages/Team";
 import TrelloCallback from "./pages/TrelloCallback";
 import OrchestratorPanel from "./pages/OrchestratorPanel";
 import PostQueueManager from "./pages/PostQueueManager";
@@ -115,6 +116,7 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
             <Route path="/waitlist" element={<Waitlist />} />
+            <Route path="/team" element={<Team />} />
             
             {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
