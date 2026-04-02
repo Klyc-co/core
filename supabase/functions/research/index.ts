@@ -115,7 +115,7 @@ async function queryCampaignMemory(
 
 async function insertResearchFeed(
   supabase: ReturnType<typeof createClient>,
-  userId: string,
+  userId: string | null,
   clientId: string | null,
   campaignId: string | null,
   findingType: string,
@@ -288,7 +288,7 @@ Analyze the above and produce structured research findings.`;
 
     // ---- Insert to research_feed (Learning Engine data) ----
     // Extract user_id from auth if available
-    let userId = "system";
+    let userId: string | null = null;
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
       try {
