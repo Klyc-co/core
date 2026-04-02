@@ -140,12 +140,23 @@ const BottomChatPanel = () => {
       client_id: selectedClientId !== "default" ? selectedClientId : undefined,
     });
 
-    const responseText = orchestratorResponse?.response || orchestratorResponse?.reply || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
+    const responseText = orchestratorResponse?.reply || orchestratorResponse?.response || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
+
+    // Normalize next_questions: orchestrator may send string[] or NextQuestion[]
+    let nextQuestions: NextQuestion[] = [];
+    if (Array.isArray(orchestratorResponse?.next_questions)) {
+      nextQuestions = orchestratorResponse.next_questions.map((q: any, i: number) => {
+        if (typeof q === "string") {
+          return { field: `suggestion_${i}`, question: q, type: "text" as const };
+        }
+        return q;
+      });
+    }
 
     return {
       intent: orchestratorResponse?.intent || "general_chat",
       message: responseText,
-      next_questions: orchestratorResponse?.next_questions || [],
+      next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
       risk_level: orchestratorResponse?.risk_level || "low",
       requires_approval: orchestratorResponse?.requires_approval || false,
