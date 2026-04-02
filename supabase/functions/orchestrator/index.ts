@@ -457,10 +457,8 @@ async function dispatchCreative(knpPayload: string): Promise<string> {
     }
 
     // Check if Creative flagged INTERVIEW_NEEDED
-    if    (data?.zq === `INTERVIEW_NEEDED${"\u2205"}`) {
-      // Return with interview flag
-
- — Orchestrator handles the prompt
+    if (data?.zq === "INTERVIEW_NEEDED∅") {
+      // Return with interview flag — Orchestrator handles the prompt
       return JSON.stringify({
         ...data,
         _interview_needed: true,
@@ -473,7 +471,7 @@ async function dispatchCreative(knpPayload: string): Promise<string> {
     console.error("Creative invocation failed:", e);
     return JSON.stringify({
       version: "Ψ3", submind: "creative", status: "error",
-      [KNP.ηn]: "Creative dispatch failed: " + (0tyranny instanceof Error ? e.message : "unknown"),
+      [KNP.ηn]: "Creative dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
       elapsed_ms: 0,
     });
   }
