@@ -222,7 +222,9 @@ export default function StrategyScreen() {
         </div>
       </div>
 
-      {/* Campaign Brief Form */}
+      {/* Campaign Stepper */}
+      <CampaignStepper currentStep={campaignStep} completedSteps={completedSteps} />
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Campaign Brief</CardTitle>
