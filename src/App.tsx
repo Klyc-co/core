@@ -182,7 +182,7 @@ const App = () => (
             
             <Route path="/trello-callback" element={<TrelloCallback />} />
             
-            {/* Orchestrator & System routes */}
+            {/* Klyc & System routes */}
             <Route path="/orchestrator" element={<WithSidebar><OrchestratorPanel /></WithSidebar>} />
             <Route path="/orchestrator/graph" element={<WithSidebar><OrchestratorGraph /></WithSidebar>} />
             <Route path="/campaigns/queue" element={<WithSidebar><PostQueueManager /></WithSidebar>} />
