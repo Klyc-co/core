@@ -812,6 +812,33 @@ export type Database = {
           },
         ]
       }
+      cash_flow_entries: {
+        Row: {
+          amount: number
+          bank_balance_after: number | null
+          date: string
+          description: string | null
+          id: string
+          type: Database["public"]["Enums"]["cash_flow_type"]
+        }
+        Insert: {
+          amount?: number
+          bank_balance_after?: number | null
+          date?: string
+          description?: string | null
+          id?: string
+          type: Database["public"]["Enums"]["cash_flow_type"]
+        }
+        Update: {
+          amount?: number
+          bank_balance_after?: number | null
+          date?: string
+          description?: string | null
+          id?: string
+          type?: Database["public"]["Enums"]["cash_flow_type"]
+        }
+        Relationships: []
+      }
       clickup_attachments: {
         Row: {
           clickup_task_id: string
@@ -1996,6 +2023,45 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          is_recurring: boolean | null
+          is_tax_deductible: boolean | null
+          receipt_ref: string | null
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          is_tax_deductible?: boolean | null
+          receipt_ref?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          is_tax_deductible?: boolean | null
+          receipt_ref?: string | null
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       google_drive_assets: {
         Row: {
           asset_name: string
@@ -2518,6 +2584,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      monthly_budgets: {
+        Row: {
+          budget_amount: number
+          category: string
+          id: string
+          month: string
+        }
+        Insert: {
+          budget_amount?: number
+          category: string
+          id?: string
+          month: string
+        }
+        Update: {
+          budget_amount?: number
+          category?: string
+          id?: string
+          month?: string
+        }
+        Relationships: []
       }
       normalizer_errors: {
         Row: {
@@ -3746,6 +3833,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_payments: {
+        Row: {
+          amount_due: number
+          amount_paid: number | null
+          due_date: string
+          id: string
+          paid_date: string | null
+          quarter: string
+          tax_type: Database["public"]["Enums"]["tax_type"]
+        }
+        Insert: {
+          amount_due?: number
+          amount_paid?: number | null
+          due_date: string
+          id?: string
+          paid_date?: string | null
+          quarter: string
+          tax_type: Database["public"]["Enums"]["tax_type"]
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number | null
+          due_date?: string
+          id?: string
+          paid_date?: string | null
+          quarter?: string
+          tax_type?: Database["public"]["Enums"]["tax_type"]
+        }
+        Relationships: []
+      }
       trello_connections: {
         Row: {
           api_key: string
@@ -4005,11 +4122,28 @@ export type Database = {
         | "cancelled"
         | "suspended"
       billing_tier: "starter" | "growth" | "pro" | "enterprise"
+      cash_flow_type: "cash_in" | "cash_out"
       channel_status: "connected" | "disconnected" | "error"
       collab_priority: "urgent" | "normal" | "low"
       collab_sender: "client" | "admin"
       collab_status: "new" | "in_progress" | "waiting_on_client" | "resolved"
       effort_size: "S" | "M" | "L" | "XL"
+      expense_category:
+        | "payroll"
+        | "contractors"
+        | "benefits"
+        | "payroll_tax"
+        | "software"
+        | "marketing_paid"
+        | "marketing_content"
+        | "marketing_events"
+        | "legal"
+        | "accounting"
+        | "consulting"
+        | "office"
+        | "equipment"
+        | "travel"
+        | "other"
       roadmap_category:
         | "infrastructure"
         | "subminds"
@@ -4023,6 +4157,7 @@ export type Database = {
         | "build"
         | "test"
         | "shipped"
+      tax_type: "federal" | "state" | "self_employment" | "other"
       vote_category:
         | "ui"
         | "subminds"
@@ -4167,11 +4302,29 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       billing_status: ["trial", "active", "past_due", "cancelled", "suspended"],
       billing_tier: ["starter", "growth", "pro", "enterprise"],
+      cash_flow_type: ["cash_in", "cash_out"],
       channel_status: ["connected", "disconnected", "error"],
       collab_priority: ["urgent", "normal", "low"],
       collab_sender: ["client", "admin"],
       collab_status: ["new", "in_progress", "waiting_on_client", "resolved"],
       effort_size: ["S", "M", "L", "XL"],
+      expense_category: [
+        "payroll",
+        "contractors",
+        "benefits",
+        "payroll_tax",
+        "software",
+        "marketing_paid",
+        "marketing_content",
+        "marketing_events",
+        "legal",
+        "accounting",
+        "consulting",
+        "office",
+        "equipment",
+        "travel",
+        "other",
+      ],
       roadmap_category: [
         "infrastructure",
         "subminds",
@@ -4187,6 +4340,7 @@ export const Constants = {
         "test",
         "shipped",
       ],
+      tax_type: ["federal", "state", "self_employment", "other"],
       vote_category: [
         "ui",
         "subminds",
