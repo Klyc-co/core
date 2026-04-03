@@ -8,8 +8,8 @@ import type {
 /**
  * Analytics Agent — computes post-publish performance metrics.
  */
-export function computeAnalyticsMetrics(input: AnalyticsAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeAnalyticsMetrics(input: AnalyticsSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Engagement Rate ──
