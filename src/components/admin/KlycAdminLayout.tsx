@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { label: "Collaboration", path: "/klyc_admin/collaboration", icon: MessageCircle },
   { label: "Client Voting", path: "/klyc_admin/voting", icon: ThumbsUp },
   { label: "Roadmap", path: "/klyc_admin/roadmap", icon: Map },
+  { label: "Marketing", path: "/klyc_admin/marketing", icon: Megaphone },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];
