@@ -62,6 +62,7 @@ const mainNav = [
   { label: "Creative", path: "/creative", icon: Palette },
   { label: "Library", path: "/profile/library", icon: BookOpen },
   { label: "Strategy", path: "/brand-strategy", icon: Lightbulb },
+  { label: "Pipeline", path: "/strategy", icon: Zap },
 ];
 
 const LeftNavSidebar = () => {
