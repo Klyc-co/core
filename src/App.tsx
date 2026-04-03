@@ -92,6 +92,7 @@ import KlycAdminDashboard from "./pages/KlycAdminDashboard";
 import KlycAdminOverview from "./pages/KlycAdminOverview";
 import KlycAdminClients from "./pages/KlycAdminClients";
 import KlycAdminClientDetail from "./pages/KlycAdminClientDetail";
+import KlycAdminRevenue from "./pages/KlycAdminRevenue";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
