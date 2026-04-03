@@ -754,8 +754,8 @@ serve(async (req: Request) => {
         version: "2.0-orchestrator",
         intents: ["campaign_new", "trend_analysis", "performance_review", "content_revision", "learning_report", "general_chat"],
         modes: ["guided", "solo"],
-        subminds_live: ["research", "product", "narrative", "creative", "social", "image", "approval"],
-        subminds_stub: ["viral", "analytics", "learning-engine"],
+        subminds_live: ["research", "product", "narrative", "creative", "social", "image", "approval", "analytics", "learning-engine"],
+        subminds_stub: ["viral"],
         features: [
           "web_topology_routing",
           "phase_based_dispatch",
