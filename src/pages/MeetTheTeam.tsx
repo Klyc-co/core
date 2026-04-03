@@ -20,7 +20,7 @@ const specialists = [
   },
   {
     name: "Iris",
-    title: "Creative Media Agent",
+    title: "Creative Media Submind",
     description:
       "Iris leads visual direction across the platform. She defines image concepts, carousel structures, creative styling, and repurposing logic so every campaign looks intentional and brand-right.",
     items: ["Visual direction", "Image concepts", "Carousel layouts", "Repurposing plans"],
