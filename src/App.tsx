@@ -89,7 +89,9 @@ import LearningHub from "./pages/LearningHub";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
 import KlycAdminLogin from "./pages/KlycAdminLogin";
 import KlycAdminDashboard from "./pages/KlycAdminDashboard";
+import KlycAdminOverview from "./pages/KlycAdminOverview";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
+import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
 
 const queryClient = new QueryClient();
