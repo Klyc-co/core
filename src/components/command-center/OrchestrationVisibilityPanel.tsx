@@ -36,8 +36,8 @@ const PIPELINE_META: Record<string, { icon: React.ReactNode; label: string }> = 
   "Platform Evaluator": { icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Platform Evaluator" },
   "Narrative Simulation": { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Narrative Simulation" },
   "Product Positioning": { icon: <Layers className="w-3.5 h-3.5" />, label: "Product Positioning" },
-  "Research Agent": { icon: <Search className="w-3.5 h-3.5" />, label: "Research Agent" },
-  "Orchestration Planner": { icon: <Network className="w-3.5 h-3.5" />, label: "Orchestration Planner" },
+  "Research Agent": { icon: <Search className="w-3.5 h-3.5" />, label: "Research Submind" },
+  "Orchestration Planner": { icon: <Network className="w-3.5 h-3.5" />, label: "Klyc Planner" },
 };
 
 const CAPABILITY_FLAGS = [
@@ -59,13 +59,13 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <Network className="w-4 h-4 text-primary" />
-            Orchestration Decisions
+            Klyc Decisions
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Network className="w-8 h-8 text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground">Run an analysis to see orchestration decisions</p>
+            <p className="text-sm text-muted-foreground">Run an analysis to see Klyc decisions</p>
           </div>
         </CardContent>
       </Card>
@@ -78,7 +78,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-base font-semibold">
             <Network className="w-4 h-4 text-primary" />
-            Orchestration Decisions
+            Klyc Decisions
           </span>
           <div className="flex items-center gap-1.5">
             <Badge variant="outline" className={`text-[10px] h-5 gap-1 capitalize ${
@@ -100,8 +100,8 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
           <span className={`mt-0.5 shrink-0 ${v.text}`}>{v.icon}</span>
           <div className="min-w-0">
             <p className={`text-sm font-medium ${v.text}`}>
-              {data.verdict === "ready" ? "Ready for Orchestration" :
-               data.verdict === "blocked" ? "Orchestration Blocked" :
+              {data.verdict === "ready" ? "Ready to Execute" :
+               data.verdict === "blocked" ? "Execution Blocked" :
                data.verdict === "low_confidence" ? "Low Confidence — Proceed with Caution" :
                "Data Refresh Recommended"}
             </p>
@@ -129,7 +129,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
             <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 mt-0.5 shrink-0" />
             <p className="text-xs text-yellow-700">
-              Partial execution is available — the orchestrator can proceed with reduced scope while blocked inputs are resolved.
+              Partial execution is available — Klyc can proceed with reduced scope while blocked inputs are resolved.
             </p>
           </div>
         )}

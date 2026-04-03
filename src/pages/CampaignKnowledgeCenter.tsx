@@ -69,7 +69,7 @@ const CampaignKnowledgeCenter = () => {
 
     const enriched: EnrichedRecord[] = (perfRes.data ?? []).map((r) => ({
       ...r,
-      industry: industryMap.get(r.client_id) || "Unknown",
+      industry: industryMap.get(r.client_id) || "Uncategorized",
       engagement: r.actual_engagement ?? 0,
       conversion_rate: r.actual_conversion ?? 0,
     }));

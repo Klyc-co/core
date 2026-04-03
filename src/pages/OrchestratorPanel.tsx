@@ -60,7 +60,7 @@ export default function OrchestratorPanel() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Orchestrator Control Panel</h1>
+        <h1 className="text-2xl font-bold text-foreground">Klyc Control Panel</h1>
         <p className="text-muted-foreground text-sm">Monitor and control the campaign pipeline</p>
       </div>
 

@@ -167,7 +167,7 @@ const ContextSection = ({ data }: { data?: CustomerContext }) => {
 };
 
 const HintsSection = ({ data }: { data?: OrchestratorHints }) => {
-  if (!data) return <Section title="Orchestrator Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}><EmptySection message="Orchestrator hints not available from this workflow run" /></Section>;
+  if (!data) return <Section title="Klyc Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}><EmptySection message="Klyc hints not available from this workflow run" /></Section>;
 
   const complexityColor = data.estimatedCampaignComplexity === "high"
     ? "border-destructive/30 text-destructive bg-destructive/5"
@@ -176,7 +176,7 @@ const HintsSection = ({ data }: { data?: OrchestratorHints }) => {
       : "border-primary/30 text-primary bg-primary/5";
 
   return (
-    <Section title="Orchestrator Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}>
+    <Section title="Klyc Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}>
       <div className="flex items-center justify-between pb-1">
         <span className="text-xs text-muted-foreground">Campaign Complexity</span>
         <Badge variant="outline" className={`text-[10px] h-5 capitalize ${complexityColor}`}>{data.estimatedCampaignComplexity}</Badge>

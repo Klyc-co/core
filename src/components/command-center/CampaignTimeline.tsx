@@ -9,7 +9,7 @@ import type { SubmindStep } from "@/types/run-status";
 
 const PIPELINE_STAGES = [
   "Normalizer",
-  "Orchestrator",
+  "Klyc",
   "Research",
   "Product",
   "Narrative",
@@ -22,7 +22,7 @@ const PIPELINE_STAGES = [
 
 const STAGE_ICONS: Record<string, React.ReactNode> = {
   Normalizer: <Filter className="w-4 h-4" />,
-  Orchestrator: <Network className="w-4 h-4" />,
+  Klyc: <Network className="w-4 h-4" />,
   Research: <Search className="w-4 h-4" />,
   Product: <Package className="w-4 h-4" />,
   Narrative: <MessageSquare className="w-4 h-4" />,
