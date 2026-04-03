@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Zap, Search, Package, BookOpen, PenTool, Share2, Image, ShieldCheck, BarChart3,
-  Loader2, CheckCircle2, XCircle, ChevronDown, RotateCcw, Download, Send, Rocket,
+  Loader2, CheckCircle2, XCircle, ChevronDown, RotateCcw, Download, Send, Rocket, Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Constants ──
 
