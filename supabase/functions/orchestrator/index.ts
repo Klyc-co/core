@@ -1480,9 +1480,59 @@ serve(async (req: Request) => {
 
     // Build next_questions for general/unknown intents
     const isGeneralIntent = intent === "general_chat" || intent === "unknown";
-    const nextQuestions = isGeneralIntent
-      ? ["Create a new campaign", "Show me analytics", "Check competitor activity"]
-      : [];
+
+    // Smart Prompt format: 3 concrete suggestions + 1 fill-in
+    // Each suggestion has a label, type, and optional navigation target
+    let nextQuestions: Array<{
+      field: string;
+      question: string;
+      type: "button" | "fill_in";
+      nav_target?: string;
+    }> = [];
+
+    if (isGeneralIntent) {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Create a new campaign", type: "button", nav_target: "/campaigns/new" },
+        { field: "suggestion_1", question: "Show me analytics", type: "button", nav_target: "/analytics" },
+        { field: "suggestion_2", question: "Check competitor activity", type: "button", nav_target: "/competitor-analysis" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    } else if (intent === "campaign_creation") {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Instagram Reels with a humor hook targeting your core audience", type: "button", nav_target: "/campaigns/new" },
+        { field: "suggestion_1", question: "LinkedIn carousel with data-driven storytelling for B2B reach", type: "button", nav_target: "/campaigns/new" },
+        { field: "suggestion_2", question: "Multi-platform blitz — simultaneous launch across all channels", type: "button", nav_target: "/campaigns/new" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    } else if (intent === "analytics_query") {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Show engagement trends for the last 30 days", type: "button", nav_target: "/analytics" },
+        { field: "suggestion_1", question: "Compare performance across platforms", type: "button", nav_target: "/analytics" },
+        { field: "suggestion_2", question: "Identify top-performing content themes", type: "button", nav_target: "/brand-strategy/intelligence" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    } else if (intent === "competitor_check") {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Deep dive into their recent campaign strategy", type: "button", nav_target: "/competitor-analysis" },
+        { field: "suggestion_1", question: "Compare their engagement rates to ours", type: "button", nav_target: "/competitor-analysis" },
+        { field: "suggestion_2", question: "Find gaps we can exploit in their positioning", type: "button", nav_target: "/brand-strategy/intelligence" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    } else if (intent === "content_edit") {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Rewrite for a more conversational tone", type: "button", nav_target: "/creative" },
+        { field: "suggestion_1", question: "Optimize for higher engagement on social", type: "button", nav_target: "/creative" },
+        { field: "suggestion_2", question: "Create platform-specific variations", type: "button", nav_target: "/creative" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    } else if (intent === "scheduling") {
+      nextQuestions = [
+        { field: "suggestion_0", question: "Schedule for peak engagement times this week", type: "button", nav_target: "/campaigns/schedule" },
+        { field: "suggestion_1", question: "Spread posts evenly across the next 2 weeks", type: "button", nav_target: "/campaigns/schedule" },
+        { field: "suggestion_2", question: "Rush publish — go live within the hour", type: "button", nav_target: "/campaigns/queue" },
+        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
+      ];
+    }
 
     return jsonRes({
       session_id: session.id,
