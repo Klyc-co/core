@@ -5,7 +5,7 @@ import {
   Filter, Network, Search, Package, MessageSquare, Share2, Image,
   Pen, ShieldCheck, BarChart3,
 } from "lucide-react";
-import type { AgentStep } from "@/types/run-status";
+import type { SubmindStep } from "@/types/run-status";
 
 const PIPELINE_STAGES = [
   "Normalizer",
