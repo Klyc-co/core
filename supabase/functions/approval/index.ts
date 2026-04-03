@@ -1,9 +1,3 @@
-// ============================================================
-// APPROVAL SUBMIND — Gatekeeper
-// Enforces client control. Anything deviating from what was
-// asked or best practice MUST be approved. Only speaks KNP.
-// ============================================================
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -13,172 +7,77 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ---- KNP Constants ----
-const KNP_VERSION = "Ψ3";
-const KNP_FIELD_SEPARATOR = "∷";
-const KNP_VALUE_JOINER = "⊕";
-const KNP_NULL_MARKER = "∅";
+const KNP_NULL = "∅";
 
-const KNP = {
-  ξb: "ξb", ζq: "ζq", μp: "μp", θc: "θc", λv: "λv",
-  κw: "κw", πf: "πf", σo: "σo", αa: "αa",
-} as const;
-
-function knpChecksum(segments: Record<string, string>): string {
-  let h = 0;
-  const str = Object.entries(segments)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => k + v)
-    .join("|");
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  }
-  return "Ψ" + Math.abs(h).toString(36);
+function parseKnp(val: unknown): string {
+  if (val === null || val === undefined) return KNP_NULL;
+  const s = String(val).trim();
+  return s === "" ? KNP_NULL : s;
 }
 
-// ---- Constants ----
-
-// Four permanent gates — NEVER auto-approvable
-const PERMANENT_GATES = ["PUBLISH", "SCHEDULE", "BUDGET", "NEW_PLATFORM"];
-
-// All valid categories
-const VALID_CATEGORIES = [
-  ...PERMANENT_GATES,
-  "CREATIVE_DEVIATION",
-  "TIMING_DEVIATION",
-  "AUDIENCE_DEVIATION",
-  "CONFLICT",
-];
-
-type ApprovalDecision =
-  | "APPROVED_THIS_TIME"
-  | "APPROVED_ALL_TIME"
-  | "BLOCKED"
-  | "PENDING_USER";
-
-type UrgencyLevel = "BLOCKING" | "ADVISORY" | "INFORMATIONAL";
-
-interface ControlPreferences {
-  always_ask: string[];
-  auto_approve: string[];
-  never_auto: string[];
+function isNull(v: string): boolean {
+  return v === KNP_NULL || v === "" || v === "null" || v === "undefined";
 }
 
-const DEFAULT_PREFERENCES: ControlPreferences = {
-  always_ask: [],
-  auto_approve: [],
-  never_auto: ["publish", "schedule", "budget", "new_platform"],
+function parseJsonField(v: string): any {
+  if (isNull(v)) return null;
+  try { return JSON.parse(v); } catch { return null; }
+}
+
+// Gate thresholds
+const GATE_THRESHOLDS = {
+  factual_accuracy: { pass: 0.8, hard_fail: 0.5, weight: 0.30 },
+  brand_alignment: { pass: 0.8, hard_fail: 0.5, weight: 0.25 },
+  audience_fit: { pass: 0.7, hard_fail: 0.5, weight: 0.20 },
+  quality_standards: { pass: 0.8, hard_fail: 0.5, weight: 0.25 },
 };
 
-// ---- Conflict Detection ----
+const COMPOSITE_PASS = 0.80;
+const INDIVIDUAL_MIN = 0.70;
+const MAX_ITERATIONS = 3;
 
-interface ConflictResult {
-  hasConflict: boolean;
-  conflictType: string;
-  description: string;
-  severity: UrgencyLevel;
+interface GateScore {
+  score: number;
+  passed: boolean;
+  hard_fail: boolean;
+  notes: string[];
 }
 
-function detectConflicts(
-  proposed: string,
-  originalRequest: string,
-  category: string,
-  conflictData: string | null
-): ConflictResult {
-  // Check for RED claim usage
-  if (proposed && /\b(the best|unmatched|unrivaled|guaranteed|cure|heal)\b/i.test(proposed)) {
-    return {
-      hasConflict: true,
-      conflictType: "RED_CLAIM_VIOLATION",
-      description: "Content uses a RED claim from the Truth Map. This must be removed or replaced with a provable GREEN claim.",
-      severity: "BLOCKING",
-    };
-  }
-
-  // Check for character limit violations (common platform limits)
-  const platformLimits: Record<string, number> = {
-    twitter: 280, x: 280, threads: 500, linkedin: 3000,
-    instagram: 2200, facebook: 63206, tiktok: 2200,
+interface ApprovalResult {
+  decision: "approved" | "revision_requested" | "rejected";
+  composite_score: number;
+  criteria_scores: {
+    factual_accuracy: GateScore;
+    brand_alignment: GateScore;
+    audience_fit: GateScore;
+    quality_standards: GateScore;
   };
-  const proposedLower = proposed?.toLowerCase() || "";
-  for (const [platform, limit] of Object.entries(platformLimits)) {
-    if (proposedLower.includes(platform) && proposed.length > limit) {
-      return {
-        hasConflict: true,
-        conflictType: "PLATFORM_LIMIT_EXCEEDED",
-        description: `Content exceeds ${platform} character limit (${limit} chars). Current length: ${proposed.length}. Shorten the content.`,
-        severity: "BLOCKING",
-      };
-    }
-  }
-
-  // Check for submind contradictions from conflict data
-  if (conflictData && conflictData !== KNP_NULL_MARKER) {
-    return {
-      hasConflict: true,
-      conflictType: "SUBMIND_CONTRADICTION",
-      description: `Two subminds produced contradictory outputs: ${conflictData.slice(0, 200)}`,
-      severity: "ADVISORY",
-    };
-  }
-
-  return {
-    hasConflict: false,
-    conflictType: "",
-    description: "",
-    severity: "INFORMATIONAL",
-  };
+  revision_notes: string;
+  conflicts: string[];
+  iteration: number;
+  reviewer: "ai";
 }
 
-// ---- AI-Powered Deviation Analysis ----
-
-async function analyzeDeviation(
-  proposed: string,
-  originalRequest: string,
-  category: string
-): Promise<{ deviates: boolean; reason: string }> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey || !originalRequest || !proposed) {
-    return { deviates: false, reason: "" };
-  }
-
+async function logDecision(result: ApprovalResult, clientId: string, campaignId: string) {
   try {
-    const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.1,
-        messages: [
-          {
-            role: "system",
-            content: `You are a strict compliance checker. Compare the proposed output against the original request. Return JSON with: {"deviates": boolean, "reason": "string"}. deviates=true only if the proposal meaningfully differs from what was asked (not just stylistic differences). Be strict about factual claims and scope changes.`,
-          },
-          {
-            role: "user",
-            content: `Original request: ${originalRequest.slice(0, 500)}\n\nProposed output: ${proposed.slice(0, 500)}\n\nCategory: ${category}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await supabase.from("approval_history").insert({
+      client_id: isNull(clientId) ? null : clientId,
+      campaign_id: isNull(campaignId) ? null : campaignId,
+      decision: result.decision,
+      review_criteria: result.criteria_scores,
+      revision_notes: result.revision_notes,
+      iteration_number: result.iteration,
+      reviewer: "ai",
+      submitted_at: new Date().toISOString(),
+      decided_at: new Date().toISOString(),
+      what_was_proposed: JSON.stringify({ composite: result.composite_score, conflicts: result.conflicts }),
+      user_id: "00000000-0000-0000-0000-000000000000",
     });
-
-    if (!response.ok) return { deviates: false, reason: "" };
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return { deviates: false, reason: "" };
-
-    return JSON.parse(content);
-  } catch {
-    return { deviates: false, reason: "" };
+  } catch (e) {
+    console.warn("Failed to log approval decision:", e);
   }
 }
-
-// ---- Main Handler ----
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -188,191 +87,213 @@ serve(async (req: Request) => {
   const startTime = Date.now();
 
   try {
-    const payload = await req.json();
-    const segments = payload.segments || payload;
+    const body = await req.json();
 
-    // Extract KNP fields
-    const proposed = segments[KNP.σo] || segments.σo || "";
-    const originalRequest = segments[KNP.ξb] || segments.ξb || "";
-    const clientId = segments[KNP.θc] || segments.θc || null;
-    const categoryRaw = segments.zq || segments[KNP.ζq] || "CREATIVE_DEVIATION";
-    const conflictData = segments[KNP.λv] || segments.λv || KNP_NULL_MARKER;
-    const sessionId = payload.session_id || null;
+    const creativeRaw = parseKnp(body.θc ?? body["θc"]);
+    const narrativeRaw = parseKnp(body.Ν ?? body["Ν"]);
+    const positioningRaw = parseKnp(body.Π ?? body["Π"]);
+    const guardrailsRaw = parseKnp(body.Γ ?? body["Γ"]);
+    const researchRaw = parseKnp(body.ρr ?? body["ρr"]);
+    const imageRaw = parseKnp(body.ωi ?? body["ωi"]);
+    const clientId = parseKnp(body.client_id ?? body.θc_client);
+    const campaignId = parseKnp(body.campaign_id);
+    const iterationNum = typeof body.iteration === "number" ? body.iteration : 1;
 
-    // Parse category (may be joined with ⊕)
-    const category = categoryRaw.split(KNP_VALUE_JOINER)[0].toUpperCase();
+    const creative = parseJsonField(creativeRaw) || body.creative || null;
+    const narrative = parseJsonField(narrativeRaw) || body.narrative || null;
+    const positioning = parseJsonField(positioningRaw) || body.positioning || null;
+    const guardrails = parseJsonField(guardrailsRaw) || body.guardrails || [];
+    const research = parseJsonField(researchRaw) || body.research || null;
+    const imageReview = parseJsonField(imageRaw) || body.image_review || null;
+    const brief = body.brief || body.ξb || "";
+    const audience = body.audience || body.zq || "";
+    const voice = body.voice || body.λv || "";
 
-    // Initialize Supabase
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    // Get user ID
-    const authHeader = req.headers.get("Authorization");
-    let userId: string | null = null;
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: userData } = await supabase.auth.getUser(token);
-      userId = userData?.user?.id || null;
+    if (!creative) {
+      return new Response(
+        JSON.stringify({ version: "Ψ3", submind: "approval", status: "error", σo: KNP_NULL, error: "Creative input required for approval" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // 1. Load control preferences from client_brain
-    let preferences = { ...DEFAULT_PREFERENCES };
-    if (clientId) {
-      const { data: brainData } = await supabase
-        .from("client_brain")
-        .select("data")
-        .eq("client_id", clientId)
-        .eq("document_type", "control_preferences")
-        .single();
-
-      if (brainData?.data) {
-        const stored = brainData.data as unknown as ControlPreferences;
-        preferences = {
-          always_ask: stored.always_ask || [],
-          auto_approve: stored.auto_approve || [],
-          never_auto: [
-            ...DEFAULT_PREFERENCES.never_auto,
-            ...(stored.never_auto || []),
-          ],
-        };
-      }
+    if (iterationNum > MAX_ITERATIONS) {
+      const rejected: ApprovalResult = {
+        decision: "rejected",
+        composite_score: 0,
+        criteria_scores: {
+          factual_accuracy: { score: 0, passed: false, hard_fail: true, notes: ["Max revision cycles exceeded"] },
+          brand_alignment: { score: 0, passed: false, hard_fail: true, notes: ["Max revision cycles exceeded"] },
+          audience_fit: { score: 0, passed: false, hard_fail: true, notes: ["Max revision cycles exceeded"] },
+          quality_standards: { score: 0, passed: false, hard_fail: true, notes: ["Max revision cycles exceeded"] },
+        },
+        revision_notes: "Maximum 3 revision cycles exceeded. Escalating to human review.",
+        conflicts: [],
+        iteration: iterationNum,
+        reviewer: "ai",
+      };
+      await logDecision(rejected, clientId, campaignId);
+      return new Response(
+        JSON.stringify({ version: "Ψ3", submind: "approval", status: "complete", ...rejected, elapsed_ms: Date.now() - startTime }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // 2. Check permanent gates first
-    const isPermanentGate = PERMANENT_GATES.includes(category);
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // 3. Detect conflicts
-    const conflict = detectConflicts(proposed, originalRequest, category, conflictData !== KNP_NULL_MARKER ? conflictData : null);
+    const systemPrompt = `You are the KLYC Approval Submind — a permanent Quality Gate.
+You can NEVER be bypassed. Every piece of content must pass your 4 gates before publishing.
 
-    // 4. Determine decision
-    let decision: ApprovalDecision;
-    let urgency: UrgencyLevel;
-    let reason = "";
+## FOUR PERMANENT GATES — Score each 0.0 to 1.0:
 
-    if (conflict.hasConflict && conflict.severity === "BLOCKING") {
-      // Conflict blocks — cannot proceed
-      decision = "BLOCKED";
-      urgency = "BLOCKING";
-      reason = conflict.description;
-    } else if (isPermanentGate) {
-      // Permanent gates always require user approval
-      decision = "PENDING_USER";
-      urgency = "BLOCKING";
-      reason = `${category} requires explicit approval every time. This is a permanent gate that cannot be auto-approved.`;
-    } else if (preferences.auto_approve.includes(category.toLowerCase())) {
-      // Previously approved for all time
-      decision = "APPROVED_ALL_TIME";
-      urgency = "INFORMATIONAL";
-      reason = `Auto-approved based on standing preference for ${category.toLowerCase()}.`;
-    } else if (preferences.always_ask.includes(category.toLowerCase())) {
-      // Client explicitly wants to be asked
-      decision = "PENDING_USER";
-      urgency = "ADVISORY";
-      reason = `Client prefers to review ${category.toLowerCase()} changes each time.`;
-    } else {
-      // Analyze for deviation
-      const deviation = await analyzeDeviation(proposed, originalRequest, category);
+1. FACTUAL ACCURACY (threshold: ≥0.8, hard fail: <0.5)
+   - Cross-check ALL claims against research findings and guardrails
+   - Flag any unsupported, exaggerated, or misleading claims
+   - Guardrails: ${JSON.stringify(guardrails)}
+   ${research ? `Research context: ${JSON.stringify(research).slice(0, 500)}` : "No research context provided"}
 
-      if (deviation.deviates) {
-        decision = "PENDING_USER";
-        urgency = "ADVISORY";
-        reason = `Deviation detected: ${deviation.reason}`;
-      } else if (conflict.hasConflict) {
-        decision = "PENDING_USER";
-        urgency = "ADVISORY";
-        reason = conflict.description;
-      } else {
-        // No deviation, no conflict, not a permanent gate, not in always_ask
-        decision = "APPROVED_THIS_TIME";
-        urgency = "INFORMATIONAL";
-        reason = "Content aligns with original request. No deviations detected.";
-      }
-    }
+2. BRAND ALIGNMENT (threshold: ≥0.8, hard fail: <0.5)
+   - Does messaging match the brand voice and positioning?
+   - Brand voice: ${voice || "Not specified"}
+   ${positioning ? `Positioning: ${JSON.stringify(positioning).slice(0, 500)}` : ""}
 
-    // 5. Log to approval_history
-    if (userId) {
-      await supabase.from("approval_history").insert({
-        user_id: userId,
-        client_id: clientId,
-        session_id: sessionId,
-        category,
-        what_was_proposed: proposed?.slice(0, 2000) || null,
-        what_was_originally_asked: originalRequest?.slice(0, 2000) || null,
-        decision,
-        decided_at: decision !== "PENDING_USER" ? new Date().toISOString() : null,
-      }).then(({ error }) => {
-        if (error) console.warn("Approval history insert warning:", error.message);
-      });
-    }
+3. AUDIENCE FIT (threshold: ≥0.7, hard fail: <0.5)
+   - Does content match the target audience?
+   - Platform-appropriate tone and format?
+   - Target audience: ${audience || "Not specified"}
+   - Brief: ${brief}
 
-    // 6. Build KNP response
-    const decisionKnp = `${decision}${KNP_NULL_MARKER}`;
-    const urgencyKnp = `${urgency}${KNP_NULL_MARKER}`;
+4. QUALITY STANDARDS (threshold: ≥0.8, hard fail: <0.5)
+   - Grammar, clarity, professionalism
+   - Visual brand consistency (if applicable)
+   ${imageReview ? `Image review scores: ${JSON.stringify(imageReview).slice(0, 300)}` : ""}
+   ${narrative ? `NarrativeRank target: ≥3.5. Narrative: ${JSON.stringify(narrative).slice(0, 300)}` : ""}
 
-    const responseSegments: Record<string, string> = {
-      [KNP.σo]: decisionKnp,
-      [KNP.πf]: urgencyKnp,
-      zq: reason,
-    };
+## CONFLICT DETECTION
+If the creative pushes in one direction but positioning/guardrails push another, flag it.
 
-    if (conflict.hasConflict && category === "CONFLICT") {
-      responseSegments[KNP.λv] = conflictData;
-    }
+## OUTPUT FORMAT — Return ONLY this JSON:
+{
+  "factual_accuracy": { "score": 0.0-1.0, "notes": ["specific issues"] },
+  "brand_alignment": { "score": 0.0-1.0, "notes": ["specific issues"] },
+  "audience_fit": { "score": 0.0-1.0, "notes": ["specific issues"] },
+  "quality_standards": { "score": 0.0-1.0, "notes": ["specific issues"] },
+  "conflicts": ["any submind disagreements detected"],
+  "overall_notes": "summary of key findings"
+}
 
-    const elapsed = Date.now() - startTime;
+Be strict. This gate exists to prevent bad content from reaching the public.`;
 
-    const response = {
-      version: KNP_VERSION,
-      submind: "approval",
-      status: "complete",
-      checksum: knpChecksum(responseSegments),
-      timestamp: Date.now(),
-      ...responseSegments,
-      // Structured data for Orchestrator
-      decision,
-      urgency,
-      reason,
-      category,
-      is_permanent_gate: isPermanentGate,
-      conflict_detected: conflict.hasConflict,
-      conflict_type: conflict.conflictType || null,
-      // Dual approval options (only for non-permanent gates that are PENDING_USER)
-      approval_options: decision === "PENDING_USER" && !isPermanentGate
-        ? ["APPROVED_THIS_TIME", "APPROVED_ALL_TIME"]
-        : decision === "PENDING_USER" && isPermanentGate
-          ? ["APPROVED_THIS_TIME"]
-          : [],
-      elapsed_ms: elapsed,
-    };
-
-    return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Review this creative content for approval (iteration ${iterationNum}):\n${JSON.stringify(creative)}` },
+        ],
+        temperature: 0.2,
+      }),
     });
-  } catch (e) {
-    console.error("Approval submind error:", e);
-    const errorSegments: Record<string, string> = {
-      [KNP.σo]: `BLOCKED${KNP_NULL_MARKER}`,
-      [KNP.πf]: `BLOCKING${KNP_NULL_MARKER}`,
-      zq: "Internal error in Gatekeeper — blocking as safety measure",
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      if (response.status === 429) throw new Error("RATE_LIMITED");
+      if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
+      throw new Error(`AI generation failed: ${response.status}`);
+    }
+
+    const aiResult = await response.json();
+    const raw = aiResult.choices?.[0]?.message?.content || "{}";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI did not return valid JSON");
+
+    const aiScores = JSON.parse(jsonMatch[0]);
+
+    // Build gate scores
+    const gates: Record<string, GateScore> = {};
+    for (const [gate, config] of Object.entries(GATE_THRESHOLDS)) {
+      const aiGate = aiScores[gate] || { score: 0.5, notes: [] };
+      const score = typeof aiGate.score === "number" ? Math.min(1, Math.max(0, aiGate.score)) : 0.5;
+      gates[gate] = {
+        score,
+        passed: score >= config.pass,
+        hard_fail: score < config.hard_fail,
+        notes: Array.isArray(aiGate.notes) ? aiGate.notes : [],
+      };
+    }
+
+    // Composite score
+    const composite = Object.entries(GATE_THRESHOLDS).reduce(
+      (sum, [gate, config]) => sum + (gates[gate]?.score || 0) * config.weight, 0
+    );
+
+    const hasHardFail = Object.values(gates).some(g => g.hard_fail);
+    const allAboveMin = Object.values(gates).every(g => g.score >= INDIVIDUAL_MIN);
+    const conflicts: string[] = Array.isArray(aiScores.conflicts) ? aiScores.conflicts : [];
+
+    let decision: "approved" | "revision_requested" | "rejected";
+    let revisionNotes = "";
+
+    if (hasHardFail) {
+      decision = "rejected";
+      const failedGates = Object.entries(gates).filter(([, g]) => g.hard_fail).map(([k]) => k);
+      revisionNotes = `HARD FAIL on: ${failedGates.join(", ")}. ${aiScores.overall_notes || ""}`;
+    } else if (composite >= COMPOSITE_PASS && allAboveMin) {
+      decision = "approved";
+      revisionNotes = aiScores.overall_notes || "All gates passed.";
+    } else {
+      decision = "revision_requested";
+      const weakGates = Object.entries(gates)
+        .filter(([, g]) => !g.passed)
+        .map(([k, g]) => `${k}: ${g.score.toFixed(2)} (needs ≥${GATE_THRESHOLDS[k as keyof typeof GATE_THRESHOLDS].pass}) — ${g.notes.join("; ")}`)
+        .join("\n");
+      revisionNotes = `Revision needed:\n${weakGates}\n${aiScores.overall_notes || ""}`;
+    }
+
+    if (conflicts.length) {
+      revisionNotes += `\n\nCONFLICTS DETECTED:\n${conflicts.join("\n")}`;
+    }
+
+    const result: ApprovalResult = {
+      decision,
+      composite_score: Math.round(composite * 100) / 100,
+      criteria_scores: {
+        factual_accuracy: gates.factual_accuracy,
+        brand_alignment: gates.brand_alignment,
+        audience_fit: gates.audience_fit,
+        quality_standards: gates.quality_standards,
+      },
+      revision_notes: revisionNotes.trim(),
+      conflicts,
+      iteration: iterationNum,
+      reviewer: "ai",
     };
+
+    await logDecision(result, clientId, campaignId);
+
     return new Response(
       JSON.stringify({
-        version: KNP_VERSION,
+        version: "Ψ3",
         submind: "approval",
-        status: "error",
-        checksum: knpChecksum(errorSegments),
-        ...errorSegments,
-        decision: "BLOCKED",
-        urgency: "BLOCKING",
-        error: e instanceof Error ? e.message : "Unknown error",
+        status: "complete",
+        σo: JSON.stringify(result),
+        ...result,
         elapsed_ms: Date.now() - startTime,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : "Unknown error";
+    const status = errMsg === "RATE_LIMITED" ? 429 : errMsg === "PAYMENT_REQUIRED" ? 402 : 500;
+    return new Response(
+      JSON.stringify({ version: "Ψ3", submind: "approval", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: Date.now() - startTime }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
