@@ -33,13 +33,13 @@ export default function OrchestratorGraph() {
         <CardHeader><CardTitle className="text-lg">Pipeline Flow</CardTitle></CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-2 justify-center">
-            {AGENTS.map((agent, i) => (
-              <div key={agent.id} className="flex items-center gap-2">
-                <div className={`rounded-lg border p-3 ${agent.color} min-w-[120px] text-center`}>
-                  <agent.icon className="h-5 w-5 mx-auto mb-1" />
-                  <p className="text-xs font-medium">{agent.label}</p>
+            {SUBMINDS.map((submind, i) => (
+              <div key={submind.id} className="flex items-center gap-2">
+                <div className={`rounded-lg border p-3 ${submind.color} min-w-[120px] text-center`}>
+                  <submind.icon className="h-5 w-5 mx-auto mb-1" />
+                  <p className="text-xs font-medium">{submind.label}</p>
                 </div>
-                {i < AGENTS.length - 1 && <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                {i < SUBMINDS.length - 1 && <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />}
               </div>
             ))}
           </div>
