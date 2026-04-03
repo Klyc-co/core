@@ -96,6 +96,7 @@ import KlycAdminRevenue from "./pages/KlycAdminRevenue";
 import KlycAdminInfrastructure from "./pages/KlycAdminInfrastructure";
 import KlycAdminCompression from "./pages/KlycAdminCompression";
 import KlycAdminSubminds from "./pages/KlycAdminSubminds";
+import KlycAdminInternal from "./pages/KlycAdminInternal";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
@@ -144,6 +145,7 @@ const App = () => (
             <Route path="/klyc_admin/infrastructure" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminInfrastructure /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/compression" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCompression /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/subminds" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminSubminds /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/klyc-internal" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminInternal /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
