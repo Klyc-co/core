@@ -23,8 +23,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface NextQuestion {
   field: string;
   question: string;
-  type: "text" | "select" | "date" | "bool";
+  type: "text" | "select" | "date" | "bool" | "button" | "fill_in";
   options?: string[];
+  nav_target?: string;
 }
 
 interface StructuredResponse {
