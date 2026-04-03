@@ -228,16 +228,14 @@ const ApprovalGateDisplay = ({
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               size="sm"
-              variant="success"
-              className="h-8 text-xs"
+              className="h-8 text-xs bg-success text-success-foreground hover:bg-success/90"
               onClick={() => onDecision("approved")}
             >
               <Check className="w-3 h-3 mr-1" /> Approve
             </Button>
             <Button
               size="sm"
-              variant="warning"
-              className="h-8 text-xs"
+              className="h-8 text-xs bg-warning text-warning-foreground hover:bg-warning/90"
               onClick={() => setShowNotes(true)}
             >
               Request Revision
