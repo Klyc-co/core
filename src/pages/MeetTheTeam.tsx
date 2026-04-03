@@ -28,7 +28,7 @@ const specialists = [
   },
   {
     name: "Sloane",
-    title: "Strategy & Messaging Agent",
+    title: "Strategy & Messaging Submind",
     description:
       "Sloane turns insights into direction. She develops messaging pillars, hooks, CTAs, and content angles that align with awareness, lead generation, authority, and nurture goals.",
     items: ["Positioning", "Messaging pillars", "Hooks and CTAs", "Campaign direction"],
