@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Shield, LogOut, LayoutDashboard, Users, CreditCard,
-  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle,
+  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
