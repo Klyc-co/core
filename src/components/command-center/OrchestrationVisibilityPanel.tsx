@@ -65,7 +65,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Network className="w-8 h-8 text-muted-foreground/30 mb-2" />
-            <p className="text-sm text-muted-foreground">Run an analysis to see orchestration decisions</p>
+            <p className="text-sm text-muted-foreground">Run an analysis to see Klyc decisions</p>
           </div>
         </CardContent>
       </Card>
