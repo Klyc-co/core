@@ -6,11 +6,12 @@
 
 // ── Re-export v1 for backward compatibility ──
 export {
-  KNP, KNPFieldKey, INPUT_FIELD_MAP, OUTPUT_KEY_MAP,
+  KNP, INPUT_FIELD_MAP, OUTPUT_KEY_MAP,
   KNP_VERSION, KNP_FIELD_SEPARATOR, KNP_VALUE_JOINER, KNP_NULL_MARKER,
-  KNPPacket, compressValue, knpChecksum, validateChecksum,
+  compressValue, knpChecksum, validateChecksum,
   buildKNPPacket, serializePacket, deserializePacket, decompressPacket,
 } from "./knp-codec";
+export type { KNPFieldKey, KNPPacket } from "./knp-codec";
 
 // ── Submind Enum (4-bit addressing) ──
 
