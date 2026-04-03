@@ -176,14 +176,14 @@ function normalizerCompress(userInput: string, sessionId: string): KNPPacket {
 function detectIntent(message: string): DetectedIntent {
   const lower = message.toLowerCase();
 
-  // CAMPAIGN_NEW
+  // PERFORMANCE_REVIEW — check BEFORE campaign_new to avoid "campaign" false positive
   if (
-    lower.includes("create") || lower.includes("new campaign") ||
-    lower.includes("launch") || lower.includes("build a campaign") ||
-    lower.includes("marketing plan") || lower.includes("new post") ||
-    (lower.includes("campaign") && (lower.includes("for") || lower.includes("about") || lower.includes("on")))
+    lower.includes("how did") || lower.includes("perform") ||
+    lower.includes("analytics") || lower.includes("metrics") ||
+    lower.includes("engagement rate") ||
+    (lower.includes("report") && !lower.includes("create"))
   ) {
-    return "campaign_new";
+    return "performance_review";
   }
 
   // TREND_ANALYSIS
@@ -195,14 +195,14 @@ function detectIntent(message: string): DetectedIntent {
     return "trend_analysis";
   }
 
-  // PERFORMANCE_REVIEW
+  // CAMPAIGN_NEW
   if (
-    lower.includes("how did") || lower.includes("perform") ||
-    lower.includes("analytics") || lower.includes("metrics") ||
-    lower.includes("engagement rate") || lower.includes("results") ||
-    lower.includes("report")
+    lower.includes("create") || lower.includes("new campaign") ||
+    lower.includes("launch") || lower.includes("build a campaign") ||
+    lower.includes("marketing plan") || lower.includes("new post") ||
+    (lower.includes("campaign") && (lower.includes("for") || lower.includes("about") || lower.includes("on")))
   ) {
-    return "performance_review";
+    return "campaign_new";
   }
 
   // CONTENT_REVISION
