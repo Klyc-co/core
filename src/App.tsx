@@ -82,6 +82,7 @@ import CrmOrders from "./pages/CrmOrders";
 import ReportsPage from "./pages/ReportsPage";
 import OrchestratorGraph from "./pages/OrchestratorGraph";
 import Onboarding from "./pages/Onboarding";
+import SmartPromptDemo from "./pages/SmartPromptDemo";
 
 
 const queryClient = new QueryClient();
