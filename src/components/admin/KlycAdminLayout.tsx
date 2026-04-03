@@ -14,9 +14,9 @@ const NAV_ITEMS = [
   { label: "Revenue", path: "/klyc_admin/revenue", icon: CreditCard },
   { label: "Infrastructure", path: "/klyc_admin/infrastructure", icon: Activity },
   { label: "Compression", path: "/klyc_admin/compression", icon: Layers },
-  { label: "Employees", path: "/klyc_admin/employees", icon: Users },
+  { label: "Subminds", path: "/klyc_admin/subminds", icon: Brain },
   { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
-  { label: "Submind Health", path: "/klyc_admin/health", icon: Brain },
+  { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];
 
