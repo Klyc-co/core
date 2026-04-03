@@ -1148,6 +1148,91 @@ export type Database = {
         }
         Relationships: []
       }
+      collaboration_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_internal_note: boolean
+          message: string
+          sender_id: string | null
+          sender_type: Database["public"]["Enums"]["collab_sender"]
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          message: string
+          sender_id?: string | null
+          sender_type: Database["public"]["Enums"]["collab_sender"]
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          message?: string
+          sender_id?: string | null
+          sender_type?: Database["public"]["Enums"]["collab_sender"]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "collaboration_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collaboration_tickets: {
+        Row: {
+          assigned_to: string | null
+          client_id: string
+          created_at: string
+          id: string
+          priority: Database["public"]["Enums"]["collab_priority"]
+          resolution_time_ms: number | null
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["collab_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["collab_priority"]
+          resolution_time_ms?: number | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["collab_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["collab_priority"]
+          resolution_time_ms?: number | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["collab_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "klyc_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -3720,6 +3805,9 @@ export type Database = {
         | "suspended"
       billing_tier: "starter" | "growth" | "pro" | "enterprise"
       channel_status: "connected" | "disconnected" | "error"
+      collab_priority: "urgent" | "normal" | "low"
+      collab_sender: "client" | "admin"
+      collab_status: "new" | "in_progress" | "waiting_on_client" | "resolved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3851,6 +3939,9 @@ export const Constants = {
       billing_status: ["trial", "active", "past_due", "cancelled", "suspended"],
       billing_tier: ["starter", "growth", "pro", "enterprise"],
       channel_status: ["connected", "disconnected", "error"],
+      collab_priority: ["urgent", "normal", "low"],
+      collab_sender: ["client", "admin"],
+      collab_status: ["new", "in_progress", "waiting_on_client", "resolved"],
     },
   },
 } as const
