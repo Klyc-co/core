@@ -40,22 +40,26 @@ export interface OrchestrationSummary {
   estimatedComplexity: "low" | "medium" | "high";
 }
 
-// ── Agent Execution Summary ──
-export interface AgentStep {
-  agent: string;
+// ── Submind Execution Summary ──
+export interface SubmindStep {
+  submind: string;
   status: "pending" | "running" | "complete" | "skipped" | "error";
   durationMs: number | null;
   confidenceScore: number | null;
   note: string | null;
 }
 
-export interface AgentExecutionSummary {
-  totalAgents: number;
-  completedAgents: number;
-  skippedAgents: number;
-  errorAgents: number;
-  steps: AgentStep[];
+export interface SubmindExecutionSummary {
+  totalSubminds: number;
+  completedSubminds: number;
+  skippedSubminds: number;
+  errorSubminds: number;
+  steps: SubmindStep[];
 }
+
+// ── Backward-compatible aliases ──
+export type AgentStep = SubmindStep;
+export type AgentExecutionSummary = SubmindExecutionSummary;
 
 // ── Next Actions ──
 export interface NextActions {
@@ -77,13 +81,22 @@ export interface WorkflowReportEnvelope {
   runMetadata: RunMetadata;
   normalizationChecksum: NormalizationChecksum;
   orchestrationSummary: OrchestrationSummary;
-  agentExecutionSummary: AgentExecutionSummary;
+  submindExecutionSummary: SubmindExecutionSummary;
+  /** @deprecated Use submindExecutionSummary */
+  agentExecutionSummary: SubmindExecutionSummary;
   nextActions: NextActions;
   rawNormalizedObjects?: RawNormalizedObjects;
 }
 
 /** Build an idle envelope for pre-run state */
 export function idleEnvelope(clientId: string, clientName: string): WorkflowReportEnvelope {
+  const summary: SubmindExecutionSummary = {
+    totalSubminds: 0,
+    completedSubminds: 0,
+    skippedSubminds: 0,
+    errorSubminds: 0,
+    steps: [],
+  };
   return {
     runMetadata: {
       clientId,
@@ -114,13 +127,8 @@ export function idleEnvelope(clientId: string, clientName: string): WorkflowRepo
       requiresPlatformEvaluation: false,
       estimatedComplexity: "low",
     },
-    agentExecutionSummary: {
-      totalAgents: 0,
-      completedAgents: 0,
-      skippedAgents: 0,
-      errorAgents: 0,
-      steps: [],
-    },
+    submindExecutionSummary: summary,
+    agentExecutionSummary: summary,
     nextActions: {
       recommended: ["Run an analysis to begin"],
       optional: [],

@@ -1,47 +1,52 @@
 // ============================================================
-// KLYC Agent Metrics — Shared Type System
+// KLYC Submind Metrics — Shared Type System
 // ============================================================
 
-/** Every metric output by an agent conforms to this shape. */
-export interface AgentMetric {
+/** Every metric output by a submind conforms to this shape. */
+export interface SubmindMetric {
   metric: string;
   value: number;
   unit?: string;
-  /** A parameterized query description agents can surface for dashboard generation. */
+  /** A parameterized query description subminds can surface for dashboard generation. */
   sql_query: string;
 }
 
-/** A concrete action the agent recommends based on its metrics. */
+/** A concrete action the submind recommends based on its metrics. */
 export interface RecommendedAction {
   priority: "high" | "medium" | "low";
   action: string;
   reason: string;
 }
 
-/** Standard output every agent must produce. */
-export interface AgentMetricsOutput {
-  agentRole: AgentRole;
-  metrics: AgentMetric[];
+/** Standard output every submind must produce. */
+export interface SubmindMetricsOutput {
+  submindRole: SubmindRole;
+  metrics: SubmindMetric[];
   recommended_actions: RecommendedAction[];
   generatedAt: string;
 }
 
-export type AgentRole =
+export type SubmindRole =
   | "research"
   | "social"
   | "image"
   | "editor"
   | "analytics";
 
-// ---- Per-agent input contracts ----
+// ---- Backward-compatible aliases ----
+export type AgentRole = SubmindRole;
+export type AgentMetric = SubmindMetric;
+export type AgentMetricsOutput = SubmindMetricsOutput;
 
-export interface ResearchAgentInput {
+// ---- Per-submind input contracts ----
+
+export interface ResearchSubmindInput {
   trendScores: Array<{ trendName: string; platform: string; volume: string | null; rank: number | null }>;
   competitors: Array<{ name: string; analyzedAt: string; hasSwot: boolean }>;
   totalCompetitorCount: number;
 }
 
-export interface SocialAgentInput {
+export interface SocialSubmindInput {
   postCaption: string;
   platform: string;
   historicalEngagementRate: number;
@@ -49,7 +54,7 @@ export interface SocialAgentInput {
   avgComments: number;
 }
 
-export interface ImageAgentInput {
+export interface ImageSubmindInput {
   imageUrl: string | null;
   hasText: boolean;
   dominantColors: string[];
@@ -57,14 +62,14 @@ export interface ImageAgentInput {
   platform: string;
 }
 
-export interface EditorAgentInput {
+export interface EditorSubmindInput {
   postText: string;
   platform: string;
   mediaUrls: string[];
   hashtags: string[];
 }
 
-export interface AnalyticsAgentInput {
+export interface AnalyticsSubmindInput {
   campaignId: string;
   views: number;
   likes: number;
@@ -76,7 +81,14 @@ export interface AnalyticsAgentInput {
   reach: number;
 }
 
-// ---- Platform constraints used by editor agent ----
+// ---- Backward-compatible input aliases ----
+export type ResearchAgentInput = ResearchSubmindInput;
+export type SocialAgentInput = SocialSubmindInput;
+export type ImageAgentInput = ImageSubmindInput;
+export type EditorAgentInput = EditorSubmindInput;
+export type AnalyticsAgentInput = AnalyticsSubmindInput;
+
+// ---- Platform constraints used by editor submind ----
 
 export const PLATFORM_LIMITS: Record<string, { maxChars: number; maxHashtags: number; maxMedia: number; formats: string[] }> = {
   twitter: { maxChars: 280, maxHashtags: 5, maxMedia: 4, formats: ["jpg", "png", "gif", "mp4"] },

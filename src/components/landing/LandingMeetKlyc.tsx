@@ -52,7 +52,7 @@ const LandingMeetKlyc = () => {
             <img src={klycLogoDark} alt="Klyc" className="h-[5.5rem] sm:h-[6.5rem] md:h-[8.5rem] lg:h-[10rem] inline-block -mb-1 -ml-8" />
           </h2>
           <p className="text-lg sm:text-xl md:text-2xl text-[#6b7280] font-light italic mb-10 sm:mb-12 text-center">
-            "I'm Your Always-On Marketing AI Agent. I work 24/7 with you."
+            "I'm Your Always-On Marketing Intelligence. I work 24/7 with you."
           </p>
         </AnimateOnScroll>
 
