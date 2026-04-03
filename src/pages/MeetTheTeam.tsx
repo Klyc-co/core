@@ -44,7 +44,7 @@ const specialists = [
   },
   {
     name: "Lyra",
-    title: "Social Performance Agent",
+    title: "Social Performance Submind",
     description:
       "Lyra monitors early engagement signals and identifies what is gaining traction. She helps Klyc understand when to iterate, boost, or double down based on real performance momentum.",
     items: ["Early velocity tracking", "Engagement signals", "Boost recommendations", "Optimization loops"],
