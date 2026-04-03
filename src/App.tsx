@@ -137,6 +137,7 @@ const App = () => (
             
             {/* Marketer routes with sidebar */}
             <Route path="/home" element={<WithSidebar><Home /></WithSidebar>} />
+            <Route path="/klyc-chat" element={<WithSidebar><KlycChatPage /></WithSidebar>} />
             <Route path="/projects" element={<WithSidebar><Projects /></WithSidebar>} />
             <Route path="/projects/new" element={<WithSidebar><NewProject /></WithSidebar>} />
             <Route path="/projects/:id/processing" element={<WithSidebar><Processing /></WithSidebar>} />
