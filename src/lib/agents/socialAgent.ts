@@ -1,8 +1,8 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  SocialAgentInput,
+  SocialSubmindInput,
 } from "./types";
 
 /**
