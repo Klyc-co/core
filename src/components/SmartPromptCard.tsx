@@ -168,6 +168,8 @@ const ApprovalGateDisplay = ({
 }) => {
   const [revisionNotes, setRevisionNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState("");
 
   const GATES: { key: keyof Pick<ApprovalGateData, "factual" | "brand" | "audience" | "quality">; label: string; threshold: number }[] = [
     { key: "factual", label: "Factual Accuracy", threshold: 0.8 },
