@@ -3210,6 +3210,62 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_items: {
+        Row: {
+          category: Database["public"]["Enums"]["roadmap_category"]
+          created_at: string
+          description: string | null
+          effort: Database["public"]["Enums"]["effort_size"]
+          id: string
+          owner_id: string | null
+          priority: number
+          progress_pct: number
+          shipped_at: string | null
+          status: Database["public"]["Enums"]["roadmap_status"]
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["roadmap_category"]
+          created_at?: string
+          description?: string | null
+          effort?: Database["public"]["Enums"]["effort_size"]
+          id?: string
+          owner_id?: string | null
+          priority?: number
+          progress_pct?: number
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["roadmap_status"]
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["roadmap_category"]
+          created_at?: string
+          description?: string | null
+          effort?: Database["public"]["Enums"]["effort_size"]
+          id?: string
+          owner_id?: string | null
+          priority?: number
+          progress_pct?: number
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["roadmap_status"]
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "klyc_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_campaigns: {
         Row: {
           campaign_name: string
@@ -3876,6 +3932,20 @@ export type Database = {
       collab_priority: "urgent" | "normal" | "low"
       collab_sender: "client" | "admin"
       collab_status: "new" | "in_progress" | "waiting_on_client" | "resolved"
+      effort_size: "S" | "M" | "L" | "XL"
+      roadmap_category:
+        | "infrastructure"
+        | "subminds"
+        | "frontend"
+        | "integrations"
+        | "business"
+      roadmap_status:
+        | "backlog"
+        | "planning"
+        | "design"
+        | "build"
+        | "test"
+        | "shipped"
       vote_category:
         | "ui"
         | "subminds"
@@ -4024,6 +4094,22 @@ export const Constants = {
       collab_priority: ["urgent", "normal", "low"],
       collab_sender: ["client", "admin"],
       collab_status: ["new", "in_progress", "waiting_on_client", "resolved"],
+      effort_size: ["S", "M", "L", "XL"],
+      roadmap_category: [
+        "infrastructure",
+        "subminds",
+        "frontend",
+        "integrations",
+        "business",
+      ],
+      roadmap_status: [
+        "backlog",
+        "planning",
+        "design",
+        "build",
+        "test",
+        "shipped",
+      ],
       vote_category: [
         "ui",
         "subminds",

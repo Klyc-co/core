@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Shield, LogOut, LayoutDashboard, Users, CreditCard,
-  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp,
+  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: "Dispatch Log", path: "/klyc_admin/dispatch", icon: Zap },
   { label: "Collaboration", path: "/klyc_admin/collaboration", icon: MessageCircle },
   { label: "Client Voting", path: "/klyc_admin/voting", icon: ThumbsUp },
+  { label: "Roadmap", path: "/klyc_admin/roadmap", icon: Map },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];
