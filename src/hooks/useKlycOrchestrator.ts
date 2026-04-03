@@ -74,12 +74,34 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+function extractReplyText(raw: Record<string, unknown>): string {
+  // Robust fallback chain — NEVER return empty or "unknown"
+  const candidates = [raw.reply, raw.message, raw.response, raw.text, raw.content];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c;
+  }
+  // Try nested stage data
+  if (raw.stages && Array.isArray(raw.stages) && raw.stages.length > 0) {
+    const s = (raw.stages as Record<string, unknown>[])[0];
+    const d = s?.data;
+    if (typeof d === "string") return d;
+    if (typeof d === "object" && d !== null) {
+      const sd = d as Record<string, unknown>;
+      return (sd.raw || sd.content || sd.message || JSON.stringify(d)) as string;
+    }
+  }
+  if (raw.result) return typeof raw.result === "string" ? raw.result : JSON.stringify(raw.result);
+  return JSON.stringify(raw);
+}
+
+function extractSource(raw: Record<string, unknown>): string {
+  return ((raw.source as string) || (raw.intent as string) || "Klyc").replace(/^unknown$/i, "Klyc");
+}
+
 function parseOrchestratorResponse(raw: Record<string, unknown>): Partial<ConversationMessage> {
   const msg: Partial<ConversationMessage> = {};
 
-  if (raw.content && typeof raw.content === "string") {
-    msg.content = raw.content;
-  }
+  msg.content = extractReplyText(raw);
 
   if (raw.smart_prompt && typeof raw.smart_prompt === "object") {
     const sp = raw.smart_prompt as Record<string, unknown>;

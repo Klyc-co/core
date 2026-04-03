@@ -83,6 +83,7 @@ import ReportsPage from "./pages/ReportsPage";
 import OrchestratorGraph from "./pages/OrchestratorGraph";
 import Onboarding from "./pages/Onboarding";
 import SmartPromptDemo from "./pages/SmartPromptDemo";
+import KlycChatPage from "./pages/KlycChatPage";
 
 
 const queryClient = new QueryClient();
