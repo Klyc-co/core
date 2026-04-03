@@ -125,6 +125,11 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
             <Route path="/waitlist" element={<Waitlist />} />
+            
+            {/* Klyc Admin */}
+            <Route path="/klyc_admin" element={<KlycAdminLogin />} />
+            <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
+            <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
             {/* Client Portal routes */}
