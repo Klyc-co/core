@@ -1958,6 +1958,44 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_advocacy: {
+        Row: {
+          channel: string
+          employee_id: string
+          engagements: number
+          id: string
+          impressions: number
+          post_url: string | null
+          posted_at: string
+        }
+        Insert: {
+          channel: string
+          employee_id: string
+          engagements?: number
+          id?: string
+          impressions?: number
+          post_url?: string | null
+          posted_at?: string
+        }
+        Update: {
+          channel?: string
+          employee_id?: string
+          engagements?: number
+          id?: string
+          impressions?: number
+          post_url?: string | null
+          posted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_advocacy_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "klyc_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_drive_assets: {
         Row: {
           asset_name: string
@@ -2220,6 +2258,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      klyc_marketing_metrics: {
+        Row: {
+          channel: string
+          clicks: number
+          conversions: number
+          date: string
+          engagements: number
+          followers: number
+          id: string
+          impressions: number
+          posts_published: number
+          spend: number
+        }
+        Insert: {
+          channel: string
+          clicks?: number
+          conversions?: number
+          date: string
+          engagements?: number
+          followers?: number
+          id?: string
+          impressions?: number
+          posts_published?: number
+          spend?: number
+        }
+        Update: {
+          channel?: string
+          clicks?: number
+          conversions?: number
+          date?: string
+          engagements?: number
+          followers?: number
+          id?: string
+          impressions?: number
+          posts_published?: number
+          spend?: number
+        }
+        Relationships: []
       }
       knowledge_graph: {
         Row: {
