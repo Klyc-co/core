@@ -85,6 +85,26 @@ async function checkImageUrl(url: string): Promise<{ reachable: boolean; content
   }
 }
 
+// ---- Brand Consistency Scoring (WP-31/32/33) ----
+
+interface BrandDimensionScores {
+  color_harmony: number;    // weight 0.25
+  typography: number;       // weight 0.20
+  logo_placement: number;   // weight 0.20
+  motif_repetition: number; // weight 0.15
+  layout_framework: number; // weight 0.20
+}
+
+function computeBrandScore(scores: BrandDimensionScores): number {
+  return Math.round((
+    scores.color_harmony * 0.25 +
+    scores.typography * 0.20 +
+    scores.logo_placement * 0.20 +
+    scores.motif_repetition * 0.15 +
+    scores.layout_framework * 0.20
+  ) * 100) / 100;
+}
+
 // ---- AI-Powered Image Review ----
 
 interface ImageReview {
@@ -92,6 +112,8 @@ interface ImageReview {
   status: "accepted" | "rejected";
   rejection_reason: string | null;
   brand_alignment: string;
+  brand_dimension_scores: BrandDimensionScores;
+  brand_score: number;
   platform_suitability: Record<string, boolean>;
   suggestions: string[];
 }
