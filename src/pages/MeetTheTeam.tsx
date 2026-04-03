@@ -36,7 +36,7 @@ const specialists = [
   },
   {
     name: "Fylix",
-    title: "Platform Content Agent",
+    title: "Platform Content Submind",
     description:
       "Fylix translates strategy into platform-native execution. He adapts messaging for the unique style, structure, and behavior of each channel so content feels native everywhere it appears.",
     items: ["LinkedIn content", "X content", "Instagram formatting", "TikTok / YouTube adaptation"],
