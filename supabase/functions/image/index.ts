@@ -187,21 +187,35 @@ Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reaso
       return imageUrls.map((url) => ({
         url, status: "accepted" as const, rejection_reason: null,
         brand_alignment: "Review unavailable — accepted by default",
+        brand_dimension_scores: defaultScores,
+        brand_score: computeBrandScore(defaultScores),
         platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
         suggestions: [],
       }));
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("No content");
+    const rawContent = data.choices?.[0]?.message?.content;
+    if (!rawContent) throw new Error("No content");
 
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : parsed.reviews || parsed.results || [parsed];
+    const jsonMatch = rawContent.match(/\[[\s\S]*\]/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawContent);
+    const items = Array.isArray(parsed) ? parsed : parsed.reviews || parsed.results || [parsed];
+
+    return items.map((item: any) => {
+      const scores: BrandDimensionScores = item.brand_dimension_scores || defaultScores;
+      return {
+        ...item,
+        brand_dimension_scores: scores,
+        brand_score: computeBrandScore(scores),
+      };
+    });
   } catch {
     return imageUrls.map((url) => ({
       url, status: "accepted" as const, rejection_reason: null,
       brand_alignment: "Review unavailable — accepted by default",
+      brand_dimension_scores: defaultScores,
+      brand_score: computeBrandScore(defaultScores),
       platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
       suggestions: [],
     }));
