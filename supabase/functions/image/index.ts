@@ -131,13 +131,16 @@ async function reviewImages(
     .map((s) => `${s.platform} ${s.use_case}: ${s.width}×${s.height} (${s.aspect_ratio})`)
     .join("; ");
 
+  const defaultScores: BrandDimensionScores = { color_harmony: 0.5, typography: 0.5, logo_placement: 0.5, motif_repetition: 0.5, layout_framework: 0.5 };
+
   if (!apiKey) {
-    // Fallback: accept all with basic specs
     return imageUrls.map((url) => ({
       url,
       status: "accepted" as const,
       rejection_reason: null,
       brand_alignment: "Unable to assess without AI — accepted by default",
+      brand_dimension_scores: defaultScores,
+      brand_score: computeBrandScore(defaultScores),
       platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
       suggestions: [],
     }));
