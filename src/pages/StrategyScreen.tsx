@@ -164,8 +164,8 @@ const PIPELINE_ORDER = ["normalizer", "research", "product", "narrative", "socia
 
 export default function StrategyScreen() {
   const pipeline = useKlycPipeline();
-
-  // Form state
+  const navigate = useNavigate();
+  const [savingDraft, setSavingDraft] = useState(false);
   const [form, setForm] = useState({
     campaignName: "",
     productInfo: "",
