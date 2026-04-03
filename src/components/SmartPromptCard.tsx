@@ -244,7 +244,7 @@ const ApprovalGateDisplay = ({
               size="sm"
               variant="destructive"
               className="h-8 text-xs"
-              onClick={() => onDecision("rejected")}
+              onClick={() => setShowRejectConfirm(true)}
             >
               Reject
             </Button>
