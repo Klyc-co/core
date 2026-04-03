@@ -103,6 +103,7 @@ import KlycAdminDispatch from "./pages/KlycAdminDispatch";
 import KlycAdminVoting from "./pages/KlycAdminVoting";
 import KlycAdminRoadmap from "./pages/KlycAdminRoadmap";
 import KlycAdminMarketing from "./pages/KlycAdminMarketing";
+import KlycAdminFinancials from "./pages/KlycAdminFinancials";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
