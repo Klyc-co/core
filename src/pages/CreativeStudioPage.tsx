@@ -57,16 +57,14 @@ export default function CreativeStudioPage() {
 
         <TabsContent value="assets" className="mt-4">
           <CreativeHub
-            brandColors={brandColors}
-            brandFonts={[]}
-            onSelectTool={(tool) => {
+            onSelect={(tool) => {
               if (tool === "broll") navigate("/projects", { state: { fromCreative: true } });
             }}
           />
         </TabsContent>
 
         <TabsContent value="generate" className="mt-4">
-          <ImageVideoGenerator brandColors={brandColors} />
+          <ImageVideoGenerator onBack={() => {}} />
         </TabsContent>
 
         <TabsContent value="library" className="mt-4">
