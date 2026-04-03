@@ -1,5 +1,5 @@
-import { KLYCAgent, type SubmindFocus } from '../agents/klyc_agent'
-import type { AgentInput, AgentOutput } from '../agents/agent_interface'
+import { KLYCSubmindEngine, type SubmindFocus } from '../subminds/klyc_submind_engine'
+import type { SubmindInput, SubmindOutput } from '../subminds/submind_interface'
 import { formatCampaignResponse, generateCampaignId } from '../utils/response_formatter'
 
 /**
@@ -7,7 +7,7 @@ import { formatCampaignResponse, generateCampaignId } from '../utils/response_fo
  */
 export interface SubmindExecutionResult {
   focus: SubmindFocus
-  output: AgentOutput
+  output: SubmindOutput
   executionTimeMs: number
   timestamp: string
 }
@@ -32,7 +32,7 @@ export interface OrchestratorResult {
 }
 
 /**
- * The sequential pipeline order — one agent, nine focus areas
+ * The sequential pipeline order — one engine, nine focus areas
  */
 const PIPELINE_ORDER: SubmindFocus[] = [
   'normalizer',
@@ -49,25 +49,25 @@ const PIPELINE_ORDER: SubmindFocus[] = [
 /**
  * KLYCOrchestratorV2 — unified pipeline orchestrator
  *
- * Drives the singular KLYCAgent through the complete campaign pipeline.
+ * Drives the singular KLYCSubmindEngine through the complete campaign pipeline.
  * Each submind's output feeds into the next submind's input — one
  * continuous stream of intelligence flowing through nine lenses.
  *
- * Version: v3-singular-agent
+ * Version: v3-singular-submind-engine
  */
 export class KLYCOrchestratorV2 {
-  private agent: KLYCAgent
-  private version = 'v3-singular-agent'
+  private engine: KLYCSubmindEngine
+  private version = 'v3-singular-submind-engine'
 
   constructor() {
-    this.agent = new KLYCAgent()
+    this.engine = new KLYCSubmindEngine()
   }
 
   /**
    * Run the complete pipeline: normalizer → research → product → narrative
    * → social → image → editor → approval → analytics
    */
-  async runPipeline(initialInput: AgentInput): Promise<OrchestratorResult> {
+  async runPipeline(initialInput: SubmindInput): Promise<OrchestratorResult> {
     return this.executePipeline(PIPELINE_ORDER, initialInput)
   }
 
@@ -76,19 +76,18 @@ export class KLYCOrchestratorV2 {
    */
   async runSingleSubmind(
     focus: SubmindFocus,
-    input: AgentInput
-  ): Promise<AgentOutput> {
+    input: SubmindInput
+  ): Promise<SubmindOutput> {
     console.log(`[KLYC] Running single submind: ${focus}`)
-    return this.agent.run(focus, input)
+    return this.engine.run(focus, input)
   }
 
   /**
    * Resume the pipeline from a specific submind forward
-   * (e.g., re-run from 'narrative' onward after editing context)
    */
   async runPipelineFrom(
     startingFocus: SubmindFocus,
-    input: AgentInput
+    input: SubmindInput
   ): Promise<OrchestratorResult> {
     const startIndex = PIPELINE_ORDER.indexOf(startingFocus)
     if (startIndex === -1) {
@@ -104,7 +103,7 @@ export class KLYCOrchestratorV2 {
    */
   private async executePipeline(
     sequence: SubmindFocus[],
-    initialInput: AgentInput
+    initialInput: SubmindInput
   ): Promise<OrchestratorResult> {
     const campaignId = generateCampaignId()
     const startTime = Date.now()
@@ -127,8 +126,7 @@ export class KLYCOrchestratorV2 {
       console.log(`[KLYC] ${stepLabel}`)
 
       try {
-        // Enrich input with accumulated outputs from prior subminds
-        const enrichedInput: AgentInput = {
+        const enrichedInput: SubmindInput = {
           ...currentInput,
           context: {
             ...currentInput.context,
@@ -137,7 +135,7 @@ export class KLYCOrchestratorV2 {
           },
         }
 
-        const result = await this.agent.run(focus, enrichedInput)
+        const result = await this.engine.run(focus, enrichedInput)
         const executionTimeMs = Date.now() - stepStart
 
         console.log(`[KLYC] ${focus} completed in ${executionTimeMs}ms`)
@@ -149,7 +147,6 @@ export class KLYCOrchestratorV2 {
           timestamp: new Date().toISOString(),
         })
 
-        // Accumulate and chain
         accumulatedOutput[focus] = result.data
         currentInput = {
           ...currentInput,
@@ -165,7 +162,6 @@ export class KLYCOrchestratorV2 {
           timestamp: new Date().toISOString(),
         })
 
-        // Mark failure in accumulated output but continue pipeline
         accumulatedOutput[focus] = { error: msg, status: 'failed' }
       }
     }
