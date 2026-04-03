@@ -8,8 +8,8 @@ import type {
 /**
  * Social Agent — evaluates caption quality and predicts engagement.
  */
-export function computeSocialMetrics(input: SocialAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeSocialMetrics(input: SocialSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
   const caption = input.postCaption || "";
 
