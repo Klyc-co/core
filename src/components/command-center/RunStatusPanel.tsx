@@ -17,7 +17,7 @@ import { useState } from "react";
 
 const VERDICT_CONFIG: Record<RunStatusVerdict, { label: string; className: string; icon: React.ReactNode }> = {
   ready: {
-    label: "Ready for Orchestration",
+    label: "Ready to Execute",
     className: "border-primary/30 text-primary bg-primary/5",
     icon: <ShieldCheck className="w-3.5 h-3.5" />,
   },
