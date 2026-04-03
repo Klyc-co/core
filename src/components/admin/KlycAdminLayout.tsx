@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { label: "Client Voting", path: "/klyc_admin/voting", icon: ThumbsUp },
   { label: "Roadmap", path: "/klyc_admin/roadmap", icon: Map },
   { label: "Marketing", path: "/klyc_admin/marketing", icon: Megaphone },
+  { label: "Financials", path: "/klyc_admin/financials", icon: CreditCard },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];

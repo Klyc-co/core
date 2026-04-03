@@ -159,6 +159,7 @@ const App = () => (
             <Route path="/klyc_admin/voting" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminVoting /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/roadmap" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminRoadmap /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/marketing" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminMarketing /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/financials" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminFinancials /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
