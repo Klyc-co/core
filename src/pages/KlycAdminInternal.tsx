@@ -98,7 +98,11 @@ export default function KlycAdminInternal() {
 
   const handleAddEmployee = async () => {
     if (!newEmpName.trim() || !newEmpEmail.trim()) return;
+    // Get current user id for the user_id field
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     const { error } = await supabase.from("klyc_employees").insert([{
+      user_id: user.id,
       display_name: newEmpName.trim(),
       role: newEmpRole,
       is_active: true,
