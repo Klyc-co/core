@@ -295,6 +295,13 @@ export function useKlycOrchestrator() {
 
   const sendMessage = useCallback(
     async (text: string) => {
+      // Auto-start session if needed
+      if (!sessionRef.current) {
+        const sid = generateId();
+        sessionRef.current = sid;
+        setState((prev) => ({ ...prev, sessionId: sid }));
+      }
+
       const userMsg: ConversationMessage = {
         id: generateId(),
         role: "user",
@@ -302,7 +309,7 @@ export function useKlycOrchestrator() {
         timestamp: new Date(),
       };
       addMessage(userMsg);
-      await callOrchestrator({ action: "message", text });
+      await callOrchestrator({ action: "chat", message: text });
     },
     [addMessage, callOrchestrator]
   );
