@@ -181,7 +181,7 @@ export default function RunStatusPanel({ data }: Props) {
 
         {/* ── Orchestration Summary ── */}
         {!isIdle && (
-          <Section title="Orchestration" icon={<ShieldCheck className="w-3 h-3 text-primary" />}>
+          <Section title="Klyc Summary" icon={<ShieldCheck className="w-3 h-3 text-primary" />}>
             <div className="flex items-center justify-between pb-1">
               <span className="text-xs text-muted-foreground">Complexity</span>
               <Badge

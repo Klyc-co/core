@@ -129,7 +129,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
             <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 mt-0.5 shrink-0" />
             <p className="text-xs text-yellow-700">
-              Partial execution is available — the orchestrator can proceed with reduced scope while blocked inputs are resolved.
+              Partial execution is available — Klyc can proceed with reduced scope while blocked inputs are resolved.
             </p>
           </div>
         )}
