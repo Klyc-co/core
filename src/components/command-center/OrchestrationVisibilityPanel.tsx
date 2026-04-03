@@ -100,8 +100,8 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
           <span className={`mt-0.5 shrink-0 ${v.text}`}>{v.icon}</span>
           <div className="min-w-0">
             <p className={`text-sm font-medium ${v.text}`}>
-              {data.verdict === "ready" ? "Ready for Orchestration" :
-               data.verdict === "blocked" ? "Orchestration Blocked" :
+              {data.verdict === "ready" ? "Ready to Execute" :
+               data.verdict === "blocked" ? "Execution Blocked" :
                data.verdict === "low_confidence" ? "Low Confidence — Proceed with Caution" :
                "Data Refresh Recommended"}
             </p>
