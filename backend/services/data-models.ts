@@ -3,9 +3,10 @@ import type {
   ContentType,
   CampaignObjective,
   CampaignStatus,
-  ContentStatus,
-  AgentType
 } from '../models/types'
+
+export type SubmindType = 'research' | 'product' | 'narrative' | 'social' | 'image' | 'editor' | 'approval' | 'analytics'
+export type ContentStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'rejected' | 'archived'
 
 export interface Campaign {
   id: string
