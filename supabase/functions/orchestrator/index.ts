@@ -269,6 +269,128 @@ function getIntentPhases(intent: DetectedIntent): PhaseSpec[] {
 // ── Submind Dispatch ──
 
 const STUB_SUBMINDS = new Set<SubmindName>(["viral", "analytics", "learning-engine"]);
+const INLINE_SUBMINDS = new Set<SubmindName>(["product"]);
+
+// ── Product Submind (inline module — lightweight, Haiku-class) ──
+
+async function runProductInline(
+  knpPayload: Record<string, unknown>,
+): Promise<{ success: boolean; data: unknown; error?: string; durationMs: number }> {
+  const start = Date.now();
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+
+  const brief = (knpPayload[KNP.ξb] || knpPayload.brief || "") as string;
+  const audience = (knpPayload[KNP.ζq] || knpPayload.audience || "") as string;
+  const product = (knpPayload[KNP.μp] || knpPayload.product || "") as string;
+  const researchRaw = knpPayload[KNP.ρr] || knpPayload.researchContext;
+  const clientBrain = knpPayload.clientBrain as Record<string, unknown> | undefined;
+
+  const MOAT_WEIGHTS = { switchingCosts: 0.20, intangibleAssets: 0.25, networkEffects: 0.20, costAdvantage: 0.15, efficientScale: 0.20 };
+
+  type MoatRaw = { switchingCosts: number; intangibleAssets: number; networkEffects: number; costAdvantage: number; efficientScale: number };
+  type MoatRating = "WIDE" | "NARROW" | "NONE";
+
+  function scoreMoat(s: MoatRaw): { composite: number; rating: MoatRating } {
+    const c = s.switchingCosts * MOAT_WEIGHTS.switchingCosts + s.intangibleAssets * MOAT_WEIGHTS.intangibleAssets +
+      s.networkEffects * MOAT_WEIGHTS.networkEffects + s.costAdvantage * MOAT_WEIGHTS.costAdvantage +
+      s.efficientScale * MOAT_WEIGHTS.efficientScale;
+    const composite = Math.round(c * 100) / 100;
+    return { composite, rating: composite >= 4.0 ? "WIDE" : composite >= 2.5 ? "NARROW" : "NONE" };
+  }
+
+  function moatMsg(r: MoatRating) {
+    return r === "WIDE" ? "Category leader — emphasize dominance" : r === "NARROW" ? "Growing advantage — emphasize momentum" : "Innovation/speed — emphasize agility";
+  }
+
+  // Check for Gen Z adaptation (WP-52-55)
+  const isGenZ = /gen[\s_-]?z|18[\s-]?24|teen|young\s*adult/i.test(audience);
+  const platforms = (brief.match(/tiktok|instagram|linkedin|twitter|x\b|facebook|youtube/gi) || []);
+  const genZ = isGenZ ? {
+    primary_discovery: platforms.some(p => /tiktok/i.test(p)) ? "TikTok (41% use social as primary search)" : "Social-first",
+    content_strategy: "UGC 10x more effective than polished ads",
+    hook_model: "Trigger → Action → Variable Reward → Investment",
+  } : null;
+
+  if (!apiKey) {
+    const m = scoreMoat({ switchingCosts: 2, intangibleAssets: 3, networkEffects: 2, costAdvantage: 2, efficientScale: 2 });
+    return {
+      success: true, durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "product", status: "success",
+        moat: { ...m }, positioning: `${product || "Product"} positioned for ${audience || "target audience"}`,
+        messagingAngle: moatMsg(m.rating), differentiators: ["Unique value proposition"],
+        painPointMap: {}, guardrails: [{ claim: "Generic", evidence: "Needs validation", risk_level: "caution" }],
+        genZAdaptation: genZ, competitiveIntensity: 3.0, competitivePosture: "balanced", confidence: 0.4,
+      },
+    };
+  }
+
+  try {
+    const prompt = `Analyze this product for competitive positioning.
+Product: ${product || "Not specified"}
+Brief: ${brief}
+Audience: ${audience || "General"}
+Research: ${researchRaw ? JSON.stringify(researchRaw).slice(0, 800) : "None"}
+Client: ${clientBrain ? JSON.stringify(clientBrain).slice(0, 500) : "None"}
+
+Return ONLY valid JSON:
+{"moat":{"switchingCosts":<1-5>,"intangibleAssets":<1-5>,"networkEffects":<1-5>,"costAdvantage":<1-5>,"efficientScale":<1-5>},"porterScore":<1.0-5.0>,"differentiators":["..."],"painPointMap":{"pain":"capability"},"positioning":"1-2 sentences","guardrails":[{"claim":"...","evidence":"...","risk_level":"safe|caution|blocked"}]}`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: "Product strategist. Morningstar 5-Source Moat + Porter's 5 Forces. Return ONLY valid JSON, no markdown." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.3, max_tokens: 2000,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
+    const aiData = await res.json();
+    const text = (aiData.choices?.[0]?.message?.content ?? "").replace(/```json\s*/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(text);
+    const moat = scoreMoat(parsed.moat);
+    const porter = parsed.porterScore ?? 3.0;
+
+    return {
+      success: true, durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "product", status: "success",
+        moat: { ...parsed.moat, ...moat },
+        positioning: parsed.positioning || "",
+        messagingAngle: moatMsg(moat.rating),
+        differentiators: parsed.differentiators || [],
+        painPointMap: parsed.painPointMap || {},
+        guardrails: (parsed.guardrails || []).map((g: any) => ({
+          claim: g.claim || "", evidence: g.evidence || "",
+          risk_level: ["safe", "caution", "blocked"].includes(g.risk_level) ? g.risk_level : "caution",
+        })),
+        genZAdaptation: genZ,
+        competitiveIntensity: porter,
+        competitivePosture: porter >= 4.0 ? "aggressive" : porter >= 2.5 ? "balanced" : "brand-building",
+        confidence: moat.composite >= 3.0 ? 0.85 : moat.composite >= 2.0 ? 0.7 : 0.55,
+      },
+    };
+  } catch (e) {
+    console.error("Product submind error:", e);
+    const m = scoreMoat({ switchingCosts: 2, intangibleAssets: 3, networkEffects: 2, costAdvantage: 2, efficientScale: 2 });
+    return {
+      success: true, durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "product", status: "success",
+        moat: { ...m }, positioning: `${product || "Product"} positioned for ${audience || "target audience"}`,
+        messagingAngle: moatMsg(m.rating), differentiators: ["Value proposition"], painPointMap: {},
+        guardrails: [{ claim: "Fallback", evidence: "AI unavailable", risk_level: "caution" }],
+        genZAdaptation: genZ, competitiveIntensity: 3.0, competitivePosture: "balanced", confidence: 0.3,
+        error: e instanceof Error ? e.message : String(e),
+      },
+    };
+  }
+}
 
 async function dispatchSubmind(
   submindName: SubmindName,
@@ -277,6 +399,11 @@ async function dispatchSubmind(
   serviceRoleKey: string,
 ): Promise<{ success: boolean; data: unknown; error?: string; durationMs: number }> {
   const start = Date.now();
+
+  // Inline product submind
+  if (submindName === "product") {
+    return runProductInline(knpPayload);
+  }
 
   // v1.1 stubs
   if (submindName === "viral") {
