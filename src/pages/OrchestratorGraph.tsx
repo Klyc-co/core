@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Image, Edit3, BarChart3, Send, ArrowRight } from "lucide-react";
 
-interface AgentNode {
+interface SubmindNode {
   id: string;
   label: string;
   icon: any;
@@ -11,12 +11,12 @@ interface AgentNode {
   connections: string[];
 }
 
-const AGENTS: AgentNode[] = [
-  { id: "research", label: "Research Agent", icon: Search, description: "Market trends, competitor analysis, audience insights", color: "bg-blue-500/10 border-blue-500/30", connections: ["content"] },
-  { id: "content", label: "Content Agent", icon: FileText, description: "Generate captions, scripts, articles from brain context", color: "bg-purple-500/10 border-purple-500/30", connections: ["image", "editor"] },
-  { id: "image", label: "Image Agent", icon: Image, description: "Generate visual prompts and image descriptions", color: "bg-pink-500/10 border-pink-500/30", connections: ["editor"] },
-  { id: "editor", label: "Editor Agent", icon: Edit3, description: "Refine, fact-check, enforce brand voice compliance", color: "bg-orange-500/10 border-orange-500/30", connections: ["analytics"] },
-  { id: "analytics", label: "Analytics Agent", icon: BarChart3, description: "Score content, predict engagement, optimize timing", color: "bg-green-500/10 border-green-500/30", connections: ["queue"] },
+const SUBMINDS: SubmindNode[] = [
+  { id: "research", label: "Research Submind", icon: Search, description: "Market trends, competitor analysis, audience insights", color: "bg-blue-500/10 border-blue-500/30", connections: ["content"] },
+  { id: "content", label: "Content Submind", icon: FileText, description: "Generate captions, scripts, articles from brain context", color: "bg-purple-500/10 border-purple-500/30", connections: ["image", "editor"] },
+  { id: "image", label: "Image Submind", icon: Image, description: "Generate visual prompts and image descriptions", color: "bg-pink-500/10 border-pink-500/30", connections: ["editor"] },
+  { id: "editor", label: "Editor Submind", icon: Edit3, description: "Refine, fact-check, enforce brand voice compliance", color: "bg-orange-500/10 border-orange-500/30", connections: ["analytics"] },
+  { id: "analytics", label: "Analytics Submind", icon: BarChart3, description: "Score content, predict engagement, optimize timing", color: "bg-green-500/10 border-green-500/30", connections: ["queue"] },
   { id: "queue", label: "Queue Worker", icon: Send, description: "Schedule, publish, retry failed posts across platforms", color: "bg-cyan-500/10 border-cyan-500/30", connections: [] },
 ];
 
@@ -24,8 +24,8 @@ export default function OrchestratorGraph() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Orchestrator Graph</h1>
-        <p className="text-muted-foreground text-sm">Visual map of the AI agent pipeline</p>
+        <h1 className="text-2xl font-bold text-foreground">Klyc Reasoning Graph</h1>
+        <p className="text-muted-foreground text-sm">Visual map of the submind pipeline</p>
       </div>
 
       {/* Flow diagram */}
