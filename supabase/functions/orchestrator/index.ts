@@ -1,51 +1,27 @@
 // ============================================================
-// KLYC ORCHESTRATOR — Central Intelligence Hub
+// KLYC ORCHESTRATOR — Central Intelligence Hub v2
 // The ONLY entity that communicates with users.
 // All subminds are black boxes dispatched via KNP payloads.
 // Normalizer membrane wraps all inbound/outbound communication.
+// WEB TOPOLOGY — no fixed pipeline order.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-// ---- Runtime Config ----
-type RuntimeConfig = {
-  supabaseUrl: string;
-  serviceRoleKey: string;
-  anonKey: string;
-};
-
-function requireRuntimeConfig(): RuntimeConfig {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    throw new Error("Server configuration error: Missing required environment variables.");
-  }
-
-  return { supabaseUrl, serviceRoleKey, anonKey };
-}
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ---- KNP Field Keys ----
+// ── KNP Field Keys ──
 const KNP = {
-  // Input keys
   ξb: "ξb", ζq: "ζq", μp: "μp", θc: "θc", λv: "λv", κw: "κw", πf: "πf", σo: "σo",
-  // Output keys
   ρr: "ρr", φd: "φd", ηn: "ηn", ωs: "ωs", δi: "δi", εe: "εe", αa: "αa", χy: "χy", ψv: "ψv",
 } as const;
 
-// ---- KNP Format Constants ----
 const KNP_VERSION = "Ψ3";
-const KNP_FIELD_SEPARATOR = "∷";
-const KNP_VALUE_JOINER = "⊕";
-const KNP_NULL_MARKER = "∅";
 
 const INPUT_FIELD_MAP: Record<string, string> = {
   campaignBrief: KNP.ξb, targetAudience: KNP.ζq, productInfo: KNP.μp,
@@ -53,13 +29,88 @@ const INPUT_FIELD_MAP: Record<string, string> = {
   platforms: KNP.πf, objective: KNP.σo,
 };
 
-const OUTPUT_KEY_MAP: Record<string, string> = {
-  research: KNP.ρr, product: KNP.φd, narrative: KNP.ηn, social: KNP.ωs,
-  image: KNP.δi, editor: KNP.εe, approval: KNP.αa, analytics: KNP.χy,
-};
+// ── Types ──
 
-// ---- Normalizer Membrane ----
-// Wraps all user↔system communication. Inbound = compress. Outbound = decompress.
+type OrchestratorMode = "guided" | "solo";
+
+type DetectedIntent =
+  | "campaign_new"
+  | "trend_analysis"
+  | "performance_review"
+  | "content_revision"
+  | "learning_report"
+  | "general_chat";
+
+type SubmindName =
+  | "research" | "product" | "narrative" | "creative"
+  | "social" | "image" | "approval"
+  | "viral" | "analytics" | "learning-engine";
+
+interface OrchestratorRequest {
+  action: "chat" | "health";
+  session_id?: string;
+  client_id?: string;
+  message?: string;
+  knp_payload?: Record<string, unknown>;
+  solo_grant?: { enabled: boolean; scope?: string };
+}
+
+interface OrchestratorResponse {
+  reply: string;
+  intent: DetectedIntent;
+  source: "orchestrator";
+  next_questions: NextQuestion[];
+  requires_approval: boolean;
+  risk_level: "low" | "medium" | "high";
+  session_id: string;
+  subminds_invoked: string[];
+  mode?: OrchestratorMode;
+}
+
+interface NextQuestion {
+  field: string;
+  question: string;
+  type: "button" | "fill_in";
+  nav_target?: string;
+}
+
+interface PhaseSpec {
+  subminds: SubmindName[];
+  parallel: boolean;
+}
+
+// ── Helpers ──
+
+function jsonRes(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function getRuntimeConfig() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+  return { supabaseUrl, serviceRoleKey, anonKey };
+}
+
+function makeServiceClient() {
+  const { supabaseUrl, serviceRoleKey } = getRuntimeConfig();
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+function makeAuthClient(authHeader: string) {
+  const { supabaseUrl, anonKey } = getRuntimeConfig();
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+}
+
+// ── Normalizer Membrane ──
 
 function knpChecksum(segments: Record<string, string>): string {
   let h = 0;
@@ -69,7 +120,7 @@ function knpChecksum(segments: Record<string, string>): string {
 }
 
 function compressValue(val: unknown): string {
-  if (val === null || val === undefined) return KNP_NULL_MARKER;
+  if (val === null || val === undefined) return "";
   const s = typeof val === "string" ? val : JSON.stringify(val);
   return s.trim().slice(0, 400);
 }
@@ -86,30 +137,22 @@ function extractFieldsFromText(text: string): Record<string, unknown> {
   const fields: Record<string, unknown> = { campaignBrief: text };
   const lower = text.toLowerCase();
 
-  // Audience
   const audMatch = text.match(/(?:target(?:ing)?|audience|for)\s+(.+?)(?:\.|,|$)/i);
   if (audMatch) fields.targetAudience = audMatch[1].trim();
 
-  // Platforms
   const platforms: string[] = [];
   for (const p of ["instagram", "linkedin", "twitter", "tiktok", "youtube", "facebook", "threads", "pinterest"]) {
     if (lower.includes(p)) platforms.push(p);
   }
   if (platforms.length > 0) fields.platforms = platforms;
 
-  // Objective
   for (const obj of ["awareness", "engagement", "conversion", "traffic", "leads", "sales", "brand", "growth"]) {
     if (lower.includes(obj)) { fields.objective = obj; break; }
   }
 
-  // Keywords (quoted)
-  const keywords = [...text.matchAll(/"([^"]+)"/g)].map(m => m[1]);
-  if (keywords.length > 0) fields.keywords = keywords;
-
   return fields;
 }
 
-/** Compress raw user text → KNP packet */
 function normalizerCompress(userInput: string, sessionId: string): KNPPacket {
   const fields = extractFieldsFromText(userInput);
   const segments: Record<string, string> = {};
@@ -128,1069 +171,298 @@ function normalizerCompress(userInput: string, sessionId: string): KNPPacket {
   };
 }
 
-/** Decompress KNP packet → human-readable text */
-function normalizerDecompress(response: string): string {
-  // If the response is not a KNP payload (already human-readable), return as-is
-  // The orchestrator assembles human-readable text, so this is mostly a passthrough
-  // that strips any residual KNP markers
-  return response;
-}
-
-/** Validate a KNP packet checksum */
-function normalizerValidate(packet: KNPPacket): boolean {
-  return packet.checksum === knpChecksum(packet.segments);
-}
-
-/** Log normalizer errors to Supabase */
-async function logNormalizerError(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  sessionId: string | null,
-  payloadFragment: string,
-  errorType: string
-) {
-  try {
-    await supabase.from("normalizer_errors").insert({
-      user_id: userId,
-      session_id: sessionId,
-      payload_fragment: payloadFragment.slice(0, 200),
-      error_type: errorType,
-    });
-  } catch (e) {
-    console.warn("Failed to log normalizer error:", e);
-  }
-}
-
-// ---- Types ----
-
-type OrchestratorMode = "guided" | "solo";
-
-type SubmindName =
-  | "research"
-  | "analytics"
-  | "creative"
-  | "viral"
-  | "product"
-  | "platform"
-  | "timing"
-  | "image"
-  | "approval"
-  | "learningEngine";
-
-interface OrchestratorRequest {
-  action: "chat" | "health";
-  session_id?: string;
-  client_id?: string;
-  message?: string;
-  knp_payload?: Record<string, unknown>;
-  solo_grant?: { enabled: boolean; scope?: string };
-}
-
-interface ConversationEntry {
-  role: "user" | "orchestrator" | "system";
-  content: string;
-  timestamp: string;
-}
-
-interface SubmindDispatch {
-  submind: SubmindName;
-  status: "pending" | "in_flight" | "complete" | "error";
-  knp_sent?: string;
-  knp_received?: string;
-  dispatched_at: string;
-}
-
-// ---- Intent Detection ----
-
-type DetectedIntent =
-  | "campaign_creation"
-  | "analytics_query"
-  | "solo_mode_grant"
-  | "asset_upload"
-  | "competitor_check"
-  | "content_edit"
-  | "scheduling"
-  | "approval_request"
-  | "general_chat"
-  | "unknown";
+// ── Intent Detection ──
 
 function detectIntent(message: string): DetectedIntent {
   const lower = message.toLowerCase();
 
-  // INTENT: Solo mode grant -> log, set mode, proceed autonomously
+  // CAMPAIGN_NEW
   if (
-    lower.includes("solo mode") ||
-    lower.includes("do it yourself") ||
-    lower.includes("make the next campaign yourself") ||
-    lower.includes("handle it") ||
-    lower.includes("go ahead and decide")
+    lower.includes("create") || lower.includes("new campaign") ||
+    lower.includes("launch") || lower.includes("build a campaign") ||
+    lower.includes("marketing plan") || lower.includes("new post") ||
+    (lower.includes("campaign") && (lower.includes("for") || lower.includes("about") || lower.includes("on")))
   ) {
-    return "solo_mode_grant";
+    return "campaign_new";
   }
 
-  // INTENT: Campaign creation -> Research + Product + Creative -> Viral loop
+  // TREND_ANALYSIS
   if (
-    lower.includes("campaign") ||
-    lower.includes("launch") ||
-    lower.includes("create content") ||
-    lower.includes("new post") ||
-    lower.includes("marketing plan")
+    lower.includes("trend") || lower.includes("what's trending") ||
+    lower.includes("market signals") || lower.includes("industry trend") ||
+    lower.includes("what's hot")
   ) {
-    return "campaign_creation";
+    return "trend_analysis";
   }
 
-  // INTENT: Analytics query -> Research -> Analytics
+  // PERFORMANCE_REVIEW
   if (
-    lower.includes("analytics") ||
-    lower.includes("performance") ||
-    lower.includes("metrics") ||
-    lower.includes("how did") ||
-    lower.includes("engagement rate") ||
+    lower.includes("how did") || lower.includes("perform") ||
+    lower.includes("analytics") || lower.includes("metrics") ||
+    lower.includes("engagement rate") || lower.includes("results") ||
     lower.includes("report")
   ) {
-    return "analytics_query";
+    return "performance_review";
   }
 
-  // INTENT: Asset upload -> Image
+  // CONTENT_REVISION
   if (
-    lower.includes("upload") ||
-    lower.includes("image") ||
-    lower.includes("photo") ||
-    lower.includes("asset") ||
-    lower.includes("visual")
+    lower.includes("edit") || lower.includes("rewrite") ||
+    lower.includes("revise") || lower.includes("improve") ||
+    lower.includes("optimize") || lower.includes("refine")
   ) {
-    return "asset_upload";
+    return "content_revision";
   }
 
-  // INTENT: Competitor check -> Research -> Learning Engine
+  // LEARNING_REPORT
   if (
-    lower.includes("competitor") ||
-    lower.includes("competition") ||
-    lower.includes("rival") ||
-    lower.includes("compare")
+    lower.includes("what did we learn") || lower.includes("retrospective") ||
+    lower.includes("learnings") || lower.includes("takeaways") ||
+    lower.includes("lessons")
   ) {
-    return "competitor_check";
+    return "learning_report";
   }
 
-  // INTENT: Content editing -> Creative + Platform
-  if (
-    lower.includes("edit") ||
-    lower.includes("rewrite") ||
-    lower.includes("revise") ||
-    lower.includes("improve")
-  ) {
-    return "content_edit";
-  }
-
-  // INTENT: Scheduling -> Timing + Platform
-  if (
-    lower.includes("schedule") ||
-    lower.includes("when to post") ||
-    lower.includes("best time") ||
-    lower.includes("calendar")
-  ) {
-    return "scheduling";
-  }
-
-  // INTENT: Approval -> Approval submind
-  if (
-    lower.includes("approve") ||
-    lower.includes("approval") ||
-    lower.includes("review") ||
-    lower.includes("sign off")
-  ) {
-    return "approval_request";
-  }
-
-  // INTENT: General conversation
-  if (
-    lower.includes("hello") ||
-    lower.includes("hi") ||
-    lower.includes("help") ||
-    lower.includes("what can you")
-  ) {
-    return "general_chat";
-  }
-
-  return "unknown";
+  // General chat — greetings, help, anything else
+  return "general_chat";
 }
 
-// ---- Intent → Submind Routing Map ----
+// ── Intent → Phase Routing (Web Topology) ──
 
-function getSubmindPipeline(
-  intent: DetectedIntent
-): { subminds: SubmindName[]; parallel: boolean } {
+function getIntentPhases(intent: DetectedIntent): PhaseSpec[] {
   switch (intent) {
-    // INTENT: Campaign creation -> Research + Product + Creative -> Viral loop
-    case "campaign_creation":
-      return {
-        subminds: [
-          "research",
-          "product",
-          "creative",
-          "viral",
-          "platform",
-          "timing",
-          "image",
-        ],
-        parallel: false, // sequential — each feeds the next
-      };
-
-    // INTENT: Analytics query -> Research -> Analytics
-    case "analytics_query":
-      return {
-        subminds: ["research", "analytics"],
-        parallel: false,
-      };
-
-    // INTENT: Competitor check -> Research -> Learning Engine
-    case "competitor_check":
-      return {
-        subminds: ["research", "learningEngine"],
-        parallel: false,
-      };
-
-    // INTENT: Asset upload -> Image
-    case "asset_upload":
-      return { subminds: ["image"], parallel: false };
-
-    // INTENT: Content editing -> Creative + Platform
-    case "content_edit":
-      return {
-        subminds: ["creative", "platform"],
-        parallel: true,
-      };
-
-    // INTENT: Scheduling -> Timing + Platform
-    case "scheduling":
-      return {
-        subminds: ["timing", "platform"],
-        parallel: true,
-      };
-
-    // INTENT: Approval -> Approval submind
-    case "approval_request":
-      return { subminds: ["approval"], parallel: false };
-
-    // INTENT: Solo mode grant -> handled separately
-    case "solo_mode_grant":
-      return { subminds: [], parallel: false };
-
-    // INTENT: General chat -> no subminds needed
+    case "campaign_new":
+      return [
+        { subminds: ["research", "product", "social"], parallel: true },   // Phase 1
+        { subminds: ["narrative", "creative"], parallel: false },            // Phase 2 sequential
+        { subminds: ["image", "social"], parallel: true },                  // Phase 3
+        { subminds: ["approval"], parallel: false },                        // Phase 4 gate
+      ];
+    case "trend_analysis":
+      return [
+        { subminds: ["research", "social"], parallel: true },
+        { subminds: ["approval"], parallel: false },
+      ];
+    case "performance_review":
+      return [
+        { subminds: ["research"], parallel: false },
+        { subminds: ["approval"], parallel: false },
+      ];
+    case "content_revision":
+      return [
+        { subminds: ["creative"], parallel: false },
+        { subminds: ["narrative", "image"], parallel: false },
+        { subminds: ["approval"], parallel: false },
+      ];
+    case "learning_report":
+      return [
+        { subminds: ["research"], parallel: false },
+        { subminds: ["narrative"], parallel: false },
+        { subminds: ["approval"], parallel: false },
+      ];
     case "general_chat":
-    case "unknown":
     default:
-      return { subminds: [], parallel: false };
+      return [];
   }
 }
 
-// ============================================================
-// STUB SUBMIND DISPATCHERS
-// Each returns a mock KNP response. Replace with actual
-// edge function invocations in subsequent builds.
-// ============================================================
+// ── Submind Dispatch ──
 
-// Research submind — dispatched via edge function
-async function dispatchResearch(knpPayload: string): Promise<string> {
+const STUB_SUBMINDS = new Set<SubmindName>(["viral", "analytics", "learning-engine"]);
+
+async function dispatchSubmind(
+  submindName: SubmindName,
+  knpPayload: Record<string, unknown>,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+): Promise<{ success: boolean; data: unknown; error?: string; durationMs: number }> {
+  const start = Date.now();
+
+  // v1.1 stubs
+  if (submindName === "viral") {
+    return {
+      success: true,
+      durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "viral", status: "stub",
+        viral_score: 0.65,
+        note: "Viral scoring coming in v1.1. Placeholder VS: 0.65",
+      },
+    };
+  }
+  if (submindName === "analytics") {
+    return {
+      success: true,
+      durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "analytics", status: "stub",
+        note: "Analytics engine coming in v1.1. Data hooks are being logged.",
+      },
+    };
+  }
+  if (submindName === "learning-engine") {
+    return {
+      success: true,
+      durationMs: Date.now() - start,
+      data: {
+        version: KNP_VERSION, submind: "learning-engine", status: "stub",
+        note: "Learning engine coming in v1.1. Signals are being captured.",
+      },
+    };
+  }
+
+  // Real submind dispatch via edge function invocation
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+
   try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("research", {
-      body: parsed,
+    const url = `${supabaseUrl}/functions/v1/${submindName}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+        "apikey": serviceRoleKey,
+      },
+      body: JSON.stringify(knpPayload),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
-    if (error) {
-      console.error("Research dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "research", status: "error",
-        [KNP.ρr]: "Research submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "unknown");
+      return {
+        success: false,
+        durationMs: Date.now() - start,
+        data: null,
+        error: `${submindName} returned ${res.status}: ${errText.slice(0, 200)}`,
+      };
     }
 
-    return JSON.stringify(data);
+    const data = await res.json();
+    return { success: true, durationMs: Date.now() - start, data };
   } catch (e) {
-    console.error("Research invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "research", status: "error",
-      [KNP.ρr]: "Research dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
+    clearTimeout(timeout);
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      success: false,
+      durationMs: Date.now() - start,
+      data: null,
+      error: msg.includes("abort") ? `${submindName} timed out (60s)` : msg,
+    };
   }
 }
 
-// Analytics submind — dispatched via edge function
-async function dispatchAnalytics(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("analytics", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Analytics dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "analytics", status: "error",
-        [KNP.χy]: "Analytics submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Analytics invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "analytics", status: "error",
-      [KNP.χy]: "Analytics dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Creative submind — dispatched via edge function
-async function dispatchCreative(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("creative", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Creative dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "creative", status: "error",
-        [KNP.ηn]: "Creative submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    // Check if Creative flagged INTERVIEW_NEEDED
-    if (data?.zq === "INTERVIEW_NEEDED∅") {
-      // Return with interview flag — Orchestrator handles the prompt
-      return JSON.stringify({
-        ...data,
-        _interview_needed: true,
-        _information_gaps: data.information_gaps || [],
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Creative invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "creative", status: "error",
-      [KNP.ηn]: "Creative dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Viral submind — dispatched via edge function
-async function dispatchViral(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("viral", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Viral dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "viral", status: "error",
-        [KNP.ψv]: "0",
-        error: "Viral submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Viral invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "viral", status: "error",
-      [KNP.ψv]: "0",
-      error: "Viral dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Product submind — dispatched via edge function
-async function dispatchProduct(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("product", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Product dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "product", status: "error",
-        [KNP.φd]: "Product submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    // If moat data is ready, dispatch Analytics for radar chart
-    if (data?.moat_ready && data?.moat_data) {
-      try {
-        const analyticsPayload = JSON.stringify({
-          version: "Ψ3",
-          segments: {
-            [KNP.σo]: JSON.stringify(data.moat_data),
-            [KNP.θc]: "RADAR",
-            [KNP.πf]: "moat_analysis",
-          },
-        });
-        const analyticsResult = await dispatchAnalytics(analyticsPayload);
-        // Attach analytics result to product response
-        data._moat_visualization = JSON.parse(analyticsResult);
-      } catch (analyticsErr) {
-        console.warn("Moat analytics dispatch failed:", analyticsErr);
-      }
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Product invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "product", status: "error",
-      [KNP.φd]: "Product dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Platform submind — dispatched via edge function
-async function dispatchPlatform(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("platform", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Platform dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "platform", status: "error",
-        [KNP.ωs]: "Platform submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    // If new platform detected, route through Approval gate
-    if (data?.new_platforms?.length > 0) {
-      try {
-        const approvalPayload = JSON.stringify({
-          version: "Ψ3",
-          segments: {
-            [KNP.σo]: `New platform(s): ${data.new_platforms.join(", ")}`,
-            [KNP.ξb]: "Platform expansion requires approval",
-            [KNP.θc]: parsed.segments?.[KNP.θc] || parsed[KNP.θc] || "",
-            zq: "NEW_PLATFORM",
-          },
-        });
-        const approvalResult = await dispatchApproval(approvalPayload);
-        data._approval_result = JSON.parse(approvalResult);
-      } catch (approvalErr) {
-        console.warn("Platform approval dispatch failed:", approvalErr);
-      }
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Platform invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "platform", status: "error",
-      [KNP.ωs]: "Platform dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Timing submind — dispatched via edge function
-async function dispatchTiming(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("timing", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Timing dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "timing", status: "error",
-        data: "Timing submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    // If schedule is ready, route through Approval gate
-    if (data?.schedule_ready) {
-      try {
-        const approvalPayload = JSON.stringify({
-          version: "Ψ3",
-          segments: {
-            [KNP.σo]: data.schedule_summary || "Schedule ready for review",
-            [KNP.ξb]: "Scheduling requires approval",
-            [KNP.θc]: parsed.segments?.[KNP.θc] || parsed[KNP.θc] || "",
-            zq: "SCHEDULE",
-          },
-        });
-        const approvalResult = await dispatchApproval(approvalPayload);
-        data._approval_result = JSON.parse(approvalResult);
-      } catch (approvalErr) {
-        console.warn("Timing approval dispatch failed:", approvalErr);
-      }
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Timing invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "timing", status: "error",
-      data: "Timing dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Image submind — dispatched via edge function
-async function dispatchImage(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("image", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Image dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "image", status: "error",
-        [KNP.δi]: "Image submind returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Image invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "image", status: "error",
-      [KNP.δi]: "Image dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Approval submind (Gatekeeper) — dispatched via edge function
-async function dispatchApproval(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("approval", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Approval dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "approval", status: "error",
-        [KNP.αa]: "Approval submind returned an error: " + error.message,
-        decision: "BLOCKED", urgency: "BLOCKING",
-        reason: "Gatekeeper unavailable — blocking as safety measure",
-        elapsed_ms: 0,
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Approval invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "approval", status: "error",
-      [KNP.αa]: "Approval dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      decision: "BLOCKED", urgency: "BLOCKING",
-      reason: "Gatekeeper dispatch failed — blocking as safety measure",
-      elapsed_ms: 0,
-    });
-  }
-}
-
-// Learning Engine submind — dispatched via edge function
-async function dispatchLearningEngine(knpPayload: string): Promise<string> {
-  try {
-    const supabase = createServiceClient();
-
-    const parsed = typeof knpPayload === "string" ? JSON.parse(knpPayload) : knpPayload;
-    const { data, error } = await supabase.functions.invoke("learning-engine", {
-      body: parsed,
-    });
-
-    if (error) {
-      console.error("Learning Engine dispatch error:", error);
-      return JSON.stringify({
-        version: "Ψ3", submind: "learningEngine", status: "error",
-        data: "Learning Engine returned an error: " + error.message,
-        elapsed_ms: 0,
-      });
-    }
-
-    return JSON.stringify(data);
-  } catch (e) {
-    console.error("Learning Engine invocation failed:", e);
-    return JSON.stringify({
-      version: "Ψ3", submind: "learningEngine", status: "error",
-      data: "Learning Engine dispatch failed: " + (e instanceof Error ? e.message : "unknown"),
-      elapsed_ms: 0,
-    });
-  }
-}
-
-const SUBMIND_DISPATCH: Record<
-  SubmindName,
-  (knp: string) => Promise<string>
-> = {
-  research: dispatchResearch,
-  analytics: dispatchAnalytics,
-  creative: dispatchCreative,
-  viral: dispatchViral,
-  product: dispatchProduct,
-  platform: dispatchPlatform,
-  timing: dispatchTiming,
-  image: dispatchImage,
-  approval: dispatchApproval,
-  learningEngine: dispatchLearningEngine,
-};
-
-// ---- Helpers ----
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function jsonRes(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function createServiceClient(authHeader: string | null = null) {
-  const { supabaseUrl, serviceRoleKey } = requireRuntimeConfig();
-  return createClient(supabaseUrl, serviceRoleKey, {
-    global: {
-      headers: authHeader ? { Authorization: authHeader } : {},
-    },
-  });
-}
-
-function createAuthClient(authHeader: string) {
-  const { supabaseUrl, anonKey } = requireRuntimeConfig();
-  return createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: { Authorization: authHeader },
-    },
-  });
-}
-
-function createSupabaseClient(authHeader: string | null) {
-  return createServiceClient(authHeader);
-}
-
-// ---- Session Management ----
+// ── Session Management ──
 
 async function getOrCreateSession(
   supabase: ReturnType<typeof createClient>,
   sessionId: string | undefined,
   userId: string,
-  clientId: string
-): Promise<{ id: string; mode: OrchestratorMode; history: ConversationEntry[] }> {
+  clientId: string,
+): Promise<{ id: string; mode: OrchestratorMode; context: Record<string, unknown>; subminds_called: string[] }> {
   if (sessionId) {
     const { data } = await supabase
       .from("orchestrator_sessions")
       .select("*")
-      .eq("id", sessionId)
+      .eq("session_id", sessionId)
       .eq("user_id", userId)
+      .eq("status", "active")
       .single();
 
     if (data) {
+      await supabase.from("orchestrator_sessions").update({ last_active: new Date().toISOString() }).eq("session_id", data.session_id);
       return {
-        id: data.id,
-        mode: data.mode as OrchestratorMode,
-        history: (data.conversation_history as ConversationEntry[]) || [],
+        id: data.session_id,
+        mode: (data.mode as OrchestratorMode) || "guided",
+        context: (data.context as Record<string, unknown>) || {},
+        subminds_called: (data.subminds_called as string[]) || [],
       };
     }
   }
 
-  // Create new session
   const { data, error } = await supabase
     .from("orchestrator_sessions")
     .insert({
       user_id: userId,
       client_id: clientId,
       mode: "guided",
-      conversation_history: [],
-      active_submind_dispatches: [],
+      context: {},
+      subminds_called: [],
+      status: "active",
     })
-    .select("id")
+    .select("session_id")
     .single();
 
-  if (error) throw new Error(`Failed to create session: ${error.message}`);
+  if (error) {
+    console.error("Session create error:", error);
+    return { id: crypto.randomUUID(), mode: "guided", context: {}, subminds_called: [] };
+  }
 
-  return { id: data.id, mode: "guided", history: [] };
+  return { id: data.session_id, mode: "guided", context: {}, subminds_called: [] };
 }
 
-async function updateSession(
+async function updateSessionContext(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
-  updates: Record<string, unknown>
+  context: Record<string, unknown>,
+  submindsCalled: string[],
+  mode?: OrchestratorMode,
 ) {
-  await supabase
-    .from("orchestrator_sessions")
-    .update(updates)
-    .eq("id", sessionId);
+  const updates: Record<string, unknown> = {
+    last_active: new Date().toISOString(),
+    context,
+    subminds_called: submindsCalled,
+  };
+  if (mode) updates.mode = mode;
+  await supabase.from("orchestrator_sessions").update(updates).eq("session_id", sessionId);
 }
 
-// ---- Solo Mode Logging ----
-
-async function logSoloDecision(
-  supabase: ReturnType<typeof createClient>,
-  sessionId: string,
-  userId: string,
-  decisionPoint: string,
-  submindCalled: string | null,
-  knpSent: unknown,
-  knpReceived: unknown,
-  reasoning: string
-) {
-  await supabase.from("solo_mode_logs").insert({
-    session_id: sessionId,
-    user_id: userId,
-    decision_point: decisionPoint,
-    submind_called: submindCalled,
-    knp_payload_sent: knpSent,
-    knp_response_received: knpReceived,
-    reasoning,
-  });
-}
-
-// ---- Question Resolution ----
+// ── Client Brain Resolution ──
 
 async function resolveFromClientBrain(
   supabase: ReturnType<typeof createClient>,
   clientId: string,
-  field: string
-): Promise<string | null> {
+): Promise<Record<string, unknown> | null> {
   const { data } = await supabase
     .from("client_brain")
-    .select("data, document_type")
-    .eq("client_id", clientId);
+    .select("brand_voice, audience_segments, moat_profile, competitor_list, industry, market_sophistication")
+    .eq("client_id", clientId)
+    .single();
 
-  if (!data || data.length === 0) return null;
-
-  // Search through brain documents for relevant info
-  for (const doc of data) {
-    const docData = doc.data as Record<string, unknown>;
-    if (docData && typeof docData === "object") {
-      const val = docData[field];
-      if (val) return typeof val === "string" ? val : JSON.stringify(val);
-    }
-  }
-  return null;
+  return data || null;
 }
 
-function buildGuidedQuestion(context: string, options: string[]): string {
-  const numbered = options
-    .map((opt, i) => `(${i + 1}) ${opt}`)
-    .join("\n");
-  return `${context}\n\n${numbered}\n(${options.length + 1}) Something else: ___`;
-}
+// ── Solo Mode Logging ──
 
-// ---- Pipeline Execution ----
-
-async function executePipeline(
+async function logSoloModeEntry(
   supabase: ReturnType<typeof createClient>,
-  session: { id: string; mode: OrchestratorMode; history: ConversationEntry[] },
-  userId: string,
+  sessionId: string,
   clientId: string,
-  intent: DetectedIntent,
-  message: string,
-  knpPayload: Record<string, unknown> | undefined
-): Promise<string> {
-  const pipeline = getSubmindPipeline(intent);
-
-  // No subminds needed — direct response
-  if (pipeline.subminds.length === 0) {
-    if (intent === "general_chat") {
-      return (
-        "I'm KLYC, your AI marketing orchestrator. I can help you with:\n\n" +
-        "• **Campaign creation** — full pipeline from research to publishing\n" +
-        "• **Analytics** — performance metrics and insights\n" +
-        "• **Competitor analysis** — market intelligence\n" +
-        "• **Content editing** — refine and optimize posts\n" +
-        "• **Scheduling** — optimal timing recommendations\n" +
-        "• **Solo mode** — say 'handle it yourself' and I'll run autonomously\n\n" +
-        "What would you like to work on?"
-      );
-    }
-    return "I'm not sure what you're asking. Could you tell me more about what you'd like to create or analyze?";
-  }
-
-  // Build KNP payload from message if not provided
-  const payload = knpPayload || {
-    version: "Ψ3",
-    [KNP.ξb]: message,
-    [KNP.σo]: intent,
-  };
-  const payloadStr = JSON.stringify(payload);
-
-  // Track dispatches
-  const dispatches: SubmindDispatch[] = [];
-  const results: Record<string, unknown> = {};
-
-  if (pipeline.parallel) {
-    // Parallel execution
-    const promises = pipeline.subminds.map(async (submind) => {
-      const dispatch: SubmindDispatch = {
-        submind,
-        status: "in_flight",
-        knp_sent: payloadStr,
-        dispatched_at: new Date().toISOString(),
-      };
-      dispatches.push(dispatch);
-
-      if (session.mode === "solo") {
-        await logSoloDecision(
-          supabase, session.id, userId,
-          `Dispatching ${submind} (parallel)`, submind,
-          payload, null,
-          `Intent ${intent} requires ${submind} — running in parallel batch`
-        );
-      }
-
-      try {
-        const result = await SUBMIND_DISPATCH[submind](payloadStr);
-        dispatch.status = "complete";
-        dispatch.knp_received = result;
-        results[submind] = JSON.parse(result);
-      } catch (e) {
-        dispatch.status = "error";
-        results[submind] = { error: (e as Error).message };
-      }
-    });
-
-    await Promise.all(promises);
-  } else {
-    // Sequential execution — each feeds the next
-    let accumulatedPayload = { ...payload };
-
-    for (const submind of pipeline.subminds) {
-      const currentPayloadStr = JSON.stringify(accumulatedPayload);
-      const dispatch: SubmindDispatch = {
-        submind,
-        status: "in_flight",
-        knp_sent: currentPayloadStr,
-        dispatched_at: new Date().toISOString(),
-      };
-      dispatches.push(dispatch);
-
-      if (session.mode === "solo") {
-        await logSoloDecision(
-          supabase, session.id, userId,
-          `Dispatching ${submind} (sequential, step ${dispatches.length})`,
-          submind, accumulatedPayload, null,
-          `Sequential chain: ${submind} receives accumulated context from previous subminds`
-        );
-      }
-
-      try {
-        const result = await SUBMIND_DISPATCH[submind](currentPayloadStr);
-        dispatch.status = "complete";
-        dispatch.knp_received = result;
-
-        const parsed = JSON.parse(result);
-        results[submind] = parsed;
-
-        // ── Creative ↔ Viral Loop ──
-        // After Creative returns, route to Viral for scoring.
-        // If Viral scores are low, re-dispatch Creative with feedback. Max 3 loops.
-        if (submind === "creative" && parsed.status === "complete" && parsed.variants_structured) {
-          // Check for interview needed flag
-          if (parsed._interview_needed) {
-            const gaps = parsed._information_gaps || [];
-            const gapQuestions: Record<string, { context: string; options: string[] }> = {
-              customer_emotional_trigger: {
-                context: "To make this campaign hit, I need to understand your customer's emotional trigger. I'm guessing:",
-                options: [
-                  "They feel guilty about what they're currently using",
-                  "They want to feel like a responsible/premium buyer",
-                  "They're frustrated by the lack of transparency in the market",
-                ],
-              },
-              brand_voice: {
-                context: "I want to nail your brand voice. Which feels closest?",
-                options: [
-                  "We're the trusted expert — calm, authoritative, no fluff",
-                  "We're the cool friend — casual, witty, relatable",
-                  "We're the challenger — bold, direct, unapologetic",
-                ],
-              },
-              success_metric: {
-                context: "What does success look like for this campaign?",
-                options: ["More sales/conversions", "Brand awareness and reach", "Email signups or leads"],
-              },
-              past_failures: {
-                context: "Have any marketing approaches fallen flat before?",
-                options: [
-                  "Overly corporate tone that felt impersonal",
-                  "Discount-heavy messaging that cheapened the brand",
-                  "Trying to go viral with humor that missed the mark",
-                ],
-              },
-            };
-
-            const firstGap = gaps[0] || "customer_emotional_trigger";
-            const q = gapQuestions[firstGap] || gapQuestions.customer_emotional_trigger;
-            results[submind] = {
-              ...parsed,
-              _interview_question: buildGuidedQuestion(q.context, q.options),
-            };
-            // Skip remaining subminds — need user input
-            break;
-          }
-
-          // Run Creative ↔ Viral loop (max 3 iterations)
-          let creativeResult = parsed;
-          let iteration = parsed.iteration_round || 1;
-          const MAX_LOOPS = 3;
-
-          while (iteration < MAX_LOOPS) {
-            // Dispatch Viral with creative output
-            const viralPayload = JSON.stringify({
-              version: "Ψ3",
-              σo: creativeResult.σo,
-              variants_structured: creativeResult.variants_structured,
-              θc: creativeResult.θc,
-              [KNP.ξb]: accumulatedPayload[KNP.ξb],
-            });
-
-            const viralResult = await SUBMIND_DISPATCH.viral(viralPayload);
-            const viralParsed = JSON.parse(viralResult);
-            results["viral"] = viralParsed;
-
-            dispatches.push({
-              submind: "viral",
-              status: "complete",
-              knp_sent: viralPayload,
-              knp_received: viralResult,
-              dispatched_at: new Date().toISOString(),
-            });
-
-            // Check loop status from Viral submind
-            const loopStatus = viralParsed.σo_loop || "";
-            const isComplete = loopStatus.includes("LOOP_COMPLETE") || iteration >= MAX_LOOPS;
-
-            if (isComplete) {
-              // Present top 3 scoring variants as smart prompt cards
-              if (viralParsed.top_variants) {
-                results["viral"] = {
-                  ...viralParsed,
-                  _presentation_variants: viralParsed.top_variants.slice(0, 3),
-                  _loop_iterations: iteration,
-                };
-              }
-              break;
-            }
-
-            // LOOP_CONTINUE — re-dispatch Creative with diagnostic feedback
-            iteration++;
-            const creativePayload = JSON.stringify({
-              ...accumulatedPayload,
-              λv: viralParsed.diagnostics || JSON.stringify(viralParsed.λv || []),
-              πf: String(iteration),
-            });
-
-            const reResult = await SUBMIND_DISPATCH.creative(creativePayload);
-            creativeResult = JSON.parse(reResult);
-            results["creative"] = creativeResult;
-
-            dispatches.push({
-              submind: "creative",
-              status: "complete",
-              knp_sent: creativePayload,
-              knp_received: reResult,
-              dispatched_at: new Date().toISOString(),
-            });
-          }
-
-          // Merge final creative output into accumulated payload
-          for (const key of Object.values(KNP)) {
-            if (creativeResult[key]) {
-              (accumulatedPayload as Record<string, unknown>)[key] = creativeResult[key];
-            }
-          }
-          // Skip viral in the main pipeline since we already ran it
-          const viralIdx = pipeline.subminds.indexOf("viral");
-          if (viralIdx > -1) {
-            // Mark as handled so the loop skips it
-            (accumulatedPayload as Record<string, unknown>)["_viral_handled"] = true;
-          }
-          continue;
-        }
-
-        // Skip viral if already handled by Creative ↔ Viral loop
-        if (submind === "viral" && (accumulatedPayload as Record<string, unknown>)["_viral_handled"]) {
-          dispatch.status = "complete";
-          dispatch.knp_received = JSON.stringify(results["viral"] || {});
-          continue;
-        }
-
-        // Inject submind output into accumulated payload for next stage
-        for (const key of Object.values(KNP)) {
-          if (parsed[key]) {
-            (accumulatedPayload as Record<string, unknown>)[key] = parsed[key];
-          }
-        }
-      } catch (e) {
-        dispatch.status = "error";
-        results[submind] = { error: (e as Error).message };
-        // Continue pipeline even on error — other subminds may still work
-      }
-    }
-  }
-
-  // Update session with dispatch records
-  await updateSession(supabase, session.id, {
-    active_submind_dispatches: dispatches,
+  scope: string,
+  decisionChain: unknown[],
+  submindsInvoked: string[],
+  outcome: unknown,
+) {
+  await supabase.from("solo_mode_logs").insert({
+    session_id: sessionId,
+    client_id: clientId,
+    permission_granted_at: new Date().toISOString(),
+    permission_scope: scope,
+    decision_chain: decisionChain,
+    subminds_invoked: submindsInvoked,
+    outcome,
+  }).then(({ error }) => {
+    if (error) console.warn("Solo mode log insert failed:", error.message);
   });
-
-  // Assemble user-facing response
-  return assembleResponse(intent, results, session.mode);
 }
 
-// ---- Response Assembly ----
+// ── Response Assembly ──
 
-function assembleResponse(
+function assembleReply(
   intent: DetectedIntent,
-  results: Record<string, unknown>,
-  mode: OrchestratorMode
+  results: Record<string, { success: boolean; data: unknown; error?: string }>,
+  mode: OrchestratorMode,
 ): string {
   const sections: string[] = [];
 
@@ -1198,35 +470,37 @@ function assembleResponse(
     sections.push("🤖 **Solo Mode** — I made all decisions autonomously. Here's what I did:\n");
   }
 
-  // Extract readable content from each submind result
   for (const [submind, result] of Object.entries(results)) {
-    if (!result || typeof result !== "object") continue;
-    const r = result as Record<string, unknown>;
-
-    if (r.error) {
-      sections.push(`⚠️ **${submind}**: encountered an issue — ${r.error}`);
+    if (!result.success) {
+      sections.push(`⚠️ **${formatSubmindName(submind)}**: encountered an issue — ${result.error || "unknown error"}`);
       continue;
     }
 
-    // Pull the primary output field or data field
+    const r = result.data as Record<string, unknown> | null;
+    if (!r) continue;
+
+    // For stubs, use the note field
+    if (r.status === "stub") {
+      sections.push(`ℹ️ **${formatSubmindName(submind)}**: ${r.note || "Stub response"}`);
+      continue;
+    }
+
+    // Pull primary output
     const output =
       r[KNP.ρr] || r[KNP.χy] || r[KNP.ηn] || r[KNP.ψv] ||
       r[KNP.φd] || r[KNP.ωs] || r[KNP.δi] || r[KNP.εe] ||
-      r[KNP.αa] || r.data || "Complete.";
+      r[KNP.αa] || r.summary || r.data || r.result || "Complete.";
 
-    sections.push(`**${formatSubmindName(submind)}**: ${output}`);
+    const outputStr = typeof output === "string" ? output : JSON.stringify(output).slice(0, 500);
+    sections.push(`**${formatSubmindName(submind)}**: ${outputStr}`);
   }
 
   if (sections.length === 0) {
-    return "I processed your request but didn't get results from any subminds. Let me try a different approach — could you tell me more?";
+    return "I processed your request but didn't receive results from the subminds. Could you provide more details so I can try again?";
   }
 
-  // NOTE: Guided mode suggestions are now sent as structured next_questions
-  // in the response JSON, NOT as text in the reply body.
-  // The frontend renders them as clickable buttons + fill-in input.
-
   if (mode === "solo") {
-    sections.push("\n📋 *Full decision chain available in your solo mode logs.*");
+    sections.push("\n📋 *Full decision chain logged in solo mode audit trail.*");
   }
 
   return sections.join("\n\n");
@@ -1234,18 +508,121 @@ function assembleResponse(
 
 function formatSubmindName(name: string): string {
   const names: Record<string, string> = {
-    research: "🔍 Research",
-    analytics: "📊 Analytics",
-    creative: "✍️ Creative",
-    viral: "🔥 Viral Score",
-    product: "📦 Product",
-    platform: "📱 Platform",
-    timing: "⏰ Timing",
-    image: "🎨 Image",
-    approval: "✅ Approval",
-    learningEngine: "🧠 Learning Engine",
+    research: "🔍 Research", product: "📦 Product", narrative: "✍️ Narrative",
+    creative: "🎨 Creative", social: "📱 Social", image: "🖼️ Image",
+    approval: "✅ Approval", viral: "🔥 Viral Score", analytics: "📊 Analytics",
+    "learning-engine": "🧠 Learning Engine",
   };
   return names[name] || name;
+}
+
+// ── Next Questions Builder ──
+
+function buildNextQuestions(intent: DetectedIntent): NextQuestion[] {
+  switch (intent) {
+    case "campaign_new":
+      return [
+        { field: "s0", question: "Instagram Reels with a humor hook targeting your core audience", type: "button", nav_target: "/campaigns/new" },
+        { field: "s1", question: "LinkedIn carousel with data-driven storytelling for B2B reach", type: "button", nav_target: "/campaigns/new" },
+        { field: "s2", question: "Multi-platform blitz — simultaneous launch across all channels", type: "button", nav_target: "/campaigns/new" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+    case "trend_analysis":
+      return [
+        { field: "s0", question: "Show me trending topics in my industry this week", type: "button" },
+        { field: "s1", question: "What are competitors doing differently right now?", type: "button", nav_target: "/competitor-analysis" },
+        { field: "s2", question: "Identify emerging platforms gaining traction", type: "button" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+    case "performance_review":
+      return [
+        { field: "s0", question: "Show engagement trends for the last 30 days", type: "button", nav_target: "/analytics" },
+        { field: "s1", question: "Compare performance across platforms", type: "button", nav_target: "/analytics" },
+        { field: "s2", question: "Identify top-performing content themes", type: "button" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+    case "content_revision":
+      return [
+        { field: "s0", question: "Rewrite for a more conversational tone", type: "button" },
+        { field: "s1", question: "Optimize for higher engagement on social", type: "button" },
+        { field: "s2", question: "Create platform-specific variations", type: "button" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+    case "learning_report":
+      return [
+        { field: "s0", question: "What worked best in our last 5 campaigns?", type: "button" },
+        { field: "s1", question: "Show me patterns in audience response", type: "button" },
+        { field: "s2", question: "Generate a full retrospective report", type: "button" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+    case "general_chat":
+    default:
+      return [
+        { field: "s0", question: "Create a new campaign", type: "button", nav_target: "/campaigns/new" },
+        { field: "s1", question: "Show me analytics", type: "button", nav_target: "/analytics" },
+        { field: "s2", question: "Check competitor activity", type: "button", nav_target: "/competitor-analysis" },
+        { field: "s3", question: "Something else...", type: "fill_in" },
+      ];
+  }
+}
+
+// ── Pipeline Execution (Phase-based web topology) ──
+
+async function executePhases(
+  phases: PhaseSpec[],
+  knpPayload: Record<string, unknown>,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  mode: OrchestratorMode,
+): Promise<{ results: Record<string, { success: boolean; data: unknown; error?: string }>; submindsInvoked: string[]; decisionChain: unknown[] }> {
+  const results: Record<string, { success: boolean; data: unknown; error?: string }> = {};
+  const submindsInvoked: string[] = [];
+  const decisionChain: unknown[] = [];
+  let accumulatedPayload = { ...knpPayload };
+
+  for (let phaseIdx = 0; phaseIdx < phases.length; phaseIdx++) {
+    const phase = phases[phaseIdx];
+    const phaseLabel = `Phase ${phaseIdx + 1}`;
+
+    if (phase.parallel) {
+      // Concurrent dispatch
+      const promises = phase.subminds.map(async (name) => {
+        submindsInvoked.push(name);
+        decisionChain.push({ phase: phaseLabel, submind: name, mode: "parallel", timestamp: new Date().toISOString() });
+        return { name, result: await dispatchSubmind(name, accumulatedPayload, supabaseUrl, serviceRoleKey) };
+      });
+
+      const settled = await Promise.all(promises);
+      for (const { name, result } of settled) {
+        results[name] = result;
+        // Merge successful outputs into accumulated payload
+        if (result.success && result.data && typeof result.data === "object") {
+          const d = result.data as Record<string, unknown>;
+          for (const key of Object.values(KNP)) {
+            if (d[key]) accumulatedPayload[key] = d[key];
+          }
+        }
+      }
+    } else {
+      // Sequential dispatch
+      for (const name of phase.subminds) {
+        submindsInvoked.push(name);
+        decisionChain.push({ phase: phaseLabel, submind: name, mode: "sequential", timestamp: new Date().toISOString() });
+
+        const result = await dispatchSubmind(name, accumulatedPayload, supabaseUrl, serviceRoleKey);
+        results[name] = result;
+
+        if (result.success && result.data && typeof result.data === "object") {
+          const d = result.data as Record<string, unknown>;
+          for (const key of Object.values(KNP)) {
+            if (d[key]) accumulatedPayload[key] = d[key];
+          }
+        }
+      }
+    }
+  }
+
+  return { results, submindsInvoked, decisionChain };
 }
 
 // ============================================================
@@ -1258,33 +635,32 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Resolve runtime config inside the request lifecycle
-    requireRuntimeConfig();
-
     const body: OrchestratorRequest = await req.json();
 
-    // ---- Health Check ----
+    // ── Health Check ──
     if (body.action === "health") {
       return jsonRes({
         status: "operational",
-        version: "1.0-orchestrator",
-        subminds: Object.keys(SUBMIND_DISPATCH),
+        version: "2.0-orchestrator",
+        intents: ["campaign_new", "trend_analysis", "performance_review", "content_revision", "learning_report", "general_chat"],
         modes: ["guided", "solo"],
+        subminds_live: ["research", "product", "narrative", "creative", "social", "image", "approval"],
+        subminds_stub: ["viral", "analytics", "learning-engine"],
         features: [
-          "dynamic_intent_routing",
-          "knp_payload_support",
+          "web_topology_routing",
+          "phase_based_dispatch",
+          "knp_normalizer_membrane",
           "session_persistence",
-          "solo_mode_logging",
-          "guided_3guess_format",
-          "sequential_and_parallel_dispatch",
+          "solo_mode_audit",
+          "guided_3plus1_format",
           "client_brain_resolution",
         ],
       });
     }
 
-    // ---- Chat Action ----
+    // ── Chat Action ──
     if (body.action !== "chat") {
-      return jsonRes({ error: `Unknown action: ${body.action}` }, 400);
+      return jsonRes({ error: `Unknown action: ${body.action}. Valid: chat, health` }, 400);
     }
 
     if (!body.message && !body.knp_payload) {
@@ -1296,252 +672,192 @@ serve(async (req: Request) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return jsonRes({ error: "Unauthorized" }, 401);
     }
-    const supabase = createSupabaseClient(authHeader);
 
-    // Validate JWT via getClaims (local validation, no network call)
+    const { supabaseUrl, serviceRoleKey } = getRuntimeConfig();
+    const supabaseAuth = makeAuthClient(authHeader);
     const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createAuthClient(authHeader);
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+
+    let userId: string;
+    try {
+      const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+      if (userError || !userData?.user?.id) {
+        return jsonRes({ error: "Unauthorized" }, 401);
+      }
+      userId = userData.user.id;
+    } catch {
       return jsonRes({ error: "Unauthorized" }, 401);
     }
-    const user = { id: claimsData.claims.sub as string };
 
-    const userId = user.id;
+    const supabase = makeServiceClient();
     const clientId = body.client_id || userId;
     const message = body.message || "";
 
-    // Session
-    const session = await getOrCreateSession(
-      supabase, body.session_id, userId, clientId
-    );
+    // ── Session ──
+    const session = await getOrCreateSession(supabase, body.session_id, userId, clientId);
 
-    // Handle solo mode grant
+    // ── Solo Mode Grant ──
     if (body.solo_grant?.enabled) {
       session.mode = "solo";
-      await updateSession(supabase, session.id, {
-        mode: "solo",
-        solo_permission_scope: body.solo_grant.scope || "full",
-      });
-      await logSoloDecision(
-        supabase, session.id, userId,
-        "Solo mode activated",
-        null, null, null,
-        `User granted solo permission. Scope: ${body.solo_grant.scope || "full"}`
-      );
     }
 
-    // Check intent for solo mode trigger from message
-    const intent = detectIntent(message);
-    if (intent === "solo_mode_grant" && session.mode !== "solo") {
-      session.mode = "solo";
-      await updateSession(supabase, session.id, {
-        mode: "solo",
-        solo_permission_scope: "full",
-      });
-      await logSoloDecision(
-        supabase, session.id, userId,
-        "Solo mode activated via message",
-        null, null, null,
-        `User said: "${message}". Interpreted as solo mode grant.`
-      );
-
-      // Append to history
-      const history = [
-        ...session.history,
-        { role: "user" as const, content: message, timestamp: new Date().toISOString() },
-        {
-          role: "orchestrator" as const,
-          content: "🤖 Solo Mode activated. I'll handle everything autonomously and log all decisions for your review. What should I work on?",
-          timestamp: new Date().toISOString(),
-        },
-      ];
-      await updateSession(supabase, session.id, { conversation_history: history });
-
-      const soloReply = "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?";
-      return jsonRes({
-        session_id: session.id,
-        mode: "solo",
-        reply: soloReply,
-        response: soloReply,
-        intent: "solo_mode_grant",
-        source: "orchestrator",
-        subminds_dispatched: [],
-        next_questions: [],
-        requires_approval: false,
-        risk_level: "low",
-      });
-    }
-
-    // ── NORMALIZER MEMBRANE: Compress inbound ──
-    const knpPacket = body.knp_payload
-      ? body.knp_payload as Record<string, unknown>
-      : normalizerCompress(message, session.id);
-
-    // Validate if it's a KNP packet
-    if ('checksum' in knpPacket && 'segments' in knpPacket) {
-      if (!normalizerValidate(knpPacket as KNPPacket)) {
-        await logNormalizerError(supabase, userId, session.id, JSON.stringify(knpPacket).slice(0, 200), "checksum_mismatch");
-        const normErrReply = "I had trouble processing that message. Could you try sending it again?";
-        return jsonRes({
-          session_id: session.id,
-          mode: session.mode,
-          reply: normErrReply,
-          response: normErrReply,
-          intent: "unknown",
-          source: "orchestrator",
-          subminds_dispatched: [],
-          next_questions: [],
-          requires_approval: false,
-          risk_level: "low",
-          normalizer_error: true,
-        });
-      }
-    }
-
-    // Enrich with client brain context
-    const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
-    const brainVoice = await resolveFromClientBrain(supabase, clientId, "voice_profile");
-    if (brainVoice) {
-      enrichedPayload[KNP.λv] = brainVoice;
-    }
-    const brainStrategy = await resolveFromClientBrain(supabase, clientId, "strategy_profile");
-    if (brainStrategy) {
-      enrichedPayload[KNP.σo] = enrichedPayload[KNP.σo] || brainStrategy;
-    }
-
-    // Execute pipeline (subminds receive ONLY KNP — never raw human text)
-    const rawResponse = await executePipeline(
-      supabase,
-      session,
-      userId,
-      clientId,
-      intent,
-      message,
-      enrichedPayload
+    // Check for solo trigger in message
+    const lowerMsg = message.toLowerCase();
+    const isSoloTrigger = (
+      lowerMsg.includes("solo mode") ||
+      lowerMsg.includes("do it yourself") ||
+      lowerMsg.includes("make the next campaign yourself") ||
+      lowerMsg.includes("handle it") ||
+      lowerMsg.includes("go ahead and decide")
     );
 
-    // ── Post-pipeline: trigger Learning Engine deduction on campaign creation ──
-    if (intent === "campaign_creation") {
-      try {
-        await supabase.functions.invoke("learning-engine", {
-          body: {
-            trigger: "campaign_launch",
-            payload: {
-              client_id: clientId,
-              brief: message.slice(0, 300),
-              platform: enrichedPayload[KNP.πf] || "",
-              messaging_angle: enrichedPayload[KNP.σo] || "",
-              [KNP.ξb]: message.slice(0, 300),
-              [KNP.θc]: clientId,
-              [KNP.μp]: enrichedPayload[KNP.πf] || "",
-            },
-          },
-        });
+    if (isSoloTrigger && session.mode !== "solo") {
+      session.mode = "solo";
+      await updateSessionContext(supabase, session.id, session.context, session.subminds_called, "solo");
+      await logSoloModeEntry(supabase, session.id, clientId, "full", [{ event: "solo_activated", message, timestamp: new Date().toISOString() }], [], { activated: true });
 
-        // Write to campaign_memory
+      const soloReply = "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?";
+      const resp: OrchestratorResponse = {
+        reply: soloReply,
+        intent: "general_chat",
+        source: "orchestrator",
+        next_questions: buildNextQuestions("general_chat"),
+        requires_approval: false,
+        risk_level: "low",
+        session_id: session.id,
+        subminds_invoked: [],
+        mode: "solo",
+      };
+      return jsonRes(resp);
+    }
+
+    // ── Detect Intent ──
+    const intent = detectIntent(message);
+
+    // ── Normalizer: Compress inbound ──
+    const knpPacket = body.knp_payload || normalizerCompress(message, session.id);
+
+    // ── Enrich from client brain ──
+    const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
+    try {
+      const brainData = await resolveFromClientBrain(supabase, clientId);
+      if (brainData) {
+        if (brainData.brand_voice && !enrichedPayload[KNP.λv]) {
+          enrichedPayload[KNP.λv] = compressValue(brainData.brand_voice);
+        }
+        if (brainData.audience_segments && !enrichedPayload[KNP.ζq]) {
+          enrichedPayload[KNP.ζq] = compressValue(brainData.audience_segments);
+        }
+        if (brainData.competitor_list && !enrichedPayload[KNP.θc]) {
+          enrichedPayload[KNP.θc] = compressValue(brainData.competitor_list);
+        }
+        if (brainData.industry) {
+          enrichedPayload._industry = brainData.industry;
+        }
+      }
+    } catch (e) {
+      console.warn("Client brain lookup failed:", e);
+    }
+
+    // ── Route based on intent ──
+    const phases = getIntentPhases(intent);
+
+    // No subminds needed — general chat
+    if (phases.length === 0) {
+      const reply =
+        "I'm KLYC, your AI marketing orchestrator. I coordinate specialized subminds to help you with:\n\n" +
+        "• **Campaign creation** — full pipeline from research to approval\n" +
+        "• **Trend analysis** — market signals and competitor insights\n" +
+        "• **Performance review** — campaign metrics and learnings\n" +
+        "• **Content revision** — optimize and refine existing content\n" +
+        "• **Learning reports** — retrospective analysis of what worked\n\n" +
+        "What would you like to work on?";
+
+      const resp: OrchestratorResponse = {
+        reply,
+        intent,
+        source: "orchestrator",
+        next_questions: buildNextQuestions(intent),
+        requires_approval: false,
+        risk_level: "low",
+        session_id: session.id,
+        subminds_invoked: [],
+        mode: session.mode,
+      };
+
+      await updateSessionContext(supabase, session.id, { ...session.context, last_intent: intent, last_message: message }, session.subminds_called, session.mode);
+      return jsonRes(resp);
+    }
+
+    // ── Execute phases ──
+    const { results, submindsInvoked, decisionChain } = await executePhases(
+      phases, enrichedPayload, supabaseUrl, serviceRoleKey, session.mode,
+    );
+
+    // ── Assemble reply ──
+    const reply = assembleReply(intent, results, session.mode);
+
+    // ── Update session ──
+    const allSubminds = [...new Set([...session.subminds_called, ...submindsInvoked])];
+    await updateSessionContext(supabase, session.id, {
+      ...session.context,
+      last_intent: intent,
+      last_message: message,
+      last_subminds: submindsInvoked,
+    }, allSubminds, session.mode);
+
+    // ── Solo mode logging ──
+    if (session.mode === "solo") {
+      await logSoloModeEntry(supabase, session.id, clientId, "full", decisionChain, submindsInvoked, { reply: reply.slice(0, 500), results_summary: Object.keys(results) });
+    }
+
+    // ── Post-pipeline hooks ──
+    if (intent === "campaign_new") {
+      try {
         await supabase.from("campaign_memory").insert({
           user_id: userId,
           client_id: clientId,
           campaign_name: message.slice(0, 100),
           platform: String(enrichedPayload[KNP.πf] || "multi"),
           message_summary: message.slice(0, 200),
+          subminds_used: submindsInvoked,
         });
       } catch (e) {
-        console.warn("Post-pipeline learning/memory hooks failed:", e);
+        console.warn("Campaign memory insert failed:", e);
       }
     }
 
-    // ── NORMALIZER MEMBRANE: Decompress outbound ──
-    const response = normalizerDecompress(rawResponse);
+    // ── Check if approval gate requires human decision ──
+    const approvalResult = results["approval"];
+    const requiresApproval = approvalResult?.success && (approvalResult.data as Record<string, unknown>)?.decision === "NEEDS_HUMAN";
 
-    // Update conversation history
-    const updatedHistory: ConversationEntry[] = [
-      ...session.history,
-      { role: "user", content: message, timestamp: new Date().toISOString() },
-      { role: "orchestrator", content: response, timestamp: new Date().toISOString() },
-    ];
-    await updateSession(supabase, session.id, {
-      conversation_history: updatedHistory,
-    });
-
-    const pipeline = getSubmindPipeline(intent);
-
-    // Build next_questions for general/unknown intents
-    const isGeneralIntent = intent === "general_chat" || intent === "unknown";
-
-    // Smart Prompt format: 3 concrete suggestions + 1 fill-in
-    // Each suggestion has a label, type, and optional navigation target
-    let nextQuestions: Array<{
-      field: string;
-      question: string;
-      type: "button" | "fill_in";
-      nav_target?: string;
-    }> = [];
-
-    if (isGeneralIntent) {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Create a new campaign", type: "button", nav_target: "/campaigns/new" },
-        { field: "suggestion_1", question: "Show me analytics", type: "button", nav_target: "/analytics" },
-        { field: "suggestion_2", question: "Check competitor activity", type: "button", nav_target: "/competitor-analysis" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    } else if (intent === "campaign_creation") {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Instagram Reels with a humor hook targeting your core audience", type: "button", nav_target: "/campaigns/new" },
-        { field: "suggestion_1", question: "LinkedIn carousel with data-driven storytelling for B2B reach", type: "button", nav_target: "/campaigns/new" },
-        { field: "suggestion_2", question: "Multi-platform blitz — simultaneous launch across all channels", type: "button", nav_target: "/campaigns/new" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    } else if (intent === "analytics_query") {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Show engagement trends for the last 30 days", type: "button", nav_target: "/analytics" },
-        { field: "suggestion_1", question: "Compare performance across platforms", type: "button", nav_target: "/analytics" },
-        { field: "suggestion_2", question: "Identify top-performing content themes", type: "button", nav_target: "/brand-strategy/intelligence" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    } else if (intent === "competitor_check") {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Deep dive into their recent campaign strategy", type: "button", nav_target: "/competitor-analysis" },
-        { field: "suggestion_1", question: "Compare their engagement rates to ours", type: "button", nav_target: "/competitor-analysis" },
-        { field: "suggestion_2", question: "Find gaps we can exploit in their positioning", type: "button", nav_target: "/brand-strategy/intelligence" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    } else if (intent === "content_edit") {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Rewrite for a more conversational tone", type: "button", nav_target: "/creative" },
-        { field: "suggestion_1", question: "Optimize for higher engagement on social", type: "button", nav_target: "/creative" },
-        { field: "suggestion_2", question: "Create platform-specific variations", type: "button", nav_target: "/creative" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    } else if (intent === "scheduling") {
-      nextQuestions = [
-        { field: "suggestion_0", question: "Schedule for peak engagement times this week", type: "button", nav_target: "/campaigns/schedule" },
-        { field: "suggestion_1", question: "Spread posts evenly across the next 2 weeks", type: "button", nav_target: "/campaigns/schedule" },
-        { field: "suggestion_2", question: "Rush publish — go live within the hour", type: "button", nav_target: "/campaigns/queue" },
-        { field: "suggestion_3", question: "Something else...", type: "fill_in" },
-      ];
-    }
-
-    return jsonRes({
-      session_id: session.id,
-      mode: session.mode,
-      reply: response,
-      response,
+    const resp: OrchestratorResponse = {
+      reply,
       intent,
       source: "orchestrator",
-      subminds_dispatched: pipeline.subminds,
-      pipeline_parallel: pipeline.parallel,
-      knp_compressed: true,
-      next_questions: nextQuestions,
-      requires_approval: false,
-      risk_level: isGeneralIntent ? "low" : "medium",
-    });
+      next_questions: buildNextQuestions(intent),
+      requires_approval: Boolean(requiresApproval),
+      risk_level: intent === "campaign_new" ? "medium" : "low",
+      session_id: session.id,
+      subminds_invoked: submindsInvoked,
+      mode: session.mode,
+    };
+
+    return jsonRes(resp);
+
   } catch (err) {
     console.error("Orchestrator error:", err);
-    return jsonRes(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      500
-    );
+    // NEVER return empty — always return a valid response
+    const fallbackReply = "I encountered an issue processing your request. Could you try again or rephrase? I'm here to help with campaigns, analytics, competitor insights, and more.";
+    return jsonRes({
+      reply: fallbackReply,
+      intent: "general_chat",
+      source: "orchestrator",
+      next_questions: buildNextQuestions("general_chat"),
+      requires_approval: false,
+      risk_level: "low",
+      session_id: "",
+      subminds_invoked: [],
+      error_detail: err instanceof Error ? err.message : "Internal error",
+    }, 500);
   }
 });
