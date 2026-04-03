@@ -1148,6 +1148,74 @@ export type Database = {
         }
         Relationships: []
       }
+      client_vote_records: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          vote_item_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          vote_item_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          vote_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_vote_records_vote_item_id_fkey"
+            columns: ["vote_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_votes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_votes: {
+        Row: {
+          category: Database["public"]["Enums"]["vote_category"]
+          created_at: string
+          description: string | null
+          id: string
+          roadmap_item_id: string | null
+          status: Database["public"]["Enums"]["vote_status"]
+          submitted_by: string | null
+          title: string
+          updated_at: string
+          vote_count: number
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["vote_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          roadmap_item_id?: string | null
+          status?: Database["public"]["Enums"]["vote_status"]
+          submitted_by?: string | null
+          title: string
+          updated_at?: string
+          vote_count?: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["vote_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          roadmap_item_id?: string | null
+          status?: Database["public"]["Enums"]["vote_status"]
+          submitted_by?: string | null
+          title?: string
+          updated_at?: string
+          vote_count?: number
+        }
+        Relationships: []
+      }
       collaboration_messages: {
         Row: {
           created_at: string
@@ -3808,6 +3876,20 @@ export type Database = {
       collab_priority: "urgent" | "normal" | "low"
       collab_sender: "client" | "admin"
       collab_status: "new" | "in_progress" | "waiting_on_client" | "resolved"
+      vote_category:
+        | "ui"
+        | "subminds"
+        | "speed"
+        | "integrations"
+        | "pricing"
+        | "other"
+      vote_status:
+        | "new"
+        | "under_review"
+        | "planned"
+        | "in_progress"
+        | "shipped"
+        | "declined"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3942,6 +4024,22 @@ export const Constants = {
       collab_priority: ["urgent", "normal", "low"],
       collab_sender: ["client", "admin"],
       collab_status: ["new", "in_progress", "waiting_on_client", "resolved"],
+      vote_category: [
+        "ui",
+        "subminds",
+        "speed",
+        "integrations",
+        "pricing",
+        "other",
+      ],
+      vote_status: [
+        "new",
+        "under_review",
+        "planned",
+        "in_progress",
+        "shipped",
+        "declined",
+      ],
     },
   },
 } as const
