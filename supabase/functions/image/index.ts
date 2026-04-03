@@ -85,6 +85,26 @@ async function checkImageUrl(url: string): Promise<{ reachable: boolean; content
   }
 }
 
+// ---- Brand Consistency Scoring (WP-31/32/33) ----
+
+interface BrandDimensionScores {
+  color_harmony: number;    // weight 0.25
+  typography: number;       // weight 0.20
+  logo_placement: number;   // weight 0.20
+  motif_repetition: number; // weight 0.15
+  layout_framework: number; // weight 0.20
+}
+
+function computeBrandScore(scores: BrandDimensionScores): number {
+  return Math.round((
+    scores.color_harmony * 0.25 +
+    scores.typography * 0.20 +
+    scores.logo_placement * 0.20 +
+    scores.motif_repetition * 0.15 +
+    scores.layout_framework * 0.20
+  ) * 100) / 100;
+}
+
 // ---- AI-Powered Image Review ----
 
 interface ImageReview {
@@ -92,6 +112,8 @@ interface ImageReview {
   status: "accepted" | "rejected";
   rejection_reason: string | null;
   brand_alignment: string;
+  brand_dimension_scores: BrandDimensionScores;
+  brand_score: number;
   platform_suitability: Record<string, boolean>;
   suggestions: string[];
 }
@@ -109,20 +131,23 @@ async function reviewImages(
     .map((s) => `${s.platform} ${s.use_case}: ${s.width}×${s.height} (${s.aspect_ratio})`)
     .join("; ");
 
+  const defaultScores: BrandDimensionScores = { color_harmony: 0.5, typography: 0.5, logo_placement: 0.5, motif_repetition: 0.5, layout_framework: 0.5 };
+
   if (!apiKey) {
-    // Fallback: accept all with basic specs
     return imageUrls.map((url) => ({
       url,
       status: "accepted" as const,
       rejection_reason: null,
       brand_alignment: "Unable to assess without AI — accepted by default",
+      brand_dimension_scores: defaultScores,
+      brand_score: computeBrandScore(defaultScores),
       platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
       suggestions: [],
     }));
   }
 
   try {
-    const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,26 +155,31 @@ async function reviewImages(
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        temperature: 0.2,
+        temperature: 0.3,
         messages: [
           {
             role: "system",
-            content: `You are an image asset reviewer for social media marketing. For each image URL, assess:
-1. Is the URL valid and likely an image? (check extension/pattern)
-2. Does the use context (${useContext}) match what would be expected?
-3. Would it likely meet platform requirements: ${specsDesc}?
-4. Any potential platform policy concerns?
+            content: `You are the KLYC Image Submind — a Visual Design Direction engine.
+You review image assets for brand consistency and platform compliance. You do NOT generate images.
 
-Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reason":null|"reason","brand_alignment":"assessment","platform_suitability":{"platform":true/false},"suggestions":["..."]}]
+For each image URL, assess and score brand consistency on 5 dimensions (0.0-1.0 each):
+- color_harmony (weight 0.25): Match with brand palette
+- typography (weight 0.20): Font consistency
+- logo_placement (weight 0.20): Position, size, clear space
+- motif_repetition (weight 0.15): Visual pattern consistency
+- layout_framework (weight 0.20): Composition and grid
 
-Since you cannot actually view the images, base assessment on URL patterns, file extensions, and context. Accept images by default unless there's a clear reason to reject (non-image URL, broken pattern, etc).`,
+Platform requirements: ${specsDesc}
+
+Since you cannot view actual images, score based on URL context, file patterns, and provided metadata. Be conservative — flag unknowns.
+
+Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reason":null|"reason","brand_alignment":"assessment","brand_dimension_scores":{"color_harmony":0.0-1.0,"typography":0.0-1.0,"logo_placement":0.0-1.0,"motif_repetition":0.0-1.0,"layout_framework":0.0-1.0},"platform_suitability":{"platform":true/false},"suggestions":["..."]}]`,
           },
           {
             role: "user",
             content: `Review these image URLs for a campaign:\nBrief: ${brief.slice(0, 500)}\nUse context: ${useContext}\nTarget platforms: ${platforms.join(", ")}\n\nURLs:\n${imageUrls.map((u, i) => `${i + 1}. ${u}`).join("\n")}`,
           },
         ],
-        response_format: { type: "json_object" },
       }),
     });
 
@@ -157,21 +187,35 @@ Since you cannot actually view the images, base assessment on URL patterns, file
       return imageUrls.map((url) => ({
         url, status: "accepted" as const, rejection_reason: null,
         brand_alignment: "Review unavailable — accepted by default",
+        brand_dimension_scores: defaultScores,
+        brand_score: computeBrandScore(defaultScores),
         platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
         suggestions: [],
       }));
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("No content");
+    const rawContent = data.choices?.[0]?.message?.content;
+    if (!rawContent) throw new Error("No content");
 
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : parsed.reviews || parsed.results || [parsed];
+    const jsonMatch = rawContent.match(/\[[\s\S]*\]/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawContent);
+    const items = Array.isArray(parsed) ? parsed : parsed.reviews || parsed.results || [parsed];
+
+    return items.map((item: any) => {
+      const scores: BrandDimensionScores = item.brand_dimension_scores || defaultScores;
+      return {
+        ...item,
+        brand_dimension_scores: scores,
+        brand_score: computeBrandScore(scores),
+      };
+    });
   } catch {
     return imageUrls.map((url) => ({
       url, status: "accepted" as const, rejection_reason: null,
       brand_alignment: "Review unavailable — accepted by default",
+      brand_dimension_scores: defaultScores,
+      brand_score: computeBrandScore(defaultScores),
       platform_suitability: Object.fromEntries(platforms.map((p) => [p, true])),
       suggestions: [],
     }));
@@ -249,6 +293,8 @@ serve(async (req: Request) => {
         status: "rejected",
         rejection_reason: "Image URL is unreachable or returns an error. Please check the link and re-upload.",
         brand_alignment: "N/A — unreachable",
+        brand_dimension_scores: { color_harmony: 0, typography: 0, logo_placement: 0, motif_repetition: 0, layout_framework: 0 },
+        brand_score: 0,
         platform_suitability: {},
         suggestions: ["Re-upload the image or provide a working URL"],
       });
