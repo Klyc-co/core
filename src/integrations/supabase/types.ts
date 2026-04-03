@@ -1680,6 +1680,13 @@ export type Database = {
             referencedRelation: "google_drive_connections"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "google_drive_assets_drive_connection_id_fkey"
+            columns: ["drive_connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_drive_connections_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       google_drive_connections: {
@@ -3201,7 +3208,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      google_drive_connections_safe: {
+        Row: {
+          assets_sheet_id: string | null
+          assets_sheet_url: string | null
+          brand_guidelines_sheet_id: string | null
+          brand_guidelines_sheet_url: string | null
+          connection_status: string | null
+          created_at: string | null
+          folder_id: string | null
+          folder_url: string | null
+          id: string | null
+          last_sync_at: string | null
+          metadata: Json | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assets_sheet_id?: string | null
+          assets_sheet_url?: string | null
+          brand_guidelines_sheet_id?: string | null
+          brand_guidelines_sheet_url?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          folder_id?: string | null
+          folder_url?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          metadata?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assets_sheet_id?: string | null
+          assets_sheet_url?: string | null
+          brand_guidelines_sheet_id?: string | null
+          brand_guidelines_sheet_url?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          folder_id?: string | null
+          folder_url?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          metadata?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_my_role: { Args: never; Returns: string }
