@@ -69,13 +69,13 @@ export function useAdminAuth() {
   const logAction = useCallback(
     async (action: string, targetType?: string, targetId?: string, details?: Record<string, unknown>) => {
       if (!adminUser) return;
-      await supabase.from("admin_audit_log").insert({
+      await supabase.from("admin_audit_log").insert([{
         admin_id: adminUser.id,
         action,
         target_type: targetType ?? null,
         target_id: targetId ?? null,
-        details: details ?? null,
-      });
+        details: (details ?? null) as any,
+      }]);
     },
     [adminUser]
   );
