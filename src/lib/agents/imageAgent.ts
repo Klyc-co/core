@@ -81,7 +81,7 @@ export function computeImageMetrics(input: ImageSubmindInput): SubmindMetricsOut
   }
 
   return {
-    agentRole: "image",
+    submindRole: "image",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

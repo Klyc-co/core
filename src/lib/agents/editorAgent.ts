@@ -94,7 +94,7 @@ export function computeEditorMetrics(input: EditorSubmindInput): SubmindMetricsO
   });
 
   return {
-    agentRole: "editor",
+    submindRole: "editor",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

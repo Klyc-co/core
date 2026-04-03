@@ -100,7 +100,7 @@ export function computeAnalyticsMetrics(input: AnalyticsSubmindInput): SubmindMe
   });
 
   return {
-    agentRole: "analytics",
+    submindRole: "analytics",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

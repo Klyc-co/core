@@ -78,18 +78,18 @@ function formatConfidence(score: number | null): string {
 }
 
 interface Props {
-  steps: AgentStep[];
+  steps: SubmindStep[];
   isRunning?: boolean;
 }
 
 export default function CampaignTimeline({ steps, isRunning }: Props) {
-  const stageMap = new Map(steps.map((s) => [s.agent, s]));
+  const stageMap = new Map(steps.map((s) => [s.submind, s]));
 
   const stages = PIPELINE_STAGES.map((name) => {
     const step = stageMap.get(name);
     return {
       name,
-      status: step?.status ?? "pending" as AgentStep["status"],
+      status: step?.status ?? "pending" as SubmindStep["status"],
       durationMs: step?.durationMs ?? null,
       confidenceScore: step?.confidenceScore ?? null,
       note: step?.note ?? null,

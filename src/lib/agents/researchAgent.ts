@@ -83,7 +83,7 @@ export function computeResearchMetrics(input: ResearchSubmindInput): SubmindMetr
   }
 
   return {
-    agentRole: "research",
+    submindRole: "research",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

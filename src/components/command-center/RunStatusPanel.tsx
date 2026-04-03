@@ -214,14 +214,14 @@ export default function RunStatusPanel({ data }: Props) {
           </Section>
         )}
 
-        {/* ── Agent Execution Summary ── */}
-        {!isIdle && agents.totalAgents > 0 && (
-          <Section title="Agent Progress" icon={<Bot className="w-3 h-3 text-primary" />}>
+        {/* ── Submind Execution Summary ── */}
+        {!isIdle && agents.totalSubminds > 0 && (
+          <Section title="Submind Progress" icon={<Bot className="w-3 h-3 text-primary" />}>
             <div className="grid grid-cols-4 gap-2">
-              <Stat label="Total" value={agents.totalAgents} />
-              <Stat label="Done" value={agents.completedAgents} />
-              <Stat label="Skipped" value={agents.skippedAgents} />
-              <Stat label="Errors" value={agents.errorAgents} alert={agents.errorAgents > 0} />
+              <Stat label="Total" value={agents.totalSubminds} />
+              <Stat label="Done" value={agents.completedSubminds} />
+              <Stat label="Skipped" value={agents.skippedSubminds} />
+              <Stat label="Errors" value={agents.errorSubminds} alert={agents.errorSubminds > 0} />
             </div>
             {agents.steps.length > 0 && (
               <div className="space-y-1 pt-1">
@@ -229,7 +229,7 @@ export default function RunStatusPanel({ data }: Props) {
                   <div key={i} className="flex items-center justify-between py-0.5">
                     <span className="flex items-center gap-1.5 text-xs text-foreground">
                       {AGENT_STATUS_ICON[step.status]}
-                      {step.agent}
+                      {step.submind}
                     </span>
                     <span className="text-[10px] text-muted-foreground font-mono">
                       {step.durationMs != null ? `${step.durationMs}ms` : step.status}

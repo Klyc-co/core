@@ -75,7 +75,7 @@ export function computeSocialMetrics(input: SocialSubmindInput): SubmindMetricsO
   });
 
   return {
-    agentRole: "social",
+    submindRole: "social",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),
