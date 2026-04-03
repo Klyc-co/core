@@ -89,7 +89,9 @@ import LearningHub from "./pages/LearningHub";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
 import KlycAdminLogin from "./pages/KlycAdminLogin";
 import KlycAdminDashboard from "./pages/KlycAdminDashboard";
+import KlycAdminOverview from "./pages/KlycAdminOverview";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
+import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
 
 const queryClient = new QueryClient();
@@ -128,8 +130,9 @@ const App = () => (
             
             {/* Klyc Admin */}
             <Route path="/klyc_admin" element={<KlycAdminLogin />} />
-            <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
-            <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
+            <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminDashboard /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/overview" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
             {/* Client Portal routes */}

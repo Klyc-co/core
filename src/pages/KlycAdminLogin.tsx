@@ -36,7 +36,7 @@ export default function KlycAdminLogin() {
       }
 
       toast.success("Welcome to Klyc Admin");
-      navigate("/klyc_admin/dashboard");
+      navigate("/klyc_admin/overview");
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     } finally {
