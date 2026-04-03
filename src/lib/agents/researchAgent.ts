@@ -8,8 +8,8 @@ import type {
 /**
  * Research Agent — evaluates trend relevance and competitor intelligence coverage.
  */
-export function computeResearchMetrics(input: ResearchAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeResearchMetrics(input: ResearchSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Topic Trend Score ──
