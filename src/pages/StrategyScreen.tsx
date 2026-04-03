@@ -167,6 +167,17 @@ export default function StrategyScreen() {
   const pipeline = useKlycPipeline();
   const navigate = useNavigate();
   const [savingDraft, setSavingDraft] = useState(false);
+
+  // Campaign step tracking
+  const campaignStep: CampaignStep = pipeline.summary && !pipeline.isRunning
+    ? "review"
+    : Object.keys(pipeline.stages).length > 0
+      ? "draft"
+      : "brief";
+  const completedSteps: CampaignStep[] = [];
+  if (campaignStep !== "brief") completedSteps.push("brief");
+  if (campaignStep === "review") completedSteps.push("draft");
+
   const [form, setForm] = useState({
     campaignName: "",
     productInfo: "",
