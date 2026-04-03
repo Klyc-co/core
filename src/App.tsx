@@ -84,7 +84,9 @@ import OrchestratorGraph from "./pages/OrchestratorGraph";
 import Onboarding from "./pages/Onboarding";
 import SmartPromptDemo from "./pages/SmartPromptDemo";
 import KlycChatPage from "./pages/KlycChatPage";
-import StrategyScreen from "./pages/StrategyScreen";
+import StrategyDashboard from "./pages/StrategyDashboard";
+import LearningHub from "./pages/LearningHub";
+import CreativeStudioPage from "./pages/CreativeStudioPage";
 
 
 const queryClient = new QueryClient();
