@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Overview", path: "/klyc_admin/overview", icon: LayoutDashboard },
   { label: "Clients", path: "/klyc_admin/clients", icon: Users },
   { label: "Revenue", path: "/klyc_admin/revenue", icon: CreditCard },
+  { label: "Infrastructure", path: "/klyc_admin/infrastructure", icon: Activity },
   { label: "Employees", path: "/klyc_admin/employees", icon: Users },
   { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
   { label: "Submind Health", path: "/klyc_admin/health", icon: Brain },
