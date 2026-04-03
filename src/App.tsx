@@ -102,6 +102,7 @@ import KlycAdminCollaborationDetail from "./pages/KlycAdminCollaborationDetail";
 import KlycAdminDispatch from "./pages/KlycAdminDispatch";
 import KlycAdminVoting from "./pages/KlycAdminVoting";
 import KlycAdminRoadmap from "./pages/KlycAdminRoadmap";
+import KlycAdminMarketing from "./pages/KlycAdminMarketing";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
