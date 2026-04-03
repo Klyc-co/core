@@ -152,7 +152,8 @@ const BottomChatPanel = () => {
     if (Array.isArray(orchestratorResponse?.next_questions)) {
       nextQuestions = orchestratorResponse.next_questions.map((q: any, i: number) => {
         if (typeof q === "string") {
-          return { field: `suggestion_${i}`, question: q, type: "text" as const };
+          // Legacy string format — treat first 3 as buttons, last as fill-in
+          return { field: `suggestion_${i}`, question: q, type: "button" as const };
         }
         return q;
       });
