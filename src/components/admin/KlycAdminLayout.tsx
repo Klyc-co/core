@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
   { label: "Dispatch Log", path: "/klyc_admin/dispatch", icon: Zap },
   { label: "Collaboration", path: "/klyc_admin/collaboration", icon: MessageCircle },
+  { label: "Client Voting", path: "/klyc_admin/voting", icon: ThumbsUp },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];
