@@ -59,7 +59,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <Network className="w-4 h-4 text-primary" />
-            Orchestration Decisions
+            Klyc Decisions
           </CardTitle>
         </CardHeader>
         <CardContent>
