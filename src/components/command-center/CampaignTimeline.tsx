@@ -33,7 +33,7 @@ const STAGE_ICONS: Record<string, React.ReactNode> = {
   Analytics: <BarChart3 className="w-4 h-4" />,
 };
 
-const STATUS_CONFIG: Record<AgentStep["status"], { icon: React.ReactNode; label: string; badgeClass: string; rowClass: string }> = {
+const STATUS_CONFIG: Record<SubmindStep["status"], { icon: React.ReactNode; label: string; badgeClass: string; rowClass: string }> = {
   complete: {
     icon: <CheckCircle2 className="w-4 h-4 text-primary" />,
     label: "Complete",
