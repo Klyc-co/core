@@ -167,7 +167,7 @@ const ContextSection = ({ data }: { data?: CustomerContext }) => {
 };
 
 const HintsSection = ({ data }: { data?: OrchestratorHints }) => {
-  if (!data) return <Section title="Orchestrator Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}><EmptySection message="Orchestrator hints not available from this workflow run" /></Section>;
+  if (!data) return <Section title="Klyc Hints" icon={<Cpu className="w-3.5 h-3.5 text-primary" />}><EmptySection message="Klyc hints not available from this workflow run" /></Section>;
 
   const complexityColor = data.estimatedCampaignComplexity === "high"
     ? "border-destructive/30 text-destructive bg-destructive/5"
