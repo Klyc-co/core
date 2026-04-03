@@ -9,6 +9,8 @@ import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSu
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import PendingApprovalsList from "@/components/dashboard/PendingApprovalsList";
 import WeeklyContentCalendar from "@/components/dashboard/WeeklyContentCalendar";
+import { Card, CardContent } from "@/components/ui/card";
+import { MessageSquare, BarChart3, ShieldCheck, Lightbulb } from "lucide-react";
 
 const Home = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -19,25 +21,15 @@ const Home = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
-        if (!session) {
-          navigate("/auth");
-        }
+        if (!session) navigate("/auth");
       }
     );
-
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-      }
+      if (!session) navigate("/auth");
+      else setUser(session.user);
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
-
-  const handleFullAnalyticsClick = () => navigate("/analytics");
-  const handleConnectGA = () => navigate("/profile/company");
 
   const handleClientAdded = () => {
     window.dispatchEvent(new StorageEvent("storage", {
@@ -46,11 +38,34 @@ const Home = () => {
     }));
   };
 
+  const quickActions = [
+    { label: "Start a Campaign", icon: MessageSquare, path: "/klyc-chat", color: "text-primary" },
+    { label: "View Analytics", icon: BarChart3, path: "/analytics", color: "text-accent" },
+    { label: "Pending Approvals", icon: ShieldCheck, path: "/campaigns?filter=pending_approval", color: "text-warning" },
+    { label: "Learning Insights", icon: Lightbulb, path: "/learning", color: "text-success" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} onAddClient={() => setAddClientOpen(true)} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {quickActions.map((action) => (
+            <Card
+              key={action.path}
+              className="cursor-pointer hover:border-primary/30 transition-colors"
+              onClick={() => navigate(action.path)}
+            >
+              <CardContent className="flex items-center gap-3 p-4">
+                <action.icon className={`w-5 h-5 ${action.color}`} />
+                <span className="text-sm font-medium text-foreground">{action.label}</span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         {/* Approvals + Calendar side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
@@ -65,14 +80,14 @@ const Home = () => {
         <LiveCampaignsFeed showFullButton limit={6} />
 
         {/* Analytics */}
-        <WebsiteAnalyticsSummary 
-          showFullButton 
-          onFullClick={handleFullAnalyticsClick}
-          onConnectClick={handleConnectGA}
+        <WebsiteAnalyticsSummary
+          showFullButton
+          onFullClick={() => navigate("/analytics")}
+          onConnectClick={() => navigate("/profile/company")}
         />
-        <SocialMediaAnalyticsSummary 
-          showFullButton 
-          onFullClick={handleFullAnalyticsClick}
+        <SocialMediaAnalyticsSummary
+          showFullButton
+          onFullClick={() => navigate("/analytics")}
         />
       </main>
 

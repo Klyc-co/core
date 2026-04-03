@@ -26,6 +26,7 @@ import {
   Shield,
   FileText,
   Zap,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,12 +59,11 @@ interface Client {
 
 const mainNav = [
   { label: "Klyc", path: "/klyc-chat", icon: MessageSquare },
-  { label: "Home", path: "/home", icon: Briefcase },
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
-  { label: "Creative", path: "/creative", icon: Palette },
-  { label: "Library", path: "/profile/library", icon: BookOpen },
-  { label: "Strategy", path: "/brand-strategy", icon: Lightbulb },
-  { label: "Pipeline", path: "/strategy", icon: Zap },
+  { label: "Strategy", path: "/strategy", icon: Zap },
+  { label: "Analytics", path: "/analytics", icon: BarChart3 },
+  { label: "Creative Studio", path: "/creative-studio", icon: Palette },
+  { label: "Learning Hub", path: "/learning", icon: Lightbulb },
 ];
 
 const LeftNavSidebar = () => {
