@@ -33,7 +33,7 @@ export interface Content {
   platform: Platform
   text?: string
   mediaUrl?: string
-  sourceAgent: AgentType
+  sourceSubmind: SubmindType
   confidenceScore: number
   viralPatternMatch: number
   predictedEngagement: number
