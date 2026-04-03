@@ -137,6 +137,7 @@ const App = () => (
             <Route path="/klyc_admin/overview" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/clients" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminClients /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/clients/:id" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminClientDetail /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/revenue" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminRevenue /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
