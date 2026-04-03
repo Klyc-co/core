@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: "Compression", path: "/klyc_admin/compression", icon: Layers },
   { label: "Subminds", path: "/klyc_admin/subminds", icon: Brain },
   { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
+  { label: "Dispatch Log", path: "/klyc_admin/dispatch", icon: Zap },
   { label: "Collaboration", path: "/klyc_admin/collaboration", icon: MessageCircle },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
