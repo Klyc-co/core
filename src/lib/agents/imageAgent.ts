@@ -8,8 +8,8 @@ import type {
 /**
  * Image Agent — evaluates visual quality signals for social content.
  */
-export function computeImageMetrics(input: ImageAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeImageMetrics(input: ImageSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Visual Clarity Score ──
