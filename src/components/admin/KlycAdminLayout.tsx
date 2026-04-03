@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Overview", path: "/klyc_admin/overview", icon: LayoutDashboard },
+  { label: "Clients", path: "/klyc_admin/clients", icon: Users },
   { label: "Billing", path: "/klyc_admin/billing", icon: CreditCard },
   { label: "Employees", path: "/klyc_admin/employees", icon: Users },
   { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
