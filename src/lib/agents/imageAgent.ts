@@ -135,7 +135,7 @@ function evaluateColorContrast(colors: string[]): number {
   return Math.min(1, 0.3 + (unique.size - 1) * 0.15);
 }
 
-function checkPlatformSizeCompliance(input: ImageAgentInput): number {
+function checkPlatformSizeCompliance(input: ImageSubmindInput): number {
   if (!input.resolution) return 0;
 
   const specs: Record<string, { width: number; height: number }[]> = {
