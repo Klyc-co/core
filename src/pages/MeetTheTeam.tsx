@@ -12,7 +12,7 @@ import lyraImg from "@/assets/team/lyra.png";
 const specialists = [
   {
     name: "Atlas",
-    title: "Research & Insights Agent",
+    title: "Research & Insights Submind",
     description:
       "Atlas uncovers the truth layer behind every campaign. He identifies audience behavior, trend momentum, competitor signals, and insight opportunities so the rest of the system starts from real data, not guesses.",
     items: ["Audience research", "Trend discovery", "Competitor analysis", "Insight packs"],
