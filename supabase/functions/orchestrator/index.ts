@@ -405,7 +405,7 @@ async function dispatchSubmind(
     return runProductInline(knpPayload);
   }
 
-  // v1.1 stubs
+  // v1.1 stub: Viral only (analytics + learning-engine are now live edge functions)
   if (submindName === "viral") {
     return {
       success: true,
@@ -413,27 +413,10 @@ async function dispatchSubmind(
       data: {
         version: KNP_VERSION, submind: "viral", status: "stub",
         viral_score: 0.65,
-        note: "Viral scoring coming in v1.1. Placeholder VS: 0.65",
-      },
-    };
-  }
-  if (submindName === "analytics") {
-    return {
-      success: true,
-      durationMs: Date.now() - start,
-      data: {
-        version: KNP_VERSION, submind: "analytics", status: "stub",
-        note: "Analytics engine coming in v1.1. Data hooks are being logged.",
-      },
-    };
-  }
-  if (submindName === "learning-engine") {
-    return {
-      success: true,
-      durationMs: Date.now() - start,
-      data: {
-        version: KNP_VERSION, submind: "learning-engine", status: "stub",
-        note: "Learning engine coming in v1.1. Signals are being captured.",
+        components: { engagement: 0.7, velocity: 0.6, novelty: 0.7, dwell: 0.6, community_spread: 0.5, emotional_energy: 0.7 },
+        recommendation: "MONITOR",
+        note: "Viral scoring is in preview. Full VS formula (0.25·E + 0.25·V + 0.20·N + 0.15·D + 0.10·CS + 0.05·EE) available in v1.1.",
+        stub: true,
       },
     };
   }
