@@ -105,7 +105,7 @@ function evaluateClarity(input: ImageSubmindInput): number {
   return Math.min(1, score);
 }
 
-function evaluateThumbnailAttention(input: ImageAgentInput): number {
+function evaluateThumbnailAttention(input: ImageSubmindInput): number {
   let score = 0.3;
 
   // Text on thumbnail helps attention
