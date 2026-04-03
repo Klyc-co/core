@@ -44,6 +44,68 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          admin_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_users: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          last_login: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          last_login?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          last_login?: string | null
+        }
+        Relationships: []
+      }
       ai_requests: {
         Row: {
           campaign_id: string | null
@@ -282,6 +344,42 @@ export type Database = {
           user_id?: string
           what_was_originally_asked?: string | null
           what_was_proposed?: string | null
+        }
+        Relationships: []
+      }
+      billing_subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          client_id: string
+          id: string
+          monthly_price: number
+          started_at: string
+          status: Database["public"]["Enums"]["billing_status"]
+          tier: Database["public"]["Enums"]["billing_tier"]
+          trial_end: string | null
+          trial_start: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          client_id: string
+          id?: string
+          monthly_price?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["billing_status"]
+          tier?: Database["public"]["Enums"]["billing_tier"]
+          trial_end?: string | null
+          trial_start?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          client_id?: string
+          id?: string
+          monthly_price?: number
+          started_at?: string
+          status?: Database["public"]["Enums"]["billing_status"]
+          tier?: Database["public"]["Enums"]["billing_tier"]
+          trial_end?: string | null
+          trial_start?: string | null
         }
         Relationships: []
       }
@@ -1899,6 +1997,77 @@ export type Database = {
         }
         Relationships: []
       }
+      klyc_channels: {
+        Row: {
+          account_name: string | null
+          config: Json | null
+          created_at: string
+          credentials_ref: string | null
+          id: string
+          platform: string
+          status: Database["public"]["Enums"]["channel_status"]
+          updated_at: string
+        }
+        Insert: {
+          account_name?: string | null
+          config?: Json | null
+          created_at?: string
+          credentials_ref?: string | null
+          id?: string
+          platform: string
+          status?: Database["public"]["Enums"]["channel_status"]
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string | null
+          config?: Json | null
+          created_at?: string
+          credentials_ref?: string | null
+          id?: string
+          platform?: string
+          status?: Database["public"]["Enums"]["channel_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      klyc_employees: {
+        Row: {
+          admin_user_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_user_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_user_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "klyc_employees_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_graph: {
         Row: {
           actual_score: number | null
@@ -2312,6 +2481,57 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verbosity?: string
+        }
+        Relationships: []
+      }
+      platform_metrics_daily: {
+        Row: {
+          api_cost_actual: number | null
+          api_cost_without_compression: number | null
+          avg_compression_ratio: number | null
+          clients_by_tier: Json | null
+          created_at: string
+          date: string
+          dictionary_hit_rate: number | null
+          dictionary_size: number | null
+          id: string
+          mrr: number | null
+          total_campaigns: number | null
+          total_clients: number | null
+          total_tokens_saved: number | null
+          total_tokens_used: number | null
+        }
+        Insert: {
+          api_cost_actual?: number | null
+          api_cost_without_compression?: number | null
+          avg_compression_ratio?: number | null
+          clients_by_tier?: Json | null
+          created_at?: string
+          date: string
+          dictionary_hit_rate?: number | null
+          dictionary_size?: number | null
+          id?: string
+          mrr?: number | null
+          total_campaigns?: number | null
+          total_clients?: number | null
+          total_tokens_saved?: number | null
+          total_tokens_used?: number | null
+        }
+        Update: {
+          api_cost_actual?: number | null
+          api_cost_without_compression?: number | null
+          avg_compression_ratio?: number | null
+          clients_by_tier?: Json | null
+          created_at?: string
+          date?: string
+          dictionary_hit_rate?: number | null
+          dictionary_size?: number | null
+          id?: string
+          mrr?: number | null
+          total_campaigns?: number | null
+          total_clients?: number | null
+          total_tokens_saved?: number | null
+          total_tokens_used?: number | null
         }
         Relationships: []
       }
@@ -3195,6 +3415,51 @@ export type Database = {
         }
         Relationships: []
       }
+      submind_health_snapshots: {
+        Row: {
+          approval_rate: number | null
+          avg_latency_ms: number | null
+          avg_tokens_in: number | null
+          avg_tokens_out: number | null
+          created_at: string
+          error_count: number | null
+          id: string
+          invocation_count: number | null
+          submind_id: string
+          success_count: number | null
+          window_end: string | null
+          window_start: string | null
+        }
+        Insert: {
+          approval_rate?: number | null
+          avg_latency_ms?: number | null
+          avg_tokens_in?: number | null
+          avg_tokens_out?: number | null
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          invocation_count?: number | null
+          submind_id: string
+          success_count?: number | null
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          approval_rate?: number | null
+          avg_latency_ms?: number | null
+          avg_tokens_in?: number | null
+          avg_tokens_out?: number | null
+          created_at?: string
+          error_count?: number | null
+          id?: string
+          invocation_count?: number | null
+          submind_id?: string
+          success_count?: number | null
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       trello_connections: {
         Row: {
           api_key: string
@@ -3443,9 +3708,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      billing_status:
+        | "trial"
+        | "active"
+        | "past_due"
+        | "cancelled"
+        | "suspended"
+      billing_tier: "starter" | "growth" | "pro" | "enterprise"
+      channel_status: "connected" | "disconnected" | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3574,6 +3848,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      billing_status: ["trial", "active", "past_due", "cancelled", "suspended"],
+      billing_tier: ["starter", "growth", "pro", "enterprise"],
+      channel_status: ["connected", "disconnected", "error"],
     },
   },
 } as const

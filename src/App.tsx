@@ -87,6 +87,9 @@ import KlycChatPage from "./pages/KlycChatPage";
 import StrategyDashboard from "./pages/StrategyDashboard";
 import LearningHub from "./pages/LearningHub";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
+import KlycAdminLogin from "./pages/KlycAdminLogin";
+import KlycAdminDashboard from "./pages/KlycAdminDashboard";
+import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 
 
 const queryClient = new QueryClient();
@@ -122,6 +125,11 @@ const App = () => (
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
             <Route path="/waitlist" element={<Waitlist />} />
+            
+            {/* Klyc Admin */}
+            <Route path="/klyc_admin" element={<KlycAdminLogin />} />
+            <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
+            <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminDashboard /></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
             {/* Client Portal routes */}
