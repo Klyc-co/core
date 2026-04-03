@@ -25,6 +25,7 @@ import {
   X,
   Shield,
   FileText,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
