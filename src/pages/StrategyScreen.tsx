@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import CampaignStepper, { type CampaignStep } from "@/components/campaign/CampaignStepper";
 
 // ── Constants ──
 
