@@ -90,6 +90,8 @@ import CreativeStudioPage from "./pages/CreativeStudioPage";
 import KlycAdminLogin from "./pages/KlycAdminLogin";
 import KlycAdminDashboard from "./pages/KlycAdminDashboard";
 import KlycAdminOverview from "./pages/KlycAdminOverview";
+import KlycAdminClients from "./pages/KlycAdminClients";
+import KlycAdminClientDetail from "./pages/KlycAdminClientDetail";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
@@ -132,6 +134,8 @@ const App = () => (
             <Route path="/klyc_admin" element={<KlycAdminLogin />} />
             <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminDashboard /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/overview" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/clients" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminClients /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/clients/:id" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminClientDetail /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
