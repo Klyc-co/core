@@ -148,6 +148,8 @@ const App = () => (
             <Route path="/klyc_admin/compression" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCompression /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/subminds" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminSubminds /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/klyc-internal" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminInternal /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/collaboration" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCollaboration /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/collaboration/:id" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCollaborationDetail /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
