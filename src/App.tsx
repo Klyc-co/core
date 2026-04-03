@@ -87,6 +87,9 @@ import KlycChatPage from "./pages/KlycChatPage";
 import StrategyDashboard from "./pages/StrategyDashboard";
 import LearningHub from "./pages/LearningHub";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
+import KlycAdminLogin from "./pages/KlycAdminLogin";
+import KlycAdminDashboard from "./pages/KlycAdminDashboard";
+import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 
 
 const queryClient = new QueryClient();
