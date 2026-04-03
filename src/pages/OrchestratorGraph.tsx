@@ -81,14 +81,14 @@ export default function OrchestratorGraph() {
               <thead>
                 <tr>
                   <th className="p-2 text-left">From ↓ / To →</th>
-                  {AGENTS.map(a => <th key={a.id} className="p-2 text-center">{a.label.split(" ")[0]}</th>)}
+                  {SUBMINDS.map(a => <th key={a.id} className="p-2 text-center">{a.label.split(" ")[0]}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {AGENTS.map(from => (
+                {SUBMINDS.map(from => (
                   <tr key={from.id} className="border-t border-border">
                     <td className="p-2 font-medium">{from.label}</td>
-                    {AGENTS.map(to => (
+                    {SUBMINDS.map(to => (
                       <td key={to.id} className="p-2 text-center">
                         {from.connections.includes(to.id) ? (
                           <span className="inline-block w-3 h-3 rounded-full bg-primary" />
