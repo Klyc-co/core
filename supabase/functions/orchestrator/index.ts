@@ -1221,20 +1221,9 @@ function assembleResponse(
     return "I processed your request but didn't get results from any subminds. Let me try a different approach — could you tell me more?";
   }
 
-  // Add guided mode suggestion if applicable
-  if (mode === "guided" && intent === "campaign_creation") {
-    sections.push(
-      "\n---\n" +
-      buildGuidedQuestion(
-        "Based on this analysis, I'd suggest one of these directions:",
-        [
-          "Instagram Reels with a humor hook targeting your core audience",
-          "LinkedIn carousel with data-driven storytelling for B2B reach",
-          "Multi-platform blitz — simultaneous launch across all channels",
-        ]
-      )
-    );
-  }
+  // NOTE: Guided mode suggestions are now sent as structured next_questions
+  // in the response JSON, NOT as text in the reply body.
+  // The frontend renders them as clickable buttons + fill-in input.
 
   if (mode === "solo") {
     sections.push("\n📋 *Full decision chain available in your solo mode logs.*");
