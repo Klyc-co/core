@@ -1,9 +1,8 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  EditorAgentInput,
-  PLATFORM_LIMITS,
+  EditorSubmindInput,
 } from "./types";
 import { PLATFORM_LIMITS as LIMITS } from "./types";
 
