@@ -90,6 +90,8 @@ import CreativeStudioPage from "./pages/CreativeStudioPage";
 import KlycAdminLogin from "./pages/KlycAdminLogin";
 import KlycAdminDashboard from "./pages/KlycAdminDashboard";
 import KlycAdminOverview from "./pages/KlycAdminOverview";
+import KlycAdminClients from "./pages/KlycAdminClients";
+import KlycAdminClientDetail from "./pages/KlycAdminClientDetail";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
