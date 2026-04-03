@@ -78,7 +78,7 @@ export default function OrchestrationVisibilityPanel({ data, isRunning, isIdle }
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-base font-semibold">
             <Network className="w-4 h-4 text-primary" />
-            Orchestration Decisions
+            Klyc Decisions
           </span>
           <div className="flex items-center gap-1.5">
             <Badge variant="outline" className={`text-[10px] h-5 gap-1 capitalize ${
