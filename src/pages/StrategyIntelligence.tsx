@@ -93,10 +93,15 @@ const StrategyIntelligence = () => {
       toast.error("Select a client before running simulation");
       return;
     }
-    const result = await execute(payload);
-    if (result) {
-      setEnvelope(result.envelope);
-      setActiveRunId(result.runId);
+    try {
+      const result = await execute(payload);
+      if (result) {
+        setEnvelope(result.envelope);
+        setActiveRunId(result.runId);
+        toast.success("Simulation complete");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Simulation failed — please try again");
     }
   };
 
