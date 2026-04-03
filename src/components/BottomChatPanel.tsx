@@ -23,8 +23,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface NextQuestion {
   field: string;
   question: string;
-  type: "text" | "select" | "date" | "bool";
+  type: "text" | "select" | "date" | "bool" | "button" | "fill_in";
   options?: string[];
+  nav_target?: string;
 }
 
 interface StructuredResponse {
@@ -151,7 +152,8 @@ const BottomChatPanel = () => {
     if (Array.isArray(orchestratorResponse?.next_questions)) {
       nextQuestions = orchestratorResponse.next_questions.map((q: any, i: number) => {
         if (typeof q === "string") {
-          return { field: `suggestion_${i}`, question: q, type: "text" as const };
+          // Legacy string format — treat first 3 as buttons, last as fill-in
+          return { field: `suggestion_${i}`, question: q, type: "button" as const };
         }
         return q;
       });
@@ -306,43 +308,115 @@ const BottomChatPanel = () => {
     }
   };
 
+  const handleSmartPromptClick = (question: NextQuestion) => {
+    // Send the selection as a user message
+    handleSend(question.question);
+    // Navigate if there's a target
+    if (question.nav_target) {
+      setTimeout(() => {
+        navigate(question.nav_target!, { state: { highlightMissing: true } });
+      }, 600);
+    }
+  };
+
+  const [fillInValue, setFillInValue] = useState("");
+
   const renderNextQuestions = (questions: NextQuestion[]) => {
     if (!questions.length) return null;
 
+    const buttonQuestions = questions.filter(q => q.type === "button");
+    const fillInQuestion = questions.find(q => q.type === "fill_in");
+    const legacyQuestions = questions.filter(q => q.type !== "button" && q.type !== "fill_in");
+
     return (
-      <div className="mt-3 space-y-3 border-t border-border pt-3">
-        {questions.map((q) => (
-          <div key={q.field} className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">{q.question}</label>
-            {q.type === "select" && q.options ? (
-              <Select
-                value={questionAnswers[q.field] || ""}
-                onValueChange={(v) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: v }))}
+      <div className="mt-3 space-y-2 border-t border-border pt-3">
+        {/* Smart Prompt: Clickable teal buttons for concrete suggestions */}
+        {buttonQuestions.length > 0 && (
+          <div className="space-y-1.5">
+            {buttonQuestions.map((q, i) => (
+              <Button
+                key={q.field}
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-left h-auto py-2 px-3 text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                onClick={() => handleSmartPromptClick(q)}
+                disabled={isLoading}
               >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {q.options.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : q.type === "bool" ? (
-              <div className="flex gap-2">
-                <Button size="sm" variant={questionAnswers[q.field] === "yes" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "yes" }))}>Yes</Button>
-                <Button size="sm" variant={questionAnswers[q.field] === "no" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "no" }))}>No</Button>
-              </div>
-            ) : q.type === "date" ? (
-              <Input type="date" className="h-8 text-xs" value={questionAnswers[q.field] || ""} onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))} />
-            ) : (
-              <Input className="h-8 text-xs" placeholder="Type your answer..." value={questionAnswers[q.field] || ""} onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))} />
-            )}
+                <span className="font-semibold mr-1.5">({i + 1})</span>
+                {q.question}
+              </Button>
+            ))}
           </div>
-        ))}
-        <Button size="sm" className="w-full h-7 text-xs" onClick={() => handleQuestionSubmit(questions)} disabled={isLoading}>
-          Submit Answers
-        </Button>
+        )}
+
+        {/* Fill-in option */}
+        {fillInQuestion && (
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">({buttonQuestions.length + 1})</span>
+            <Input
+              className="h-8 text-xs flex-1"
+              placeholder="Something else..."
+              value={fillInValue}
+              onChange={(e) => setFillInValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && fillInValue.trim()) {
+                  handleSend(fillInValue.trim());
+                  setFillInValue("");
+                }
+              }}
+              disabled={isLoading}
+            />
+            <Button
+              size="sm"
+              className="h-8 text-xs"
+              disabled={!fillInValue.trim() || isLoading}
+              onClick={() => {
+                handleSend(fillInValue.trim());
+                setFillInValue("");
+              }}
+            >
+              <Send className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
+        {/* Legacy form-based questions (select, date, bool, text without button/fill_in type) */}
+        {legacyQuestions.length > 0 && (
+          <div className="space-y-3">
+            {legacyQuestions.map((q) => (
+              <div key={q.field} className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">{q.question}</label>
+                {q.type === "select" && q.options ? (
+                  <Select
+                    value={questionAnswers[q.field] || ""}
+                    onValueChange={(v) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: v }))}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {q.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : q.type === "bool" ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant={questionAnswers[q.field] === "yes" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "yes" }))}>Yes</Button>
+                    <Button size="sm" variant={questionAnswers[q.field] === "no" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setQuestionAnswers((prev) => ({ ...prev, [q.field]: "no" }))}>No</Button>
+                  </div>
+                ) : q.type === "date" ? (
+                  <Input type="date" className="h-8 text-xs" value={questionAnswers[q.field] || ""} onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))} />
+                ) : (
+                  <Input className="h-8 text-xs" placeholder="Type your answer..." value={questionAnswers[q.field] || ""} onChange={(e) => setQuestionAnswers((prev) => ({ ...prev, [q.field]: e.target.value }))} />
+                )}
+              </div>
+            ))}
+            <Button size="sm" className="w-full h-7 text-xs" onClick={() => handleQuestionSubmit(legacyQuestions)} disabled={isLoading}>
+              Submit Answers
+            </Button>
+          </div>
+        )}
       </div>
     );
   };
