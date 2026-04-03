@@ -168,6 +168,8 @@ const ApprovalGateDisplay = ({
 }) => {
   const [revisionNotes, setRevisionNotes] = useState("");
   const [showNotes, setShowNotes] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState("");
 
   const GATES: { key: keyof Pick<ApprovalGateData, "factual" | "brand" | "audience" | "quality">; label: string; threshold: number }[] = [
     { key: "factual", label: "Factual Accuracy", threshold: 0.8 },
@@ -244,7 +246,7 @@ const ApprovalGateDisplay = ({
               size="sm"
               variant="destructive"
               className="h-8 text-xs"
-              onClick={() => onDecision("rejected")}
+              onClick={() => setShowRejectConfirm(true)}
             >
               Reject
             </Button>
@@ -265,6 +267,36 @@ const ApprovalGateDisplay = ({
               >
                 Submit Revision Notes
               </Button>
+            </div>
+          )}
+          {showRejectConfirm && (
+            <div className="space-y-2 animate-fade-in border border-destructive/30 rounded-lg p-3 bg-destructive/5">
+              <p className="text-xs font-medium text-destructive">Are you sure you want to reject?</p>
+              <Textarea
+                value={rejectNotes}
+                onChange={(e) => setRejectNotes(e.target.value)}
+                placeholder="Add notes for the team (required)"
+                className="text-xs min-h-[60px]"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-xs"
+                  disabled={!rejectNotes.trim()}
+                  onClick={() => onDecision("rejected", rejectNotes)}
+                >
+                  Confirm Rejection
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => { setShowRejectConfirm(false); setRejectNotes(""); }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </div>

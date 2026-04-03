@@ -17,12 +17,12 @@ import { useNavigate } from "react-router-dom";
 import { useCurrentClient } from "@/hooks/use-current-client";
 import { useRunCampaign } from "@/hooks/use-run-campaign";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import type { WorkflowPayload } from "@/types/workflow-payload";
 import { isPayloadReady } from "@/types/workflow-payload";
 import { idleEnvelope, type WorkflowReportEnvelope } from "@/types/run-status";
 import RunHistorySelector, { type RunHistoryEntry } from "@/components/command-center/RunHistorySelector";
-import { toast } from "sonner";
 
 const StrategyIntelligence = () => {
   const navigate = useNavigate();
@@ -92,10 +92,15 @@ const StrategyIntelligence = () => {
       toast.error("Select a client before running simulation");
       return;
     }
-    const result = await execute(payload);
-    if (result) {
-      setEnvelope(result.envelope);
-      setActiveRunId(result.runId);
+    try {
+      const result = await execute(payload);
+      if (result) {
+        setEnvelope(result.envelope);
+        setActiveRunId(result.runId);
+        toast.success("Simulation complete");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Simulation failed — please try again");
     }
   };
 
