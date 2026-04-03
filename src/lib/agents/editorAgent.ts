@@ -9,8 +9,8 @@ import { PLATFORM_LIMITS as LIMITS } from "./types";
 /**
  * Editor / Publisher Agent — validates platform formatting and compliance.
  */
-export function computeEditorMetrics(input: EditorAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeEditorMetrics(input: EditorSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
   const limits = LIMITS[input.platform] || LIMITS.instagram;
 
