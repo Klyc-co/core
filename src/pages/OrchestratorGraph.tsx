@@ -46,23 +46,23 @@ export default function OrchestratorGraph() {
         </CardContent>
       </Card>
 
-      {/* Agent detail cards */}
+      {/* Submind detail cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {AGENTS.map(agent => (
-          <Card key={agent.id} className={`border ${agent.color}`}>
+        {SUBMINDS.map(submind => (
+          <Card key={submind.id} className={`border ${submind.color}`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <agent.icon className="h-5 w-5" />
-                {agent.label}
+                <submind.icon className="h-5 w-5" />
+                {submind.label}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">{agent.description}</p>
-              {agent.connections.length > 0 && (
+              <p className="text-sm text-muted-foreground mb-3">{submind.description}</p>
+              {submind.connections.length > 0 && (
                 <div className="flex gap-1 flex-wrap">
                   <span className="text-xs text-muted-foreground">Outputs to:</span>
-                  {agent.connections.map(c => {
-                    const target = AGENTS.find(a => a.id === c);
+                  {submind.connections.map(c => {
+                    const target = SUBMINDS.find(a => a.id === c);
                     return <Badge key={c} variant="outline" className="text-xs">{target?.label}</Badge>;
                   })}
                 </div>
