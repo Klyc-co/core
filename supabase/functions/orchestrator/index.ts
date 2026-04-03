@@ -268,7 +268,7 @@ function getIntentPhases(intent: DetectedIntent): PhaseSpec[] {
 
 // ── Submind Dispatch ──
 
-const STUB_SUBMINDS = new Set<SubmindName>(["viral", "analytics", "learning-engine"]);
+const STUB_SUBMINDS = new Set<SubmindName>(["viral"]);
 const INLINE_SUBMINDS = new Set<SubmindName>(["product"]);
 
 // ── Product Submind (inline module — lightweight, Haiku-class) ──
