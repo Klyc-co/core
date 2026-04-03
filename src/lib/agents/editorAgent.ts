@@ -1,17 +1,16 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  EditorAgentInput,
-  PLATFORM_LIMITS,
+  EditorSubmindInput,
 } from "./types";
 import { PLATFORM_LIMITS as LIMITS } from "./types";
 
 /**
  * Editor / Publisher Agent — validates platform formatting and compliance.
  */
-export function computeEditorMetrics(input: EditorAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeEditorMetrics(input: EditorSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
   const limits = LIMITS[input.platform] || LIMITS.instagram;
 
@@ -95,7 +94,7 @@ export function computeEditorMetrics(input: EditorAgentInput): AgentMetricsOutpu
   });
 
   return {
-    agentRole: "editor",
+    submindRole: "editor",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

@@ -1,15 +1,15 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  AnalyticsAgentInput,
+  AnalyticsSubmindInput,
 } from "./types";
 
 /**
  * Analytics Agent — computes post-publish performance metrics.
  */
-export function computeAnalyticsMetrics(input: AnalyticsAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeAnalyticsMetrics(input: AnalyticsSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Engagement Rate ──
@@ -100,7 +100,7 @@ export function computeAnalyticsMetrics(input: AnalyticsAgentInput): AgentMetric
   });
 
   return {
-    agentRole: "analytics",
+    submindRole: "analytics",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

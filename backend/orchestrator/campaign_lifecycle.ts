@@ -1,10 +1,9 @@
 /**
  * KLYC Campaign Lifecycle Processor
  * Full state machine with checkpoint evaluation and learning updates.
- * Migrated from ai-controller/core/orchestrator/campaign_lifecycle.ts
  */
 
-import type { AgentOutput } from '../agents/agent_interface'
+import type { SubmindOutput } from '../subminds/submind_interface'
 import type { CampaignStatus, CheckpointWindow } from '../models/types'
 
 export interface LifecycleTransition {
@@ -19,11 +18,11 @@ export interface CampaignLifecycleResult {
   campaignId: string
   currentStatus: CampaignStatus
   transitions: LifecycleTransition[]
-  agentsSummary: {
+  submindsSummary: {
     total: number
     successful: number
     failed: number
-    agents: string[]
+    subminds: string[]
   }
 }
 
@@ -40,59 +39,54 @@ export class CampaignLifecycleProcessor {
   private transitions: LifecycleTransition[] = []
   private currentStatus: CampaignStatus = 'draft'
 
-  processResults(campaignId: string, agentResults: AgentOutput[]): CampaignLifecycleResult {
+  processResults(campaignId: string, submindResults: SubmindOutput[]): CampaignLifecycleResult {
     this.transitions = []
     this.currentStatus = 'draft'
 
-    // Walk through the lifecycle based on agent results
     this.transition('normalized', 'orchestrator', 'Input normalized')
 
-    const hasResearch = agentResults.find(r => r.agent === 'research' && r.status === 'success')
+    const hasResearch = submindResults.find(r => r.submind === 'research' && r.status === 'success')
     if (hasResearch) {
-      this.transition('researched', 'research_agent', 'Market research complete')
+      this.transition('researched', 'research_submind', 'Market research complete')
     }
 
-    const hasProduct = agentResults.find(r => r.agent === 'product' && r.status === 'success')
+    const hasProduct = submindResults.find(r => r.submind === 'product' && r.status === 'success')
     if (hasProduct) {
-      this.transition('positioned', 'product_agent', 'Product positioning complete')
+      this.transition('positioned', 'product_submind', 'Product positioning complete')
     }
 
-    const hasNarrative = agentResults.find(r => r.agent === 'narrative' && r.status === 'success')
+    const hasNarrative = submindResults.find(r => r.submind === 'narrative' && r.status === 'success')
     if (hasNarrative) {
-      this.transition('simulated', 'narrative_agent', 'Narrative simulation complete')
+      this.transition('simulated', 'narrative_submind', 'Narrative simulation complete')
     }
 
-    const hasApproval = agentResults.find(r => r.agent === 'approval' && r.status === 'success')
+    const hasApproval = submindResults.find(r => r.submind === 'approval' && r.status === 'success')
     if (hasApproval) {
       const assessment = (hasApproval.data as any)?.assessment
       if (assessment?.readyForApproval) {
-        this.transition('approved', 'approval_agent', 'Auto-approved by agent assessment')
+        this.transition('approved', 'approval_submind', 'Auto-approved by submind assessment')
         this.transition('publish_ready', 'orchestrator', 'Campaign ready for publishing')
       } else {
-        this.transition('approved', 'approval_agent', 'Flagged for human review')
+        this.transition('approved', 'approval_submind', 'Flagged for human review')
       }
     }
 
-    const successful = agentResults.filter(r => r.status === 'success').length
-    const failed = agentResults.length - successful
+    const successful = submindResults.filter(r => r.status === 'success').length
+    const failed = submindResults.length - successful
 
     return {
       campaignId,
       currentStatus: this.currentStatus,
       transitions: [...this.transitions],
-      agentsSummary: {
-        total: agentResults.length,
+      submindsSummary: {
+        total: submindResults.length,
         successful,
         failed,
-        agents: agentResults.map(r => r.agent),
+        subminds: submindResults.map(r => r.submind),
       },
     }
   }
 
-  /**
-   * Checkpoint evaluation for live campaigns.
-   * Uses engagement rate + viral velocity to decide: boost, continue, pause, or archive.
-   */
   evaluateCheckpoint(
     campaignId: string,
     window: CheckpointWindow,
@@ -121,10 +115,6 @@ export class CampaignLifecycleProcessor {
     return { campaignId, window, engagementRate, viralVelocity, decision, reasoning }
   }
 
-  /**
-   * Generate learning update from campaign performance data.
-   * Identifies best-performing window and recommends scale/iterate/retire.
-   */
   writeLearningUpdate(
     campaignId: string,
     snapshots: { window: CheckpointWindow; engagementRate: number }[]

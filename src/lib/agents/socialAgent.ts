@@ -1,15 +1,15 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  SocialAgentInput,
+  SocialSubmindInput,
 } from "./types";
 
 /**
  * Social Agent — evaluates caption quality and predicts engagement.
  */
-export function computeSocialMetrics(input: SocialAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeSocialMetrics(input: SocialSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
   const caption = input.postCaption || "";
 
@@ -75,7 +75,7 @@ export function computeSocialMetrics(input: SocialAgentInput): AgentMetricsOutpu
   });
 
   return {
-    agentRole: "social",
+    submindRole: "social",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

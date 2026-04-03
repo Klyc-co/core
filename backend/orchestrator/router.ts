@@ -162,7 +162,7 @@ const buildNextReportHints = (signals: RoutingSignals): string[] => {
   if (signals.estimatedCampaignComplexity === 'high') {
     hints.push('Expect staggered handoff due to campaign complexity')
   } else if (signals.estimatedCampaignComplexity === 'medium') {
-    hints.push('Prioritize early research to unblock downstream agents')
+    hints.push('Prioritize early research to unblock downstream subminds')
   }
 
   return hints

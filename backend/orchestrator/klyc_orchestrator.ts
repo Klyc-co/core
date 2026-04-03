@@ -1,32 +1,32 @@
 /**
  * KLYC Orchestrator
- * Main orchestrator that runs all agents in sequence.
- * Migrated from ai-controller, now powered by Claude.
+ * Main orchestrator that runs all subminds in sequence.
+ * Powered by Claude.
  */
 
-import type { AgentInput, AgentOutput } from '../agents/agent_interface'
-import { researchAgent } from '../agents/research'
-import { productAgent } from '../agents/product'
-import { narrativeAgent } from '../agents/narrative'
-import { socialAgent } from '../agents/social'
-import { imageAgent } from '../agents/image'
-import { editorAgent } from '../agents/editor'
-import { approvalAgent } from '../agents/approval'
-import { analyticsAgent } from '../agents/analytics'
-import { executeAgent } from './agent_runner'
+import type { SubmindInput, SubmindOutput } from '../subminds/submind_interface'
+import { researchSubmind } from '../subminds/research'
+import { productSubmind } from '../subminds/product'
+import { narrativeSubmind } from '../subminds/narrative'
+import { socialSubmind } from '../subminds/social'
+import { imageSubmind } from '../subminds/image'
+import { editorSubmind } from '../subminds/editor'
+import { approvalSubmind } from '../subminds/approval'
+import { analyticsSubmind } from '../subminds/analytics'
+import { executeSubmind } from './submind_runner'
 import { formatCampaignResponse, generateCampaignId } from '../utils/response_formatter'
 import { CampaignLifecycleProcessor } from './campaign_lifecycle'
 import type { CampaignResponse } from '../utils/response_formatter'
 
-const AGENT_CHAIN = [
-  researchAgent,
-  productAgent,
-  narrativeAgent,
-  socialAgent,
-  imageAgent,
-  editorAgent,
-  approvalAgent,
-  analyticsAgent,
+const SUBMIND_CHAIN = [
+  researchSubmind,
+  productSubmind,
+  narrativeSubmind,
+  socialSubmind,
+  imageSubmind,
+  editorSubmind,
+  approvalSubmind,
+  analyticsSubmind,
 ]
 
 export interface OrchestratorInput {
@@ -48,19 +48,14 @@ export class KLYCOrchestrator {
     const campaignId = generateCampaignId()
 
     try {
-      // Validate input
       if (!request.campaign_topic?.trim()) {
         return { success: false, error: 'campaign_topic is required' }
       }
 
-      // Run the agent chain
-      const agentResults = await this.runAgentChain(request)
+      const submindResults = await this.runSubmindChain(request)
+      const lifecycleResult = this.lifecycle.processResults(campaignId, submindResults)
 
-      // Process lifecycle
-      const lifecycleResult = this.lifecycle.processResults(campaignId, agentResults)
-
-      // Format response
-      const response = formatCampaignResponse(agentResults, {
+      const response = formatCampaignResponse(submindResults, {
         campaignId,
         metadata: {
           topic: request.campaign_topic,
@@ -79,26 +74,25 @@ export class KLYCOrchestrator {
     }
   }
 
-  private async runAgentChain(request: OrchestratorInput): Promise<AgentOutput[]> {
-    const results: AgentOutput[] = []
+  private async runSubmindChain(request: OrchestratorInput): Promise<SubmindOutput[]> {
+    const results: SubmindOutput[] = []
     let previousOutput: Record<string, unknown> = {}
 
-    for (const agent of AGENT_CHAIN) {
-      const input: AgentInput = {
+    for (const submind of SUBMIND_CHAIN) {
+      const input: SubmindInput = {
         campaign_topic: request.campaign_topic,
         business_context: request.business_context,
         audience: request.audience,
         previous_output: previousOutput,
       }
 
-      const result = await executeAgent(agent, input, { timeoutMs: 30000 })
+      const result = await executeSubmind(submind, input, { timeoutMs: 30000 })
       results.push(result)
 
-      // Accumulate successful results for next agent
       if (result.status === 'success' && result.data) {
         previousOutput = {
           ...previousOutput,
-          [result.agent]: result.data,
+          [result.submind]: result.data,
         }
       }
     }

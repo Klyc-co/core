@@ -1,15 +1,15 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  ImageAgentInput,
+  ImageSubmindInput,
 } from "./types";
 
 /**
  * Image Agent — evaluates visual quality signals for social content.
  */
-export function computeImageMetrics(input: ImageAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeImageMetrics(input: ImageSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Visual Clarity Score ──
@@ -81,14 +81,14 @@ export function computeImageMetrics(input: ImageAgentInput): AgentMetricsOutput 
   }
 
   return {
-    agentRole: "image",
+    submindRole: "image",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),
   };
 }
 
-function evaluateClarity(input: ImageAgentInput): number {
+function evaluateClarity(input: ImageSubmindInput): number {
   if (!input.imageUrl) return 0;
   let score = 0.5; // baseline for having an image
 
@@ -105,7 +105,7 @@ function evaluateClarity(input: ImageAgentInput): number {
   return Math.min(1, score);
 }
 
-function evaluateThumbnailAttention(input: ImageAgentInput): number {
+function evaluateThumbnailAttention(input: ImageSubmindInput): number {
   let score = 0.3;
 
   // Text on thumbnail helps attention
@@ -135,7 +135,7 @@ function evaluateColorContrast(colors: string[]): number {
   return Math.min(1, 0.3 + (unique.size - 1) * 0.15);
 }
 
-function checkPlatformSizeCompliance(input: ImageAgentInput): number {
+function checkPlatformSizeCompliance(input: ImageSubmindInput): number {
   if (!input.resolution) return 0;
 
   const specs: Record<string, { width: number; height: number }[]> = {

@@ -1,10 +1,9 @@
 /**
  * KLYC Response Formatter
- * Compresses agent results into a unified campaign response.
- * Migrated from ai-controller/core/utils/response_formatter.ts
+ * Compresses submind results into a unified campaign response.
  */
 
-import type { AgentOutput, AgentStatus } from '../agents/agent_interface'
+import type { SubmindOutput, SubmindStatus } from '../subminds/submind_interface'
 
 type CompressedPayload = {
   research: Record<string, unknown>
@@ -19,22 +18,22 @@ type CompressedPayload = {
 export type CampaignResponse = {
   campaign_id: string
   timestamp: number
-  agents_executed: string[]
+  subminds_executed: string[]
   compressed_payload: CompressedPayload
   metadata: CampaignMetadata
   lifecycle?: any
 }
 
 type CampaignMetadata = {
-  agent_count: number
-  successful_agents: number
-  failed_agents: number
-  agent_statuses: Record<string, AgentStatus>
-  agent_errors: Record<string, string>
+  submind_count: number
+  successful_subminds: number
+  failed_subminds: number
+  submind_statuses: Record<string, SubmindStatus>
+  submind_errors: Record<string, string>
   [key: string]: unknown
 }
 
-const AGENT_KEY_MAP: Record<string, keyof CompressedPayload> = {
+const SUBMIND_KEY_MAP: Record<string, keyof CompressedPayload> = {
   research: 'research',
   narrative: 'narrative',
   social: 'social',
@@ -44,7 +43,7 @@ const AGENT_KEY_MAP: Record<string, keyof CompressedPayload> = {
   analytics: 'analytics',
 }
 
-const normalizeData = (data: AgentOutput['data']): Record<string, unknown> => {
+const normalizeData = (data: SubmindOutput['data']): Record<string, unknown> => {
   if (!data || typeof data !== 'object') return {}
   try {
     return JSON.parse(JSON.stringify(data)) as Record<string, unknown>
@@ -53,7 +52,7 @@ const normalizeData = (data: AgentOutput['data']): Record<string, unknown> => {
   }
 }
 
-const normalizePayload = (agentResults: AgentOutput[]): CompressedPayload => {
+const normalizePayload = (submindResults: SubmindOutput[]): CompressedPayload => {
   const base: CompressedPayload = {
     research: {},
     narrative: {},
@@ -64,8 +63,8 @@ const normalizePayload = (agentResults: AgentOutput[]): CompressedPayload => {
     analytics: {},
   }
 
-  for (const result of agentResults) {
-    const key = AGENT_KEY_MAP[result.agent]
+  for (const result of submindResults) {
+    const key = SUBMIND_KEY_MAP[result.submind]
     if (!key) continue
     base[key] = normalizeData(result.data)
   }
@@ -81,51 +80,51 @@ export const generateCampaignId = (): string => {
 }
 
 const buildMetadata = (
-  agentResults: AgentOutput[],
+  submindResults: SubmindOutput[],
   extras: Record<string, unknown> = {}
 ): CampaignMetadata => {
-  const agent_statuses = agentResults.reduce<Record<string, AgentStatus>>((acc, result) => {
-    acc[result.agent] = result.status
+  const submind_statuses = submindResults.reduce<Record<string, SubmindStatus>>((acc, result) => {
+    acc[result.submind] = result.status
     return acc
   }, {})
 
-  const agent_errors = agentResults.reduce<Record<string, string>>((acc, result) => {
+  const submind_errors = submindResults.reduce<Record<string, string>>((acc, result) => {
     if (result.status === 'error' && result.error) {
-      acc[result.agent] = result.error
+      acc[result.submind] = result.error
     }
     return acc
   }, {})
 
-  const successful_agents = agentResults.filter(r => r.status === 'success').length
-  const failed_agents = agentResults.length - successful_agents
+  const successful_subminds = submindResults.filter(r => r.status === 'success').length
+  const failed_subminds = submindResults.length - successful_subminds
 
   return {
-    agent_count: agentResults.length,
-    successful_agents,
-    failed_agents,
-    agent_statuses,
-    agent_errors,
+    submind_count: submindResults.length,
+    successful_subminds,
+    failed_subminds,
+    submind_statuses,
+    submind_errors,
     ...extras,
   }
 }
 
 export function formatCampaignResponse(
-  agentResults: AgentOutput[],
+  submindResults: SubmindOutput[],
   options: {
     campaignId?: string
     metadata?: Record<string, unknown>
     lifecycle?: any
   } = {}
 ): CampaignResponse {
-  const agents_executed = [...new Set(agentResults.map(r => r.agent))]
-  const compressed_payload = normalizePayload(agentResults)
+  const subminds_executed = [...new Set(submindResults.map(r => r.submind))]
+  const compressed_payload = normalizePayload(submindResults)
 
   return {
     campaign_id: options.campaignId ?? generateCampaignId(),
     timestamp: Date.now(),
-    agents_executed,
+    subminds_executed,
     compressed_payload,
-    metadata: buildMetadata(agentResults, options.metadata),
+    metadata: buildMetadata(submindResults, options.metadata),
     lifecycle: options.lifecycle,
   }
 }

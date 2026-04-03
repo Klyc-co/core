@@ -43,7 +43,7 @@ export type RequestType =
   | 'content_generate'
   | 'research_request'
   | 'analytics_request'
-  | 'agent_run'
+  | 'submind_run'
 
 export type NarrativeType =
   | 'hidden_truth'
@@ -215,7 +215,7 @@ export interface OrchestrationContext {
 }
 
 export interface OrchestrationStep {
-  agent: string
+  submind: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   startedAt?: number
   completedAt?: number
@@ -223,12 +223,15 @@ export interface OrchestrationStep {
   error?: string
 }
 
-export interface AgentTask {
-  agentName: string
+export interface SubmindTask {
+  submindName: string
   priority: number
   dependencies: string[]
   config?: Record<string, unknown>
 }
+
+// Backward-compatible aliases
+export type AgentTask = SubmindTask
 
 // ── Workflow ────────────────────────────────────────────────────────
 

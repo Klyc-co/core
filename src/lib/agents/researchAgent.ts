@@ -1,15 +1,15 @@
 import type {
-  AgentMetricsOutput,
-  AgentMetric,
+  SubmindMetricsOutput,
+  SubmindMetric,
   RecommendedAction,
-  ResearchAgentInput,
+  ResearchSubmindInput,
 } from "./types";
 
 /**
  * Research Agent — evaluates trend relevance and competitor intelligence coverage.
  */
-export function computeResearchMetrics(input: ResearchAgentInput): AgentMetricsOutput {
-  const metrics: AgentMetric[] = [];
+export function computeResearchMetrics(input: ResearchSubmindInput): SubmindMetricsOutput {
+  const metrics: SubmindMetric[] = [];
   const actions: RecommendedAction[] = [];
 
   // ── Topic Trend Score ──
@@ -83,7 +83,7 @@ export function computeResearchMetrics(input: ResearchAgentInput): AgentMetricsO
   }
 
   return {
-    agentRole: "research",
+    submindRole: "research",
     metrics,
     recommended_actions: actions,
     generatedAt: new Date().toISOString(),

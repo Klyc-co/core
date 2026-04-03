@@ -1,5 +1,6 @@
 /**
  * KLYC Submind Runner
+ * Executes subminds with timeout, retry, step limits, and response size guardrails.
  * Re-exports from execution_guardrails for backward compatibility.
  */
 

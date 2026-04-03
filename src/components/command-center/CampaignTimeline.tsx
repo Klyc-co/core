@@ -5,7 +5,7 @@ import {
   Filter, Network, Search, Package, MessageSquare, Share2, Image,
   Pen, ShieldCheck, BarChart3,
 } from "lucide-react";
-import type { AgentStep } from "@/types/run-status";
+import type { SubmindStep } from "@/types/run-status";
 
 const PIPELINE_STAGES = [
   "Normalizer",
@@ -33,7 +33,7 @@ const STAGE_ICONS: Record<string, React.ReactNode> = {
   Analytics: <BarChart3 className="w-4 h-4" />,
 };
 
-const STATUS_CONFIG: Record<AgentStep["status"], { icon: React.ReactNode; label: string; badgeClass: string; rowClass: string }> = {
+const STATUS_CONFIG: Record<SubmindStep["status"], { icon: React.ReactNode; label: string; badgeClass: string; rowClass: string }> = {
   complete: {
     icon: <CheckCircle2 className="w-4 h-4 text-primary" />,
     label: "Complete",
@@ -78,18 +78,18 @@ function formatConfidence(score: number | null): string {
 }
 
 interface Props {
-  steps: AgentStep[];
+  steps: SubmindStep[];
   isRunning?: boolean;
 }
 
 export default function CampaignTimeline({ steps, isRunning }: Props) {
-  const stageMap = new Map(steps.map((s) => [s.agent, s]));
+  const stageMap = new Map(steps.map((s) => [s.submind, s]));
 
   const stages = PIPELINE_STAGES.map((name) => {
     const step = stageMap.get(name);
     return {
       name,
-      status: step?.status ?? "pending" as AgentStep["status"],
+      status: step?.status ?? "pending" as SubmindStep["status"],
       durationMs: step?.durationMs ?? null,
       confidenceScore: step?.confidenceScore ?? null,
       note: step?.note ?? null,
