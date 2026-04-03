@@ -293,6 +293,8 @@ serve(async (req: Request) => {
         status: "rejected",
         rejection_reason: "Image URL is unreachable or returns an error. Please check the link and re-upload.",
         brand_alignment: "N/A — unreachable",
+        brand_dimension_scores: { color_harmony: 0, typography: 0, logo_placement: 0, motif_repetition: 0, layout_framework: 0 },
+        brand_score: 0,
         platform_suitability: {},
         suggestions: ["Re-upload the image or provide a working URL"],
       });
