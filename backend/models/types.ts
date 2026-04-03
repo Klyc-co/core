@@ -43,7 +43,7 @@ export type RequestType =
   | 'content_generate'
   | 'research_request'
   | 'analytics_request'
-  | 'agent_run'
+  | 'submind_run'
 
 export type NarrativeType =
   | 'hidden_truth'
