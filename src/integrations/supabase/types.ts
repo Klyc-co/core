@@ -227,40 +227,58 @@ export type Database = {
       }
       approval_history: {
         Row: {
+          campaign_id: string | null
           category: string | null
           client_id: string | null
           created_at: string | null
           decided_at: string | null
           decision: string | null
           id: string
+          iteration_number: number | null
+          review_criteria: Json | null
+          reviewer: string | null
+          revision_notes: string | null
           revoked_at: string | null
           session_id: string | null
+          submitted_at: string | null
           user_id: string
           what_was_originally_asked: string | null
           what_was_proposed: string | null
         }
         Insert: {
+          campaign_id?: string | null
           category?: string | null
           client_id?: string | null
           created_at?: string | null
           decided_at?: string | null
           decision?: string | null
           id?: string
+          iteration_number?: number | null
+          review_criteria?: Json | null
+          reviewer?: string | null
+          revision_notes?: string | null
           revoked_at?: string | null
           session_id?: string | null
+          submitted_at?: string | null
           user_id: string
           what_was_originally_asked?: string | null
           what_was_proposed?: string | null
         }
         Update: {
+          campaign_id?: string | null
           category?: string | null
           client_id?: string | null
           created_at?: string | null
           decided_at?: string | null
           decision?: string | null
           id?: string
+          iteration_number?: number | null
+          review_criteria?: Json | null
+          reviewer?: string | null
+          revision_notes?: string | null
           revoked_at?: string | null
           session_id?: string | null
+          submitted_at?: string | null
           user_id?: string
           what_was_originally_asked?: string | null
           what_was_proposed?: string | null
@@ -536,8 +554,13 @@ export type Database = {
       }
       campaign_memory: {
         Row: {
+          actual_metrics: Json | null
           audience: string | null
+          audience_data: Json | null
+          brief: Json | null
+          campaign_id: string | null
           campaign_name: string | null
+          checkpoints: Json | null
           client_id: string | null
           conversion_rate: number | null
           created_at: string
@@ -546,13 +569,22 @@ export type Database = {
           industry: string | null
           launched_at: string | null
           message_summary: string | null
+          messaging_data: Json | null
           platform: string | null
+          platforms: string[] | null
+          predicted_score: number | null
+          subminds_used: string[] | null
           user_id: string
           viral_score: number | null
         }
         Insert: {
+          actual_metrics?: Json | null
           audience?: string | null
+          audience_data?: Json | null
+          brief?: Json | null
+          campaign_id?: string | null
           campaign_name?: string | null
+          checkpoints?: Json | null
           client_id?: string | null
           conversion_rate?: number | null
           created_at?: string
@@ -561,13 +593,22 @@ export type Database = {
           industry?: string | null
           launched_at?: string | null
           message_summary?: string | null
+          messaging_data?: Json | null
           platform?: string | null
+          platforms?: string[] | null
+          predicted_score?: number | null
+          subminds_used?: string[] | null
           user_id: string
           viral_score?: number | null
         }
         Update: {
+          actual_metrics?: Json | null
           audience?: string | null
+          audience_data?: Json | null
+          brief?: Json | null
+          campaign_id?: string | null
           campaign_name?: string | null
+          checkpoints?: Json | null
           client_id?: string | null
           conversion_rate?: number | null
           created_at?: string
@@ -576,7 +617,11 @@ export type Database = {
           industry?: string | null
           launched_at?: string | null
           message_summary?: string | null
+          messaging_data?: Json | null
           platform?: string | null
+          platforms?: string[] | null
+          predicted_score?: number | null
+          subminds_used?: string[] | null
           user_id?: string
           viral_score?: number | null
         }
@@ -893,29 +938,50 @@ export type Database = {
       }
       client_brain: {
         Row: {
+          audience_segments: Json | null
+          brand_voice: Json | null
           client_id: string
+          competitor_list: string[] | null
           created_at: string
           data: Json
           document_type: string
           id: string
+          industry: string | null
+          market_sophistication: string | null
+          moat_profile: Json | null
+          strategy_profile_data: Json | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          audience_segments?: Json | null
+          brand_voice?: Json | null
           client_id: string
+          competitor_list?: string[] | null
           created_at?: string
           data?: Json
           document_type: string
           id?: string
+          industry?: string | null
+          market_sophistication?: string | null
+          moat_profile?: Json | null
+          strategy_profile_data?: Json | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          audience_segments?: Json | null
+          brand_voice?: Json | null
           client_id?: string
+          competitor_list?: string[] | null
           created_at?: string
           data?: Json
           document_type?: string
           id?: string
+          industry?: string | null
+          market_sophistication?: string | null
+          moat_profile?: Json | null
+          strategy_profile_data?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -1092,38 +1158,56 @@ export type Database = {
       competitor_observations: {
         Row: {
           client_id: string | null
+          client_relevance: number | null
           competitor_name: string | null
+          confidence: number | null
           created_at: string
+          details: Json | null
           engagement_delta: number | null
           id: string
           knp_summary: string | null
+          observation_type: string | null
           observed_action: string | null
           observed_at: string | null
           platform: string | null
+          recommendation: string | null
+          source_urls: string[] | null
           user_id: string
         }
         Insert: {
           client_id?: string | null
+          client_relevance?: number | null
           competitor_name?: string | null
+          confidence?: number | null
           created_at?: string
+          details?: Json | null
           engagement_delta?: number | null
           id?: string
           knp_summary?: string | null
+          observation_type?: string | null
           observed_action?: string | null
           observed_at?: string | null
           platform?: string | null
+          recommendation?: string | null
+          source_urls?: string[] | null
           user_id: string
         }
         Update: {
           client_id?: string | null
+          client_relevance?: number | null
           competitor_name?: string | null
+          confidence?: number | null
           created_at?: string
+          details?: Json | null
           engagement_delta?: number | null
           id?: string
           knp_summary?: string | null
+          observation_type?: string | null
           observed_action?: string | null
           observed_at?: string | null
           platform?: string | null
+          recommendation?: string | null
+          source_urls?: string[] | null
           user_id?: string
         }
         Relationships: []
@@ -2124,35 +2208,110 @@ export type Database = {
         Row: {
           active_submind_dispatches: Json
           client_id: string
+          context: Json | null
           conversation_history: Json
           created_at: string
           id: string
+          last_active: string | null
           mode: string
           solo_permission_scope: string | null
+          started_at: string | null
+          status: string | null
+          subminds_called: string[] | null
           updated_at: string
           user_id: string
         }
         Insert: {
           active_submind_dispatches?: Json
           client_id: string
+          context?: Json | null
           conversation_history?: Json
           created_at?: string
           id?: string
+          last_active?: string | null
           mode?: string
           solo_permission_scope?: string | null
+          started_at?: string | null
+          status?: string | null
+          subminds_called?: string[] | null
           updated_at?: string
           user_id: string
         }
         Update: {
           active_submind_dispatches?: Json
           client_id?: string
+          context?: Json | null
           conversation_history?: Json
           created_at?: string
           id?: string
+          last_active?: string | null
           mode?: string
           solo_permission_scope?: string | null
+          started_at?: string | null
+          status?: string | null
+          subminds_called?: string[] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      personality_settings: {
+        Row: {
+          adaptation_level: string
+          alert_style: string
+          approval_rule: string
+          checkin_frequency: string
+          competitor_tracking: boolean
+          confidence_threshold: number
+          created_at: string
+          default_mode: string
+          explanation_detail: number
+          id: string
+          industry: string[] | null
+          proactive_suggestions: boolean
+          show_reasoning: number
+          tone: string
+          updated_at: string
+          user_id: string
+          verbosity: string
+        }
+        Insert: {
+          adaptation_level?: string
+          alert_style?: string
+          approval_rule?: string
+          checkin_frequency?: string
+          competitor_tracking?: boolean
+          confidence_threshold?: number
+          created_at?: string
+          default_mode?: string
+          explanation_detail?: number
+          id?: string
+          industry?: string[] | null
+          proactive_suggestions?: boolean
+          show_reasoning?: number
+          tone?: string
+          updated_at?: string
+          user_id: string
+          verbosity?: string
+        }
+        Update: {
+          adaptation_level?: string
+          alert_style?: string
+          approval_rule?: string
+          checkin_frequency?: string
+          competitor_tracking?: boolean
+          confidence_threshold?: number
+          created_at?: string
+          default_mode?: string
+          explanation_detail?: number
+          id?: string
+          industry?: string[] | null
+          proactive_suggestions?: boolean
+          show_reasoning?: number
+          tone?: string
+          updated_at?: string
+          user_id?: string
+          verbosity?: string
         }
         Relationships: []
       }
@@ -2913,36 +3072,54 @@ export type Database = {
       }
       solo_mode_logs: {
         Row: {
+          client_id: string | null
           created_at: string
+          decision_chain: Json | null
           decision_point: string
           id: string
           knp_payload_sent: Json | null
           knp_response_received: Json | null
+          outcome: Json | null
+          permission_granted_at: string | null
+          permission_scope: string | null
           reasoning: string | null
           session_id: string
           submind_called: string | null
+          subminds_invoked: string[] | null
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
+          decision_chain?: Json | null
           decision_point: string
           id?: string
           knp_payload_sent?: Json | null
           knp_response_received?: Json | null
+          outcome?: Json | null
+          permission_granted_at?: string | null
+          permission_scope?: string | null
           reasoning?: string | null
           session_id: string
           submind_called?: string | null
+          subminds_invoked?: string[] | null
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
+          decision_chain?: Json | null
           decision_point?: string
           id?: string
           knp_payload_sent?: Json | null
           knp_response_received?: Json | null
+          outcome?: Json | null
+          permission_granted_at?: string | null
+          permission_scope?: string | null
           reasoning?: string | null
           session_id?: string
           submind_called?: string | null
+          subminds_invoked?: string[] | null
           user_id?: string
         }
         Relationships: [
