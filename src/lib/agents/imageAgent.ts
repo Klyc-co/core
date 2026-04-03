@@ -88,7 +88,7 @@ export function computeImageMetrics(input: ImageSubmindInput): SubmindMetricsOut
   };
 }
 
-function evaluateClarity(input: ImageAgentInput): number {
+function evaluateClarity(input: ImageSubmindInput): number {
   if (!input.imageUrl) return 0;
   let score = 0.5; // baseline for having an image
 
