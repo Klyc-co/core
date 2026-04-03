@@ -133,7 +133,7 @@ const BottomChatPanel = () => {
       }
     }
     if (data?.result) return typeof data.result === "string" ? data.result : JSON.stringify(data.result);
-    return "I processed your request but couldn't extract a readable response.";
+    return JSON.stringify(data);
   };
 
   const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {

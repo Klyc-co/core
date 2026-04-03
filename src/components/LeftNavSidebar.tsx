@@ -56,8 +56,8 @@ interface Client {
 }
 
 const mainNav = [
+  { label: "Klyc", path: "/klyc-chat", icon: MessageSquare },
   { label: "Home", path: "/home", icon: Briefcase },
-  
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
   { label: "Creative", path: "/creative", icon: Palette },
   { label: "Library", path: "/profile/library", icon: BookOpen },
