@@ -333,10 +333,52 @@ export default function StrategyScreen() {
               <Button variant="outline" size="sm" onClick={() => { pipeline.cancel(); window.location.reload(); }}>
                 <RotateCcw className="w-3.5 h-3.5 mr-1.5" />New Strategy
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingDraft}
+                onClick={async () => {
+                  setSavingDraft(true);
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      await supabase.from("campaign_drafts").insert({
+                        user_id: user.id,
+                        prompt: form.campaignBrief,
+                        campaign_idea: form.campaignName,
+                        target_audience: form.targetAudience,
+                        campaign_objective: form.objective,
+                        tags: form.platforms,
+                      });
+                    }
+                    toast.success("Draft saved", { duration: 3000 });
+                  } catch {
+                    toast.error("Failed to save draft");
+                  } finally {
+                    setSavingDraft(false);
+                  }
+                }}
+              >
+                {savingDraft ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                Save Draft
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify({ stages: pipeline.stages, summary: pipeline.summary, compression: pipeline.compression, viralScore: pipeline.viralScore }, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `strategy-${Date.now()}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Strategy exported");
+                }}
+              >
                 <Download className="w-3.5 h-3.5 mr-1.5" />Export
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => navigate("/klyc-chat")}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />Send to Chat
               </Button>
             </div>
