@@ -197,7 +197,7 @@ const BottomChatPanel = () => {
         message: structured.message,
         draft_updates: structured.draft_updates,
         next_questions: structured.next_questions,
-        intent: structured.intent,
+        session_id: structured.session_id,
       };
     } catch (err) {
       const fallback: StructuredResponse = {
