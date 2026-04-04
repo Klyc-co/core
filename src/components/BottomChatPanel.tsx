@@ -207,10 +207,9 @@ const BottomChatPanel = () => {
   };
 
   const streamOrchestrator = async (
-    action: string,
-    payload: Record<string, any>,
+    payload: { message: string; history?: Array<{ role: string; content: string }> },
     onChunk: (content: string) => void,
-  ): Promise<StructuredResponse> => {
+  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number } }> => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
@@ -222,7 +221,7 @@ const BottomChatPanel = () => {
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ action, stream: true, ...payload }),
+      body: JSON.stringify(payload),
     });
 
     if (!resp.ok) {
@@ -231,66 +230,49 @@ const BottomChatPanel = () => {
     }
 
     if (!resp.body) {
-      return toStructuredResponse(await resp.json());
+      const data = await resp.json();
+      const text = extractResponseText(data) || FALLBACK_MSG;
+      return { text };
     }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let content = "";
-    let donePayload: any = null;
+    let fullText = "";
+    let usage: { input_tokens: number; output_tokens: number } | undefined;
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
 
-      while (buffer.includes("\n\n")) {
-        const boundary = buffer.indexOf("\n\n");
-        const rawEvent = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
+      let newlineIdx: number;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, newlineIdx).trim();
+        buffer = buffer.slice(newlineIdx + 1);
 
-        if (!rawEvent.trim()) continue;
+        if (!line || !line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6);
+        if (jsonStr === "[DONE]") continue;
 
-        let eventName = "message";
-        const dataLines: string[] = [];
-
-        for (const line of rawEvent.split("\n")) {
-          if (line.startsWith("event:")) eventName = line.slice(6).trim();
-          if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-        }
-
-        if (!dataLines.length) continue;
-
-        const rawData = dataLines.join("\n");
-        let parsed: any;
-
+        // Check for event type from the previous line
+        // Our SSE format uses "event: chunk" and "event: done"
         try {
-          parsed = JSON.parse(rawData);
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.delta) {
+            fullText += parsed.delta;
+            onChunk(fullText);
+          }
+          if (parsed.usage) {
+            usage = parsed.usage;
+          }
         } catch {
-          parsed = { delta: rawData };
-        }
-
-        if (eventName === "chunk") {
-          const delta = typeof parsed?.delta === "string" ? parsed.delta : "";
-          content += delta;
-          onChunk(content);
-        }
-
-        if (eventName === "error") {
-          throw new Error(parsed?.error || "Streaming failed");
-        }
-
-        if (eventName === "done") {
-          donePayload = parsed;
-          content = parsed?.reply || content;
-          onChunk(content);
+          // Ignore parse errors on partial data
         }
       }
     }
 
-    return toStructuredResponse(donePayload || { reply: content });
+    return { text: fullText || FALLBACK_MSG, usage };
   };
 
   const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
