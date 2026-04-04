@@ -135,12 +135,29 @@ const BottomChatPanel = () => {
     return await resp.json();
   };
 
+  const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
+
   const extractResponseText = (data: any): string => {
-    if (data?.reply) return data.reply;
-    if (data?.response) return typeof data.response === "string" ? data.response : JSON.stringify(data.response);
-    if (data?.text) return data.text;
-    if (data?.content) return data.content;
-    if (data?.message) return data.message;
+    if (typeof data === "string") {
+      // Try parsing JSON strings
+      try {
+        const parsed = JSON.parse(data);
+        if (typeof parsed === "object" && parsed !== null) {
+          return extractResponseText(parsed);
+        }
+      } catch {
+        return data;
+      }
+      return data;
+    }
+    if (!data || typeof data !== "object") return "";
+
+    // Check known fields in priority order — use explicit typeof check for empty strings
+    for (const key of ["reply", "response", "text", "content", "message", "result"]) {
+      const val = data[key];
+      if (typeof val === "string" && val.trim().length > 0) return val;
+    }
+
     if (data?.stages && Array.isArray(data.stages) && data.stages.length > 0) {
       const stageData = data.stages[0].data;
       if (typeof stageData === "string") {
@@ -152,11 +169,12 @@ const BottomChatPanel = () => {
         }
       }
       if (typeof stageData === "object" && stageData !== null) {
-        return stageData.raw || stageData.content || stageData.message || JSON.stringify(stageData);
+        return stageData.raw || stageData.content || stageData.message || "";
       }
     }
-    if (data?.result) return typeof data.result === "string" ? data.result : JSON.stringify(data.result);
-    return JSON.stringify(data);
+
+    // Never show raw JSON to user
+    return "";
   };
 
   const toStructuredResponse = (orchestratorResponse: any): StructuredResponse => {
