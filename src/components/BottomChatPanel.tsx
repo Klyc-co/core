@@ -69,6 +69,8 @@ const BottomChatPanel = () => {
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
+  const [showCompressionStats, setShowCompressionStats] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
