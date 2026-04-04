@@ -694,6 +694,12 @@ const BottomChatPanel = () => {
                             <RefreshCw className="h-3 w-3" /> Retry
                           </Button>
                         )}
+                        {showCompressionStats && msg.compressionStats && (
+                          <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground/70">
+                            <Zap className="h-2.5 w-2.5" />
+                            <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()} tokens</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       msg.content
