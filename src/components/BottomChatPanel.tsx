@@ -150,17 +150,16 @@ const BottomChatPanel = () => {
 
     const orchestratorResponse = await callOrchestrator("chat", {
       message: userText,
+      session_id: draftId || undefined,
       client_id: selectedClientId !== "default" ? selectedClientId : undefined,
     });
 
     const responseText = orchestratorResponse?.reply || orchestratorResponse?.response || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
 
-    // Normalize next_questions: orchestrator may send string[] or NextQuestion[]
     let nextQuestions: NextQuestion[] = [];
     if (Array.isArray(orchestratorResponse?.next_questions)) {
       nextQuestions = orchestratorResponse.next_questions.map((q: any, i: number) => {
         if (typeof q === "string") {
-          // Legacy string format — treat first 3 as buttons, last as fill-in
           return { field: `suggestion_${i}`, question: q, type: "button" as const };
         }
         return q;
@@ -168,12 +167,12 @@ const BottomChatPanel = () => {
     }
 
     return {
-      intent: orchestratorResponse?.source || orchestratorResponse?.intent || "Klyc",
       message: responseText,
       next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
       risk_level: orchestratorResponse?.risk_level || "low",
       requires_approval: orchestratorResponse?.requires_approval || false,
+      session_id: orchestratorResponse?.session_id,
     };
   };
 
