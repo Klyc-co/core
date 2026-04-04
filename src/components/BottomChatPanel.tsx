@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
