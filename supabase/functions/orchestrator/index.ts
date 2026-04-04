@@ -53,6 +53,7 @@ interface OrchestratorRequest {
   message?: string;
   knp_payload?: Record<string, unknown>;
   solo_grant?: { enabled: boolean; scope?: string };
+  stream?: boolean;
 }
 
 interface OrchestratorResponse {
@@ -85,6 +86,34 @@ function jsonRes(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function sseRes(data: OrchestratorResponse) {
+  const encoder = new TextEncoder();
+  const words = data.reply.split(/(\s+)/).filter(Boolean);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let built = "";
+      for (const word of words) {
+        built += word;
+        controller.enqueue(encoder.encode(`event: chunk\ndata: ${JSON.stringify({ delta: word })}\n\n`));
+        await new Promise((resolve) => setTimeout(resolve, 12));
+      }
+      controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ ...data, reply: built.trim() })}\n\n`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
 }
 
