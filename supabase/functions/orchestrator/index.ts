@@ -53,6 +53,7 @@ interface OrchestratorRequest {
   message?: string;
   knp_payload?: Record<string, unknown>;
   solo_grant?: { enabled: boolean; scope?: string };
+  stream?: boolean;
 }
 
 interface OrchestratorResponse {
@@ -85,6 +86,34 @@ function jsonRes(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function sseRes(data: OrchestratorResponse) {
+  const encoder = new TextEncoder();
+  const words = data.reply.split(/(\s+)/).filter(Boolean);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let built = "";
+      for (const word of words) {
+        built += word;
+        controller.enqueue(encoder.encode(`event: chunk\ndata: ${JSON.stringify({ delta: word })}\n\n`));
+        await new Promise((resolve) => setTimeout(resolve, 12));
+      }
+      controller.enqueue(encoder.encode(`event: done\ndata: ${JSON.stringify({ ...data, reply: built.trim() })}\n\n`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
 }
 
@@ -631,6 +660,53 @@ function formatSubmindName(name: string): string {
   return names[name] || name;
 }
 
+async function generateGeneralChatReply(message: string): Promise<string> {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+  }
+
+  const lower = trimmed.toLowerCase();
+  const isGreeting = ["hi", "hello", "hey", "help", "what can you do", "start"].some((phrase) => lower === phrase || lower.includes(phrase));
+  if (isGreeting) {
+    return "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+  }
+
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    return `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  }
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        temperature: 0.5,
+        max_tokens: 220,
+        messages: [
+          {
+            role: "system",
+            content: "You are Klyc, an AI marketing strategist. Reply conversationally in 1-3 short sentences. Do not use bullets. Do not list options that are already represented by UI buttons. Be helpful and specific to the user's request.",
+          },
+          { role: "user", content: trimmed },
+        ],
+      }),
+    });
+
+    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    return content || `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  } catch {
+    return `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  }
+}
+
 // ── Next Questions Builder ──
 
 function buildNextQuestions(intent: DetectedIntent): NextQuestion[] {
@@ -830,7 +906,7 @@ serve(async (req: Request) => {
       await updateSessionContext(supabase, session.id, session.context, session.subminds_called, "solo");
       await logSoloModeEntry(supabase, session.id, clientId, "full", [{ event: "solo_activated", message, timestamp: new Date().toISOString() }], [], { activated: true });
 
-      const soloReply = "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?";
+      const soloReply = "Solo Mode activated. I'll handle the decision-making and keep a clear audit trail. What should I work on?";
       const resp: OrchestratorResponse = {
         reply: soloReply,
         intent: "general_chat",
@@ -842,16 +918,12 @@ serve(async (req: Request) => {
         subminds_invoked: [],
         mode: "solo",
       };
-      return jsonRes(resp);
+      return body.stream ? sseRes(resp) : jsonRes(resp);
     }
 
-    // ── Detect Intent ──
     const intent = detectIntent(message);
-
-    // ── Normalizer: Compress inbound ──
     const knpPacket = body.knp_payload || normalizerCompress(message, session.id);
 
-    // ── Enrich from client brain ──
     const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
     try {
       const brainData = await resolveFromClientBrain(supabase, clientId);
@@ -873,12 +945,10 @@ serve(async (req: Request) => {
       console.warn("Client brain lookup failed:", e);
     }
 
-    // ── Route based on intent ──
     const phases = getIntentPhases(intent);
 
-    // No subminds needed — general chat
     if (phases.length === 0) {
-      const reply = "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+      const reply = await generateGeneralChatReply(message);
 
       const resp: OrchestratorResponse = {
         reply,
@@ -893,18 +963,15 @@ serve(async (req: Request) => {
       };
 
       await updateSessionContext(supabase, session.id, { ...session.context, last_intent: intent, last_message: message }, session.subminds_called, session.mode);
-      return jsonRes(resp);
+      return body.stream ? sseRes(resp) : jsonRes(resp);
     }
 
-    // ── Execute phases ──
     const { results, submindsInvoked, decisionChain } = await executePhases(
       phases, enrichedPayload, supabaseUrl, serviceRoleKey, session.mode,
     );
 
-    // ── Assemble reply ──
     const reply = assembleReply(intent, results, session.mode);
 
-    // ── Update session ──
     const allSubminds = [...new Set([...session.subminds_called, ...submindsInvoked])];
     await updateSessionContext(supabase, session.id, {
       ...session.context,
@@ -913,12 +980,10 @@ serve(async (req: Request) => {
       last_subminds: submindsInvoked,
     }, allSubminds, session.mode);
 
-    // ── Solo mode logging ──
     if (session.mode === "solo") {
       await logSoloModeEntry(supabase, session.id, clientId, "full", decisionChain, submindsInvoked, { reply: reply.slice(0, 500), results_summary: Object.keys(results) });
     }
 
-    // ── Post-pipeline hooks ──
     if (intent === "campaign_new") {
       try {
         await supabase.from("campaign_memory").insert({
@@ -934,7 +999,6 @@ serve(async (req: Request) => {
       }
     }
 
-    // ── Check if approval gate requires human decision ──
     const approvalResult = results["approval"];
     const requiresApproval = approvalResult?.success && (approvalResult.data as Record<string, unknown>)?.decision === "NEEDS_HUMAN";
 
@@ -950,7 +1014,7 @@ serve(async (req: Request) => {
       mode: session.mode,
     };
 
-    return jsonRes(resp);
+    return body.stream ? sseRes(resp) : jsonRes(resp);
 
   } catch (err) {
     console.error("Orchestrator error:", err);
