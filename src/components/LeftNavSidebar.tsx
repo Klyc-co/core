@@ -18,7 +18,6 @@ import {
   Trash2,
   User,
   Megaphone,
-  BookOpen,
   Lightbulb,
   Palette,
   Menu,
@@ -27,6 +26,7 @@ import {
   FileText,
   Zap,
   BarChart3,
+  House,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,11 +58,12 @@ interface Client {
 }
 
 const mainNav = [
+  { label: "Home", path: "/home", icon: House },
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
-  { label: "Strategy", path: "/strategy", icon: Zap },
+  { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
-  { label: "Creative Studio", path: "/creative-studio", icon: Palette },
-  { label: "Learning Hub", path: "/learning", icon: Lightbulb },
+  { label: "Strategy", path: "/strategy", icon: Zap },
+  { label: "Learning", path: "/learning", icon: Lightbulb },
 ];
 
 const LeftNavSidebar = () => {
