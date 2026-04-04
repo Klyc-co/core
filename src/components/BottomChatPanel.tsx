@@ -361,30 +361,62 @@ const BottomChatPanel = () => {
 
     setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", content: text };
-    const updated = [...messages, userMsg];
+    const assistantPlaceholder: ChatMessage = { role: "assistant", content: "" };
+    const updated = [...messages, userMsg, assistantPlaceholder];
     setMessages(updated);
     if (!overrideText) setInput("");
     setIsLoading(true);
     setQuestionAnswers({});
 
     try {
-      const structured = await sendToKlyc(updated);
+      const structured = await streamOrchestrator(
+        "chat",
+        {
+          message: text,
+          session_id: sessionId || undefined,
+          client_id: selectedClientId !== "default" ? selectedClientId : undefined,
+        },
+        (content) => {
+          setMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = {
+              ...next[next.length - 1],
+              role: "assistant",
+              content,
+            };
+            return next;
+          });
+        }
+      );
 
       if (structured.session_id) {
         setSessionId(structured.session_id);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: structured.message, structured },
-      ]);
+      if (structured.draft_updates?._draft_id) {
+        setDraftId(structured.draft_updates._draft_id);
+      }
+
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = {
+          role: "assistant",
+          content: structured.message,
+          structured,
+        };
+        return next;
+      });
     } catch (error) {
       console.error("Chat error:", error);
       setLastFailedText(text);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = {
+          role: "assistant",
+          content: "Sorry, I encountered an error. Click retry or send a new message.",
+        };
+        return next;
+      });
     } finally {
       setIsLoading(false);
     }

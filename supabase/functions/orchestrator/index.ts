@@ -906,7 +906,7 @@ serve(async (req: Request) => {
       await updateSessionContext(supabase, session.id, session.context, session.subminds_called, "solo");
       await logSoloModeEntry(supabase, session.id, clientId, "full", [{ event: "solo_activated", message, timestamp: new Date().toISOString() }], [], { activated: true });
 
-      const soloReply = "🤖 **Solo Mode activated.** I'll handle everything autonomously and log all decisions for your review.\n\nWhat should I work on?";
+      const soloReply = "Solo Mode activated. I'll handle the decision-making and keep a clear audit trail. What should I work on?";
       const resp: OrchestratorResponse = {
         reply: soloReply,
         intent: "general_chat",
@@ -918,16 +918,12 @@ serve(async (req: Request) => {
         subminds_invoked: [],
         mode: "solo",
       };
-      return jsonRes(resp);
+      return body.stream ? sseRes(resp) : jsonRes(resp);
     }
 
-    // ── Detect Intent ──
     const intent = detectIntent(message);
-
-    // ── Normalizer: Compress inbound ──
     const knpPacket = body.knp_payload || normalizerCompress(message, session.id);
 
-    // ── Enrich from client brain ──
     const enrichedPayload = { ...knpPacket } as Record<string, unknown>;
     try {
       const brainData = await resolveFromClientBrain(supabase, clientId);
@@ -949,12 +945,10 @@ serve(async (req: Request) => {
       console.warn("Client brain lookup failed:", e);
     }
 
-    // ── Route based on intent ──
     const phases = getIntentPhases(intent);
 
-    // No subminds needed — general chat
     if (phases.length === 0) {
-      const reply = "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+      const reply = await generateGeneralChatReply(message);
 
       const resp: OrchestratorResponse = {
         reply,
@@ -969,18 +963,15 @@ serve(async (req: Request) => {
       };
 
       await updateSessionContext(supabase, session.id, { ...session.context, last_intent: intent, last_message: message }, session.subminds_called, session.mode);
-      return jsonRes(resp);
+      return body.stream ? sseRes(resp) : jsonRes(resp);
     }
 
-    // ── Execute phases ──
     const { results, submindsInvoked, decisionChain } = await executePhases(
       phases, enrichedPayload, supabaseUrl, serviceRoleKey, session.mode,
     );
 
-    // ── Assemble reply ──
     const reply = assembleReply(intent, results, session.mode);
 
-    // ── Update session ──
     const allSubminds = [...new Set([...session.subminds_called, ...submindsInvoked])];
     await updateSessionContext(supabase, session.id, {
       ...session.context,
@@ -989,12 +980,10 @@ serve(async (req: Request) => {
       last_subminds: submindsInvoked,
     }, allSubminds, session.mode);
 
-    // ── Solo mode logging ──
     if (session.mode === "solo") {
       await logSoloModeEntry(supabase, session.id, clientId, "full", decisionChain, submindsInvoked, { reply: reply.slice(0, 500), results_summary: Object.keys(results) });
     }
 
-    // ── Post-pipeline hooks ──
     if (intent === "campaign_new") {
       try {
         await supabase.from("campaign_memory").insert({
@@ -1010,7 +999,6 @@ serve(async (req: Request) => {
       }
     }
 
-    // ── Check if approval gate requires human decision ──
     const approvalResult = results["approval"];
     const requiresApproval = approvalResult?.success && (approvalResult.data as Record<string, unknown>)?.decision === "NEEDS_HUMAN";
 
@@ -1026,7 +1014,7 @@ serve(async (req: Request) => {
       mode: session.mode,
     };
 
-    return jsonRes(resp);
+    return body.stream ? sseRes(resp) : jsonRes(resp);
 
   } catch (err) {
     console.error("Orchestrator error:", err);
