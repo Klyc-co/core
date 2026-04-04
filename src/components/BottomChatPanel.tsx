@@ -71,7 +71,6 @@ const BottomChatPanel = () => {
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const [showCompressionStats, setShowCompressionStats] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkHealth = async () => {
