@@ -106,6 +106,12 @@ const BottomChatPanel = () => {
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
 
+  const calcCompressionStats = (text: string): CompressionStats => {
+    const originalTokens = Math.round(text.length * 3);
+    const compressedTokens = Math.max(1, Math.round(text.length / 4));
+    return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
+  };
+
   const callOrchestrator = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
