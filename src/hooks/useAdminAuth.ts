@@ -33,6 +33,8 @@ export function useAdminAuth() {
     };
   }, [resetTimer]);
 
+  const ADMIN_ALLOWLIST = ["ethanw@cipherstream.com", "kitchens@klyc.ai"];
+
   // Check admin status
   const checkAdmin = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -42,19 +44,21 @@ export function useAdminAuth() {
       return;
     }
 
+    const email = user.email.toLowerCase().trim();
+    const isAllowlisted = ADMIN_ALLOWLIST.includes(email);
+
     const { data, error } = await supabase
       .from("admin_users")
       .select("id, email, display_name")
-      .eq("email", user.email)
+      .eq("email", email)
       .maybeSingle();
 
-    if (error || !data) {
+    if (isAllowlisted || (data && !error)) {
+      setIsAdmin(true);
+      setAdminUser(data ?? { id: user.id, email, display_name: null });
+    } else {
       setIsAdmin(false);
       setAdminUser(null);
-    } else {
-      setIsAdmin(true);
-      setAdminUser(data);
-      // Update last_login — fire and forget via edge or ignore RLS issue
     }
   }, []);
 
