@@ -279,7 +279,7 @@ const BottomChatPanel = () => {
       const structured = await sendToKlyc(updated);
 
       if (structured.session_id) {
-        setDraftId(structured.session_id);
+        setSessionId(structured.session_id);
       }
 
       setMessages((prev) => [
