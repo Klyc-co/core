@@ -518,11 +518,6 @@ const BottomChatPanel = () => {
                             {msg.content}
                           </ReactMarkdown>
                         </div>
-                        {msg.structured?.intent && msg.structured.intent !== "other" && (
-                          <Badge variant="secondary" className="mt-2 text-[10px]">
-                            {msg.structured.intent.replace("_", " ")}
-                          </Badge>
-                        )}
                         {msg.structured?.intent === "campaign_ready" && (
                           <Button size="sm" className="mt-2 w-full text-xs gap-1.5" onClick={() => navigate("/campaigns/queue")}>
                             <ExternalLink className="h-3 w-3" /> Open Campaign Queue
