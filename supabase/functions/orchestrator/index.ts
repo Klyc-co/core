@@ -475,15 +475,15 @@ async function getOrCreateSession(
     const { data } = await supabase
       .from("orchestrator_sessions")
       .select("*")
-      .eq("session_id", sessionId)
+      .eq("id", sessionId)
       .eq("user_id", userId)
       .eq("status", "active")
       .single();
 
     if (data) {
-      await supabase.from("orchestrator_sessions").update({ last_active: new Date().toISOString() }).eq("session_id", data.session_id);
+      await supabase.from("orchestrator_sessions").update({ last_active: new Date().toISOString() }).eq("id", data.id);
       return {
-        id: data.session_id,
+        id: data.id,
         mode: (data.mode as OrchestratorMode) || "guided",
         context: (data.context as Record<string, unknown>) || {},
         subminds_called: (data.subminds_called as string[]) || [],
@@ -501,15 +501,20 @@ async function getOrCreateSession(
       subminds_called: [],
       status: "active",
     })
-    .select("session_id")
+    .select("id, mode, context, subminds_called")
     .single();
 
-  if (error) {
+  if (error || !data) {
     console.error("Session create error:", error);
     return { id: crypto.randomUUID(), mode: "guided", context: {}, subminds_called: [] };
   }
 
-  return { id: data.session_id, mode: "guided", context: {}, subminds_called: [] };
+  return {
+    id: data.id,
+    mode: (data.mode as OrchestratorMode) || "guided",
+    context: (data.context as Record<string, unknown>) || {},
+    subminds_called: (data.subminds_called as string[]) || [],
+  };
 }
 
 async function updateSessionContext(
@@ -525,7 +530,7 @@ async function updateSessionContext(
     subminds_called: submindsCalled,
   };
   if (mode) updates.mode = mode;
-  await supabase.from("orchestrator_sessions").update(updates).eq("session_id", sessionId);
+  await supabase.from("orchestrator_sessions").update(updates).eq("id", sessionId);
 }
 
 // ── Client Brain Resolution ──
