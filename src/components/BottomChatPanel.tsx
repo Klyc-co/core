@@ -388,57 +388,42 @@ const BottomChatPanel = () => {
     setQuestionAnswers({});
 
     try {
-      const structured = await streamOrchestrator(
-        "chat",
-        {
-          message: text,
-          session_id: sessionId || undefined,
-          client_id: selectedClientId !== "default" ? selectedClientId : undefined,
-        },
-        (rawContent) => {
-          // Parse out JSON if the stream chunk is JSON with a reply field
-          let displayContent = rawContent;
-          try {
-            if (rawContent.trim().startsWith("{")) {
-              const parsed = JSON.parse(rawContent);
-              if (typeof parsed === "object" && parsed !== null) {
-                displayContent = extractResponseText(parsed) || "";
-              }
-            }
-          } catch {
-            // Not complete JSON yet during streaming — show as-is unless it looks like partial JSON
-            if (rawContent.trim().startsWith("{") && !rawContent.trim().endsWith("}")) {
-              displayContent = ""; // Hide partial JSON during streaming
-            }
-          }
+      // Build history from previous messages (exclude the placeholder)
+      const history = messages
+        .filter((m) => m.content.trim())
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const result = await streamOrchestrator(
+        { message: text, history },
+        (streamedText) => {
           setMessages((prev) => {
             const next = [...prev];
             next[next.length - 1] = {
               ...next[next.length - 1],
               role: "assistant",
-              content: displayContent,
+              content: streamedText,
             };
             return next;
           });
-        }
+        },
       );
 
-      if (structured.session_id) {
-        setSessionId(structured.session_id);
-      }
+      const isFallback = result.text === FALLBACK_MSG;
+      const structured: StructuredResponse = {
+        message: result.text,
+        next_questions: [],
+        draft_updates: {},
+        risk_level: "low",
+        requires_approval: false,
+      };
 
-      if (structured.draft_updates?._draft_id) {
-        setDraftId(structured.draft_updates._draft_id);
-      }
-
-      const isFallback = structured.message === FALLBACK_MSG;
       setMessages((prev) => {
         const next = [...prev];
         next[next.length - 1] = {
           role: "assistant",
-          content: structured.message,
+          content: result.text,
           structured,
-          compressionStats: isFallback ? undefined : calcCompressionStats(structured.message),
+          compressionStats: isFallback ? undefined : calcCompressionStats(result.text, result.usage),
         };
         return next;
       });
