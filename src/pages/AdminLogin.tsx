@@ -9,6 +9,12 @@ import { Shield, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import klycLogo from "@/assets/klyc-logo.png";
 
+const ADMIN_ALLOWLIST = [
+  "ethanw@cipherstream.com",
+  "kitchens@klyc.ai",
+  "kristopher.kitchens@gmail.com",
+];
+
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,12 +27,10 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Verify admin role via edge function
-      const { data: adminData, error: adminError } = await supabase.functions.invoke("admin-list-users");
-      if (adminError || adminData?.error) {
+      if (!ADMIN_ALLOWLIST.includes(email.toLowerCase().trim())) {
         await supabase.auth.signOut();
         throw new Error("Access denied. Admin privileges required.");
       }
@@ -53,7 +57,6 @@ const AdminLogin = () => {
             Admin Access
           </div>
         </div>
-
         <Card>
           <CardHeader>
             <CardTitle className="text-center text-xl">Admin Login</CardTitle>
@@ -62,25 +65,11 @@ const AdminLogin = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@klyc.ai"
-                  required
-                />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@klyc.ai" required />
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
@@ -89,7 +78,6 @@ const AdminLogin = () => {
             </form>
           </CardContent>
         </Card>
-
         <div className="text-center mt-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-gray-500">
             <ArrowLeft className="w-4 h-4 mr-1" />

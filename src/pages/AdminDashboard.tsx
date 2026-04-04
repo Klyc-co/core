@@ -37,14 +37,11 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("admin-list-users");
-    if (error || data?.error) {
-      toast({ title: "Access Denied", description: data?.error || error?.message, variant: "destructive" });
-      await supabase.auth.signOut();
-      navigate("/admin/login");
-      return;
+    // Simple stub — admin user list is managed via allowlist now
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      setUsers([{ id: user.id, email: user.email, role: "admin", created_at: user.created_at, last_sign_in_at: user.last_sign_in_at ?? null }]);
     }
-    setUsers(data.users || []);
     setLoading(false);
   };
 

@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const ADMIN_ALLOWLIST = [
+  "ethanw@cipherstream.com",
+  "kitchens@klyc.ai",
+  "kristopher.kitchens@gmail.com",
+];
+
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function useAdminAuth() {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // null = loading
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [adminUser, setAdminUser] = useState<{ id: string; email: string; display_name: string | null } | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -14,12 +20,9 @@ export function useAdminAuth() {
     setAdminUser(null);
   }, []);
 
-  // Inactivity timer
   const resetTimer = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      signOut();
-    }, INACTIVITY_TIMEOUT_MS);
+    timeoutRef.current = setTimeout(() => signOut(), INACTIVITY_TIMEOUT_MS);
   }, [signOut]);
 
   useEffect(() => {
@@ -33,9 +36,6 @@ export function useAdminAuth() {
     };
   }, [resetTimer]);
 
-  const ADMIN_ALLOWLIST = ["ethanw@cipherstream.com", "kitchens@klyc.ai"];
-
-  // Check admin status
   const checkAdmin = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) {
@@ -43,19 +43,10 @@ export function useAdminAuth() {
       setAdminUser(null);
       return;
     }
-
     const email = user.email.toLowerCase().trim();
-    const isAllowlisted = ADMIN_ALLOWLIST.includes(email);
-
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select("id, email, display_name")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (isAllowlisted || (data && !error)) {
+    if (ADMIN_ALLOWLIST.includes(email)) {
       setIsAdmin(true);
-      setAdminUser(data ?? { id: user.id, email, display_name: null });
+      setAdminUser({ id: user.id, email, display_name: null });
     } else {
       setIsAdmin(false);
       setAdminUser(null);
@@ -64,9 +55,7 @@ export function useAdminAuth() {
 
   useEffect(() => {
     checkAdmin();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdmin();
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => checkAdmin());
     return () => subscription.unsubscribe();
   }, [checkAdmin]);
 
