@@ -337,7 +337,7 @@ const BottomChatPanel = () => {
         .filter((m) => m.content.trim())
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const result = await streamOrchestrator(
+      const result = await callOrchestrator(
         { message: text, history },
         (streamedText) => {
           setMessages((prev) => {
