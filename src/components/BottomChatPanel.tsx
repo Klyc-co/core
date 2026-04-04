@@ -201,7 +201,6 @@ const BottomChatPanel = () => {
       };
     } catch (err) {
       const fallback: StructuredResponse = {
-        intent: "other",
         message: "Sorry, I encountered an error. Please try again.",
         next_questions: [],
         draft_updates: {},
@@ -210,7 +209,7 @@ const BottomChatPanel = () => {
         ...prev,
         { role: "assistant", content: fallback.message, structured: fallback },
       ]);
-      return { message: fallback.message, draft_updates: {}, next_questions: [], intent: "other" };
+      return { message: fallback.message, draft_updates: {}, next_questions: [], session_id: undefined };
     }
   };
 
