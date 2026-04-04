@@ -220,13 +220,16 @@ const BottomChatPanel = () => {
     const lastUserMsg = allMessages.filter((m) => m.role === "user").pop();
     const userText = lastUserMsg?.content || "";
 
-    const orchestratorResponse = await callOrchestrator("chat", {
-      message: userText,
-      session_id: sessionId || undefined,
-      client_id: selectedClientId !== "default" ? selectedClientId : undefined,
-    });
+    const history = allMessages
+      .filter((m) => m.content.trim())
+      .map((m) => ({ role: m.role, content: m.content }));
 
-    return toStructuredResponse(orchestratorResponse);
+    const result = await callOrchestrator(
+      { message: userText, history },
+      () => {}, // no streaming callback needed here
+    );
+
+    return toStructuredResponse({ reply: result.text, usage: result.usage });
   };
 
   const sendForInterview = async (text: string, brainContext?: string) => {
