@@ -83,11 +83,19 @@ const BottomChatPanel = () => {
     checkHealth();
   }, []);
 
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]");
+        const el = viewport || scrollRef.current;
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
 
   const callOrchestrator = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();

@@ -322,11 +322,19 @@ export default function KlycChat({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll on new messages
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const viewport = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]");
+        const el = viewport || scrollRef.current;
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isThinking]);
+    scrollToBottom();
+  }, [messages, isThinking, scrollToBottom]);
 
   const handleSend = () => {
     const trimmed = input.trim();

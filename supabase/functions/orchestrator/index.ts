@@ -873,14 +873,7 @@ serve(async (req: Request) => {
 
     // No subminds needed — general chat
     if (phases.length === 0) {
-      const reply =
-        "I'm KLYC, your AI marketing orchestrator. I coordinate specialized subminds to help you with:\n\n" +
-        "• **Campaign creation** — full pipeline from research to approval\n" +
-        "• **Trend analysis** — market signals and competitor insights\n" +
-        "• **Performance review** — campaign metrics and learnings\n" +
-        "• **Content revision** — optimize and refine existing content\n" +
-        "• **Learning reports** — retrospective analysis of what worked\n\n" +
-        "What would you like to work on?";
+      const reply = "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
 
       const resp: OrchestratorResponse = {
         reply,
