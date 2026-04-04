@@ -417,6 +417,7 @@ const BottomChatPanel = () => {
           role: "assistant",
           content: structured.message,
           structured,
+          compressionStats: calcCompressionStats(structured.message),
         };
         return next;
       });
