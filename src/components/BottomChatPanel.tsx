@@ -518,7 +518,7 @@ const BottomChatPanel = () => {
                             {msg.content}
                           </ReactMarkdown>
                         </div>
-                        {msg.structured?.intent === "campaign_ready" && (
+                        {msg.structured?.draft_updates?._draft_id && (
                           <Button size="sm" className="mt-2 w-full text-xs gap-1.5" onClick={() => navigate("/campaigns/queue")}>
                             <ExternalLink className="h-3 w-3" /> Open Campaign Queue
                           </Button>
