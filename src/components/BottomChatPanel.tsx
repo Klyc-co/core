@@ -117,28 +117,7 @@ const BottomChatPanel = () => {
     return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
   };
 
-  const callOrchestrator = async (action: string, payload: Record<string, any>) => {
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) throw new Error("Not authenticated");
-
-    const resp = await fetch(ORCHESTRATOR_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-      body: JSON.stringify({ action, ...payload }),
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
-    }
-
-    return await resp.json();
-  };
+  // Old callOrchestrator removed — replaced by the unified callOrchestrator below
 
   const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
