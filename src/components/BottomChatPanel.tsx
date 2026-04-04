@@ -193,6 +193,9 @@ const BottomChatPanel = () => {
       if (structured.draft_updates?._draft_id) {
         setDraftId(structured.draft_updates._draft_id);
       }
+      if (structured.session_id) {
+        setSessionId(structured.session_id);
+      }
 
       return {
         message: structured.message,
