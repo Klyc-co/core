@@ -106,7 +106,12 @@ const BottomChatPanel = () => {
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
 
-  const calcCompressionStats = (text: string): CompressionStats => {
+  const calcCompressionStats = (text: string, usage?: { input_tokens: number; output_tokens: number }): CompressionStats => {
+    if (usage && usage.input_tokens > 0 && usage.output_tokens > 0) {
+      const total = usage.input_tokens + usage.output_tokens;
+      const compressed = usage.output_tokens;
+      return { originalTokens: total, compressedTokens: compressed, ratio: Math.max(1, Math.round(total / compressed)) };
+    }
     const originalTokens = Math.round(text.length * 3);
     const compressedTokens = Math.max(1, Math.round(text.length / 4));
     return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
