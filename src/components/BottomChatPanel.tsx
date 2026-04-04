@@ -408,13 +408,28 @@ const BottomChatPanel = () => {
           session_id: sessionId || undefined,
           client_id: selectedClientId !== "default" ? selectedClientId : undefined,
         },
-        (content) => {
+        (rawContent) => {
+          // Parse out JSON if the stream chunk is JSON with a reply field
+          let displayContent = rawContent;
+          try {
+            if (rawContent.trim().startsWith("{")) {
+              const parsed = JSON.parse(rawContent);
+              if (typeof parsed === "object" && parsed !== null) {
+                displayContent = extractResponseText(parsed) || "";
+              }
+            }
+          } catch {
+            // Not complete JSON yet during streaming — show as-is unless it looks like partial JSON
+            if (rawContent.trim().startsWith("{") && !rawContent.trim().endsWith("}")) {
+              displayContent = ""; // Hide partial JSON during streaming
+            }
+          }
           setMessages((prev) => {
             const next = [...prev];
             next[next.length - 1] = {
               ...next[next.length - 1],
               role: "assistant",
-              content,
+              content: displayContent,
             };
             return next;
           });
