@@ -55,7 +55,7 @@ export default function StrategyDashboard() {
             <p className="text-sm text-muted-foreground">Campaign pipeline, positioning, and strategic planning</p>
           </div>
         </div>
-        <Button size="sm" onClick={() => navigate("/klyc-chat")}>
+        <Button size="sm" onClick={() => navigate("/campaigns")}>
           <Rocket className="w-4 h-4 mr-1.5" />
           Start Campaign
         </Button>

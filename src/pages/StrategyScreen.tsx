@@ -392,7 +392,7 @@ export default function StrategyScreen() {
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" />Export
               </Button>
-              <Button size="sm" onClick={() => navigate("/klyc-chat")}>
+              <Button size="sm" onClick={() => navigate("/campaigns")}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />Send to Chat
               </Button>
             </div>
