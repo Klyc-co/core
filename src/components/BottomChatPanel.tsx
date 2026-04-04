@@ -56,6 +56,7 @@ const BottomChatPanel = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
