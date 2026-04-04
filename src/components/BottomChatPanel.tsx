@@ -429,13 +429,14 @@ const BottomChatPanel = () => {
         setDraftId(structured.draft_updates._draft_id);
       }
 
+      const isFallback = structured.message === FALLBACK_MSG;
       setMessages((prev) => {
         const next = [...prev];
         next[next.length - 1] = {
           role: "assistant",
           content: structured.message,
           structured,
-          compressionStats: calcCompressionStats(structured.message),
+          compressionStats: isFallback ? undefined : calcCompressionStats(structured.message),
         };
         return next;
       });
