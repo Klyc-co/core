@@ -117,28 +117,7 @@ const BottomChatPanel = () => {
     return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
   };
 
-  const callOrchestrator = async (action: string, payload: Record<string, any>) => {
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    if (!token) throw new Error("Not authenticated");
-
-    const resp = await fetch(ORCHESTRATOR_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-      body: JSON.stringify({ action, ...payload }),
-    });
-
-    if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
-    }
-
-    return await resp.json();
-  };
+  // Old callOrchestrator removed — replaced by the unified callOrchestrator below
 
   const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
@@ -206,7 +185,7 @@ const BottomChatPanel = () => {
     };
   };
 
-  const streamOrchestrator = async (
+  const callOrchestrator = async (
     payload: { message: string; history?: Array<{ role: string; content: string }> },
     onChunk: (content: string) => void,
   ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number } }> => {
@@ -225,67 +204,32 @@ const BottomChatPanel = () => {
     });
 
     if (!resp.ok) {
+      // Try to extract a friendly error from the response
       const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
+      const errorReply = errorData.reply || errorData.error || `Request failed (${resp.status})`;
+      throw new Error(errorReply);
     }
 
-    if (!resp.body) {
-      const data = await resp.json();
-      const text = extractResponseText(data) || FALLBACK_MSG;
-      return { text };
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullText = "";
-    let usage: { input_tokens: number; output_tokens: number } | undefined;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let newlineIdx: number;
-      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, newlineIdx).trim();
-        buffer = buffer.slice(newlineIdx + 1);
-
-        if (!line || !line.startsWith("data: ")) continue;
-        const jsonStr = line.slice(6);
-        if (jsonStr === "[DONE]") continue;
-
-        // Check for event type from the previous line
-        // Our SSE format uses "event: chunk" and "event: done"
-        try {
-          const parsed = JSON.parse(jsonStr);
-          if (parsed.delta) {
-            fullText += parsed.delta;
-            onChunk(fullText);
-          }
-          if (parsed.usage) {
-            usage = parsed.usage;
-          }
-        } catch {
-          // Ignore parse errors on partial data
-        }
-      }
-    }
-
-    return { text: fullText || FALLBACK_MSG, usage };
+    const data = await resp.json();
+    const text = extractResponseText(data) || FALLBACK_MSG;
+    onChunk(text);
+    return { text, usage: data.usage };
   };
 
   const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
     const lastUserMsg = allMessages.filter((m) => m.role === "user").pop();
     const userText = lastUserMsg?.content || "";
 
-    const orchestratorResponse = await callOrchestrator("chat", {
-      message: userText,
-      session_id: sessionId || undefined,
-      client_id: selectedClientId !== "default" ? selectedClientId : undefined,
-    });
+    const history = allMessages
+      .filter((m) => m.content.trim())
+      .map((m) => ({ role: m.role, content: m.content }));
 
-    return toStructuredResponse(orchestratorResponse);
+    const result = await callOrchestrator(
+      { message: userText, history },
+      () => {}, // no streaming callback needed here
+    );
+
+    return toStructuredResponse({ reply: result.text, usage: result.usage });
   };
 
   const sendForInterview = async (text: string, brainContext?: string) => {
@@ -393,7 +337,7 @@ const BottomChatPanel = () => {
         .filter((m) => m.content.trim())
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const result = await streamOrchestrator(
+      const result = await callOrchestrator(
         { message: text, history },
         (streamedText) => {
           setMessages((prev) => {

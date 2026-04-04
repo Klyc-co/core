@@ -2,8 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -32,6 +31,7 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
+      console.error("ANTHROPIC_API_KEY is not set in environment variables.");
       return new Response(
         JSON.stringify({ reply: "API key not configured. Please add ANTHROPIC_API_KEY in your project secrets." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -66,7 +66,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => "Unknown error");
-      console.error("Anthropic API error:", response.status, errText);
+      console.error(`Anthropic API error: ${response.status} - ${errText}`);
       return new Response(
         JSON.stringify({ reply: "I'm having trouble connecting to the AI service right now. Please try again in a moment." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
