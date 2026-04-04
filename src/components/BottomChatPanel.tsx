@@ -38,10 +38,17 @@ interface StructuredResponse {
   session_id?: string;
 }
 
+interface CompressionStats {
+  originalTokens: number;
+  compressedTokens: number;
+  ratio: number;
+}
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   structured?: StructuredResponse;
+  compressionStats?: CompressionStats;
 };
 
 const ORCHESTRATOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/orchestrator`;
