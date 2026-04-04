@@ -178,7 +178,7 @@ const BottomChatPanel = () => {
   };
 
   const toStructuredResponse = (orchestratorResponse: any): StructuredResponse => {
-    const responseText = orchestratorResponse?.reply || orchestratorResponse?.response || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
+    const responseText = extractResponseText(orchestratorResponse) || FALLBACK_MSG;
 
     let nextQuestions: NextQuestion[] = [];
     if (Array.isArray(orchestratorResponse?.next_questions)) {
