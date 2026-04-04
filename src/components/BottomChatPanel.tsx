@@ -29,12 +29,12 @@ interface NextQuestion {
 }
 
 interface StructuredResponse {
-  intent: string;
   message: string;
   next_questions: NextQuestion[];
   draft_updates: Record<string, any>;
   risk_level?: "low" | "medium" | "high";
   requires_approval?: boolean;
+  session_id?: string;
 }
 
 type ChatMessage = {
