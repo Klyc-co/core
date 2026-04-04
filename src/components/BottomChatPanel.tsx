@@ -525,7 +525,6 @@ const BottomChatPanel = () => {
                         )}
                         {msg.structured?.next_questions &&
                           i === messages.length - 1 &&
-                          msg.structured.intent !== "campaign_ready" &&
                           renderNextQuestions(msg.structured.next_questions)}
                         {/* Retry button on last error message */}
                         {i === messages.length - 1 && lastFailedText && msg.content.includes("error") && (
