@@ -29,6 +29,7 @@ interface NextQuestion {
 }
 
 interface StructuredResponse {
+  intent?: string;
   message: string;
   next_questions: NextQuestion[];
   draft_updates: Record<string, any>;
@@ -51,7 +52,7 @@ const BottomChatPanel = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. How can I help you today?" },
+    { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?" },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +64,6 @@ const BottomChatPanel = () => {
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Health check on mount
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -145,16 +145,7 @@ const BottomChatPanel = () => {
     return JSON.stringify(data);
   };
 
-  const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
-    const lastUserMsg = allMessages.filter(m => m.role === "user").pop();
-    const userText = lastUserMsg?.content || "";
-
-    const orchestratorResponse = await callOrchestrator("chat", {
-      message: userText,
-      session_id: sessionId || undefined,
-      client_id: selectedClientId !== "default" ? selectedClientId : undefined,
-    });
-
+  const toStructuredResponse = (orchestratorResponse: any): StructuredResponse => {
     const responseText = orchestratorResponse?.reply || orchestratorResponse?.response || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
 
     let nextQuestions: NextQuestion[] = [];
@@ -168,6 +159,7 @@ const BottomChatPanel = () => {
     }
 
     return {
+      intent: orchestratorResponse?.intent,
       message: responseText,
       next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
@@ -175,6 +167,106 @@ const BottomChatPanel = () => {
       requires_approval: orchestratorResponse?.requires_approval || false,
       session_id: orchestratorResponse?.session_id,
     };
+  };
+
+  const streamOrchestrator = async (
+    action: string,
+    payload: Record<string, any>,
+    onChunk: (content: string) => void,
+  ): Promise<StructuredResponse> => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) throw new Error("Not authenticated");
+
+    const resp = await fetch(ORCHESTRATOR_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ action, stream: true, ...payload }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed (${resp.status})`);
+    }
+
+    if (!resp.body) {
+      return toStructuredResponse(await resp.json());
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+    let donePayload: any = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      while (buffer.includes("\n\n")) {
+        const boundary = buffer.indexOf("\n\n");
+        const rawEvent = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        if (!rawEvent.trim()) continue;
+
+        let eventName = "message";
+        const dataLines: string[] = [];
+
+        for (const line of rawEvent.split("\n")) {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+
+        if (!dataLines.length) continue;
+
+        const rawData = dataLines.join("\n");
+        let parsed: any;
+
+        try {
+          parsed = JSON.parse(rawData);
+        } catch {
+          parsed = { delta: rawData };
+        }
+
+        if (eventName === "chunk") {
+          const delta = typeof parsed?.delta === "string" ? parsed.delta : "";
+          content += delta;
+          onChunk(content);
+        }
+
+        if (eventName === "error") {
+          throw new Error(parsed?.error || "Streaming failed");
+        }
+
+        if (eventName === "done") {
+          donePayload = parsed;
+          content = parsed?.reply || content;
+          onChunk(content);
+        }
+      }
+    }
+
+    return toStructuredResponse(donePayload || { reply: content });
+  };
+
+  const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
+    const lastUserMsg = allMessages.filter((m) => m.role === "user").pop();
+    const userText = lastUserMsg?.content || "";
+
+    const orchestratorResponse = await callOrchestrator("chat", {
+      message: userText,
+      session_id: sessionId || undefined,
+      client_id: selectedClientId !== "default" ? selectedClientId : undefined,
+    });
+
+    return toStructuredResponse(orchestratorResponse);
   };
 
   const sendForInterview = async (text: string, brainContext?: string) => {
