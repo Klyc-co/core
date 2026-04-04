@@ -565,24 +565,6 @@ const BottomChatPanel = () => {
         </button>
       </div>
 
-      {/* Header bar - always visible, acts as collapsed state */}
-      <div className={cn(
-        "px-4 py-2 flex items-center gap-2 shrink-0",
-        heightVh > 18 && "border-b border-border"
-      )}>
-        <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
-        <span className="text-sm font-semibold text-foreground">Klyc</span>
-        <span className="text-xs text-muted-foreground">AI Command Center</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 ml-auto shrink-0 text-muted-foreground"
-          onClick={() => setShowCompressionStats((v) => !v)}
-          title={showCompressionStats ? "Hide KNP stats" : "Show KNP stats"}
-        >
-          {showCompressionStats ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-        </Button>
-      </div>
 
       {heightVh <= 18 ? null : interviewMode ? (
         <VoiceInterviewMode
