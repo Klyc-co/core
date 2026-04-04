@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useChatHeight } from "@/contexts/ChatHeightContext";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import { MessageSquare, Send, Loader2, Mic, Zap, ExternalLink, ChevronUp, ChevronDown, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -38,10 +38,17 @@ interface StructuredResponse {
   session_id?: string;
 }
 
+interface CompressionStats {
+  originalTokens: number;
+  compressedTokens: number;
+  ratio: number;
+}
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   structured?: StructuredResponse;
+  compressionStats?: CompressionStats;
 };
 
 const ORCHESTRATOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/orchestrator`;
@@ -62,6 +69,7 @@ const BottomChatPanel = () => {
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
+  const [showCompressionStats, setShowCompressionStats] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,6 +105,12 @@ const BottomChatPanel = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
+
+  const calcCompressionStats = (text: string): CompressionStats => {
+    const originalTokens = Math.round(text.length * 3);
+    const compressedTokens = Math.max(1, Math.round(text.length / 4));
+    return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
+  };
 
   const callOrchestrator = async (action: string, payload: Record<string, any>) => {
     const session = await supabase.auth.getSession();
@@ -403,6 +417,7 @@ const BottomChatPanel = () => {
           role: "assistant",
           content: structured.message,
           structured,
+          compressionStats: calcCompressionStats(structured.message),
         };
         return next;
       });
@@ -608,6 +623,15 @@ const BottomChatPanel = () => {
         <img src={klycFace} alt="Klyc" className="w-10 h-10 rounded-full object-cover" />
         <span className="text-sm font-semibold text-foreground">Klyc</span>
         <span className="text-xs text-muted-foreground">AI Command Center</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 ml-auto shrink-0 text-muted-foreground"
+          onClick={() => setShowCompressionStats((v) => !v)}
+          title={showCompressionStats ? "Hide KNP stats" : "Show KNP stats"}
+        >
+          {showCompressionStats ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </Button>
       </div>
 
       {heightVh <= 18 ? null : interviewMode ? (
@@ -669,6 +693,12 @@ const BottomChatPanel = () => {
                           >
                             <RefreshCw className="h-3 w-3" /> Retry
                           </Button>
+                        )}
+                        {showCompressionStats && msg.compressionStats && (
+                          <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground/70">
+                            <Zap className="h-2.5 w-2.5" />
+                            <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()} tokens</span>
+                          </div>
                         )}
                       </>
                     ) : (
