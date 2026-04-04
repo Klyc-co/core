@@ -660,6 +660,53 @@ function formatSubmindName(name: string): string {
   return names[name] || name;
 }
 
+async function generateGeneralChatReply(message: string): Promise<string> {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+  }
+
+  const lower = trimmed.toLowerCase();
+  const isGreeting = ["hi", "hello", "hey", "help", "what can you do", "start"].some((phrase) => lower === phrase || lower.includes(phrase));
+  if (isGreeting) {
+    return "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?";
+  }
+
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    return `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  }
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        temperature: 0.5,
+        max_tokens: 220,
+        messages: [
+          {
+            role: "system",
+            content: "You are Klyc, an AI marketing strategist. Reply conversationally in 1-3 short sentences. Do not use bullets. Do not list options that are already represented by UI buttons. Be helpful and specific to the user's request.",
+          },
+          { role: "user", content: trimmed },
+        ],
+      }),
+    });
+
+    if (!res.ok) throw new Error(`AI gateway ${res.status}`);
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    return content || `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  } catch {
+    return `Got it — ${trimmed}. Tell me the goal, audience, and channel, and I'll help you turn it into a concrete marketing plan.`;
+  }
+}
+
 // ── Next Questions Builder ──
 
 function buildNextQuestions(intent: DetectedIntent): NextQuestion[] {
