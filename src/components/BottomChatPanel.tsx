@@ -206,7 +206,7 @@ const BottomChatPanel = () => {
     };
   };
 
-  const streamOrchestrator = async (
+  const callOrchestrator = async (
     payload: { message: string; history?: Array<{ role: string; content: string }> },
     onChunk: (content: string) => void,
   ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number } }> => {
@@ -225,54 +225,16 @@ const BottomChatPanel = () => {
     });
 
     if (!resp.ok) {
+      // Try to extract a friendly error from the response
       const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed (${resp.status})`);
+      const errorReply = errorData.reply || errorData.error || `Request failed (${resp.status})`;
+      throw new Error(errorReply);
     }
 
-    if (!resp.body) {
-      const data = await resp.json();
-      const text = extractResponseText(data) || FALLBACK_MSG;
-      return { text };
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullText = "";
-    let usage: { input_tokens: number; output_tokens: number } | undefined;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let newlineIdx: number;
-      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, newlineIdx).trim();
-        buffer = buffer.slice(newlineIdx + 1);
-
-        if (!line || !line.startsWith("data: ")) continue;
-        const jsonStr = line.slice(6);
-        if (jsonStr === "[DONE]") continue;
-
-        // Check for event type from the previous line
-        // Our SSE format uses "event: chunk" and "event: done"
-        try {
-          const parsed = JSON.parse(jsonStr);
-          if (parsed.delta) {
-            fullText += parsed.delta;
-            onChunk(fullText);
-          }
-          if (parsed.usage) {
-            usage = parsed.usage;
-          }
-        } catch {
-          // Ignore parse errors on partial data
-        }
-      }
-    }
-
-    return { text: fullText || FALLBACK_MSG, usage };
+    const data = await resp.json();
+    const text = extractResponseText(data) || FALLBACK_MSG;
+    onChunk(text);
+    return { text, usage: data.usage };
   };
 
   const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
