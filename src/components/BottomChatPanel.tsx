@@ -29,12 +29,12 @@ interface NextQuestion {
 }
 
 interface StructuredResponse {
-  intent: string;
   message: string;
   next_questions: NextQuestion[];
   draft_updates: Record<string, any>;
   risk_level?: "low" | "medium" | "high";
   requires_approval?: boolean;
+  session_id?: string;
 }
 
 type ChatMessage = {
@@ -56,6 +56,7 @@ const BottomChatPanel = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
@@ -150,17 +151,16 @@ const BottomChatPanel = () => {
 
     const orchestratorResponse = await callOrchestrator("chat", {
       message: userText,
+      session_id: sessionId || undefined,
       client_id: selectedClientId !== "default" ? selectedClientId : undefined,
     });
 
     const responseText = orchestratorResponse?.reply || orchestratorResponse?.response || orchestratorResponse?.message || extractResponseText(orchestratorResponse);
 
-    // Normalize next_questions: orchestrator may send string[] or NextQuestion[]
     let nextQuestions: NextQuestion[] = [];
     if (Array.isArray(orchestratorResponse?.next_questions)) {
       nextQuestions = orchestratorResponse.next_questions.map((q: any, i: number) => {
         if (typeof q === "string") {
-          // Legacy string format — treat first 3 as buttons, last as fill-in
           return { field: `suggestion_${i}`, question: q, type: "button" as const };
         }
         return q;
@@ -168,12 +168,12 @@ const BottomChatPanel = () => {
     }
 
     return {
-      intent: orchestratorResponse?.source || orchestratorResponse?.intent || "Klyc",
       message: responseText,
       next_questions: nextQuestions,
       draft_updates: orchestratorResponse?.draft_updates || {},
       risk_level: orchestratorResponse?.risk_level || "low",
       requires_approval: orchestratorResponse?.requires_approval || false,
+      session_id: orchestratorResponse?.session_id,
     };
   };
 
@@ -193,16 +193,18 @@ const BottomChatPanel = () => {
       if (structured.draft_updates?._draft_id) {
         setDraftId(structured.draft_updates._draft_id);
       }
+      if (structured.session_id) {
+        setSessionId(structured.session_id);
+      }
 
       return {
         message: structured.message,
         draft_updates: structured.draft_updates,
         next_questions: structured.next_questions,
-        intent: structured.intent,
+        session_id: structured.session_id,
       };
     } catch (err) {
       const fallback: StructuredResponse = {
-        intent: "other",
         message: "Sorry, I encountered an error. Please try again.",
         next_questions: [],
         draft_updates: {},
@@ -211,7 +213,7 @@ const BottomChatPanel = () => {
         ...prev,
         { role: "assistant", content: fallback.message, structured: fallback },
       ]);
-      return { message: fallback.message, draft_updates: {}, next_questions: [], intent: "other" };
+      return { message: fallback.message, draft_updates: {}, next_questions: [], session_id: undefined };
     }
   };
 
@@ -276,8 +278,8 @@ const BottomChatPanel = () => {
     try {
       const structured = await sendToKlyc(updated);
 
-      if (structured.draft_updates?._draft_id) {
-        setDraftId(structured.draft_updates._draft_id);
+      if (structured.session_id) {
+        setSessionId(structured.session_id);
       }
 
       setMessages((prev) => [
@@ -520,19 +522,13 @@ const BottomChatPanel = () => {
                             {msg.content}
                           </ReactMarkdown>
                         </div>
-                        {msg.structured?.intent && msg.structured.intent !== "other" && (
-                          <Badge variant="secondary" className="mt-2 text-[10px]">
-                            {msg.structured.intent.replace("_", " ")}
-                          </Badge>
-                        )}
-                        {msg.structured?.intent === "campaign_ready" && (
+                        {msg.structured?.draft_updates?._draft_id && (
                           <Button size="sm" className="mt-2 w-full text-xs gap-1.5" onClick={() => navigate("/campaigns/queue")}>
                             <ExternalLink className="h-3 w-3" /> Open Campaign Queue
                           </Button>
                         )}
                         {msg.structured?.next_questions &&
                           i === messages.length - 1 &&
-                          msg.structured.intent !== "campaign_ready" &&
                           renderNextQuestions(msg.structured.next_questions)}
                         {/* Retry button on last error message */}
                         {i === messages.length - 1 && lastFailedText && msg.content.includes("error") && (
