@@ -151,7 +151,7 @@ const BottomChatPanel = () => {
 
     const orchestratorResponse = await callOrchestrator("chat", {
       message: userText,
-      session_id: draftId || undefined,
+      session_id: sessionId || undefined,
       client_id: selectedClientId !== "default" ? selectedClientId : undefined,
     });
 
