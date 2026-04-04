@@ -106,7 +106,12 @@ const BottomChatPanel = () => {
     scrollToBottom();
   }, [messages, isLoading, scrollToBottom]);
 
-  const calcCompressionStats = (text: string): CompressionStats => {
+  const calcCompressionStats = (text: string, usage?: { input_tokens: number; output_tokens: number }): CompressionStats => {
+    if (usage && usage.input_tokens > 0 && usage.output_tokens > 0) {
+      const total = usage.input_tokens + usage.output_tokens;
+      const compressed = usage.output_tokens;
+      return { originalTokens: total, compressedTokens: compressed, ratio: Math.max(1, Math.round(total / compressed)) };
+    }
     const originalTokens = Math.round(text.length * 3);
     const compressedTokens = Math.max(1, Math.round(text.length / 4));
     return { originalTokens, compressedTokens, ratio: Math.round(originalTokens / compressedTokens) };
@@ -202,10 +207,9 @@ const BottomChatPanel = () => {
   };
 
   const streamOrchestrator = async (
-    action: string,
-    payload: Record<string, any>,
+    payload: { message: string; history?: Array<{ role: string; content: string }> },
     onChunk: (content: string) => void,
-  ): Promise<StructuredResponse> => {
+  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number } }> => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
@@ -217,7 +221,7 @@ const BottomChatPanel = () => {
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ action, stream: true, ...payload }),
+      body: JSON.stringify(payload),
     });
 
     if (!resp.ok) {
@@ -226,66 +230,49 @@ const BottomChatPanel = () => {
     }
 
     if (!resp.body) {
-      return toStructuredResponse(await resp.json());
+      const data = await resp.json();
+      const text = extractResponseText(data) || FALLBACK_MSG;
+      return { text };
     }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let content = "";
-    let donePayload: any = null;
+    let fullText = "";
+    let usage: { input_tokens: number; output_tokens: number } | undefined;
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
 
-      while (buffer.includes("\n\n")) {
-        const boundary = buffer.indexOf("\n\n");
-        const rawEvent = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
+      let newlineIdx: number;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, newlineIdx).trim();
+        buffer = buffer.slice(newlineIdx + 1);
 
-        if (!rawEvent.trim()) continue;
+        if (!line || !line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6);
+        if (jsonStr === "[DONE]") continue;
 
-        let eventName = "message";
-        const dataLines: string[] = [];
-
-        for (const line of rawEvent.split("\n")) {
-          if (line.startsWith("event:")) eventName = line.slice(6).trim();
-          if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-        }
-
-        if (!dataLines.length) continue;
-
-        const rawData = dataLines.join("\n");
-        let parsed: any;
-
+        // Check for event type from the previous line
+        // Our SSE format uses "event: chunk" and "event: done"
         try {
-          parsed = JSON.parse(rawData);
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.delta) {
+            fullText += parsed.delta;
+            onChunk(fullText);
+          }
+          if (parsed.usage) {
+            usage = parsed.usage;
+          }
         } catch {
-          parsed = { delta: rawData };
-        }
-
-        if (eventName === "chunk") {
-          const delta = typeof parsed?.delta === "string" ? parsed.delta : "";
-          content += delta;
-          onChunk(content);
-        }
-
-        if (eventName === "error") {
-          throw new Error(parsed?.error || "Streaming failed");
-        }
-
-        if (eventName === "done") {
-          donePayload = parsed;
-          content = parsed?.reply || content;
-          onChunk(content);
+          // Ignore parse errors on partial data
         }
       }
     }
 
-    return toStructuredResponse(donePayload || { reply: content });
+    return { text: fullText || FALLBACK_MSG, usage };
   };
 
   const sendToKlyc = async (allMessages: ChatMessage[]): Promise<StructuredResponse> => {
@@ -401,57 +388,42 @@ const BottomChatPanel = () => {
     setQuestionAnswers({});
 
     try {
-      const structured = await streamOrchestrator(
-        "chat",
-        {
-          message: text,
-          session_id: sessionId || undefined,
-          client_id: selectedClientId !== "default" ? selectedClientId : undefined,
-        },
-        (rawContent) => {
-          // Parse out JSON if the stream chunk is JSON with a reply field
-          let displayContent = rawContent;
-          try {
-            if (rawContent.trim().startsWith("{")) {
-              const parsed = JSON.parse(rawContent);
-              if (typeof parsed === "object" && parsed !== null) {
-                displayContent = extractResponseText(parsed) || "";
-              }
-            }
-          } catch {
-            // Not complete JSON yet during streaming — show as-is unless it looks like partial JSON
-            if (rawContent.trim().startsWith("{") && !rawContent.trim().endsWith("}")) {
-              displayContent = ""; // Hide partial JSON during streaming
-            }
-          }
+      // Build history from previous messages (exclude the placeholder)
+      const history = messages
+        .filter((m) => m.content.trim())
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const result = await streamOrchestrator(
+        { message: text, history },
+        (streamedText) => {
           setMessages((prev) => {
             const next = [...prev];
             next[next.length - 1] = {
               ...next[next.length - 1],
               role: "assistant",
-              content: displayContent,
+              content: streamedText,
             };
             return next;
           });
-        }
+        },
       );
 
-      if (structured.session_id) {
-        setSessionId(structured.session_id);
-      }
+      const isFallback = result.text === FALLBACK_MSG;
+      const structured: StructuredResponse = {
+        message: result.text,
+        next_questions: [],
+        draft_updates: {},
+        risk_level: "low",
+        requires_approval: false,
+      };
 
-      if (structured.draft_updates?._draft_id) {
-        setDraftId(structured.draft_updates._draft_id);
-      }
-
-      const isFallback = structured.message === FALLBACK_MSG;
       setMessages((prev) => {
         const next = [...prev];
         next[next.length - 1] = {
           role: "assistant",
-          content: structured.message,
+          content: result.text,
           structured,
-          compressionStats: isFallback ? undefined : calcCompressionStats(structured.message),
+          compressionStats: isFallback ? undefined : calcCompressionStats(result.text, result.usage),
         };
         return next;
       });
