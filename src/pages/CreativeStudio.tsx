@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppHeader from "@/components/AppHeader";
-import CreativeHub from "@/components/creative/CreativeHub";
 import ImageVideoGenerator from "@/components/creative/ImageVideoGenerator";
 import FlyerGeneratorView from "@/components/creative/FlyerGeneratorView";
 import HireAProfessional from "@/components/creative/HireAProfessional";
 import type { User } from "@supabase/supabase-js";
-
-type ActiveTool = "hub" | "image-video" | "flyer" | "broll" | "hire";
 
 const CreativeStudio = () => {
   const navigate = useNavigate();
@@ -17,7 +15,6 @@ const CreativeStudio = () => {
   const [loading, setLoading] = useState(true);
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [brandFonts, setBrandFonts] = useState<string[]>([]);
-  const [activeTool, setActiveTool] = useState<ActiveTool>("hub");
 
   useEffect(() => {
     const init = async () => {
@@ -36,14 +33,6 @@ const CreativeStudio = () => {
     init();
   }, [navigate]);
 
-  const handleSelect = (tool: "image-video" | "flyer" | "broll" | "hire") => {
-    if (tool === "broll") {
-      navigate("/projects", { state: { fromCreative: true } });
-      return;
-    }
-    setActiveTool(tool);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -58,20 +47,33 @@ const CreativeStudio = () => {
       <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Creative Studio</h1>
-          <p className="text-sm text-muted-foreground">Create visual content, images, thumbnails, and media assets for campaigns.</p>
+          <p className="text-sm text-muted-foreground">Create visual content, images, thumbnails, and media assets.</p>
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {activeTool === "hub" && <CreativeHub onSelect={handleSelect} />}
-        {activeTool === "image-video" && <ImageVideoGenerator onBack={() => setActiveTool("hub")} />}
-        {activeTool === "flyer" && (
-          <FlyerGeneratorView
-            brandColors={brandColors}
-            brandFonts={brandFonts}
-            onBack={() => setActiveTool("hub")}
-          />
-        )}
-        {activeTool === "hire" && <HireAProfessional onBack={() => setActiveTool("hub")} />}
+        <Tabs defaultValue="image-video">
+          <TabsList className="mb-6">
+            <TabsTrigger value="image-video">Image & Video</TabsTrigger>
+            <TabsTrigger value="flyer">Flyer Generator</TabsTrigger>
+            <TabsTrigger value="hire">Hire</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="image-video">
+            <ImageVideoGenerator />
+          </TabsContent>
+
+          <TabsContent value="flyer">
+            <FlyerGeneratorView
+              brandColors={brandColors}
+              brandFonts={brandFonts}
+              onBack={() => {}}
+            />
+          </TabsContent>
+
+          <TabsContent value="hire">
+            <HireAProfessional onBack={() => {}} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
