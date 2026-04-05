@@ -399,7 +399,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               ) : libraryImages.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
               ) : (
-                <ScrollArea className="max-h-48">
+                <ScrollArea className="h-64">
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {libraryImages.map((img) => {
                       const isSelected = inspirationUrls.includes(img.value);
