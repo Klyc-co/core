@@ -60,20 +60,29 @@ const CreativeStudio = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <Tabs defaultValue="image-video">
           <TabsList className="mb-6">
             <TabsTrigger value="image-video">Image & Video</TabsTrigger>
             <TabsTrigger value="flyer">Flyer Generator</TabsTrigger>
             <TabsTrigger value="hire">Hire</TabsTrigger>
-            <TabsTrigger value="library">Library</TabsTrigger>
           </TabsList>
-        </Tabs>
 
-        {activeTab === "image-video" && <ImageVideoGenerator />}
-        {activeTab === "flyer" && (
-          <FlyerGeneratorView brandColors={brandColors} brandFonts={brandFonts} onBack={() => {}} />
-        )}
-        {activeTab === "hire" && <HireAProfessional onBack={() => {}} />}
+          <TabsContent value="image-video">
+            <ImageVideoGenerator />
+          </TabsContent>
+
+          <TabsContent value="flyer">
+            <FlyerGeneratorView
+              brandColors={brandColors}
+              brandFonts={brandFonts}
+              onBack={() => {}}
+            />
+          </TabsContent>
+
+          <TabsContent value="hire">
+            <HireAProfessional onBack={() => {}} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
