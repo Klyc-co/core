@@ -303,10 +303,6 @@ const LeftNavSidebar = () => {
     );
   }
 
-  // Desktop — draggable width
-  const { width, setWidth } = useSidebarWidth();
-  const isDragging = useRef(false);
-
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
