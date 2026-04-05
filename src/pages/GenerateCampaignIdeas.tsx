@@ -602,7 +602,24 @@ const GenerateCampaignIdeas = () => {
     }
   };
 
-  const handleGenerateVoiceover = async () => {
+  const handleLaunchPost = () => {
+    navigate("/campaigns/new", {
+      state: {
+        campaignName: campaignIdea || "",
+        postCaption: postCaption || "",
+        tags: tags || [],
+        videoScript: videoScript || "",
+        imagePrompt: imagePrompt || "",
+        articleOutline: articleOutline || "",
+        campaignGoals: campaignGoals || "",
+        targetAudienceDescription: targetAudienceDescription || "",
+        campaignObjective: campaignObjective || "",
+        contentType: selectedContentType || "",
+      },
+    });
+  };
+
+
     const textToVoice = voiceoverSource === "script" ? videoScript : campaignObjective;
     if (!textToVoice?.trim()) {
       toast({
