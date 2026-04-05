@@ -54,6 +54,7 @@ interface BrandAssetImage {
 }
 
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
@@ -68,6 +69,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  // B-Roll state
+  const [brollProjects, setBrollProjects] = useState<any[]>([]);
+  const [brollLoading, setBrollLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
