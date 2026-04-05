@@ -857,6 +857,20 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
+          {/* Upload My Own Content Button */}
+          {selectedContentType && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 py-6 text-lg border-dashed border-2"
+              onClick={() => navigate("/campaigns/new", {
+                state: { contentType: selectedContentType },
+              })}
+            >
+              <Upload className="w-5 h-5" />
+              Upload My Own Content
+            </Button>
+          )}
+
           {/* Generate Button */}
           <Button 
             className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
@@ -871,7 +885,9 @@ const GenerateCampaignIdeas = () => {
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Generate Campaign Ideas
+                {selectedContentType 
+                  ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+                  : "Generate Post Ideas"}
               </>
             )}
           </Button>
