@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Send, Loader2, Mic, Zap, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +53,7 @@ const SidebarChat = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hey! I'm Klyc, your AI marketing strategist. What would you like to work on?" },
   ]);
@@ -64,7 +65,22 @@ const SidebarChat = () => {
   const [interviewMode, setInterviewMode] = useState<InterviewType | null>(null);
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
+  const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-prompt when user lands on the generate page
+  useEffect(() => {
+    if (location.pathname === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
+      setLastPromptedRoute("/campaigns/generate");
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "📝 **Let's create a post!**\n\nTell me about your post — what's the idea, what are you promoting, and who's your target audience? I'll help shape the strategy while you pick your content type on the right.",
+        },
+      ]);
+    }
+  }, [location.pathname]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
