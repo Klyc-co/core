@@ -66,6 +66,29 @@ export default function ReviewPromptStep({
         parts.push("");
       }
 
+      // Custom prompt
+      if (wizardState.customPrompt?.trim()) {
+        parts.push("USER INSTRUCTIONS:");
+        parts.push(wizardState.customPrompt.trim());
+        parts.push("");
+      }
+
+      // Product info
+      if (wizardState.selectedProduct) {
+        parts.push("PRODUCT DETAILS:");
+        parts.push(`- Product Name: ${wizardState.selectedProduct.name}`);
+        if (wizardState.selectedProduct.short_description) {
+          parts.push(`- Description: ${wizardState.selectedProduct.short_description}`);
+        }
+        if (wizardState.selectedProduct.value_propositions) {
+          parts.push(`- Value Propositions: ${wizardState.selectedProduct.value_propositions}`);
+        }
+        if (wizardState.selectedProduct.target_audience) {
+          parts.push(`- Target Audience: ${wizardState.selectedProduct.target_audience}`);
+        }
+        parts.push("");
+      }
+
       // Assets
       if (wizardState.selectedAssets.length > 0) {
         const logos = wizardState.selectedAssets.filter((a) => a.type === "logo");
@@ -111,6 +134,8 @@ export default function ReviewPromptStep({
     wizardState.aspectRatio,
     wizardState.selectedTemplate,
     wizardState.selectedCampaignDraft,
+    wizardState.selectedProduct,
+    wizardState.customPrompt,
     wizardState.selectedAssets,
     wizardState.selectedFonts,
     wizardState.selectedColors,
