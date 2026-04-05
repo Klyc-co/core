@@ -32,7 +32,7 @@ const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
   { id: "visual-post", label: "Image Post", icon: Image },
   { id: "written", label: "Written", icon: FileText },
-  { id: "video-ad", label: "Video Ad", icon: Film },
+  { id: "paid-ads", label: "Paid Ads", icon: DollarSign },
 ];
 
 // Campaign Strategy Component (shared between content types)
