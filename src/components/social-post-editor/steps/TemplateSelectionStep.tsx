@@ -554,12 +554,16 @@ export default function TemplateSelectionStep({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Choose Your Template</h2>
-        <p className="text-muted-foreground mt-1">
-          Select your post size, paste a Figma URL, upload a PNG, or choose from templates
-        </p>
+      {/* Continue to Assets Button */}
+      <div className="flex justify-end">
+        <Button
+          size="lg"
+          onClick={onNext}
+          disabled={!canProceed}
+          className="min-w-[200px]"
+        >
+          Continue to Assets
+        </Button>
       </div>
 
       {/* Aspect Ratio Selector */}
@@ -599,52 +603,48 @@ export default function TemplateSelectionStep({
         </div>
       </div>
 
-      {/* Figma URL Paste */}
-      <div className="bg-muted/50 rounded-xl border p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Link className="w-4 h-4 text-primary" />
-          <span>Paste Figma Template URL</span>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            placeholder="https://www.figma.com/file/... or https://www.figma.com/community/..."
-            value={figmaUrl}
-            onChange={(e) => setFigmaUrl(e.target.value)}
-            className="flex-1 h-10 bg-background"
-          />
-          {figmaUrl && (
+      {/* Figma URL + Upload Template side by side */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="bg-muted/50 rounded-xl border p-3 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <Link className="w-3.5 h-3.5 text-primary" />
+            <span>Paste Figma Template URL</span>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://www.figma.com/file/..."
+              value={figmaUrl}
+              onChange={(e) => setFigmaUrl(e.target.value)}
+              className="flex-1 h-9 bg-background text-sm"
+            />
+            {figmaUrl && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setFigmaUrl("")}
+                className="h-9 w-9"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
             <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setFigmaUrl("")}
-              className="h-10 w-10"
+              onClick={handleSaveFigmaUrl}
+              disabled={!figmaUrl.trim()}
+              className="h-9 text-sm"
+              size="sm"
             >
-              <X className="w-4 h-4" />
+              Save
             </Button>
-          )}
-          <Button
-            onClick={handleSaveFigmaUrl}
-            disabled={!figmaUrl.trim()}
-            className="h-10"
-          >
-            Save Link
-          </Button>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          After saving the link, export the Figma design as PNG and upload it below.
-        </p>
-      </div>
 
-      {/* Upload Template */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all group">
+        <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all group">
           {isUploading ? (
-            <Loader2 className="w-10 h-10 text-primary animate-spin mb-3" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
           ) : (
-            <Upload className="w-10 h-10 text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
+            <Upload className="w-8 h-8 text-muted-foreground group-hover:text-primary mb-2 transition-colors" />
           )}
-          <span className="text-base font-medium">Upload Template PNG</span>
-          <span className="text-sm text-muted-foreground mt-1">Export from Figma and upload</span>
+          <span className="text-sm font-medium">Upload Template PNG</span>
           <input
             type="file"
             accept="image/*"
@@ -653,6 +653,7 @@ export default function TemplateSelectionStep({
             disabled={isUploading}
           />
         </label>
+      </div>
 
         {/* Selected Template Preview */}
         {wizardState.selectedTemplate && (
