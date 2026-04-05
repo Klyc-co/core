@@ -66,6 +66,19 @@ const socialPlatforms: SocialPlatform[] = [
 
 const NewCampaign = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const generatedData = location.state as {
+    campaignName?: string;
+    postCaption?: string;
+    tags?: string[];
+    videoScript?: string;
+    imagePrompt?: string;
+    articleOutline?: string;
+    campaignGoals?: string;
+    targetAudienceDescription?: string;
+    campaignObjective?: string;
+    contentType?: string;
+  } | null;
   const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
   const [campaignName, setCampaignName] = useState("");
