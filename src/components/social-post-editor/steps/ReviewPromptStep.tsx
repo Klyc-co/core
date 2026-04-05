@@ -134,6 +134,8 @@ export default function ReviewPromptStep({
     wizardState.aspectRatio,
     wizardState.selectedTemplate,
     wizardState.selectedCampaignDraft,
+    wizardState.selectedProduct,
+    wizardState.customPrompt,
     wizardState.selectedAssets,
     wizardState.selectedFonts,
     wizardState.selectedColors,
