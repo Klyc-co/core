@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Image,
   Video,
+  Film,
   Sparkles,
   Loader2,
   Download,
