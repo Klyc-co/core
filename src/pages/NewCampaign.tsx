@@ -475,7 +475,7 @@ const NewCampaign = () => {
             <Label htmlFor="campaignName">Post Name</Label>
             <Input
               id="campaignName"
-              placeholder="Enter campaign name"
+              placeholder="Enter post name"
               value={campaignName}
               onChange={(e) => setCampaignName(e.target.value)}
             />
@@ -499,7 +499,7 @@ const NewCampaign = () => {
           {/* Add Links */}
           <div className="space-y-2">
             <Label>Add Links</Label>
-            <p className="text-sm text-muted-foreground">Paste URLs that will appear in the campaign description</p>
+            <p className="text-sm text-muted-foreground">Paste URLs that will appear in the post description</p>
             <div className="flex gap-2">
               <Input
                 placeholder="Paste URL here (e.g., https://example.com)"
@@ -674,7 +674,7 @@ const NewCampaign = () => {
           {/* Platform Selection */}
           <div className="space-y-4">
             <Label>Select Platforms to Post</Label>
-            <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your campaign</p>
+            <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {socialPlatforms.map((platform) => (
                 <Card
@@ -711,8 +711,8 @@ const NewCampaign = () => {
 
           {/* Schedule Date & Time */}
           <div className="space-y-4">
-            <Label>Schedule Campaign</Label>
-            <p className="text-sm text-muted-foreground">Choose when to launch your campaign</p>
+            <Label>Schedule Post</Label>
+            <p className="text-sm text-muted-foreground">Choose when to launch your post</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Date Picker */}
               <div className="space-y-2">
@@ -829,7 +829,7 @@ const NewCampaign = () => {
               disabled={isLaunching}
             >
               {isLaunching ? (
-                <>Scheduling Campaign...</>
+                <>Scheduling Post...</>
               ) : (
                 <>
                   <Rocket className="mr-2 h-5 w-5" />
@@ -850,7 +850,7 @@ const NewCampaign = () => {
             if (draft.tags && draft.tags.length > 0) setTags(draft.tags);
             toast({
               title: "Draft loaded! ✨",
-              description: "Campaign fields have been populated from your draft.",
+              description: "Post fields have been populated from your draft.",
             });
           }}
         />
@@ -861,7 +861,7 @@ const NewCampaign = () => {
             <DialogHeader>
               <DialogTitle>Send for Client Approval</DialogTitle>
               <DialogDescription>
-                Select which client should review and approve this campaign.
+                Select which client should review and approve this post.
               </DialogDescription>
             </DialogHeader>
             
@@ -908,12 +908,12 @@ const NewCampaign = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
-              {isTestMode ? "Test Campaign Launch" : "Launch Post"}
+              {isTestMode ? "Test Post Launch" : "Launch Post"}
             </DialogTitle>
             <DialogDescription>
               {isTestMode
-                ? "Generate a test campaign context payload and inspect the result."
-                : "Build and process the full campaign context through the KLYC orchestrator."}
+                ? "Generate a test post context payload and inspect the result."
+                : "Build and process the full post context through the KLYC orchestrator."}
             </DialogDescription>
           </DialogHeader>
 
