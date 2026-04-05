@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppHeader from "@/components/AppHeader";
 import ImageVideoGenerator from "@/components/creative/ImageVideoGenerator";
 import FlyerGeneratorView from "@/components/creative/FlyerGeneratorView";
@@ -15,6 +15,7 @@ const CreativeStudio = () => {
   const [loading, setLoading] = useState(true);
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [brandFonts, setBrandFonts] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("image-video");
 
   useEffect(() => {
     const init = async () => {
@@ -32,6 +33,14 @@ const CreativeStudio = () => {
     };
     init();
   }, [navigate]);
+
+  const handleTabChange = (value: string) => {
+    if (value === "library") {
+      navigate("/profile/library");
+      return;
+    }
+    setActiveTab(value);
+  };
 
   if (loading) {
     return (
@@ -51,29 +60,20 @@ const CreativeStudio = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <Tabs defaultValue="image-video">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-6">
             <TabsTrigger value="image-video">Image & Video</TabsTrigger>
             <TabsTrigger value="flyer">Flyer Generator</TabsTrigger>
             <TabsTrigger value="hire">Hire</TabsTrigger>
+            <TabsTrigger value="library">Library</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="image-video">
-            <ImageVideoGenerator />
-          </TabsContent>
-
-          <TabsContent value="flyer">
-            <FlyerGeneratorView
-              brandColors={brandColors}
-              brandFonts={brandFonts}
-              onBack={() => {}}
-            />
-          </TabsContent>
-
-          <TabsContent value="hire">
-            <HireAProfessional onBack={() => {}} />
-          </TabsContent>
         </Tabs>
+
+        {activeTab === "image-video" && <ImageVideoGenerator />}
+        {activeTab === "flyer" && (
+          <FlyerGeneratorView brandColors={brandColors} brandFonts={brandFonts} onBack={() => {}} />
+        )}
+        {activeTab === "hire" && <HireAProfessional onBack={() => {}} />}
       </div>
     </div>
   );
