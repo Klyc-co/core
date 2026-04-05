@@ -322,7 +322,8 @@ const LeftNavSidebar = () => {
     );
   }
 
-
+  // Desktop
+  return (
     <>
       <div
         className="fixed left-0 top-0 h-screen bg-card/80 backdrop-blur-sm border-r border-border z-40 flex flex-col overflow-hidden"
