@@ -39,7 +39,7 @@ const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] 
 ];
 
 interface ImageVideoGeneratorProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface BrandAssetImage {
