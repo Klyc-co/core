@@ -711,7 +711,7 @@ const GenerateCampaignIdeas = () => {
             className="text-primary hover:text-primary/80"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Campaigns
+             Back to Posts
           </Button>
           <div className="flex gap-2">
             <Button 
@@ -727,14 +727,18 @@ const GenerateCampaignIdeas = () => {
               className="gap-2"
             >
               <FileStack className="w-4 h-4" />
-              Campaign Drafts
+              Post Drafts
             </Button>
           </div>
         </div>
         
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Generate Campaign Ideas</h1>
-          <p className="text-muted-foreground">Let AI help you brainstorm campaign concepts</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            {selectedContentType 
+              ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+              : "Generate Post Ideas"}
+          </h1>
+          <p className="text-muted-foreground">Let AI help you brainstorm post concepts</p>
         </div>
 
         <div className="space-y-6">
