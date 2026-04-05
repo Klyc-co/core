@@ -50,30 +50,23 @@ const Home = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {quickActions.map((action) => (
             <Card
               key={action.path}
               className="cursor-pointer hover:border-primary/30 transition-colors"
               onClick={() => navigate(action.path)}
             >
-              <CardContent className="flex items-center gap-3 p-4">
-                <action.icon className={`w-5 h-5 ${action.color}`} />
-                <span className="text-sm font-medium text-foreground">{action.label}</span>
+              <CardContent className="flex items-center gap-2 p-2.5">
+                <action.icon className={`w-4 h-4 ${action.color}`} />
+                <span className="text-xs font-medium text-foreground">{action.label}</span>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Approvals + Calendar side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <PendingApprovalsList />
-          </div>
-          <div className="lg:col-span-2">
-            <WeeklyContentCalendar />
-          </div>
-        </div>
+        {/* Full-width Calendar */}
+        <WeeklyContentCalendar />
 
         {/* Live Campaigns */}
         <LiveCampaignsFeed showFullButton limit={6} />
