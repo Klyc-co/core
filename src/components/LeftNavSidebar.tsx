@@ -300,11 +300,45 @@ const LeftNavSidebar = () => {
     );
   }
 
-  // Desktop
+  // Desktop — draggable width
+  const { width, setWidth } = useSidebarWidth();
+  const isDragging = useRef(false);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    const onMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX)));
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [setWidth]);
+
   return (
     <>
-      <div className="fixed left-0 top-0 h-screen w-[260px] bg-card/80 backdrop-blur-sm border-r border-border z-40 flex flex-col overflow-hidden">
+      <div
+        className="fixed left-0 top-0 h-screen bg-card/80 backdrop-blur-sm border-r border-border z-40 flex flex-col overflow-hidden"
+        style={{ width: `${width}px` }}
+      >
         {navContent}
+      </div>
+      {/* Drag handle */}
+      <div
+        className="fixed top-0 h-screen w-1.5 z-50 cursor-col-resize group hover:bg-primary/20 transition-colors"
+        style={{ left: `${width - 3}px` }}
+        onMouseDown={handleDragStart}
+      >
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-primary/50 transition-colors" />
       </div>
       <AddClientDialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen} onClientAdded={fetchClients} />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
