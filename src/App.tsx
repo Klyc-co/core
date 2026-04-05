@@ -236,7 +236,7 @@ const App = () => (
             <Route path="/reports/scheduled" element={<WithSidebar><ReportsPage /></WithSidebar>} />
             <Route path="/strategy" element={<WithSidebar><StrategyDashboard /></WithSidebar>} />
             <Route path="/learning" element={<WithSidebar><LearningHub /></WithSidebar>} />
-            <Route path="/creative-studio" element={<WithSidebar><CreativeStudioPage /></WithSidebar>} />
+            <Route path="/creative-studio" element={<WithSidebar><CreativeStudio /></WithSidebar>} />
             <Route path="/demo/smart-prompt" element={<SmartPromptDemo />} />
             
             {/* Client onboarding */}
