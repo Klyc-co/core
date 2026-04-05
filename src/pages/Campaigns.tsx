@@ -95,16 +95,16 @@ const Campaigns = () => {
           </div>
         </div>
 
-        {/* Live Campaigns */}
+        {/* Live Posts */}
         <div className="mb-6 sm:mb-10">
           <LiveCampaignsFeed />
         </div>
 
-        {/* Past Campaigns */}
+        {/* Past Posts */}
         <div>
           <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
             <History className="w-4 h-4 sm:w-5 sm:h-5" />
-            Past Campaigns
+            Past Posts
           </h2>
           {loadingPast ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
