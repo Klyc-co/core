@@ -64,7 +64,7 @@ const CampaignStrategy = ({
   <Card>
     <CardContent className="p-6">
       <div className="border-l-4 border-primary pl-4 mb-6">
-        <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
+        <h3 className="text-xl font-bold text-foreground">Post Strategy</h3>
       </div>
 
       <div className="space-y-6">
