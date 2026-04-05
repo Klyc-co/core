@@ -36,6 +36,7 @@ const subNavItems = [
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Strategy", path: "/strategy", icon: Zap },
+  { label: "Library", path: "/profile/library", icon: FolderOpen },
   { label: "Learning", path: "/learning", icon: Lightbulb },
 ];
 
