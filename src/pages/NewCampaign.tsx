@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientContext } from "@/contexts/ClientContext";
@@ -66,6 +66,19 @@ const socialPlatforms: SocialPlatform[] = [
 
 const NewCampaign = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const generatedData = location.state as {
+    campaignName?: string;
+    postCaption?: string;
+    tags?: string[];
+    videoScript?: string;
+    imagePrompt?: string;
+    articleOutline?: string;
+    campaignGoals?: string;
+    targetAudienceDescription?: string;
+    campaignObjective?: string;
+    contentType?: string;
+  } | null;
   const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
   const [campaignName, setCampaignName] = useState("");
@@ -106,6 +119,15 @@ const NewCampaign = () => {
     };
     getUser();
   }, [navigate]);
+
+  // Pre-fill from generated post data
+  useEffect(() => {
+    if (generatedData) {
+      if (generatedData.campaignName) setCampaignName(generatedData.campaignName);
+      if (generatedData.postCaption) setPostCaption(generatedData.postCaption);
+      if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
+    }
+  }, []);
 
   const fetchClients = async (userId: string) => {
     const { data, error } = await supabase

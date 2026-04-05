@@ -53,15 +53,7 @@ const Campaigns = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Post Dashboard</h1>
           
-          <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
-            <Button 
-              className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-xs sm:text-sm"
-              onClick={() => navigate("/campaigns/new")}
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">New Post</span>
-              <span className="sm:hidden">New</span>
-            </Button>
+           <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
             <Button 
               className="gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 text-xs sm:text-sm"
               onClick={() => navigate("/campaigns/generate")}

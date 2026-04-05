@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap, Rocket } from "lucide-react";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -64,12 +64,12 @@ const CampaignStrategy = ({
   <Card>
     <CardContent className="p-6">
       <div className="border-l-4 border-primary pl-4 mb-6">
-        <h3 className="text-xl font-bold text-foreground">Campaign Strategy</h3>
+        <h3 className="text-xl font-bold text-foreground">Post Strategy</h3>
       </div>
 
       <div className="space-y-6">
         <div>
-          <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
+          <h4 className="font-semibold text-foreground mb-3">Post Goals & Ideas</h4>
           <Textarea
             value={campaignGoals}
             onChange={(e) => setCampaignGoals(e.target.value)}
@@ -91,7 +91,7 @@ const CampaignStrategy = ({
         </div>
 
         <div>
-          <h4 className="font-semibold text-foreground mb-2">Campaign Objective</h4>
+          <h4 className="font-semibold text-foreground mb-2">Post Objective</h4>
           <Textarea
             value={campaignObjective}
             onChange={(e) => setCampaignObjective(e.target.value)}
@@ -602,6 +602,23 @@ const GenerateCampaignIdeas = () => {
     }
   };
 
+  const handleLaunchPost = () => {
+    navigate("/campaigns/new", {
+      state: {
+        campaignName: campaignIdea || "",
+        postCaption: postCaption || "",
+        tags: tags || [],
+        videoScript: videoScript || "",
+        imagePrompt: imagePrompt || "",
+        articleOutline: articleOutline || "",
+        campaignGoals: campaignGoals || "",
+        targetAudienceDescription: targetAudienceDescription || "",
+        campaignObjective: campaignObjective || "",
+        contentType: selectedContentType || "",
+      },
+    });
+  };
+
   const handleGenerateVoiceover = async () => {
     const textToVoice = voiceoverSource === "script" ? videoScript : campaignObjective;
     if (!textToVoice?.trim()) {
@@ -1042,15 +1059,25 @@ const GenerateCampaignIdeas = () => {
 
               <SampleCampaigns campaigns={sampleCampaigns} />
 
-              {/* Save Buttons */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save Draft"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+                  onClick={handleLaunchPost}
+                >
+                  <Rocket className="w-5 h-5" />
+                  Launch This Post
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 py-6 text-lg"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1289,15 +1316,25 @@ const GenerateCampaignIdeas = () => {
 
               <SampleCampaigns campaigns={sampleCampaigns} />
 
-              {/* Save Buttons */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save Draft"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+                  onClick={handleLaunchPost}
+                >
+                  <Rocket className="w-5 h-5" />
+                  Launch This Post
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 py-6 text-lg"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1359,15 +1396,25 @@ const GenerateCampaignIdeas = () => {
 
               <SampleCampaigns campaigns={sampleCampaigns} />
 
-              {/* Save Buttons */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save Draft"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+                  onClick={handleLaunchPost}
+                >
+                  <Rocket className="w-5 h-5" />
+                  Launch This Post
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 py-6 text-lg"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1558,15 +1605,25 @@ const GenerateCampaignIdeas = () => {
 
               <SampleCampaigns campaigns={sampleCampaigns} />
 
-              {/* Save Buttons */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save Draft"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+                  onClick={handleLaunchPost}
+                >
+                  <Rocket className="w-5 h-5" />
+                  Launch This Post
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 py-6 text-lg"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
             </div>
           )}
         </div>
