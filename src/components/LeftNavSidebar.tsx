@@ -61,7 +61,26 @@ const LeftNavSidebar = () => {
   const [navExpanded, setNavExpanded] = useState(false);
   const [utilExpanded, setUtilExpanded] = useState(false);
 
-  const fetchClients = async () => {
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    const onMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX)));
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [setWidth]);
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setClients([]); return; }
