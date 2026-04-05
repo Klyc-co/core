@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, History, Sparkles, Send } from "lucide-react";
+import { Plus, Clock, History, Sparkles, Send, Eye, Heart, MessageCircle, Share2 } from "lucide-react";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import type { User } from "@supabase/supabase-js";
 
@@ -15,6 +15,13 @@ interface PastCampaign {
   platforms: string[];
   scheduled_date: string;
   status: string;
+}
+
+interface PostAnalytics {
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
 }
 
 const Campaigns = () => {
