@@ -286,10 +286,7 @@ const Library = () => {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
       
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12 flex-1">
-        <Button variant="ghost" onClick={() => navigate("/profile")} className="mb-4 sm:mb-6 text-primary hover:text-primary/80 -ml-2">
-          <ArrowLeft className="w-4 h-4 mr-2" />Back
-        </Button>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex-1">
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
