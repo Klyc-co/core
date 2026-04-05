@@ -655,27 +655,26 @@ export default function TemplateSelectionStep({
         </label>
       </div>
 
-        {/* Selected Template Preview */}
-        {wizardState.selectedTemplate && (
-          <div className="relative border-2 border-primary rounded-xl overflow-hidden">
-            <img
-              src={wizardState.selectedTemplate.previewUrl}
-              alt={wizardState.selectedTemplate.name}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-              <div className="bg-primary text-primary-foreground rounded-full p-2">
-                <Check className="w-6 h-6" />
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-              <p className="text-white text-sm font-medium truncate">
-                {wizardState.selectedTemplate.name}
-              </p>
+      {/* Selected Template Preview */}
+      {wizardState.selectedTemplate && (
+        <div className="relative border-2 border-primary rounded-xl overflow-hidden max-w-xs">
+          <img
+            src={wizardState.selectedTemplate.previewUrl}
+            alt={wizardState.selectedTemplate.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+            <div className="bg-primary text-primary-foreground rounded-full p-2">
+              <Check className="w-6 h-6" />
             </div>
           </div>
-        )}
-      </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+            <p className="text-white text-sm font-medium truncate">
+              {wizardState.selectedTemplate.name}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Saved Templates Gallery */}
       <div className="space-y-4">
