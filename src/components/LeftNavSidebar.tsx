@@ -46,6 +46,9 @@ const LeftNavSidebar = () => {
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
 
+  const { width, setWidth } = useSidebarWidth();
+  const isDragging = useRef(false);
+
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
