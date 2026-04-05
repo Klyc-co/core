@@ -443,8 +443,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           )}
         </div>
       )}
-        </div>
-      )}
 
       {mode !== "broll" && (<>
       {/* Result preview - full width on top */}
