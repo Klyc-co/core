@@ -160,24 +160,52 @@ const Campaigns = () => {
             </Card>
           ) : (
             <div className="space-y-3">
-              {pastCampaigns.map(c => (
-                <Card key={c.id} className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => navigate("/campaigns/schedule")}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">{c.campaign_name}</h3>
-                      <span className="text-xs text-muted-foreground">{c.scheduled_date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {c.platforms.map(p => (
-                          <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0">{p}</Badge>
-                        ))}
+              {pastCampaigns.map(c => {
+                const stats = analyticsMap[c.id];
+                const fmt = (v: number | undefined) => v !== undefined ? v.toLocaleString() : "--";
+                return (
+                  <Card key={c.id} className="hover:border-primary/50 transition-all cursor-pointer" onClick={() => navigate("/campaigns/schedule")}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-medium text-foreground">{c.campaign_name}</h3>
+                          <span className="text-xs text-muted-foreground">{c.scheduled_date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {c.platforms.map(p => (
+                              <Badge key={p} variant="secondary" className="text-[10px] px-1.5 py-0">{p}</Badge>
+                            ))}
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
+                        </div>
                       </div>
-                      <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Eye className="w-3.5 h-3.5 text-blue-500" />
+                          <span className="font-medium text-foreground">{fmt(stats?.views)}</span>
+                          <span className="hidden sm:inline">views</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Heart className="w-3.5 h-3.5 text-red-500" />
+                          <span className="font-medium text-foreground">{fmt(stats?.likes)}</span>
+                          <span className="hidden sm:inline">likes</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MessageCircle className="w-3.5 h-3.5 text-green-500" />
+                          <span className="font-medium text-foreground">{fmt(stats?.comments)}</span>
+                          <span className="hidden sm:inline">comments</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Share2 className="w-3.5 h-3.5 text-purple-500" />
+                          <span className="font-medium text-foreground">{fmt(stats?.shares)}</span>
+                          <span className="hidden sm:inline">shares</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
