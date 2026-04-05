@@ -32,7 +32,7 @@ interface Client {
 }
 
 const subNavItems = [
-  { label: "Campaigns", path: "/campaigns", icon: Megaphone },
+  { label: "Posts", path: "/campaigns", icon: Megaphone },
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Strategy", path: "/strategy", icon: Zap },

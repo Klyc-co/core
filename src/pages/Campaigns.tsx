@@ -51,7 +51,7 @@ const Campaigns = () => {
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Campaigns</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Post Dashboard</h1>
           
           <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
             <Button 
@@ -59,7 +59,7 @@ const Campaigns = () => {
               onClick={() => navigate("/campaigns/new")}
             >
               <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">New Campaign</span>
+              <span className="hidden sm:inline">New Post</span>
               <span className="sm:hidden">New</span>
             </Button>
             <Button 
@@ -67,7 +67,7 @@ const Campaigns = () => {
               onClick={() => navigate("/campaigns/generate")}
             >
               <Sparkles className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Generate Ideas</span>
+              <span className="hidden sm:inline">Generate Post</span>
               <span className="sm:hidden">Generate</span>
             </Button>
             <Button 
@@ -95,23 +95,23 @@ const Campaigns = () => {
           </div>
         </div>
 
-        {/* Live Campaigns */}
+        {/* Live Posts */}
         <div className="mb-6 sm:mb-10">
           <LiveCampaignsFeed />
         </div>
 
-        {/* Past Campaigns */}
+        {/* Past Posts */}
         <div>
           <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
             <History className="w-4 h-4 sm:w-5 sm:h-5" />
-            Past Campaigns
+            Past Posts
           </h2>
           {loadingPast ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Loading...</CardContent></Card>
           ) : pastCampaigns.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
-                No past campaigns yet. Completed campaigns will appear here.
+                No past posts yet. Completed posts will appear here.
               </CardContent>
             </Card>
           ) : (
