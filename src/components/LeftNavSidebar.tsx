@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SidebarChat from "@/components/SidebarChat";
 import {
   LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
-  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X,
+  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X, FolderOpen,
   Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
