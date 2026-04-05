@@ -81,6 +81,7 @@ const LeftNavSidebar = () => {
     window.addEventListener("mouseup", onUp);
   }, [setWidth]);
 
+  const fetchClients = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setClients([]); return; }
