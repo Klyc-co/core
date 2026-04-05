@@ -111,7 +111,7 @@ const Campaigns = () => {
           ) : pastCampaigns.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="p-6 sm:p-8 text-center text-muted-foreground text-sm sm:text-base">
-                No past campaigns yet. Completed campaigns will appear here.
+                No past posts yet. Completed posts will appear here.
               </CardContent>
             </Card>
           ) : (
