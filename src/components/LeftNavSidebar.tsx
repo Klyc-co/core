@@ -4,48 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { useClientContext } from "@/contexts/ClientContext";
-
 import { useIsMobile } from "@/hooks/use-mobile";
+import SidebarChat from "@/components/SidebarChat";
 import {
-  LogOut,
-  Settings,
-  MessageSquare,
-  UserCog,
-  Users,
-  Plus,
-  Check,
-  Briefcase,
-  Trash2,
-  User,
-  Megaphone,
-  Lightbulb,
-  Palette,
-  Menu,
-  X,
-  Shield,
-  FileText,
-  Zap,
-  BarChart3,
-  House,
+  LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
+  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X,
+  Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import AddClientDialog from "@/components/AddClientDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -57,8 +30,7 @@ interface Client {
   client_email: string | null;
 }
 
-const mainNav = [
-  { label: "Home", path: "/home", icon: House },
+const subNavItems = [
   { label: "Campaigns", path: "/campaigns", icon: Megaphone },
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
@@ -72,7 +44,6 @@ const LeftNavSidebar = () => {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { selectedClientId, selectedClientName, setSelectedClient, isDefaultClient } = useClientContext();
-  
 
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
@@ -82,36 +53,30 @@ const LeftNavSidebar = () => {
   const [deleting, setDeleting] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Collapsible states
+  const [navExpanded, setNavExpanded] = useState(true);
+  const [utilExpanded, setUtilExpanded] = useState(false);
+
   const fetchClients = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setClients([]); return; }
       const { data, error } = await supabase
-        .from("marketer_clients")
-        .select("*")
-        .eq("status", "active")
-        .order("client_name");
+        .from("marketer_clients").select("*").eq("status", "active").order("client_name");
       if (error) throw error;
       setClients(data || []);
     } catch (error: any) {
       toast({ title: "Error loading clients", description: error.message, variant: "destructive" });
-    } finally {
-      setLoadingClients(false);
-    }
+    } finally { setLoadingClients(false); }
   };
 
   useEffect(() => { fetchClients(); }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
+  const handleLogout = async () => { await supabase.auth.signOut(); navigate("/auth"); };
 
   const handleDeleteClick = (e: React.MouseEvent, client: Client) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setClientToDelete(client);
-    setDeleteDialogOpen(true);
+    e.preventDefault(); e.stopPropagation();
+    setClientToDelete(client); setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -120,18 +85,12 @@ const LeftNavSidebar = () => {
     try {
       const { error } = await supabase.from("marketer_clients").delete().eq("id", clientToDelete.id);
       if (error) throw error;
-      if (selectedClientId === clientToDelete.client_id) {
-        setSelectedClient("default", "My Business");
-      }
+      if (selectedClientId === clientToDelete.client_id) setSelectedClient("default", "My Business");
       toast({ title: "Client deleted", description: `${clientToDelete.client_name} has been removed.` });
       fetchClients();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-      setClientToDelete(null);
-    }
+    } finally { setDeleting(false); setDeleteDialogOpen(false); setClientToDelete(null); }
   };
 
   const isActive = (path: string) => {
@@ -139,200 +98,212 @@ const LeftNavSidebar = () => {
     return location.pathname.startsWith(path);
   };
 
+  const closeMobile = () => { if (isMobile) setMobileOpen(false); };
+
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 pt-3 pb-4">
+      <div className="px-4 pt-3 pb-2 shrink-0">
         <Logo size="lg" />
       </div>
 
-      {/* Client Switcher */}
+      {/* Client indicator */}
       {!isDefaultClient && selectedClientName && (
-        <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Client</p>
-          <p className="text-sm font-semibold text-primary truncate">{selectedClientName}</p>
+        <div className="mx-3 mb-2 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+          <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Client</p>
+          <p className="text-xs font-semibold text-primary truncate">{selectedClientName}</p>
         </div>
       )}
 
-      {/* Main Navigation */}
-      <nav className="px-3 space-y-1">
-        {mainNav.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.path);
-          return (
-            <button
-              key={item.path}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) setMobileOpen(false);
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {item.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Bottom Section */}
-      <div className="px-3 pb-0 space-y-1 border-t border-border pt-3 mt-auto shrink-0">
-        {/* Profile (always visible) */}
+      {/* Home button — always navigates */}
+      <div className="px-3 shrink-0">
         <button
-          onClick={() => { navigate("/profile"); if (isMobile) setMobileOpen(false); }}
+          onClick={() => { navigate("/home"); closeMobile(); }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+            isActive("/home") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          <House className="w-4 h-4 shrink-0" />
+          Home
+        </button>
+      </div>
+
+      {/* Collapse toggle for sub-nav */}
+      <div className="px-3 shrink-0">
+        <button
+          onClick={() => setNavExpanded((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+        >
+          <span className="font-medium">Tools</span>
+          {navExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+      </div>
+
+      {/* Collapsible sub-nav items */}
+      {navExpanded && (
+        <nav className="px-3 space-y-0.5 shrink-0">
+          {subNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <button
+                key={item.path}
+                onClick={() => { navigate(item.path); closeMobile(); }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* ===== CHAT fills the middle ===== */}
+      <div className="flex-1 min-h-0 flex flex-col mx-2 my-2 border border-border rounded-lg overflow-hidden bg-background/50">
+        <SidebarChat />
+      </div>
+
+      {/* ===== BOTTOM SECTION ===== */}
+      {/* Expand/collapse for utility nav */}
+      <div className="px-3 shrink-0">
+        <button
+          onClick={() => setUtilExpanded((v) => !v)}
+          className="w-full flex items-center justify-center py-1 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
+        >
+          {utilExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* Collapsible utility items */}
+      {utilExpanded && (
+        <div className="px-3 space-y-0.5 shrink-0 pb-1">
+          {/* Switch Profile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                <UserCog className="w-4 h-4 shrink-0" />
+                Switch Profile
+                {!isDefaultClient && <span className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="right" className="w-[260px] bg-popover z-[60]">
+              <DropdownMenuLabel>Switch Profile</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSelectedClient("default", "My Business")} className="flex items-center justify-between">
+                <div className="flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" /><span>My Business</span></div>
+                {isDefaultClient && <Check className="w-4 h-4 text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {loadingClients ? (
+                <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
+              ) : clients.length === 0 ? (
+                <DropdownMenuItem disabled className="text-muted-foreground">No clients yet</DropdownMenuItem>
+              ) : (
+                clients.map((client) => (
+                  <DropdownMenuItem key={client.id} onClick={() => setSelectedClient(client.client_id, client.client_name)} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Users className="w-4 h-4 shrink-0" /><span className="truncate">{client.client_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {selectedClientId === client.client_id && <Check className="w-4 h-4 text-primary" />}
+                      <button onClick={(e) => handleDeleteClick(e, client)} className="p-1 rounded hover:bg-destructive/10 transition-colors"><Trash2 className="w-3 h-3 text-destructive" /></button>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setAddClientDialogOpen(true)} className="text-primary">
+                <Plus className="w-4 h-4 mr-2" /> Add New Client
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            onClick={() => { navigate("/messages"); closeMobile(); }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
+              isActive("/messages") && "bg-primary/10 text-primary"
+            )}
+          >
+            <MessageSquare className="w-4 h-4 shrink-0" />Messages
+          </button>
+
+          <button
+            onClick={() => { navigate("/settings"); closeMobile(); }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
+              isActive("/settings") && "bg-primary/10 text-primary"
+            )}
+          >
+            <Settings className="w-4 h-4 shrink-0" />Settings
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-destructive/80 hover:text-destructive hover:bg-destructive/5 transition-colors"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />Sign Out
+          </button>
+        </div>
+      )}
+
+      {/* Profile — always visible */}
+      <div className="px-3 pb-0 shrink-0">
+        <button
+          onClick={() => { navigate("/profile"); closeMobile(); }}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm border border-transparent text-foreground hover:bg-muted/50 transition-colors",
             location.pathname.startsWith("/profile") ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30"
           )}
         >
-          <User className="w-4 h-4 shrink-0" />
-          <span>Profile</span>
+          <User className="w-4 h-4 shrink-0" /><span>Profile</span>
         </button>
+      </div>
 
-        {/* Switch Users */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-              <UserCog className="w-4 h-4 shrink-0" />
-              Switch Profile
-              {!isDefaultClient && <span className="ml-auto w-2 h-2 bg-primary rounded-full" />}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="right" className="w-[260px] bg-popover z-[60]">
-            <DropdownMenuLabel>Switch Profile</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSelectedClient("default", "My Business")} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-primary" />
-                <span>My Business</span>
-              </div>
-              {isDefaultClient && <Check className="w-4 h-4 text-primary" />}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {loadingClients ? (
-              <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
-            ) : clients.length === 0 ? (
-              <DropdownMenuItem disabled className="text-muted-foreground">No clients yet</DropdownMenuItem>
-            ) : (
-              clients.map((client) => (
-                <DropdownMenuItem key={client.id} onClick={() => setSelectedClient(client.client_id, client.client_name)} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Users className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{client.client_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {selectedClientId === client.client_id && <Check className="w-4 h-4 text-primary" />}
-                    <button onClick={(e) => handleDeleteClick(e, client)} className="p-1 rounded hover:bg-destructive/10 transition-colors" title="Delete client">
-                      <Trash2 className="w-3 h-3 text-destructive" />
-                    </button>
-                  </div>
-                </DropdownMenuItem>
-              ))
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setAddClientDialogOpen(true)} className="text-primary">
-              <Plus className="w-4 h-4 mr-2" /> Add New Client
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <button
-          onClick={() => { navigate("/messages"); if (isMobile) setMobileOpen(false); }}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
-            isActive("/messages") && "bg-primary/10 text-primary"
-          )}
-        >
-          <MessageSquare className="w-4 h-4 shrink-0" />
-          Messages
-        </button>
-
-        <button
-          onClick={() => { navigate("/settings"); if (isMobile) setMobileOpen(false); }}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
-            isActive("/settings") && "bg-primary/10 text-primary"
-          )}
-        >
-          <Settings className="w-4 h-4 shrink-0" />
-          Settings
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-destructive/80 hover:text-destructive hover:bg-destructive/5 transition-colors"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          Sign Out
-        </button>
-
-        {/* Terms & Privacy side by side */}
-        <div className="pt-2 mt-1 border-t border-border flex gap-1">
-          <button
-            onClick={() => { navigate("/terms"); if (isMobile) setMobileOpen(false); }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
-          >
-            <FileText className="w-3 h-3 shrink-0" />
-            Terms
+      {/* Terms & Privacy — always visible */}
+      <div className="px-3 pb-2 shrink-0">
+        <div className="pt-1 flex gap-1">
+          <button onClick={() => { navigate("/terms"); closeMobile(); }} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors">
+            <FileText className="w-2.5 h-2.5 shrink-0" />Terms
           </button>
-          <button
-            onClick={() => { navigate("/privacy"); if (isMobile) setMobileOpen(false); }}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
-          >
-            <Shield className="w-3 h-3 shrink-0" />
-            Privacy
+          <button onClick={() => { navigate("/privacy"); closeMobile(); }} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30 transition-colors">
+            <Shield className="w-2.5 h-2.5 shrink-0" />Privacy
           </button>
         </div>
       </div>
     </div>
   );
 
-  // Mobile: hamburger trigger + overlay
+  // Mobile
   if (isMobile) {
     return (
       <>
-        <Button
-          onClick={() => setMobileOpen(true)}
-          className="fixed top-3 left-3 z-50 h-10 w-10 rounded-lg bg-card border border-border shadow-sm"
-          variant="ghost"
-          size="icon"
-        >
+        <Button onClick={() => setMobileOpen(true)} className="fixed top-3 left-3 z-50 h-10 w-10 rounded-lg bg-card border border-border shadow-sm" variant="ghost" size="icon">
           <Menu className="h-5 w-5" />
         </Button>
-
         {mobileOpen && (
           <>
             <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setMobileOpen(false)} />
-            <div className="fixed left-0 top-0 h-full w-[260px] bg-card border-r border-border z-50 overflow-y-auto">
-              <div className="absolute top-3 right-3">
-                <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="h-8 w-8">
-                  <X className="h-4 w-4" />
-                </Button>
+            <div className="fixed left-0 top-0 h-full w-[280px] bg-card border-r border-border z-50 overflow-hidden flex flex-col">
+              <div className="absolute top-3 right-3 z-10">
+                <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} className="h-8 w-8"><X className="h-4 w-4" /></Button>
               </div>
               {navContent}
             </div>
           </>
         )}
-
         <AddClientDialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen} onClientAdded={fetchClients} />
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete <strong>{clientToDelete?.client_name}</strong>.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete <strong>{clientToDelete?.client_name}</strong>.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
-                {deleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive hover:bg-destructive/90">{deleting ? "Deleting..." : "Delete"}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -340,27 +311,19 @@ const LeftNavSidebar = () => {
     );
   }
 
-  // Desktop: always-open left sidebar
+  // Desktop
   return (
     <>
-      <div className="fixed left-0 top-0 h-screen w-[220px] bg-card/80 backdrop-blur-sm border-r border-border z-40 overflow-y-auto">
+      <div className="fixed left-0 top-0 h-screen w-[260px] bg-card/80 backdrop-blur-sm border-r border-border z-40 flex flex-col overflow-hidden">
         {navContent}
       </div>
-
       <AddClientDialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen} onClientAdded={fetchClients} />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete <strong>{clientToDelete?.client_name}</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete <strong>{clientToDelete?.client_name}</strong>.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive hover:bg-destructive/90">{deleting ? "Deleting..." : "Delete"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
