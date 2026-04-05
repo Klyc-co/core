@@ -859,7 +859,7 @@ const GenerateCampaignIdeas = () => {
           </Card>
 
           {/* Upload My Own Content Button */}
-          {selectedContentType && (
+          {selectedContentType && selectedContentType !== "paid-ads" && (
             <Button
               variant="outline"
               className="w-full gap-2 py-6 text-lg border-dashed border-2"
@@ -873,25 +873,27 @@ const GenerateCampaignIdeas = () => {
           )}
 
           {/* Generate Button */}
-          <Button 
-            className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
-            onClick={handleGenerate}
-            disabled={!selectedContentType || isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                {selectedContentType 
-                  ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
-                  : "Generate Post Ideas"}
-              </>
-            )}
-          </Button>
+          {selectedContentType !== "paid-ads" && (
+            <Button 
+              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
+              onClick={handleGenerate}
+              disabled={!selectedContentType || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  {selectedContentType 
+                    ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+                    : "Generate Post Ideas"}
+                </>
+              )}
+            </Button>
+          )}
 
           {/* Social Video Results */}
           {showResults && selectedContentType === "social-video" && (
