@@ -1316,15 +1316,25 @@ const GenerateCampaignIdeas = () => {
 
               <SampleCampaigns campaigns={sampleCampaigns} />
 
-              {/* Save Buttons */}
-              <Button 
-                className="w-full gap-2 py-6 text-lg"
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-              >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                {isSaving ? "Saving..." : "Save Draft"}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
+                  onClick={handleLaunchPost}
+                >
+                  <Rocket className="w-5 h-5" />
+                  Launch This Post
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2 py-6 text-lg"
+                  onClick={handleSaveDraft}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              </div>
             </div>
           )}
 
