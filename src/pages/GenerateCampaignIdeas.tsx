@@ -739,7 +739,7 @@ const GenerateCampaignIdeas = () => {
               ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
               : "Generate Post Ideas"}
           </h1>
-          <p className="text-muted-foreground">Let AI help you brainstorm post concepts</p>
+          <p className="text-muted-foreground">Use the chat on the left to describe your post &amp; audience, then pick your content type here</p>
         </div>
 
         <div className="space-y-6">
