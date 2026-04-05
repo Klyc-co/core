@@ -74,6 +74,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   // B-Roll state
   const [brollProjects, setBrollProjects] = useState<any[]>([]);
   const [brollLoading, setBrollLoading] = useState(false);
+  const [brollUnlocked, setBrollUnlocked] = useState(false);
+  const [brollPasscode, setBrollPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
