@@ -127,9 +127,9 @@ const LeftNavSidebar = () => {
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo = Home button */}
-      <div className="px-4 pt-1 pb-0 shrink-0">
+      <div className="px-3 pt-2 pb-0 shrink-0">
         <button onClick={() => { navigate("/home"); closeMobile(); }} className="hover:opacity-80 transition-opacity">
-          <Logo size="lg" />
+          <Logo size="sm" />
         </button>
       </div>
 
