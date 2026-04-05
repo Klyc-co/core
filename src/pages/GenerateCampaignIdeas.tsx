@@ -69,7 +69,7 @@ const CampaignStrategy = ({
 
       <div className="space-y-6">
         <div>
-          <h4 className="font-semibold text-foreground mb-3">Campaign Goals & Ideas</h4>
+          <h4 className="font-semibold text-foreground mb-3">Post Goals & Ideas</h4>
           <Textarea
             value={campaignGoals}
             onChange={(e) => setCampaignGoals(e.target.value)}
