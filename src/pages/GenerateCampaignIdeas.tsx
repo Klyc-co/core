@@ -7,11 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Film, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap, Rocket } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, DollarSign, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap, Rocket } from "lucide-react";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
+import PaidAdsDashboard from "@/components/PaidAdsDashboard";
 import { useClientContext } from "@/contexts/ClientContext";
 
 interface Product {
@@ -32,7 +33,7 @@ const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
   { id: "visual-post", label: "Image Post", icon: Image },
   { id: "written", label: "Written", icon: FileText },
-  { id: "video-ad", label: "Video Ad", icon: Film },
+  { id: "paid-ads", label: "Paid Ads", icon: DollarSign },
 ];
 
 // Campaign Strategy Component (shared between content types)
@@ -858,7 +859,7 @@ const GenerateCampaignIdeas = () => {
           </Card>
 
           {/* Upload My Own Content Button */}
-          {selectedContentType && (
+          {selectedContentType && selectedContentType !== "paid-ads" && (
             <Button
               variant="outline"
               className="w-full gap-2 py-6 text-lg border-dashed border-2"
@@ -872,25 +873,27 @@ const GenerateCampaignIdeas = () => {
           )}
 
           {/* Generate Button */}
-          <Button 
-            className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
-            onClick={handleGenerate}
-            disabled={!selectedContentType || isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                {selectedContentType 
-                  ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
-                  : "Generate Post Ideas"}
-              </>
-            )}
-          </Button>
+          {selectedContentType !== "paid-ads" && (
+            <Button 
+              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
+              onClick={handleGenerate}
+              disabled={!selectedContentType || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  {selectedContentType 
+                    ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+                    : "Generate Post Ideas"}
+                </>
+              )}
+            </Button>
+          )}
 
           {/* Social Video Results */}
           {showResults && selectedContentType === "social-video" && (
@@ -1438,213 +1441,9 @@ const GenerateCampaignIdeas = () => {
             </div>
           )}
 
-          {/* Video Ad Results */}
-          {showResults && selectedContentType === "video-ad" && (
-            <div className="space-y-6 mt-8">
-              {/* Post Idea */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
-                  <Textarea
-                    value={campaignIdea}
-                    onChange={(e) => setCampaignIdea(e.target.value)}
-                    placeholder="Your AI-generated post idea will appear here..."
-                    rows={2}
-                    className="resize-none bg-muted/50"
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Video Script */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-foreground">Video Script</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleCopy(videoScript, 'video-ad-script')}
-                      className="gap-2"
-                    >
-                      {copiedField === 'video-ad-script' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      Copy
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={videoScript}
-                    onChange={(e) => setVideoScript(e.target.value)}
-                    placeholder="Your AI-generated video script will appear here..."
-                    rows={6}
-                    className="resize-none bg-muted/50"
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Video Generation Prompts */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-foreground mb-4">Video Generation Prompts (by Scene)</h3>
-                  <div className="space-y-4">
-                    {scenePrompts.map((scene, index) => (
-                      <div key={index} className="border border-border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-foreground">{scene.time} {scene.title}</h4>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleCopy(scene.prompt, `video-ad-scene-${index}`)}
-                            className="gap-2"
-                          >
-                            {copiedField === `video-ad-scene-${index}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                            Copy
-                          </Button>
-                        </div>
-                        <Textarea
-                          value={scene.prompt}
-                          onChange={(e) => {
-                            const newPrompts = [...scenePrompts];
-                            newPrompts[index] = { ...scene, prompt: e.target.value };
-                            setScenePrompts(newPrompts);
-                          }}
-                          placeholder="AI-generated prompt will appear here..."
-                          rows={3}
-                          className="resize-none bg-muted/50"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-4">
-                    Use these prompts with AI video generation tools like Runway, Synthesia, or comparable video generation services to create each scene.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Voiceover Generation */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <ElevenLabsIcon className="w-5 h-5 text-foreground" />
-                    <h3 className="text-lg font-semibold text-foreground">AI Voiceover</h3>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-foreground mb-2">Content to voice:</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => { setVoiceoverSource("script"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
-                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "script" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
-                        >
-                          <Mic className="w-4 h-4 mx-auto mb-1" />
-                          Video Script
-                        </button>
-                        <button
-                          onClick={() => { setVoiceoverSource("objective"); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
-                          className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "objective" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
-                        >
-                          <FileText className="w-4 h-4 mx-auto mb-1" />
-                          Post Objective
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-foreground mb-2">Select Voice:</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {voices.map((voice) => (
-                          <button
-                            key={voice.id}
-                            onClick={() => { setSelectedVoice(voice.id); setVoiceoverAudioUrl(null); voiceoverAudioRef.current = null; }}
-                            className={`p-2 rounded-lg border-2 text-center transition-all ${selectedVoice === voice.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
-                          >
-                            <span className="text-sm font-medium text-foreground block">{voice.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{voice.desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Button
-                      className="w-full gap-2"
-                      onClick={handleGenerateVoiceover}
-                      disabled={isGeneratingVoiceover}
-                    >
-                      {isGeneratingVoiceover ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Generating Voiceover...
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="w-4 h-4" />
-                          Generate Voiceover
-                        </>
-                      )}
-                    </Button>
-
-                    {voiceoverAudioUrl && (
-                      <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handlePlayPauseVoiceover}
-                          className="gap-2"
-                        >
-                          {isPlayingVoiceover ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                          {isPlayingVoiceover ? "Stop" : "Play"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadVoiceover}
-                          className="gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          Download MP3
-                        </Button>
-                        <span className="text-xs text-muted-foreground ml-auto">Powered by ElevenLabs</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
-
-              <SampleCampaigns campaigns={sampleCampaigns} />
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Button 
-                  className="w-full gap-2 py-6 text-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
-                  onClick={handleLaunchPost}
-                >
-                  <Rocket className="w-5 h-5" />
-                  Launch This Post
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="w-full gap-2 py-6 text-lg"
-                  onClick={handleSaveDraft}
-                  disabled={isSaving}
-                >
-                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileStack className="w-5 h-5" />}
-                  {isSaving ? "Saving..." : "Save Draft"}
-                </Button>
-              </div>
-            </div>
+          {/* Paid Ads Dashboard (inline) */}
+          {selectedContentType === "paid-ads" && (
+            <PaidAdsDashboard />
           )}
         </div>
       </main>
