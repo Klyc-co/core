@@ -78,6 +78,7 @@ const NewCampaign = () => {
     targetAudienceDescription?: string;
     campaignObjective?: string;
     contentType?: string;
+    generatedImageUrl?: string;
   } | null;
   const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
@@ -126,6 +127,9 @@ const NewCampaign = () => {
       if (generatedData.campaignName) setCampaignName(generatedData.campaignName);
       if (generatedData.postCaption) setPostCaption(generatedData.postCaption);
       if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
+      if (generatedData.generatedImageUrl) {
+        setLibraryAssets([{ id: "generated-image", name: "Generated Image", url: generatedData.generatedImageUrl }]);
+      }
     }
   }, []);
 
@@ -455,40 +459,15 @@ const NewCampaign = () => {
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <Button 
           variant="ghost" 
-          onClick={() => navigate("/campaigns")}
+          onClick={() => navigate("/campaigns/generate")}
           className="mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Posts
+          Back to Post Generator
         </Button>
 
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Create New Post</h1>
-          <div className="flex gap-2">
-            <Button
-              className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
-              onClick={() => { setIsTestMode(false); setLaunchModalOpen(true); }}
-            >
-              <Rocket className="w-4 h-4" />
-              Launch Post
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 border-muted-foreground/30"
-              onClick={() => { setIsTestMode(true); setLaunchModalOpen(true); }}
-            >
-              <FlaskConical className="w-4 h-4" />
-              Test Launch
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 border-purple-500 text-purple-500 hover:bg-purple-500/10"
-              onClick={() => setShowDraftPicker(true)}
-            >
-              <FileText className="w-4 h-4" />
-              Use Draft
-            </Button>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Prepare for Launch</h1>
         </div>
 
         <div className="space-y-8">
