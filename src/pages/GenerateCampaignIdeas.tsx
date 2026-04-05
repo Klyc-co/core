@@ -30,7 +30,7 @@ const voices = [
 
 const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
-  { id: "visual-post", label: "Visual Post", icon: Image },
+  { id: "visual-post", label: "Image Post", icon: Image },
   { id: "written", label: "Written", icon: FileText },
   { id: "video-ad", label: "Video Ad", icon: Film },
 ];
@@ -73,7 +73,7 @@ const CampaignStrategy = ({
           <Textarea
             value={campaignGoals}
             onChange={(e) => setCampaignGoals(e.target.value)}
-            placeholder="AI-generated campaign goals will appear here..."
+            placeholder="AI-generated post goals will appear here..."
             rows={4}
             className="resize-none bg-muted/50"
           />
@@ -95,7 +95,7 @@ const CampaignStrategy = ({
           <Textarea
             value={campaignObjective}
             onChange={(e) => setCampaignObjective(e.target.value)}
-            placeholder="AI-generated campaign objective will appear here..."
+            placeholder="AI-generated post objective will appear here..."
             rows={3}
             className="resize-none bg-muted/50"
           />
@@ -389,7 +389,7 @@ const GenerateCampaignIdeas = () => {
       });
 
       if (error) {
-        throw new Error(error.message || "Failed to generate campaign idea");
+        throw new Error(error.message || "Failed to generate post idea");
       }
 
       
@@ -416,8 +416,8 @@ const GenerateCampaignIdeas = () => {
       
       setShowResults(true);
     } catch (error) {
-      console.error("Error generating campaign idea:", error);
-      alert(error instanceof Error ? error.message : "Failed to generate campaign idea");
+      console.error("Error generating post idea:", error);
+      alert(error instanceof Error ? error.message : "Failed to generate post idea");
     } finally {
       setIsLoading(false);
     }
@@ -469,7 +469,7 @@ const GenerateCampaignIdeas = () => {
     if (!imagePrompt.trim()) {
       toast({
         title: "No image prompt",
-        description: "Please generate a campaign idea first or enter an image prompt.",
+        description: "Please generate a post idea first or enter an image prompt.",
         variant: "destructive",
       });
       return;
@@ -624,7 +624,7 @@ const GenerateCampaignIdeas = () => {
     if (!textToVoice?.trim()) {
       toast({
         title: "No content to voice",
-        description: `Please generate a campaign idea first.`,
+        description: `Please generate a post idea first.`,
         variant: "destructive",
       });
       return;
@@ -711,7 +711,7 @@ const GenerateCampaignIdeas = () => {
             className="text-primary hover:text-primary/80"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Campaigns
+             Back to Posts
           </Button>
           <div className="flex gap-2">
             <Button 
@@ -727,14 +727,18 @@ const GenerateCampaignIdeas = () => {
               className="gap-2"
             >
               <FileStack className="w-4 h-4" />
-              Campaign Drafts
+              Post Drafts
             </Button>
           </div>
         </div>
         
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Generate Campaign Ideas</h1>
-          <p className="text-muted-foreground">Let AI help you brainstorm campaign concepts</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            {selectedContentType 
+              ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+              : "Generate Post Ideas"}
+          </h1>
+          <p className="text-muted-foreground">Let AI help you brainstorm post concepts</p>
         </div>
 
         <div className="space-y-6">
@@ -822,7 +826,7 @@ const GenerateCampaignIdeas = () => {
                 onChange={(e) => setTargetAudience(e.target.value)}
               />
               <p className="text-sm text-muted-foreground mt-2">
-                Describe your target audience to help generate more relevant campaign ideas.
+                Describe your target audience to help generate more relevant post ideas.
               </p>
             </CardContent>
           </Card>
@@ -848,10 +852,24 @@ const GenerateCampaignIdeas = () => {
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground mt-2">
-                Select a product from your library to enrich the campaign idea.
+                Select a product from your library to enrich the post idea.
               </p>
             </CardContent>
           </Card>
+
+          {/* Upload My Own Content Button */}
+          {selectedContentType && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 py-6 text-lg border-dashed border-2"
+              onClick={() => navigate("/campaigns/new", {
+                state: { contentType: selectedContentType },
+              })}
+            >
+              <Upload className="w-5 h-5" />
+              Upload My Own Content
+            </Button>
+          )}
 
           {/* Generate Button */}
           <Button 
@@ -867,7 +885,9 @@ const GenerateCampaignIdeas = () => {
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Generate Campaign Ideas
+                {selectedContentType 
+                  ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+                  : "Generate Post Ideas"}
               </>
             )}
           </Button>
@@ -875,14 +895,14 @@ const GenerateCampaignIdeas = () => {
           {/* Social Video Results */}
           {showResults && selectedContentType === "social-video" && (
             <div className="space-y-6 mt-8">
-              {/* Campaign Idea */}
+              {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
                   <Textarea
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
-                    placeholder="Your AI-generated campaign idea will appear here..."
+                    placeholder="Your AI-generated post idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
                   />
@@ -977,7 +997,7 @@ const GenerateCampaignIdeas = () => {
                           className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "objective" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
                         >
                           <FileText className="w-4 h-4 mx-auto mb-1" />
-                          Campaign Objective
+                          Post Objective
                         </button>
                       </div>
                     </div>
@@ -1084,14 +1104,14 @@ const GenerateCampaignIdeas = () => {
           {/* Visual Post Results */}
           {showResults && selectedContentType === "visual-post" && (
             <div className="space-y-6 mt-8">
-              {/* Campaign Idea */}
+              {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
                   <Textarea
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
-                    placeholder="Your AI-generated campaign idea will appear here..."
+                    placeholder="Your AI-generated post idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
                   />
@@ -1341,14 +1361,14 @@ const GenerateCampaignIdeas = () => {
           {/* Written Results */}
           {showResults && selectedContentType === "written" && (
             <div className="space-y-6 mt-8">
-              {/* Campaign Idea */}
+              {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
                   <Textarea
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
-                    placeholder="Your AI-generated campaign idea will appear here..."
+                    placeholder="Your AI-generated post idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
                   />
@@ -1421,14 +1441,14 @@ const GenerateCampaignIdeas = () => {
           {/* Video Ad Results */}
           {showResults && selectedContentType === "video-ad" && (
             <div className="space-y-6 mt-8">
-              {/* Campaign Idea */}
+              {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Campaign Idea</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
                   <Textarea
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
-                    placeholder="Your AI-generated campaign idea will appear here..."
+                    placeholder="Your AI-generated post idea will appear here..."
                     rows={2}
                     className="resize-none bg-muted/50"
                   />
@@ -1523,7 +1543,7 @@ const GenerateCampaignIdeas = () => {
                           className={`p-3 rounded-lg border-2 text-sm transition-all ${voiceoverSource === "objective" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
                         >
                           <FileText className="w-4 h-4 mx-auto mb-1" />
-                          Campaign Objective
+                          Post Objective
                         </button>
                       </div>
                     </div>
