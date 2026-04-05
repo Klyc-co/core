@@ -235,7 +235,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -244,10 +244,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Image & Video Generator</h2>
-            <p className="text-sm text-muted-foreground">Create AI-generated visuals from text descriptions</p>
-          </div>
+          <h2 className="text-xl font-bold text-foreground">Image & Video Generator</h2>
         </div>
         <Button variant="outline" size="sm" onClick={() => window.location.href = "/projects"} className="gap-2">
           <Film className="w-4 h-4" />
@@ -255,7 +252,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </Button>
       </div>
 
-      {/* Mode Tabs */}
+      {/* Mode Tabs + Model selector */}
       <Tabs
         value={mode}
         onValueChange={(v) => {
@@ -273,10 +270,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Describe the image you want to create. Be specific about colors, style, composition, and subject matter.
-          </p>
+        <TabsContent value="image" className="mt-3">
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
@@ -296,10 +290,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             </Select>
           </div>
         </TabsContent>
-        <TabsContent value="video" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Describe the video clip you want to generate. Include details about motion, scene, and mood.
-          </p>
+        <TabsContent value="video" className="mt-3">
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={videoModel} onValueChange={(v) => setVideoModel(v as VideoModel)}>
@@ -321,119 +312,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </TabsContent>
       </Tabs>
 
-      {/* Inspiration Image (image mode only) */}
-      {mode === "image" && (
-        <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">Reference Images (optional, up to 5)</Label>
-          <p className="text-xs text-muted-foreground">
-            Upload product photos or pick from your library to guide the AI's style and composition.
-          </p>
-
-          {/* Selected inspiration thumbnails */}
-          {inspirationUrls.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {inspirationUrls.map((url, idx) => (
-                <div key={idx} className="relative inline-block">
-                  <img
-                    src={url}
-                    alt={`Inspiration ${idx + 1}`}
-                    className="w-20 h-20 rounded-lg object-cover border border-border"
-                  />
-                  <button
-                    onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {inspirationUrls.length < 5 && (
-            <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={uploadingFile}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload Image
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setShowLibrary(!showLibrary)}
-              >
-                <Library className="w-4 h-4" />
-                Brand Library
-              </Button>
-              <span className="text-xs text-muted-foreground self-center">{inspirationUrls.length}/5</span>
-            </div>
-          )}
-
-          {/* Library picker */}
-          {showLibrary && inspirationUrls.length < 5 && (
-            <Card className="p-3 mt-2">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">Select from Library</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}>
-                  <X className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {loadingLibrary ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : libraryImages.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
-              ) : (
-                <ScrollArea className="h-64">
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {libraryImages.map((img) => {
-                      const isSelected = inspirationUrls.includes(img.value);
-                      return (
-                        <button
-                          key={img.id}
-                          disabled={isSelected}
-                          onClick={() => {
-                            setInspirationUrls((prev) => [...prev, img.value]);
-                            if (inspirationUrls.length + 1 >= 5) setShowLibrary(false);
-                          }}
-                          className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${
-                            isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"
-                          }`}
-                        >
-                          <img
-                            src={img.value}
-                            alt={img.name || "Library image"}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Prompt + Generate */}
+      {/* Main: Prompt + Result side by side */}
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 space-y-4">
+        {/* Left: Prompt + Generate + Upload/Library */}
+        <div className="lg:w-2/5 space-y-3">
           <Textarea
             placeholder={
               mode === "image"
@@ -448,7 +330,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           <Button
             onClick={handleGenerate}
             disabled={generating || !prompt.trim()}
-            className="w-full sm:w-auto gap-2"
+            className="w-full gap-2"
           >
             {generating ? (
               <>
@@ -460,10 +342,114 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               </>
             )}
           </Button>
+
+          {/* Reference images section (image mode only) */}
+          {mode === "image" && (
+            <div className="space-y-2 pt-2">
+              {/* Selected inspiration thumbnails */}
+              {inspirationUrls.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {inspirationUrls.map((url, idx) => (
+                    <div key={idx} className="relative inline-block">
+                      <img
+                        src={url}
+                        alt={`Inspiration ${idx + 1}`}
+                        className="w-16 h-16 rounded-lg object-cover border border-border"
+                      />
+                      <button
+                        onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {inspirationUrls.length < 5 && (
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={uploadingFile}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    Upload Image
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setShowLibrary(!showLibrary)}
+                  >
+                    <Library className="w-4 h-4" />
+                    Brand Library
+                  </Button>
+                </div>
+              )}
+
+              {/* Library picker */}
+              {showLibrary && inspirationUrls.length < 5 && (
+                <Card className="p-3 mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-foreground">Select from Library</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}>
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {loadingLibrary ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : libraryImages.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
+                  ) : (
+                    <ScrollArea className="h-64">
+                      <div className="grid grid-cols-4 gap-2">
+                        {libraryImages.map((img) => {
+                          const isSelected = inspirationUrls.includes(img.value);
+                          return (
+                            <button
+                              key={img.id}
+                              disabled={isSelected}
+                              onClick={() => {
+                                setInspirationUrls((prev) => [...prev, img.value]);
+                                if (inspirationUrls.length + 1 >= 5) setShowLibrary(false);
+                              }}
+                              className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${
+                                isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"
+                              }`}
+                            >
+                              <img
+                                src={img.value}
+                                alt={img.name || "Library image"}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </Card>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Result */}
-        <div className="flex-1 min-h-[300px]">
+        {/* Right: Result preview (larger) */}
+        <div className="lg:w-3/5 min-h-[400px]">
           {resultUrl ? (
             <Card className="overflow-hidden relative group">
               {mode === "image" ? (
@@ -499,7 +485,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               </div>
             </Card>
           ) : (
-            <Card className="flex items-center justify-center h-full min-h-[300px] border-dashed">
+            <Card className="flex items-center justify-center h-full min-h-[400px] border-dashed">
               <div className="text-center text-muted-foreground">
                 {mode === "image" ? (
                   <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
