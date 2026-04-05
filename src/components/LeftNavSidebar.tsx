@@ -102,32 +102,20 @@ const LeftNavSidebar = () => {
 
   const navContent = (
     <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="px-4 pt-3 pb-2 shrink-0">
-        <Logo size="lg" />
+      {/* Logo = Home button */}
+      <div className="px-4 pt-3 pb-1 shrink-0">
+        <button onClick={() => { navigate("/home"); closeMobile(); }} className="hover:opacity-80 transition-opacity">
+          <Logo size="lg" />
+        </button>
       </div>
 
       {/* Client indicator */}
       {!isDefaultClient && selectedClientName && (
-        <div className="mx-3 mb-2 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+        <div className="mx-3 mb-1 px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
           <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Client</p>
           <p className="text-xs font-semibold text-primary truncate">{selectedClientName}</p>
         </div>
       )}
-
-      {/* Home button — always navigates */}
-      <div className="px-3 shrink-0">
-        <button
-          onClick={() => { navigate("/home"); closeMobile(); }}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-            isActive("/home") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <House className="w-4 h-4 shrink-0" />
-          Home
-        </button>
-      </div>
 
       {/* Collapse toggle for sub-nav */}
       <div className="px-3 shrink-0">
