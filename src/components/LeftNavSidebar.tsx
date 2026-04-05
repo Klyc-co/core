@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SidebarChat from "@/components/SidebarChat";
 import {
   LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
-  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X,
+  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X, FolderOpen,
   Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ const subNavItems = [
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Strategy", path: "/strategy", icon: Zap },
+  { label: "Library", path: "/profile/library", icon: FolderOpen },
   { label: "Learning", path: "/learning", icon: Lightbulb },
 ];
 
