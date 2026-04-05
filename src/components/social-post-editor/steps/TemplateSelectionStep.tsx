@@ -758,17 +758,6 @@ export default function TemplateSelectionStep({
         )}
       </div>
 
-      {/* Next Button */}
-      <div className="flex justify-end pt-4 border-t">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!canProceed}
-          className="min-w-[200px]"
-        >
-          Continue to Assets
-        </Button>
-      </div>
     </div>
   );
 }
