@@ -402,6 +402,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </div>
       )}
 
+      {mode !== "broll" && (<>
       {/* Result preview - full width on top */}
       <div className="w-full">
         {resultUrl ? (
