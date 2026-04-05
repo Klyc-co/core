@@ -15,7 +15,6 @@ const CreativeStudio = () => {
   const [loading, setLoading] = useState(true);
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [brandFonts, setBrandFonts] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState("image-video");
 
   useEffect(() => {
     const init = async () => {
@@ -33,14 +32,6 @@ const CreativeStudio = () => {
     };
     init();
   }, [navigate]);
-
-  const handleTabChange = (value: string) => {
-    if (value === "library") {
-      navigate("/profile/library");
-      return;
-    }
-    setActiveTab(value);
-  };
 
   if (loading) {
     return (
