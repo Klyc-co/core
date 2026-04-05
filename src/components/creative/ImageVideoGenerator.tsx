@@ -50,7 +50,7 @@ interface BrandAssetImage {
 }
 
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
-  const [mode, setMode] = useState<"image" | "video">("image");
+  const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
@@ -246,27 +246,31 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           )}
           <h2 className="text-xl font-bold text-foreground">Image & Video Generator</h2>
         </div>
-        <Button variant="outline" size="sm" onClick={() => window.location.href = "/projects"} className="gap-2">
-          <Film className="w-4 h-4" />
-          B-Roll Generator
-        </Button>
       </div>
 
       {/* Mode Tabs + Model selector */}
       <Tabs
         value={mode}
         onValueChange={(v) => {
-          setMode(v as "image" | "video");
+          const val = v as "image" | "video" | "broll";
+          if (val === "broll") {
+            window.location.href = "/projects";
+            return;
+          }
+          setMode(val);
           setResultUrl(null);
           setSavedToLibrary(false);
         }}
       >
-        <TabsList className="grid w-full max-w-xs grid-cols-2">
+        <TabsList className="grid w-full max-w-sm grid-cols-3">
           <TabsTrigger value="image" className="gap-2">
             <Image className="w-4 h-4" /> Image
           </TabsTrigger>
           <TabsTrigger value="video" className="gap-2">
             <Video className="w-4 h-4" /> Video
+          </TabsTrigger>
+          <TabsTrigger value="broll" className="gap-2">
+            <Film className="w-4 h-4" /> B-Roll
           </TabsTrigger>
         </TabsList>
 
