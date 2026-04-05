@@ -21,6 +21,16 @@ export interface CampaignDraft {
   created_at: string;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  short_description: string | null;
+  product_type: string;
+  target_audience: string | null;
+  value_propositions: string | null;
+  created_at: string;
+}
+
 export interface EditorSource {
   type: "upload" | "library" | "google-drive" | "dropbox" | "figma" | "campaign-draft" | "blank";
   data?: any;
@@ -81,8 +91,10 @@ export interface WizardState {
   templateImageUrl: string | null;
   figmaUrl: string | null;
   aspectRatio: AspectRatio;
-  // Step 2: Campaign + Assets
+  // Step 2: Campaign + Product + Prompt + Assets
   selectedCampaignDraft: CampaignDraft | null;
+  selectedProduct: Product | null;
+  customPrompt: string;
   selectedAssets: SelectedAsset[];
   selectedFonts: string[];
   selectedColors: string[];
@@ -100,6 +112,8 @@ export const initialWizardState: WizardState = {
   figmaUrl: null,
   aspectRatio: "portrait",
   selectedCampaignDraft: null,
+  selectedProduct: null,
+  customPrompt: "",
   selectedAssets: [],
   selectedFonts: [],
   selectedColors: [],
