@@ -48,7 +48,7 @@ interface BrandAssetImage {
   value: string;
 }
 
-const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps) => {
+const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
