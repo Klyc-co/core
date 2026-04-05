@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +23,9 @@ import {
   X,
   Save,
   Check,
+  Plus,
+  Clock,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,6 +54,7 @@ interface BrandAssetImage {
 }
 
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
@@ -64,6 +69,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+
+  // B-Roll state
+  const [brollProjects, setBrollProjects] = useState<any[]>([]);
+  const [brollLoading, setBrollLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,6 +100,21 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     };
     fetchLibrary();
   }, [showLibrary]);
+
+  // Fetch B-Roll projects when mode switches to broll
+  useEffect(() => {
+    if (mode !== "broll") return;
+    const fetchBroll = async () => {
+      setBrollLoading(true);
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setBrollProjects(data || []);
+      setBrollLoading(false);
+    };
+    fetchBroll();
+  }, [mode]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -253,13 +277,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         value={mode}
         onValueChange={(v) => {
           const val = v as "image" | "video" | "broll";
-          if (val === "broll") {
-            window.location.href = "/projects";
-            return;
-          }
           setMode(val);
-          setResultUrl(null);
-          setSavedToLibrary(false);
+          if (val !== "broll") {
+            setResultUrl(null);
+            setSavedToLibrary(false);
+          }
         }}
       >
         <TabsList className="grid w-full max-w-sm grid-cols-3">
@@ -314,8 +336,73 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             </Select>
           </div>
         </TabsContent>
+        <TabsContent value="broll" className="mt-3" />
       </Tabs>
 
+      {/* B-Roll inline content */}
+      {mode === "broll" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Create and manage your B-roll videos</p>
+            <Button onClick={() => navigate("/projects/new")} className="gap-2">
+              <Plus className="w-4 h-4" /> New Project
+            </Button>
+          </div>
+
+          {brollLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : brollProjects.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <Video className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No projects yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">Upload your first video clip to get started</p>
+              <Button onClick={() => navigate("/projects/new")} className="gap-2">
+                <Plus className="w-4 h-4" /> Create your first project
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {brollProjects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => {
+                    if (project.status === "processing") {
+                      navigate(`/projects/${project.id}/processing`);
+                    } else {
+                      navigate(`/projects/${project.id}/edit`);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                        <Video className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-foreground text-sm">{project.title}</h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          <span>{project.duration_seconds ? `${Math.round(project.duration_seconds)}s` : "—"}</span>
+                          <span>•</span>
+                          <span>{new Date(project.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">{project.status?.replace(/_/g, " ")}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode !== "broll" && (<>
       {/* Result preview - full width on top */}
       <div className="w-full">
         {resultUrl ? (
@@ -499,6 +586,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 };
