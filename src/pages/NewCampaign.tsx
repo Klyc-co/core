@@ -122,8 +122,8 @@ const NewCampaign = () => {
   const handleSendForApproval = async () => {
     if (!campaignName.trim()) {
       toast({
-        title: "Campaign name required",
-        description: "Please enter a campaign name",
+        title: "Post name required",
+        description: "Please enter a post name",
         variant: "destructive",
       });
       return;
@@ -141,7 +141,7 @@ const NewCampaign = () => {
     if (!scheduledDate) {
       toast({
         title: "Select date",
-        description: "Please select a date for your campaign",
+        description: "Please select a date for your post",
         variant: "destructive",
       });
       return;
@@ -150,7 +150,7 @@ const NewCampaign = () => {
     if (!scheduledTime) {
       toast({
         title: "Select time",
-        description: "Please select a time for your campaign",
+        description: "Please select a time for your post",
         variant: "destructive",
       });
       return;
@@ -209,7 +209,7 @@ const NewCampaign = () => {
 
       toast({
         title: "Sent for Approval! 📩",
-        description: `Your campaign "${campaignName}" has been sent for client approval.`,
+        description: `Your post "${campaignName}" has been sent for client approval.`,
       });
 
       setShowClientDialog(false);
@@ -217,7 +217,7 @@ const NewCampaign = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to send campaign for approval.",
+        description: error.message || "Failed to send post for approval.",
         variant: "destructive",
       });
     } finally {
@@ -344,8 +344,8 @@ const NewCampaign = () => {
   const handleLaunchCampaign = async () => {
     if (!campaignName.trim()) {
       toast({
-        title: "Campaign name required",
-        description: "Please enter a campaign name",
+        title: "Post name required",
+        description: "Please enter a post name",
         variant: "destructive",
       });
       return;
@@ -363,7 +363,7 @@ const NewCampaign = () => {
     if (!scheduledDate) {
       toast({
         title: "Select date",
-        description: "Please select a date for your campaign",
+        description: "Please select a date for your post",
         variant: "destructive",
       });
       return;
@@ -372,7 +372,7 @@ const NewCampaign = () => {
     if (!scheduledTime) {
       toast({
         title: "Select time",
-        description: "Please select a time for your campaign",
+        description: "Please select a time for your post",
         variant: "destructive",
       });
       return;
@@ -410,7 +410,7 @@ const NewCampaign = () => {
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to schedule campaign. Please try again.",
+        description: "Failed to schedule post. Please try again.",
         variant: "destructive",
       });
       setIsLaunching(false);
@@ -418,8 +418,8 @@ const NewCampaign = () => {
     }
     
     toast({
-      title: "Campaign Scheduled! 🚀",
-      description: `Your campaign "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
+      title: "Post Scheduled! 🚀",
+      description: `Your post "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
     });
     
     setIsLaunching(false);
@@ -437,18 +437,18 @@ const NewCampaign = () => {
           className="mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Campaigns
+          Back to Posts
         </Button>
 
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Create New Campaign</h1>
+          <h1 className="text-3xl font-bold">Create New Post</h1>
           <div className="flex gap-2">
             <Button
               className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90"
               onClick={() => { setIsTestMode(false); setLaunchModalOpen(true); }}
             >
               <Rocket className="w-4 h-4" />
-              Launch Campaign
+              Launch Post
             </Button>
             <Button
               variant="outline"
@@ -470,9 +470,9 @@ const NewCampaign = () => {
         </div>
 
         <div className="space-y-8">
-          {/* Campaign Name */}
+          {/* Post Name */}
           <div className="space-y-2">
-            <Label htmlFor="campaignName">Campaign Name</Label>
+            <Label htmlFor="campaignName">Post Name</Label>
             <Input
               id="campaignName"
               placeholder="Enter campaign name"
@@ -833,7 +833,7 @@ const NewCampaign = () => {
               ) : (
                 <>
                   <Rocket className="mr-2 h-5 w-5" />
-                  Launch Campaign
+                  Launch Post
                 </>
               )}
             </Button>
@@ -902,13 +902,13 @@ const NewCampaign = () => {
         </Dialog>
       </main>
 
-      {/* Launch Campaign Dialog */}
+      {/* Launch Post Dialog */}
       <Dialog open={launchModalOpen} onOpenChange={setLaunchModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {isTestMode ? <FlaskConical className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
-              {isTestMode ? "Test Campaign Launch" : "Launch Campaign"}
+              {isTestMode ? "Test Campaign Launch" : "Launch Post"}
             </DialogTitle>
             <DialogDescription>
               {isTestMode
