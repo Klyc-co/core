@@ -586,6 +586,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 };
