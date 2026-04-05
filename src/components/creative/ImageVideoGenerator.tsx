@@ -106,7 +106,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   // Fetch B-Roll projects when mode switches to broll
   useEffect(() => {
-    if (mode !== "broll") return;
+    if (mode !== "broll" || !brollUnlocked) return;
     const fetchBroll = async () => {
       setBrollLoading(true);
       const { data } = await supabase
@@ -117,7 +117,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       setBrollLoading(false);
     };
     fetchBroll();
-  }, [mode]);
+  }, [mode, brollUnlocked]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
