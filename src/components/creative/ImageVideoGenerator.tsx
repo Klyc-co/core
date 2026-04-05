@@ -246,10 +246,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           )}
           <h2 className="text-xl font-bold text-foreground">Image & Video Generator</h2>
         </div>
-        <Button variant="outline" size="sm" onClick={() => window.location.href = "/projects"} className="gap-2">
-          <Film className="w-4 h-4" />
-          B-Roll Generator
-        </Button>
       </div>
 
       {/* Mode Tabs + Model selector */}
