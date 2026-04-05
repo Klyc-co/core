@@ -110,9 +110,9 @@ const Campaigns = () => {
               className="gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 text-xs sm:text-sm"
               onClick={() => navigate("/campaigns/generate")}
             >
-              <Sparkles className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Generate Post</span>
-              <span className="sm:hidden">Generate</span>
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">+ New Post</span>
+              <span className="sm:hidden">+ New</span>
             </Button>
             <Button 
               variant="outline"
