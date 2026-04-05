@@ -54,7 +54,7 @@ const LeftNavSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Collapsible states
-  const [navExpanded, setNavExpanded] = useState(true);
+  const [navExpanded, setNavExpanded] = useState(false);
   const [utilExpanded, setUtilExpanded] = useState(false);
 
   const fetchClients = async () => {
