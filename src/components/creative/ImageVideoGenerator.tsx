@@ -101,6 +101,21 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     fetchLibrary();
   }, [showLibrary]);
 
+  // Fetch B-Roll projects when mode switches to broll
+  useEffect(() => {
+    if (mode !== "broll") return;
+    const fetchBroll = async () => {
+      setBrollLoading(true);
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setBrollProjects(data || []);
+      setBrollLoading(false);
+    };
+    fetchBroll();
+  }, [mode]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
