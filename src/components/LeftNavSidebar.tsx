@@ -10,7 +10,7 @@ import SidebarChat from "@/components/SidebarChat";
 import {
   LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
   Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X,
-  Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp,
+  Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -334,11 +334,15 @@ const LeftNavSidebar = () => {
       </div>
       {/* Drag handle */}
       <div
-        className="fixed top-0 h-screen w-1.5 z-50 cursor-col-resize group hover:bg-primary/20 transition-colors"
-        style={{ left: `${width - 3}px` }}
+        className="fixed top-0 h-screen w-4 z-50 cursor-col-resize group flex items-center justify-center"
+        style={{ left: `${width - 8}px` }}
         onMouseDown={handleDragStart}
       >
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-primary/50 transition-colors" />
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-primary/40 transition-colors" />
+        <div className="relative flex items-center gap-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+          <ChevronLeft className="w-3 h-3" />
+          <ChevronRight className="w-3 h-3 -ml-1.5" />
+        </div>
       </div>
       <AddClientDialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen} onClientAdded={fetchClients} />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
