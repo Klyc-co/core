@@ -12,6 +12,7 @@ import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
+import PaidAdsDashboard from "@/components/PaidAdsDashboard";
 import { useClientContext } from "@/contexts/ClientContext";
 
 interface Product {
