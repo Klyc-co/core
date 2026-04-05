@@ -616,6 +616,7 @@ const GenerateCampaignIdeas = () => {
         targetAudienceDescription: targetAudienceDescription || "",
         campaignObjective: campaignObjective || "",
         contentType: selectedContentType || "",
+        generatedImageUrl: generatedImageUrl || "",
       },
     });
   };
