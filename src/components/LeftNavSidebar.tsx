@@ -322,27 +322,7 @@ const LeftNavSidebar = () => {
     );
   }
 
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    const onMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, ev.clientX)));
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [setWidth]);
 
-  return (
     <>
       <div
         className="fixed left-0 top-0 h-screen bg-card/80 backdrop-blur-sm border-r border-border z-40 flex flex-col overflow-hidden"
