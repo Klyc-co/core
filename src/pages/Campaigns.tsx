@@ -29,6 +29,7 @@ const Campaigns = () => {
   const [user, setUser] = useState<User | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [pastCampaigns, setPastCampaigns] = useState<PastCampaign[]>([]);
+  const [analyticsMap, setAnalyticsMap] = useState<Record<string, PostAnalytics>>({});
   const [loadingPast, setLoadingPast] = useState(true);
 
   useEffect(() => {
@@ -45,10 +46,54 @@ const Campaigns = () => {
   const loadData = async (userId: string) => {
     const [pendingRes, pastRes] = await Promise.all([
       supabase.from("campaign_approvals").select("id", { count: "exact", head: true }).eq("marketer_id", userId).eq("status", "pending"),
-      supabase.from("scheduled_campaigns").select("id, campaign_name, platforms, scheduled_date, status").eq("user_id", userId).order("scheduled_date", { ascending: false }).limit(10),
+      supabase.from("scheduled_campaigns").select("id, campaign_name, platforms, scheduled_date, status, post_caption, image_url, video_url").eq("user_id", userId).order("scheduled_date", { ascending: false }).limit(10),
     ]);
     setPendingCount(pendingRes.count || 0);
-    setPastCampaigns((pastRes.data || []) as PastCampaign[]);
+    const camps = (pastRes.data || []) as any[];
+    setPastCampaigns(camps);
+
+    // Fetch analytics
+    const { data: postQueues } = await supabase
+      .from("post_queue")
+      .select("id, post_text, video_url, image_url")
+      .eq("user_id", userId)
+      .eq("status", "published");
+
+    if (postQueues && postQueues.length > 0) {
+      const postIds = postQueues.map(pq => pq.id);
+      const { data: analytics } = await supabase
+        .from("post_analytics")
+        .select("post_queue_id, views, likes, comments, shares")
+        .in("post_queue_id", postIds);
+
+      if (analytics && analytics.length > 0) {
+        const postAgg: Record<string, PostAnalytics> = {};
+        for (const a of analytics) {
+          const ex = postAgg[a.post_queue_id] || { views: 0, likes: 0, comments: 0, shares: 0 };
+          postAgg[a.post_queue_id] = {
+            views: ex.views + (a.views || 0),
+            likes: ex.likes + (a.likes || 0),
+            comments: ex.comments + (a.comments || 0),
+            shares: ex.shares + (a.shares || 0),
+          };
+        }
+
+        const campAnalytics: Record<string, PostAnalytics> = {};
+        for (const c of camps) {
+          for (const pq of postQueues) {
+            const captionMatch = c.post_caption && pq.post_text && c.post_caption.trim().toLowerCase() === pq.post_text.trim().toLowerCase();
+            const videoMatch = c.video_url && pq.video_url && c.video_url === pq.video_url;
+            const imageMatch = c.image_url && pq.image_url && c.image_url === pq.image_url;
+            if ((captionMatch || videoMatch || imageMatch) && postAgg[pq.id]) {
+              campAnalytics[c.id] = postAgg[pq.id];
+              break;
+            }
+          }
+        }
+        setAnalyticsMap(campAnalytics);
+      }
+    }
+
     setLoadingPast(false);
   };
 
