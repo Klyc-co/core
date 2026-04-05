@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSidebarWidth, MIN_WIDTH, MAX_WIDTH } from "@/contexts/SidebarWidthContext";
 import { supabase } from "@/integrations/supabase/client";
 import Logo from "@/components/Logo";
 import { cn } from "@/lib/utils";
