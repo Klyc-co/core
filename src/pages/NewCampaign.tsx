@@ -120,6 +120,15 @@ const NewCampaign = () => {
     getUser();
   }, [navigate]);
 
+  // Pre-fill from generated post data
+  useEffect(() => {
+    if (generatedData) {
+      if (generatedData.campaignName) setCampaignName(generatedData.campaignName);
+      if (generatedData.postCaption) setPostCaption(generatedData.postCaption);
+      if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
+    }
+  }, []);
+
   const fetchClients = async (userId: string) => {
     const { data, error } = await supabase
       .from("marketer_clients")
