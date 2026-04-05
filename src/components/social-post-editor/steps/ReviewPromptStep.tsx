@@ -87,6 +87,7 @@ export default function ReviewPromptStep({
           parts.push(`- Target Audience: ${wizardState.selectedProduct.target_audience}`);
         }
         parts.push("");
+      }
 
       // Assets
       if (wizardState.selectedAssets.length > 0) {
