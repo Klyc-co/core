@@ -619,7 +619,7 @@ const GenerateCampaignIdeas = () => {
     });
   };
 
-
+  const handleGenerateVoiceover = async () => {
     const textToVoice = voiceoverSource === "script" ? videoScript : campaignObjective;
     if (!textToVoice?.trim()) {
       toast({
