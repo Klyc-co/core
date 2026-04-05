@@ -78,6 +78,7 @@ const NewCampaign = () => {
     targetAudienceDescription?: string;
     campaignObjective?: string;
     contentType?: string;
+    generatedImageUrl?: string;
   } | null;
   const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
