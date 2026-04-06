@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair, FileText, Settings2 } from "lucide-react";
+import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair, FileText, Settings2, Sparkles } from "lucide-react";
 
 export interface SignalDiscoveryState {
   campaignGoal: string;
@@ -22,13 +23,15 @@ export interface SignalDiscoveryState {
 interface Props {
   state: SignalDiscoveryState;
   onChange: (state: SignalDiscoveryState) => void;
+  onAnalyze?: () => void;
+  isRunning?: boolean;
 }
 
 const INDUSTRIES = ["SaaS", "E-Commerce", "Healthcare", "Finance", "Education", "Real Estate", "Agency", "Retail", "Manufacturing", "Other"];
 const CUSTOMER_SIZES = ["SMB (1-50)", "Mid-Market (51-500)", "Enterprise (500+)", "Consumer / D2C"];
 const GEOS = ["North America", "Europe", "APAC", "LATAM", "MEA", "Global"];
 
-export default function SignalDiscoveryPanel({ state, onChange }: Props) {
+export default function SignalDiscoveryPanel({ state, onChange, onAnalyze, isRunning }: Props) {
   const update = (patch: Partial<SignalDiscoveryState>) => onChange({ ...state, ...patch });
 
   return (
@@ -131,6 +134,17 @@ export default function SignalDiscoveryPanel({ state, onChange }: Props) {
             <ToggleGroupItem value="hybrid" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Hybrid</ToggleGroupItem>
           </ToggleGroup>
         </SignalBox>
+
+        {onAnalyze && (
+          <Button
+            className="w-full h-12 text-base gap-2 bg-primary hover:bg-primary/90"
+            onClick={onAnalyze}
+            disabled={isRunning}
+          >
+            <Sparkles className="w-5 h-5" />
+            {isRunning ? "Running Workflow…" : "Run Analysis"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

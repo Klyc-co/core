@@ -250,10 +250,6 @@ const CampaignCommandCenter = () => {
               </p>
             </div>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary/90" onClick={handleAnalyze} disabled={isRunning}>
-            <Sparkles className="w-4 h-4" />
-            {isRunning ? "Running Workflow…" : "Run Analysis"}
-          </Button>
         </div>
 
         {workflowState.phase === "error" && (
@@ -275,7 +271,7 @@ const CampaignCommandCenter = () => {
 
         {/* Signal Discovery – horizontal scrollable row at top */}
         <div className="mb-5">
-          <SignalDiscoveryPanel state={signals} onChange={setSignals} />
+          <SignalDiscoveryPanel state={signals} onChange={setSignals} onAnalyze={handleAnalyze} isRunning={isRunning} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
