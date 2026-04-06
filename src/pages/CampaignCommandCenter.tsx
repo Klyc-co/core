@@ -242,10 +242,10 @@ const CampaignCommandCenter = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                 <Zap className="w-5 h-5 text-primary" />
-                Campaign Command Center
+                Post Command Center
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                AI-driven campaign intelligence & strategy engine
+                AI-driven post intelligence & strategy engine
                 {currentClientName && <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>}
               </p>
             </div>
@@ -273,9 +273,13 @@ const CampaignCommandCenter = () => {
           </div>
         )}
 
+        {/* Signal Discovery – horizontal scrollable row at top */}
+        <div className="mb-5">
+          <SignalDiscoveryPanel state={signals} onChange={setSignals} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
-            <SignalDiscoveryPanel state={signals} onChange={setSignals} />
             <CompressionStatePanel state={compression} onLoadDna={handleLoadDna} onLoadStrategy={handleLoadStrategy} onRerun={handleAnalyze} isLoading={isRunning} />
             <RunHistorySelector
               entries={history}
