@@ -134,6 +134,17 @@ export default function SignalDiscoveryPanel({ state, onChange, onAnalyze, isRun
             <ToggleGroupItem value="hybrid" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Hybrid</ToggleGroupItem>
           </ToggleGroup>
         </SignalBox>
+
+        {onAnalyze && (
+          <Button
+            className="w-full h-12 text-base gap-2 bg-primary hover:bg-primary/90"
+            onClick={onAnalyze}
+            disabled={isRunning}
+          >
+            <Sparkles className="w-5 h-5" />
+            {isRunning ? "Running Workflow…" : "Run Analysis"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
