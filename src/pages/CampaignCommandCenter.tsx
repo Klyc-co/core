@@ -250,7 +250,7 @@ const CampaignCommandCenter = () => {
               </p>
             </div>
           </div>
-          </div>
+        </div>
         </div>
 
         {workflowState.phase === "error" && (
