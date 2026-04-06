@@ -251,7 +251,6 @@ const CampaignCommandCenter = () => {
             </div>
           </div>
         </div>
-        </div>
 
         {workflowState.phase === "error" && (
           <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5 flex items-start gap-2">
