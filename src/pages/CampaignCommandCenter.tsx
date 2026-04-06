@@ -250,10 +250,7 @@ const CampaignCommandCenter = () => {
               </p>
             </div>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary/90" onClick={handleAnalyze} disabled={isRunning}>
-            <Sparkles className="w-4 h-4" />
-            {isRunning ? "Running Workflow…" : "Run Analysis"}
-          </Button>
+          </div>
         </div>
 
         {workflowState.phase === "error" && (
