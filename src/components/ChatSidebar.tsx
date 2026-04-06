@@ -422,6 +422,9 @@ const ChatSidebar = () => {
               <div className="space-y-4">
                 {messages.map((msg, i) => (
                   <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                    {msg.role === "assistant" && (
+                      <img src="/src/assets/team/klyc.png" alt="Klyc" className="w-7 h-7 rounded-full object-cover mr-2 mt-1 flex-shrink-0" />
+                    )}
                     <div
                       className={cn(
                         "max-w-[85%] rounded-lg px-3 py-2 text-sm",
