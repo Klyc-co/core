@@ -31,7 +31,7 @@ const INDUSTRIES = ["SaaS", "E-Commerce", "Healthcare", "Finance", "Education", 
 const CUSTOMER_SIZES = ["SMB (1-50)", "Mid-Market (51-500)", "Enterprise (500+)", "Consumer / D2C"];
 const GEOS = ["North America", "Europe", "APAC", "LATAM", "MEA", "Global"];
 
-export default function SignalDiscoveryPanel({ state, onChange }: Props) {
+export default function SignalDiscoveryPanel({ state, onChange, onAnalyze, isRunning }: Props) {
   const update = (patch: Partial<SignalDiscoveryState>) => onChange({ ...state, ...patch });
 
   return (

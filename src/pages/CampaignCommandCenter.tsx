@@ -272,7 +272,7 @@ const CampaignCommandCenter = () => {
 
         {/* Signal Discovery – horizontal scrollable row at top */}
         <div className="mb-5">
-          <SignalDiscoveryPanel state={signals} onChange={setSignals} />
+          <SignalDiscoveryPanel state={signals} onChange={setSignals} onAnalyze={handleAnalyze} isRunning={isRunning} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
