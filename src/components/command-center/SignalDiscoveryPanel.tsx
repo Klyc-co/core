@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair, FileText, Settings2 } from "lucide-react";
+import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair, FileText, Settings2, Sparkles } from "lucide-react";
 
 export interface SignalDiscoveryState {
   campaignGoal: string;
