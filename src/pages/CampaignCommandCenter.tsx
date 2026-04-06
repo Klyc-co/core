@@ -273,9 +273,13 @@ const CampaignCommandCenter = () => {
           </div>
         )}
 
+        {/* Signal Discovery – horizontal scrollable row at top */}
+        <div className="mb-5">
+          <SignalDiscoveryPanel state={signals} onChange={setSignals} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-1 space-y-5">
-            <SignalDiscoveryPanel state={signals} onChange={setSignals} />
             <CompressionStatePanel state={compression} onLoadDna={handleLoadDna} onLoadStrategy={handleLoadStrategy} onRerun={handleAnalyze} isLoading={isRunning} />
             <RunHistorySelector
               entries={history}

@@ -4,10 +4,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair } from "lucide-react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Radar, Globe, Building2, Users, Target, Shield, Package, Crosshair, FileText, Settings2 } from "lucide-react";
 
 export interface SignalDiscoveryState {
-  /** Maps to input_as_text – the primary campaign brief */
   campaignGoal: string;
   geo: string;
   industry: string;
@@ -34,102 +34,125 @@ export default function SignalDiscoveryPanel({ state, onChange }: Props) {
 
   return (
     <Card className="border-border/60 bg-card/80 backdrop-blur-sm">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <Radar className="w-4 h-4 text-primary" />
           Signal Discovery
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Campaign Brief – maps to input_as_text */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Campaign Brief</Label>
-          <Textarea
-            className="text-sm min-h-[72px] bg-background/60 border-border/50 resize-none"
-            placeholder="Describe what you want to achieve — this is the primary input for the AI..."
-            value={state.campaignGoal}
-            onChange={(e) => update({ campaignGoal: e.target.value })}
-          />
-        </div>
+      <CardContent className="pb-4">
+        <ScrollArea className="w-full">
+          <div className="flex gap-3 pb-3" style={{ minWidth: "max-content" }}>
+            {/* Campaign Brief */}
+            <SignalBox icon={<FileText className="w-3.5 h-3.5 text-primary" />} label="Campaign Brief" className="min-w-[260px] max-w-[280px]">
+              <Textarea
+                className="text-sm min-h-[68px] bg-background/60 border-border/50 resize-none"
+                placeholder="Describe what you want to achieve..."
+                value={state.campaignGoal}
+                onChange={(e) => update({ campaignGoal: e.target.value })}
+              />
+            </SignalBox>
 
-        {/* Row 1: Geo / Industry / Customer Size */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <FieldSelect icon={<Globe className="w-3.5 h-3.5" />} label="Geography" value={state.geo} options={GEOS} onChange={(v) => update({ geo: v })} />
-          <FieldSelect icon={<Building2 className="w-3.5 h-3.5" />} label="Industry" value={state.industry} options={INDUSTRIES} onChange={(v) => update({ industry: v })} />
-          <FieldSelect icon={<Users className="w-3.5 h-3.5" />} label="Customer Size" value={state.customerSize} options={CUSTOMER_SIZES} onChange={(v) => update({ customerSize: v })} />
-        </div>
+            {/* Geography */}
+            <SignalBox icon={<Globe className="w-3.5 h-3.5 text-primary" />} label="Geography" className="min-w-[180px]">
+              <Select value={state.geo} onValueChange={(v) => update({ geo: v })}>
+                <SelectTrigger className="text-sm bg-background/60 border-border/50 h-9">
+                  <SelectValue placeholder="Select geo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GEOS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </SignalBox>
 
-        {/* Row 2: Competitor / Addressable Market */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldInput icon={<Target className="w-3.5 h-3.5" />} label="Competitor" placeholder="e.g. HubSpot, Mailchimp" value={state.competitor} onChange={(v) => update({ competitor: v })} />
-          <FieldInput icon={<Crosshair className="w-3.5 h-3.5" />} label="Addressable Market" placeholder="e.g. 50K SMBs in North America" value={state.addressableMarket} onChange={(v) => update({ addressableMarket: v })} />
-        </div>
+            {/* Industry */}
+            <SignalBox icon={<Building2 className="w-3.5 h-3.5 text-primary" />} label="Industry" className="min-w-[180px]">
+              <Select value={state.industry} onValueChange={(v) => update({ industry: v })}>
+                <SelectTrigger className="text-sm bg-background/60 border-border/50 h-9">
+                  <SelectValue placeholder="Select industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRIES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </SignalBox>
 
-        {/* Row 3: Business Need / Regulatory */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldInput icon={<Package className="w-3.5 h-3.5" />} label="Business Need" placeholder="Core problem to solve" value={state.businessNeed} onChange={(v) => update({ businessNeed: v })} />
-          <FieldInput icon={<Shield className="w-3.5 h-3.5" />} label="Regulatory Driver" placeholder="e.g. GDPR, HIPAA, SOC2" value={state.regulatoryDriver} onChange={(v) => update({ regulatoryDriver: v })} />
-        </div>
+            {/* Customer Size */}
+            <SignalBox icon={<Users className="w-3.5 h-3.5 text-primary" />} label="Customer Size" className="min-w-[200px]">
+              <Select value={state.customerSize} onValueChange={(v) => update({ customerSize: v })}>
+                <SelectTrigger className="text-sm bg-background/60 border-border/50 h-9">
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CUSTOMER_SIZES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </SignalBox>
 
-        {/* Product Definition */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Product Definition</Label>
-          <Textarea
-            className="text-sm min-h-[60px] bg-background/60 border-border/50 resize-none"
-            placeholder="What are you marketing? Describe the product or service..."
-            value={state.productDefinition}
-            onChange={(e) => update({ productDefinition: e.target.value })}
-          />
-        </div>
+            {/* Competitor */}
+            <SignalBox icon={<Target className="w-3.5 h-3.5 text-primary" />} label="Competitor" className="min-w-[200px]">
+              <Input className="text-sm bg-background/60 border-border/50 h-9" placeholder="e.g. HubSpot" value={state.competitor} onChange={(e) => update({ competitor: e.target.value })} />
+            </SignalBox>
 
-        {/* Mode Toggle */}
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Strategy Mode</Label>
-          <ToggleGroup
-            type="single"
-            value={state.mode}
-            onValueChange={(v) => v && update({ mode: v })}
-            className="justify-start"
-          >
-            <ToggleGroupItem value="reactive" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              Reactive
-            </ToggleGroupItem>
-            <ToggleGroupItem value="proactive" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              Proactive
-            </ToggleGroupItem>
-            <ToggleGroupItem value="hybrid" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-              Hybrid
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+            {/* Addressable Market */}
+            <SignalBox icon={<Crosshair className="w-3.5 h-3.5 text-primary" />} label="Addressable Market" className="min-w-[220px]">
+              <Input className="text-sm bg-background/60 border-border/50 h-9" placeholder="e.g. 50K SMBs" value={state.addressableMarket} onChange={(e) => update({ addressableMarket: e.target.value })} />
+            </SignalBox>
+
+            {/* Business Need */}
+            <SignalBox icon={<Package className="w-3.5 h-3.5 text-primary" />} label="Business Need" className="min-w-[200px]">
+              <Input className="text-sm bg-background/60 border-border/50 h-9" placeholder="Core problem" value={state.businessNeed} onChange={(e) => update({ businessNeed: e.target.value })} />
+            </SignalBox>
+
+            {/* Regulatory */}
+            <SignalBox icon={<Shield className="w-3.5 h-3.5 text-primary" />} label="Regulatory Driver" className="min-w-[200px]">
+              <Input className="text-sm bg-background/60 border-border/50 h-9" placeholder="e.g. GDPR, HIPAA" value={state.regulatoryDriver} onChange={(e) => update({ regulatoryDriver: e.target.value })} />
+            </SignalBox>
+
+            {/* Product Definition */}
+            <SignalBox icon={<Package className="w-3.5 h-3.5 text-primary" />} label="Product Definition" className="min-w-[260px] max-w-[280px]">
+              <Textarea
+                className="text-sm min-h-[68px] bg-background/60 border-border/50 resize-none"
+                placeholder="What are you marketing?"
+                value={state.productDefinition}
+                onChange={(e) => update({ productDefinition: e.target.value })}
+              />
+            </SignalBox>
+
+            {/* Strategy Mode */}
+            <SignalBox icon={<Settings2 className="w-3.5 h-3.5 text-primary" />} label="Strategy Mode" className="min-w-[200px]">
+              <ToggleGroup
+                type="single"
+                value={state.mode}
+                onValueChange={(v) => v && update({ mode: v })}
+                className="justify-start"
+              >
+                <ToggleGroupItem value="reactive" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Reactive
+                </ToggleGroupItem>
+                <ToggleGroupItem value="proactive" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Proactive
+                </ToggleGroupItem>
+                <ToggleGroupItem value="hybrid" className="text-xs px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Hybrid
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </SignalBox>
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </CardContent>
     </Card>
   );
 }
 
-function FieldSelect({ icon, label, value, options, onChange }: { icon: React.ReactNode; label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+function SignalBox({ icon, label, children, className }: { icon: React.ReactNode; label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground flex items-center gap-1">{icon}{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="text-sm bg-background/60 border-border/50 h-9">
-          <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o} value={o}>{o}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-function FieldInput({ icon, label, placeholder, value, onChange }: { icon: React.ReactNode; label: string; placeholder: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground flex items-center gap-1">{icon}{label}</Label>
-      <Input className="text-sm bg-background/60 border-border/50 h-9" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    <div className={`flex-shrink-0 rounded-lg border border-border/50 bg-background/40 p-3 space-y-2 ${className || ""}`}>
+      <Label className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+        {icon}{label}
+      </Label>
+      {children}
     </div>
   );
 }
