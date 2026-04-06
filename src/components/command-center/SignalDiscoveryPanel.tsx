@@ -23,6 +23,8 @@ export interface SignalDiscoveryState {
 interface Props {
   state: SignalDiscoveryState;
   onChange: (state: SignalDiscoveryState) => void;
+  onAnalyze?: () => void;
+  isRunning?: boolean;
 }
 
 const INDUSTRIES = ["SaaS", "E-Commerce", "Healthcare", "Finance", "Education", "Real Estate", "Agency", "Retail", "Manufacturing", "Other"];
