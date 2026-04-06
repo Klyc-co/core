@@ -64,7 +64,7 @@ export default function CreativeStudioPage() {
         </TabsContent>
 
         <TabsContent value="generate" className="mt-4">
-          <ImageVideoGenerator onBack={() => {}} />
+          <ImageVideoGenerator />
         </TabsContent>
 
         <TabsContent value="library" className="mt-4">
