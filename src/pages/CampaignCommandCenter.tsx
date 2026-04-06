@@ -242,10 +242,10 @@ const CampaignCommandCenter = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                 <Zap className="w-5 h-5 text-primary" />
-                Campaign Command Center
+                Post Command Center
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                AI-driven campaign intelligence & strategy engine
+                AI-driven post intelligence & strategy engine
                 {currentClientName && <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>}
               </p>
             </div>
