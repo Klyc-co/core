@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import klycFace from "@/assets/klyc-face.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send, Loader2, Mic, Zap, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
