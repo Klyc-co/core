@@ -111,8 +111,8 @@ const Campaigns = () => {
               onClick={() => navigate("/campaigns/generate")}
             >
               <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">+ New Post</span>
-              <span className="sm:hidden">+ New</span>
+              <span className="hidden sm:inline">New Post</span>
+              <span className="sm:hidden">New</span>
             </Button>
             <Button 
               variant="outline"
