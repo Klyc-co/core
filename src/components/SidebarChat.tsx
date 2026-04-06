@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import klycFace from "@/assets/klyc-face.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send, Loader2, Mic, Zap, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -244,6 +245,9 @@ const SidebarChat = () => {
         <div className="space-y-2">
           {messages.map((msg, i) => (
             <div key={i} className={cn("flex w-full", msg.role === "user" ? "justify-end" : "justify-start")}>
+              {msg.role === "assistant" && (
+                <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
+              )}
               <div
                 className={cn(
                   "max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs",
