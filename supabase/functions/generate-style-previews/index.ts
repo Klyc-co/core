@@ -10,53 +10,89 @@ const visualStyles = [
   {
     id: "deep-contrast",
     name: "Deep Contrast",
-    prompt: "Hard tungsten lighting. Orange-teal color tones. High contrast. Fine film grain. Shallow depth of field.",
+    prompt: "Hard tungsten lighting, orange-teal color grading, high contrast, fine film grain, shallow depth of field, dramatic shadows",
   },
   {
     id: "soft-editorial",
     name: "Soft Editorial",
-    prompt: "Diffuse natural light. Clean whites. Soft warm skin tones. Minimal contrast. Luxury magazine editorial feel.",
+    prompt: "Diffuse natural window light, clean whites, soft warm skin tones, minimal contrast, luxury fashion magazine editorial",
   },
   {
     id: "cinematic-moody",
     name: "Cinematic Moody",
-    prompt: "Low-key dramatic lighting. Deep shadows. Rich blacks. Subtle color separation. Cinematic storytelling mood.",
+    prompt: "Low-key dramatic lighting, deep rich shadows, cinematic color grading, anamorphic lens bokeh, film noir mood",
   },
   {
     id: "bright-commercial",
     name: "Bright Commercial",
-    prompt: "High-key lighting. Crisp clarity. Product-forward framing. Clean highlights. Polished commercial ad aesthetic.",
+    prompt: "High-key studio lighting, crisp sharp clarity, product-forward composition, clean white highlights, polished advertising aesthetic",
   },
   {
     id: "documentary-real",
     name: "Documentary Real",
-    prompt: "Natural available light. Authentic texture. Real-world environment. Honest, grounded, photojournalistic feel.",
+    prompt: "Natural available daylight, authentic grain and texture, candid street photography style, real environment, photojournalistic",
   },
   {
     id: "modern-minimal",
     name: "Modern Minimal",
-    prompt: "Neutral backgrounds. Clean composition. Soft shadows. Limited color palette. Premium minimalist design.",
+    prompt: "Clean neutral background, precise geometric composition, soft diffused shadow, monochrome palette with one accent, Swiss design inspired",
   },
   {
     id: "bold-lifestyle",
     name: "Bold Lifestyle",
-    prompt: "Dynamic framing. Vibrant saturated color. Human energy. Social-first composition. Strong personality.",
+    prompt: "Dynamic diagonal framing, vibrant saturated colors, energetic movement, golden hour backlight, social media hero shot",
   },
   {
     id: "luxury-texture",
     name: "Luxury Texture",
-    prompt: "Rich materials and textures. Warm highlights. Elegant framing. Refined color balance. High-end premium feel.",
+    prompt: "Rich tactile materials close-up, warm golden highlights, elegant symmetrical framing, refined tonal color balance, premium high-end aesthetic",
   },
 ];
+
+function extractImageUrl(data: any): string | null {
+  // Try standard path
+  const choices = data?.choices;
+  if (!choices || !Array.isArray(choices) || choices.length === 0) return null;
+
+  const msg = choices[0]?.message;
+  if (!msg) return null;
+
+  // Path 1: images array
+  if (msg.images && Array.isArray(msg.images) && msg.images.length > 0) {
+    const url = msg.images[0]?.image_url?.url || msg.images[0]?.url;
+    if (url) return url;
+  }
+
+  // Path 2: content array with image parts
+  if (msg.content && Array.isArray(msg.content)) {
+    for (const part of msg.content) {
+      if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
+      if (part.type === "image" && part.url) return part.url;
+      // base64 inline
+      if (part.type === "image_url" && part.image_url?.url?.startsWith("data:")) return part.image_url.url;
+    }
+  }
+
+  // Path 3: inline_data (Gemini native)
+  if (msg.content && Array.isArray(msg.content)) {
+    for (const part of msg.content) {
+      if (part.inline_data?.data && part.inline_data?.mime_type) {
+        return `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
+      }
+    }
+  }
+
+  return null;
+}
 
 async function generateImage(
   apiKey: string,
   businessContext: string,
   stylePrompt: string
 ): Promise<string | null> {
-  const fullPrompt = `Generate a stunning vertical 9:16 aspect ratio photograph for a ${businessContext}. Style: ${stylePrompt}. The image should feel like a premium social media post or ad showcasing this specific business. No text, no watermarks, no logos. Output only the generated image, no text.`;
+  const fullPrompt = `Generate one photographic image. Vertical 9:16 aspect ratio. Subject: a premium visual representing a ${businessContext}. Photographic style: ${stylePrompt}. No text overlays, no watermarks, no logos, no borders. Photorealistic only.`;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch(
         "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -68,33 +104,40 @@ async function generateImage(
           },
           body: JSON.stringify({
             model: "google/gemini-3.1-flash-image-preview",
-            messages: [{ role: "user", content: fullPrompt }],
+            messages: [
+              {
+                role: "user",
+                content: fullPrompt,
+              },
+            ],
             modalities: ["image", "text"],
           }),
         }
       );
 
       if (response.status === 429) {
-        // Rate limited - wait and retry
-        await new Promise((r) => setTimeout(r, 3000));
+        const wait = Math.min(2000 * (attempt + 1), 8000);
+        console.warn(`Rate limited on attempt ${attempt + 1}, waiting ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
         continue;
       }
 
       if (!response.ok) {
-        console.error(`Image gen failed: ${response.status}`);
+        console.error(`Image gen failed: ${response.status} ${response.statusText}`);
+        await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
 
       const data = await response.json();
-      const imageUrl =
-        data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      const imageUrl = extractImageUrl(data);
+
       if (imageUrl) return imageUrl;
 
-      // Model returned text instead of image - retry with simplified prompt
-      console.warn("Model returned text instead of image, retrying...");
-      continue;
+      console.warn(`Attempt ${attempt + 1}: no image extracted, retrying...`);
+      await new Promise((r) => setTimeout(r, 1500));
     } catch (e) {
-      console.error("Image generation error:", e);
+      console.error(`Attempt ${attempt + 1} error:`, e);
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   return null;
@@ -114,21 +157,32 @@ serve(async (req) => {
       throw new Error("businessContext is required");
     }
 
-    // Generate all 8 images in parallel (max concurrency) for speed
-    const results = await Promise.all(
-      visualStyles.map(async (style, idx) => {
-        // Tiny stagger to avoid hitting rate limit on simultaneous requests
-        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 300));
-        const imageUrl = await generateImage(
-          LOVABLE_API_KEY,
-          businessContext,
-          style.prompt
-        );
+    // Generate in two batches of 4 to avoid rate limits
+    const batch1 = visualStyles.slice(0, 4);
+    const batch2 = visualStyles.slice(4, 8);
+
+    const results1 = await Promise.all(
+      batch1.map(async (style, idx) => {
+        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 500));
+        const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
         return { id: style.id, imageUrl };
       })
     );
 
-    return new Response(JSON.stringify({ success: true, styles: results }), {
+    // Small pause between batches
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const results2 = await Promise.all(
+      batch2.map(async (style, idx) => {
+        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 500));
+        const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
+        return { id: style.id, imageUrl };
+      })
+    );
+
+    const allResults = [...results1, ...results2];
+
+    return new Response(JSON.stringify({ success: true, styles: allResults }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
