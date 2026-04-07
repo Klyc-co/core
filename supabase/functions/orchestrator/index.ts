@@ -5,6 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Model mapping: short names → full Claude API model strings
+const MODEL_MAP: Record<string, string> = {
+  "haiku": "claude-haiku-4-5-20251001",
+  "sonnet": "claude-sonnet-4-20250514",
+  "opus": "claude-opus-4-20250514",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,7 +23,13 @@ serve(async (req) => {
     // Health check
     if (body.action === "health") {
       return new Response(
-        JSON.stringify({ status: "ok", model: "claude-sonnet-4-20250514", provider: "anthropic" }),
+        JSON.stringify({
+          status: "ok",
+          models: Object.keys(MODEL_MAP),
+          default: "sonnet",
+          provider: "anthropic",
+          version: "v2-multi-model"
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -38,6 +51,16 @@ serve(async (req) => {
       );
     }
 
+    // Model selection: accept "model" param, default to sonnet for backward compat
+    const requestedModel = (body.model || "sonnet").toLowerCase();
+    const modelString = MODEL_MAP[requestedModel] || MODEL_MAP["sonnet"];
+
+    // System prompt: accept custom system prompt or use default
+    const systemPrompt = body.system || "You are Klyc, an AI marketing strategist. You help users create campaigns, analyze trends, review performance, revise content, and generate learning reports. Be conversational, helpful, and concise.";
+
+    // Max tokens: accept custom or default 1024
+    const maxTokens = body.max_tokens || 1024;
+
     // Build messages with optional history
     const messages: Array<{ role: string; content: string }> = [];
     if (Array.isArray(body.history)) {
@@ -57,9 +80,9 @@ serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        system: "You are Klyc, an AI marketing strategist. You help users create campaigns, analyze trends, review performance, revise content, and generate learning reports. Be conversational, helpful, and concise.",
+        model: modelString,
+        max_tokens: maxTokens,
+        system: systemPrompt,
         messages,
       }),
     });
@@ -68,7 +91,11 @@ serve(async (req) => {
       const errText = await response.text().catch(() => "Unknown error");
       console.error(`Anthropic API error: ${response.status} - ${errText}`);
       return new Response(
-        JSON.stringify({ reply: "I'm having trouble connecting to the AI service right now. Please try again in a moment." }),
+        JSON.stringify({
+          reply: `API Error: ${errText}`,
+          error: true,
+          status: response.status
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -76,13 +103,18 @@ serve(async (req) => {
     const data = await response.json();
     const reply = data.content?.[0]?.text || "Sorry, I could not generate a response.";
 
-    return new Response(JSON.stringify({ reply, usage: data.usage }), {
+    return new Response(JSON.stringify({
+      reply,
+      usage: data.usage,
+      model: modelString,
+      model_short: requestedModel
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Orchestrator error:", error);
     return new Response(
-      JSON.stringify({ reply: "Something went wrong. Please try again." }),
+      JSON.stringify({ reply: "Something went wrong. Please try again.", error: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
