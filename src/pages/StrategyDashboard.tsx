@@ -55,10 +55,16 @@ export default function StrategyDashboard() {
             <p className="text-sm text-muted-foreground">Campaign pipeline, positioning, and strategic planning</p>
           </div>
         </div>
-        <Button size="sm" onClick={() => navigate("/campaigns")}>
-          <Rocket className="w-4 h-4 mr-1.5" />
-          Start Campaign
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate("/brand-strategy")}>
+            <MessageSquare className="w-4 h-4 mr-1.5" />
+            Strategy Tools
+          </Button>
+          <Button size="sm" onClick={() => navigate("/campaigns")}>
+            <Rocket className="w-4 h-4 mr-1.5" />
+            Start Campaign
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
