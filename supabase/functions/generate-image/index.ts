@@ -1,324 +1,141 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function generateWithNanoBanana(prompt: string, apiKey: string, inspirationImageUrl?: string): Promise<string> {
-  console.log("Generating with Nano Banana model...", inspirationImageUrl ? "with inspiration image" : "text-only");
-  
-  // Build the message content - either text-only or with inspiration image
-  let messageContent: any;
-  
-  if (inspirationImageUrl) {
-    // Image-to-image: use inspiration image as reference
-    messageContent = [
-      {
-        type: "text",
-        text: `Generate an image now. Using this image as style inspiration, create: ${prompt}. Output only the generated image, no text.`
-      },
-      {
-        type: "image_url",
-        image_url: {
-          url: inspirationImageUrl
-        }
-      }
-    ];
-  } else {
-    // Text-to-image: standard generation
-    messageContent = `Generate an image now: ${prompt}. Output only the generated image, no text.`;
-  }
-  
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image",
-      messages: [
-        {
-          role: "user",
-          content: messageContent
-        }
-      ],
-      modalities: ["image", "text"]
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Nano Banana error:", response.status, errorText);
-    
-    if (response.status === 429) {
-      throw new Error("Rate limit exceeded. Please try again later.");
-    }
-    if (response.status === 402) {
-      throw new Error("Payment required. Please add credits to your workspace.");
-    }
-    throw new Error(`Nano Banana error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log("Nano Banana raw response:", JSON.stringify(data).substring(0, 500));
-  
-  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-  if (!imageUrl) {
-    console.error("No image in Nano Banana response:", JSON.stringify(data));
-    
-    // Check if there's text content that might explain why
-    const textContent = data.choices?.[0]?.message?.content || "";
-    
-    // Sometimes the model returns a refusal or just text - retry with simpler prompt
-    if (textContent && !inspirationImageUrl) {
-      console.log("Model returned text instead of image, retrying with simpler prompt...");
-      
-      // Retry with a very direct prompt
-      const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [
-            {
-              role: "user",
-              content: `Create this image: ${prompt}`
-            }
-          ],
-          modalities: ["image", "text"]
-        }),
-      });
-      
-      if (retryResponse.ok) {
-        const retryData = await retryResponse.json();
-        const retryImageUrl = retryData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        if (retryImageUrl) {
-          return retryImageUrl;
-        }
-      }
-    }
-    
-    throw new Error("Image generation failed. The AI returned text instead of an image. Try a simpler, more concrete prompt.");
-  }
-
-  return imageUrl;
-}
-
-async function generateWithRunway(prompt: string, apiKey: string): Promise<string> {
-  console.log("Generating with Runway model...");
-  
-  // Valid Runway ratios: 1024:1024, 1080:1080, 1168:880, 1360:768, 1440:1080, 1080:1440, 1808:768, 1920:1080, 1080:1920, 2112:912, 1280:720, 720:1280, 720:720, 960:720, 720:960, 1680:720
-  const runwayRatio = "1024:1024"; // Square format for consistent marketing images
-  
-  // Start the image generation task
-  const createResponse = await fetch("https://api.dev.runwayml.com/v1/image_to_image", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "X-Runway-Version": "2024-11-06",
-    },
-    body: JSON.stringify({
-      model: "gen4_image",
-      promptText: prompt,
-      ratio: runwayRatio,
-    }),
-  });
-
-  if (!createResponse.ok) {
-    // Try the text_to_image endpoint instead
-    console.log("Trying text_to_image endpoint...");
-    
-    const textToImageResponse = await fetch("https://api.dev.runwayml.com/v1/text_to_image", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "X-Runway-Version": "2024-11-06",
-      },
-      body: JSON.stringify({
-        model: "gen4_image",
-        promptText: prompt,
-        ratio: runwayRatio,
-      }),
-    });
-
-    if (!textToImageResponse.ok) {
-      const errorText = await textToImageResponse.text();
-      console.error("Runway error:", textToImageResponse.status, errorText);
-      
-      if (textToImageResponse.status === 401) {
-        throw new Error("Invalid Runway API key. Please check your configuration.");
-      }
-      if (textToImageResponse.status === 429) {
-        throw new Error("Runway rate limit exceeded. Please try again later.");
-      }
-      throw new Error(`Runway error: ${textToImageResponse.status} - ${errorText}`);
-    }
-
-    const taskData = await textToImageResponse.json();
-    console.log("Runway task created:", taskData);
-    
-    // Poll for completion
-    return await pollRunwayTask(taskData.id, apiKey);
-  }
-
-  const taskData = await createResponse.json();
-  console.log("Runway task created:", taskData);
-  
-  // Poll for completion
-  return await pollRunwayTask(taskData.id, apiKey);
-}
-
-async function pollRunwayTask(taskId: string, apiKey: string): Promise<string> {
-  const maxAttempts = 60; // 5 minutes max
-  let attempts = 0;
-
-  while (attempts < maxAttempts) {
-    const statusResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "X-Runway-Version": "2024-11-06",
-      },
-    });
-
-    if (!statusResponse.ok) {
-      const errorText = await statusResponse.text();
-      console.error("Runway poll error:", statusResponse.status, errorText);
-      throw new Error(`Failed to check Runway task status: ${statusResponse.status}`);
-    }
-
-    const statusData = await statusResponse.json();
-    console.log("Runway task status:", statusData.status);
-
-    if (statusData.status === "SUCCEEDED") {
-      if (statusData.output && statusData.output.length > 0) {
-        return statusData.output[0];
-      }
-      throw new Error("Runway task succeeded but no image was returned.");
-    }
-
-    if (statusData.status === "FAILED") {
-      throw new Error(statusData.failure || "Runway image generation failed.");
-    }
-
-    if (statusData.status === "CANCELLED") {
-      throw new Error("Runway image generation was cancelled.");
-    }
-
-    // Wait 5 seconds before polling again
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    attempts++;
-  }
-
-  throw new Error("Runway image generation timed out. Please try again.");
-}
+// Platform-specific image size presets
+const PLATFORM_SIZES: Record<string, { width: number; height: number; label: string }> = {
+  linkedin:  { width: 1200, height: 627,  label: "LinkedIn Feed" },
+  twitter:   { width: 1200, height: 675,  label: "X/Twitter Post" },
+  instagram: { width: 1080, height: 1080, label: "Instagram Square" },
+  facebook:  { width: 1200, height: 630,  label: "Facebook Feed" },
+  tiktok:    { width: 1080, height: 1920, label: "TikTok Cover" },
+  youtube:   { width: 1280, height: 720,  label: "YouTube Thumbnail" },
+  story:     { width: 1080, height: 1920, label: "Story (IG/FB)" },
+};
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Verify JWT and get authenticated user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const body = await req.json();
+
+    // Health check
+    if (body.action === "health") {
+      return new Response(
+        JSON.stringify({
+          status: "ok",
+          provider: "nano-banana-2",
+          platforms: Object.keys(PLATFORM_SIZES),
+          version: "v2"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const prompt = body.prompt || "";
+    if (!prompt.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Image prompt required." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const { prompt, model = "nano-banana", inspirationImageUrl } = await req.json();
-    
-    if (!prompt) {
-      return new Response(JSON.stringify({ error: 'Prompt is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Which platforms to generate for (default: all)
+    const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
+
+    // Use batch mode if available (50% cheaper)
+    const useBatch = body.batch !== false;
+
+    const nanoBananaKey = Deno.env.get("NANO_BANANA_API_KEY");
+    if (!nanoBananaKey) {
+      console.error("NANO_BANANA_API_KEY is not set in environment variables.");
+      return new Response(
+        JSON.stringify({ error: "Nano Banana API key not configured. Please add NANO_BANANA_API_KEY in project secrets." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    // For style-transfer model, inspiration image is required
-    if (model === "style-transfer" && !inspirationImageUrl) {
-      return new Response(JSON.stringify({ error: 'Inspiration image is required for Style Transfer model' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const nanoBananaEndpoint = Deno.env.get("NANO_BANANA_API_URL") || "https://api.nanobanana.com/v1/generate";
 
-    console.log(`Generating image for user: ${user.id}, Model: ${model}, Prompt: ${prompt.substring(0, 100)}...`, inspirationImageUrl ? "with inspiration image" : "");
+    // Generate images for each platform
+    const results: Record<string, any> = {};
+    let totalCost = 0;
+    let totalImages = 0;
 
-    let imageUrl: string;
+    for (const platform of platforms) {
+      const size = PLATFORM_SIZES[platform];
+      if (!size) {
+        results[platform] = { error: `Unknown platform: ${platform}` };
+        continue;
+      }
 
-    if (model === "runway") {
-      const RUNWAY_API_KEY = Deno.env.get("RUNWAY_API_KEY");
-      if (!RUNWAY_API_KEY) {
-        return new Response(JSON.stringify({ error: "Runway API key is not configured. Please add it in settings." }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      try {
+        const response = await fetch(nanoBananaEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${nanoBananaKey}`,
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            width: size.width,
+            height: size.height,
+            model: "nano-banana-2",
+            batch: useBatch,
+          }),
         });
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "Unknown error");
+          results[platform] = { error: `Nano Banana error: ${errText}`, status: response.status };
+          continue;
+        }
+
+        const data = await response.json();
+
+        // Cost estimation based on resolution tier (Nano Banana 2 pricing 2026)
+        const pixels = size.width * size.height;
+        let imageCost;
+        if (pixels <= 512 * 512) imageCost = useBatch ? 0.022 : 0.045;
+        else if (pixels <= 1024 * 1024) imageCost = useBatch ? 0.034 : 0.067;
+        else if (pixels <= 2048 * 2048) imageCost = useBatch ? 0.050 : 0.101;
+        else imageCost = useBatch ? 0.075 : 0.151;
+
+        totalCost += imageCost;
+        totalImages++;
+
+        results[platform] = {
+          url: data.url || data.image_url || null,
+          size: `${size.width}x${size.height}`,
+          label: size.label,
+          cost: imageCost,
+          model: "nano-banana-2",
+          batch: useBatch,
+        };
+      } catch (err) {
+        results[platform] = { error: err.message };
       }
-      imageUrl = await generateWithRunway(prompt, RUNWAY_API_KEY);
-    } else if (model === "fooocus") {
-      return new Response(JSON.stringify({ error: "Fooocus model is coming soon. Please select another model." }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else if (model === "style-transfer") {
-      // Style transfer uses Nano Banana with inspiration image
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) {
-        throw new Error("LOVABLE_API_KEY is not configured");
-      }
-      imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY, inspirationImageUrl);
-    } else {
-      // Default to Nano Banana (text-to-image OR image-to-image when inspirationImageUrl is provided)
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) {
-        throw new Error("LOVABLE_API_KEY is not configured");
-      }
-      imageUrl = await generateWithNanoBanana(prompt, LOVABLE_API_KEY, inspirationImageUrl);
     }
 
-    return new Response(JSON.stringify({ 
-      imageUrl,
-      model,
-      message: `Image generated successfully with ${model}`
+    return new Response(JSON.stringify({
+      images: results,
+      totalImages,
+      totalCost,
+      model: "nano-banana-2",
+      batch: useBatch,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (error) {
-    console.error("Error in generate-image:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Image generation error:", error);
+    return new Response(
+      JSON.stringify({ error: "Image generation failed. Please try again." }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
