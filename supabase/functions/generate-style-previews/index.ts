@@ -50,32 +50,22 @@ const visualStyles = [
 ];
 
 function extractImageUrl(data: any): string | null {
-  // Try standard path
-  const choices = data?.choices;
-  if (!choices || !Array.isArray(choices) || choices.length === 0) return null;
-
-  const msg = choices[0]?.message;
+  const msg = data?.choices?.[0]?.message;
   if (!msg) return null;
 
-  // Path 1: images array
-  if (msg.images && Array.isArray(msg.images) && msg.images.length > 0) {
-    const url = msg.images[0]?.image_url?.url || msg.images[0]?.url;
-    if (url) return url;
-  }
-
-  // Path 2: content array with image parts
-  if (msg.content && Array.isArray(msg.content)) {
-    for (const part of msg.content) {
-      if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
-      if (part.type === "image" && part.url) return part.url;
-      // base64 inline
-      if (part.type === "image_url" && part.image_url?.url?.startsWith("data:")) return part.image_url.url;
+  // Path 1: images array (standard Lovable gateway response)
+  if (Array.isArray(msg.images)) {
+    for (const img of msg.images) {
+      const url = img?.image_url?.url || img?.url;
+      if (url) return url;
     }
   }
 
-  // Path 3: inline_data (Gemini native)
-  if (msg.content && Array.isArray(msg.content)) {
+  // Path 2: content array with image parts
+  if (Array.isArray(msg.content)) {
     for (const part of msg.content) {
+      if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
+      if (part.type === "image" && part.url) return part.url;
       if (part.inline_data?.data && part.inline_data?.mime_type) {
         return `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
       }
@@ -103,41 +93,35 @@ async function generateImage(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image-preview",
-            messages: [
-              {
-                role: "user",
-                content: fullPrompt,
-              },
-            ],
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: fullPrompt }],
             modalities: ["image", "text"],
           }),
         }
       );
 
       if (response.status === 429) {
-        const wait = Math.min(2000 * (attempt + 1), 8000);
-        console.warn(`Rate limited on attempt ${attempt + 1}, waiting ${wait}ms`);
+        const wait = 2000 * (attempt + 1);
+        console.warn(`Rate limited attempt ${attempt + 1}, waiting ${wait}ms`);
         await new Promise((r) => setTimeout(r, wait));
         continue;
       }
 
       if (!response.ok) {
-        console.error(`Image gen failed: ${response.status} ${response.statusText}`);
-        await new Promise((r) => setTimeout(r, 1000));
+        console.error(`Image gen failed: ${response.status}`);
+        await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
 
       const data = await response.json();
       const imageUrl = extractImageUrl(data);
-
       if (imageUrl) return imageUrl;
 
-      console.warn(`Attempt ${attempt + 1}: no image extracted, retrying...`);
+      console.warn(`Attempt ${attempt + 1}: no image in response, retrying`);
       await new Promise((r) => setTimeout(r, 1500));
     } catch (e) {
       console.error(`Attempt ${attempt + 1} error:`, e);
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1500));
     }
   }
   return null;
@@ -152,49 +136,38 @@ serve(async (req) => {
     const { businessContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!businessContext) throw new Error("businessContext is required");
 
-    if (!businessContext) {
-      throw new Error("businessContext is required");
-    }
-
-    // Generate in two batches of 4 to avoid rate limits
+    // Generate in 2 batches of 4 with stagger to avoid rate limits
     const batch1 = visualStyles.slice(0, 4);
     const batch2 = visualStyles.slice(4, 8);
 
     const results1 = await Promise.all(
       batch1.map(async (style, idx) => {
-        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 500));
+        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 600));
         const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
         return { id: style.id, imageUrl };
       })
     );
 
-    // Small pause between batches
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1500));
 
     const results2 = await Promise.all(
       batch2.map(async (style, idx) => {
-        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 500));
+        if (idx > 0) await new Promise((r) => setTimeout(r, idx * 600));
         const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
         return { id: style.id, imageUrl };
       })
     );
 
-    const allResults = [...results1, ...results2];
-
-    return new Response(JSON.stringify({ success: true, styles: allResults }), {
+    return new Response(JSON.stringify({ success: true, styles: [...results1, ...results2] }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-style-previews error:", e);
     return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
