@@ -127,7 +127,7 @@ Make the content native to ${platform}'s style, length, and best practices.${sel
 
 Topic: ${topic}
 Target Audience: ${audience}
-Tone preference: ${tone || "Any"}${colorContext}${vibeContext}
+Tone preference: ${tone || "Any"}${colorContext}${vibeContext}${subtitleContext}
 
 Provide 5-7 examples of viral/popular ${platform} posts about this topic. For each post include:
 1. **Post Summary** — What the post was about (reconstruct the key message)
