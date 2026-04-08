@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -96,6 +96,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [visualVibe, setVisualVibe] = useState("");
   const [musicSearch, setMusicSearch] = useState("");
+  const [subtitles, setSubtitles] = useState("");
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
@@ -108,11 +109,12 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
   const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
   const musicContext = musicSearch.trim() ? `\nMusic/Audio Reference: "${musicSearch}" — suggest content that pairs well with this song/audio mood.` : "";
+  const subtitleContext = subtitles.trim() ? `\nSubtitles/Captions: "${subtitles}" — incorporate these subtitles or caption style into the content.` : "";
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
 Topic: ${topic}
 Audience: ${audience}
-Tone: ${tone || "Professional yet engaging"}${colorContext}${vibeContext}${musicContext}
+Tone: ${tone || "Professional yet engaging"}${colorContext}${vibeContext}${musicContext}${subtitleContext}
 
 Generate the following formats optimized for ${platform}:
 ${formats}
@@ -229,6 +231,16 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
                 </Button>
               )}
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+              <Captions className="w-3.5 h-3.5" /> Subtitles / Captions
+            </label>
+            <Input
+              placeholder="Add subtitle text or caption style..."
+              value={subtitles}
+              onChange={(e) => setSubtitles(e.target.value)}
+            />
           </div>
           <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
             {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
