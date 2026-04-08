@@ -105,6 +105,8 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
     );
   };
 
+  const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
+  const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
   const musicContext = musicSearch.trim() ? `\nMusic/Audio Reference: "${musicSearch}" — suggest content that pairs well with this song/audio mood.` : "";
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
