@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, TrendingUp } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 function useAIGenerate() {
@@ -67,23 +68,63 @@ function ResultDisplay({ result, loading, onCopy, copied }: { result: string | n
   );
 }
 
+const COLOR_OPTIONS = [
+  { value: "Warm Tones", colors: ["#FF6B6B", "#FFA07A", "#FFD93D"] },
+  { value: "Cool Tones", colors: ["#6C63FF", "#48C9B0", "#5DADE2"] },
+  { value: "Earth Tones", colors: ["#A0522D", "#8B7355", "#6B8E23"] },
+  { value: "Neon / Bold", colors: ["#FF00FF", "#00FF87", "#FFE600"] },
+  { value: "Pastel", colors: ["#FFB3BA", "#BAFFC9", "#BAE1FF"] },
+  { value: "Monochrome", colors: ["#333333", "#777777", "#BBBBBB"] },
+  { value: "Luxury / Dark", colors: ["#1A1A2E", "#C9A94E", "#E0E0E0"] },
+];
+
+const VIBE_OPTIONS = [
+  "Minimalist & Clean",
+  "Bold & Energetic",
+  "Retro / Vintage",
+  "Futuristic / Techy",
+  "Organic / Natural",
+  "Playful / Fun",
+  "Elegant / Luxurious",
+  "Street / Urban",
+];
+
 function PlatformTab({ platform, formats }: { platform: string; formats: string }) {
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("");
   const [tone, setTone] = useState("");
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [visualVibe, setVisualVibe] = useState("");
+  const [musicFile, setMusicFile] = useState<File | null>(null);
+  const musicInputRef = useRef<HTMLInputElement>(null);
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
+
+  const toggleColor = (value: string) => {
+    setSelectedColors((prev) =>
+      prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]
+    );
+  };
+
+  const handleMusicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setMusicFile(file);
+  };
+
+  const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
+  const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
+  const musicContext = musicFile ? `\nMusic/Audio Reference: User has uploaded "${musicFile.name}" — suggest content that pairs well with this audio mood.` : "";
 
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
 Topic: ${topic}
 Audience: ${audience}
-Tone: ${tone || "Professional yet engaging"}
+Tone: ${tone || "Professional yet engaging"}${colorContext}${vibeContext}${musicContext}
 
 Generate the following formats optimized for ${platform}:
 ${formats}
 
-Make the content native to ${platform}'s style, length, and best practices.`);
+Make the content native to ${platform}'s style, length, and best practices.${selectedColors.length > 0 ? " Incorporate the specified color palette into visual direction notes." : ""}${visualVibe ? " Align visual suggestions with the specified vibe." : ""}`);
   };
 
   const handleShowViral = () => {
@@ -91,7 +132,7 @@ Make the content native to ${platform}'s style, length, and best practices.`);
 
 Topic: ${topic}
 Target Audience: ${audience}
-Tone preference: ${tone || "Any"}
+Tone preference: ${tone || "Any"}${colorContext}${vibeContext}
 
 Provide 5-7 examples of viral/popular ${platform} posts about this topic. For each post include:
 1. **Post Summary** — What the post was about (reconstruct the key message)
@@ -130,6 +171,77 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
                 <SelectItem value="Humorous">Humorous</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5" /> Color Palette
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {COLOR_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleColor(opt.value)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                    selectedColors.includes(opt.value)
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <span className="flex gap-0.5">
+                    {opt.colors.map((c) => (
+                      <span key={c} className="w-3 h-3 rounded-full inline-block border border-border/50" style={{ backgroundColor: c }} />
+                    ))}
+                  </span>
+                  {opt.value}
+                </button>
+              ))}
+            </div>
+            {selectedColors.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {selectedColors.map((c) => (
+                  <Badge key={c} variant="secondary" className="text-xs cursor-pointer" onClick={() => toggleColor(c)}>
+                    {c} <X className="w-3 h-3 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Visual Vibe</label>
+            <Select value={visualVibe} onValueChange={setVisualVibe}>
+              <SelectTrigger><SelectValue placeholder="Select visual vibe" /></SelectTrigger>
+              <SelectContent>
+                {VIBE_OPTIONS.map((v) => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+              <Music className="w-3.5 h-3.5" /> Upload Music / Audio
+            </label>
+            <input
+              ref={musicInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handleMusicUpload}
+              className="hidden"
+            />
+            {musicFile ? (
+              <div className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
+                <Music className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-xs text-foreground truncate flex-1">{musicFile.name}</span>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setMusicFile(null); if (musicInputRef.current) musicInputRef.current.value = ""; }}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => musicInputRef.current?.click()}>
+                <Upload className="w-3.5 h-3.5 mr-1.5" /> Choose Audio File
+              </Button>
+            )}
           </div>
           <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
             {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
