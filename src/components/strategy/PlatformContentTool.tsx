@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Upload } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -95,8 +95,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [tone, setTone] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [visualVibe, setVisualVibe] = useState("");
-  const [musicFile, setMusicFile] = useState<File | null>(null);
-  const musicInputRef = useRef<HTMLInputElement>(null);
+  const [musicSearch, setMusicSearch] = useState("");
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
@@ -106,15 +105,9 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
     );
   };
 
-  const handleMusicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setMusicFile(file);
-  };
-
   const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
   const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
-  const musicContext = musicFile ? `\nMusic/Audio Reference: User has uploaded "${musicFile.name}" — suggest content that pairs well with this audio mood.` : "";
-
+  const musicContext = musicSearch.trim() ? `\nMusic/Audio Reference: "${musicSearch}" — suggest content that pairs well with this song/audio mood.` : "";
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
 Topic: ${topic}
@@ -220,28 +213,22 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
-              <Music className="w-3.5 h-3.5" /> Upload Music / Audio
+              <Music className="w-3.5 h-3.5" /> Song / Audio Reference
             </label>
-            <input
-              ref={musicInputRef}
-              type="file"
-              accept="audio/*"
-              onChange={handleMusicUpload}
-              className="hidden"
-            />
-            {musicFile ? (
-              <div className="flex items-center gap-2 p-2 rounded-md border border-border bg-muted/30">
-                <Music className="w-4 h-4 text-primary shrink-0" />
-                <span className="text-xs text-foreground truncate flex-1">{musicFile.name}</span>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setMusicFile(null); if (musicInputRef.current) musicInputRef.current.value = ""; }}>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search for a song or artist..."
+                value={musicSearch}
+                onChange={(e) => setMusicSearch(e.target.value)}
+                className="pl-8"
+              />
+              {musicSearch && (
+                <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0" onClick={() => setMusicSearch("")}>
                   <X className="w-3 h-3" />
                 </Button>
-              </div>
-            ) : (
-              <Button variant="outline" size="sm" className="w-full" onClick={() => musicInputRef.current?.click()}>
-                <Upload className="w-3.5 h-3.5 mr-1.5" /> Choose Audio File
-              </Button>
-            )}
+              )}
+            </div>
           </div>
           <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
             {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
