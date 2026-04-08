@@ -236,11 +236,55 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
             <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
               <Captions className="w-3.5 h-3.5" /> Subtitles / Captions
             </label>
-            <Input
-              placeholder="Add subtitle text or caption style..."
-              value={subtitles}
-              onChange={(e) => setSubtitles(e.target.value)}
-            />
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="00:00"
+                  value={subtitleTimestamp}
+                  onChange={(e) => setSubtitleTimestamp(e.target.value)}
+                  className="w-20 text-center font-mono text-xs"
+                />
+                <Input
+                  placeholder="Enter subtitle text..."
+                  value={subtitleText}
+                  onChange={(e) => setSubtitleText(e.target.value)}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subtitleText.trim()) {
+                      setSubtitleEntries((prev) => [...prev, { time: subtitleTimestamp || "00:00", text: subtitleText.trim() }]);
+                      setSubtitleText("");
+                      setSubtitleTimestamp("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!subtitleText.trim()}
+                  onClick={() => {
+                    setSubtitleEntries((prev) => [...prev, { time: subtitleTimestamp || "00:00", text: subtitleText.trim() }]);
+                    setSubtitleText("");
+                    setSubtitleTimestamp("");
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              {subtitleEntries.length > 0 && (
+                <div className="space-y-1">
+                  {subtitleEntries.map((entry, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
+                      <span className="font-mono text-muted-foreground w-12 shrink-0">{entry.time}</span>
+                      <span className="flex-1 text-foreground">{entry.text}</span>
+                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => setSubtitleEntries((prev) => prev.filter((_, j) => j !== i))}>
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
             {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
