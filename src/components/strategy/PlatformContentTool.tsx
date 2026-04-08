@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -72,6 +72,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [audience, setAudience] = useState("");
   const [tone, setTone] = useState("");
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
+  const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
@@ -84,6 +85,25 @@ ${formats}
 
 Make the content native to ${platform}'s style, length, and best practices.`);
   };
+
+  const handleShowViral = () => {
+    generateViral(`You are a social media trend analyst specializing in ${platform}. Research and present the most popular, viral, and high-performing posts related to:
+
+Topic: ${topic}
+Target Audience: ${audience}
+Tone preference: ${tone || "Any"}
+
+Provide 5-7 examples of viral/popular ${platform} posts about this topic. For each post include:
+1. **Post Summary** — What the post was about (reconstruct the key message)
+2. **Why It Went Viral** — The psychological or strategic hook that made it spread
+3. **Engagement Pattern** — Estimated engagement level (high/very high/mega viral) and what type of engagement it drove (shares, saves, comments, etc.)
+4. **Key Takeaway** — What the user can learn and replicate from this post
+5. **Suggested Adaptation** — How the user could create a similar post for their audience (${audience})
+
+Focus on recent, trending content patterns on ${platform}. Include specific content structures, hooks, and formats that are currently performing well.`);
+  };
+
+  const inputsFilled = topic.trim().length > 0;
 
   return (
     <div className="space-y-4 mt-4">
@@ -111,13 +131,45 @@ Make the content native to ${platform}'s style, length, and best practices.`);
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleGenerate} disabled={loading || !topic} className="w-full">
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Generate {platform} Content
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleGenerate} disabled={loading || !topic} className="flex-1">
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Generate {platform} Content
+            </Button>
+            <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="flex-1">
+              {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
+              Show Viral Posts
+            </Button>
+          </div>
         </CardContent>
       </Card>
       <ResultDisplay result={result} loading={loading} onCopy={copyResult} copied={copied} />
+      {(viralResult || viralLoading) && (
+        <Card className={viralResult ? "border-primary/30" : ""}>
+          <CardContent className="pt-4">
+            {viralLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Finding viral posts...</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    Viral & Trending Posts
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={copyViral}>
+                    {viralCopied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                    {viralCopied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <div className="prose prose-sm max-w-none text-sm text-muted-foreground whitespace-pre-wrap">{viralResult}</div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
