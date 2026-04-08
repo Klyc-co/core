@@ -131,16 +131,14 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleGenerate} disabled={loading || !topic} className="flex-1">
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              Generate {platform} Content
-            </Button>
-            <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="flex-1">
-              {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
-              Show Viral Posts
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
+            {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
+            Show Viral Posts
+          </Button>
+          <Button onClick={handleGenerate} disabled={loading || !topic} className="w-full">
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            Generate {platform} Content
+          </Button>
         </CardContent>
       </Card>
       <ResultDisplay result={result} loading={loading} onCopy={copyResult} copied={copied} />
