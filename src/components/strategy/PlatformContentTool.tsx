@@ -96,7 +96,9 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [visualVibe, setVisualVibe] = useState("");
   const [musicSearch, setMusicSearch] = useState("");
-  const [subtitles, setSubtitles] = useState("");
+  const [subtitleText, setSubtitleText] = useState("");
+  const [subtitleTimestamp, setSubtitleTimestamp] = useState("");
+  const [subtitleEntries, setSubtitleEntries] = useState<{ time: string; text: string }[]>([]);
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
@@ -109,7 +111,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
   const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
   const musicContext = musicSearch.trim() ? `\nMusic/Audio Reference: "${musicSearch}" — suggest content that pairs well with this song/audio mood.` : "";
-  const subtitleContext = subtitles.trim() ? `\nSubtitles/Captions: "${subtitles}" — incorporate these subtitles or caption style into the content.` : "";
+  const subtitleContext = subtitleEntries.length > 0 ? `\nSubtitles/Captions:\n${subtitleEntries.map((e) => `[${e.time}] ${e.text}`).join("\n")}\nIncorporate these timed subtitles into the content.` : "";
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
 Topic: ${topic}
@@ -236,11 +238,55 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
             <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
               <Captions className="w-3.5 h-3.5" /> Subtitles / Captions
             </label>
-            <Input
-              placeholder="Add subtitle text or caption style..."
-              value={subtitles}
-              onChange={(e) => setSubtitles(e.target.value)}
-            />
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="00:00"
+                  value={subtitleTimestamp}
+                  onChange={(e) => setSubtitleTimestamp(e.target.value)}
+                  className="w-20 text-center font-mono text-xs"
+                />
+                <Input
+                  placeholder="Enter subtitle text..."
+                  value={subtitleText}
+                  onChange={(e) => setSubtitleText(e.target.value)}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subtitleText.trim()) {
+                      setSubtitleEntries((prev) => [...prev, { time: subtitleTimestamp || "00:00", text: subtitleText.trim() }]);
+                      setSubtitleText("");
+                      setSubtitleTimestamp("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!subtitleText.trim()}
+                  onClick={() => {
+                    setSubtitleEntries((prev) => [...prev, { time: subtitleTimestamp || "00:00", text: subtitleText.trim() }]);
+                    setSubtitleText("");
+                    setSubtitleTimestamp("");
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              {subtitleEntries.length > 0 && (
+                <div className="space-y-1">
+                  {subtitleEntries.map((entry, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
+                      <span className="font-mono text-muted-foreground w-12 shrink-0">{entry.time}</span>
+                      <span className="flex-1 text-foreground">{entry.text}</span>
+                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => setSubtitleEntries((prev) => prev.filter((_, j) => j !== i))}>
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <Button variant="outline" onClick={handleShowViral} disabled={viralLoading || !inputsFilled} className="w-full">
             {viralLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
