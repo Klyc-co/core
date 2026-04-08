@@ -95,8 +95,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [tone, setTone] = useState("");
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [visualVibe, setVisualVibe] = useState("");
-  const [musicFile, setMusicFile] = useState<File | null>(null);
-  const musicInputRef = useRef<HTMLInputElement>(null);
+  const [musicSearch, setMusicSearch] = useState("");
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
