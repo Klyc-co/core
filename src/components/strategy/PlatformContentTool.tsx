@@ -96,7 +96,9 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [visualVibe, setVisualVibe] = useState("");
   const [musicSearch, setMusicSearch] = useState("");
-  const [subtitles, setSubtitles] = useState("");
+  const [subtitleText, setSubtitleText] = useState("");
+  const [subtitleTimestamp, setSubtitleTimestamp] = useState("");
+  const [subtitleEntries, setSubtitleEntries] = useState<{ time: string; text: string }[]>([]);
   const { loading, result, generate, copyResult, copied } = useAIGenerate();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
 
@@ -109,7 +111,7 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const colorContext = selectedColors.length > 0 ? `\nColor Palette Preference: ${selectedColors.join(", ")}` : "";
   const vibeContext = visualVibe ? `\nVisual Vibe: ${visualVibe}` : "";
   const musicContext = musicSearch.trim() ? `\nMusic/Audio Reference: "${musicSearch}" — suggest content that pairs well with this song/audio mood.` : "";
-  const subtitleContext = subtitles.trim() ? `\nSubtitles/Captions: "${subtitles}" — incorporate these subtitles or caption style into the content.` : "";
+  const subtitleContext = subtitleEntries.length > 0 ? `\nSubtitles/Captions:\n${subtitleEntries.map((e) => `[${e.time}] ${e.text}`).join("\n")}\nIncorporate these timed subtitles into the content.` : "";
   const handleGenerate = () => {
     generate(`You are an expert ${platform} content creator. Create platform-native content for:
 Topic: ${topic}
