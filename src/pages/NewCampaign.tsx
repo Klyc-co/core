@@ -543,60 +543,12 @@ const NewCampaign = () => {
 
 
 
-          {/* Add from Content Library */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">Add from Content Library</Label>
-            <p className="text-sm text-muted-foreground">Select images and videos from your sources ({libraryAssets.length}/10)</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Upload from device */}
-              <div
-                className="border-2 border-dashed border-primary/40 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all"
-                onClick={() => !isUploading && document.getElementById("libraryFileInput")?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-              >
-                {isUploading ? (
-                  <Loader2 className="w-7 h-7 text-muted-foreground animate-spin" />
-                ) : (
-                  <Upload className="w-7 h-7 text-muted-foreground" />
-                )}
-                <span className="font-medium text-sm">{isUploading ? "Uploading..." : "Upload"}</span>
-                <span className="text-xs text-muted-foreground">From device</span>
-                <input
-                  id="libraryFileInput"
-                  type="file"
-                  multiple
-                  className="hidden"
-                  accept="image/*,video/*,.pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                />
-              </div>
-
-              {/* Google Drive */}
-              <div
-                className="border rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all"
-                onClick={() => setShowGoogleDrivePicker(true)}
-              >
-                <GoogleDriveIcon className="w-7 h-7" />
-                <span className="font-medium text-sm">Google Drive</span>
-                <span className="text-xs text-muted-foreground">Select files</span>
-              </div>
-
-              {/* Klyc Library */}
-              <div
-                className="border rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all"
-                onClick={() => setShowLibraryPicker(true)}
-              >
-                <FolderOpen className="w-7 h-7 text-primary" />
-                <span className="font-medium text-sm">Klyc Library</span>
-                <span className="text-xs text-muted-foreground">Your assets</span>
-              </div>
-            </div>
-
-            {/* Selected library assets */}
-            {libraryAssets.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {libraryAssets.map((asset, index) => (
+          {/* Attached media preview (from previous page) */}
+          {libraryAssets.length > 0 && (
+            <div className="space-y-2">
+              <Label>Attached Media</Label>
+              <div className="flex flex-wrap gap-2">
+                {libraryAssets.map((asset) => (
                   <div key={asset.id} className="relative group">
                     <img
                       src={asset.url}
@@ -604,48 +556,11 @@ const NewCampaign = () => {
                       className="w-16 h-16 rounded-lg object-cover border"
                       onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
                     />
-                    <button
-                      onClick={() => setLibraryAssets(prev => prev.filter(a => a.id !== asset.id))}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Library Picker Modal */}
-          <LibraryAssetPicker
-            open={showLibraryPicker}
-            onOpenChange={setShowLibraryPicker}
-            onAssetsSelected={(assets) => {
-              setLibraryAssets(prev => {
-                const existing = new Set(prev.map(a => a.id));
-                const newOnes = assets.filter(a => !existing.has(a.id));
-                return [...prev, ...newOnes].slice(0, 10);
-              });
-            }}
-            maxSelection={10}
-            assetTypeFilter="all"
-          />
-
-          {/* Google Drive Picker */}
-          <GoogleDriveFilePicker
-            open={showGoogleDrivePicker}
-            onOpenChange={setShowGoogleDrivePicker}
-            selectionMode="select"
-            onFilesSelected={(files) => {
-              const mapped = files.map(f => ({ id: f.id, name: f.name, url: f.thumbnailUrl || f.path || "" }));
-              setLibraryAssets(prev => {
-                const existing = new Set(prev.map(a => a.id));
-                const newOnes = mapped.filter(a => !existing.has(a.id));
-                return [...prev, ...newOnes].slice(0, 10);
-              });
-            }}
-          />
-
+            </div>
+          )}
           {/* Tags & Keywords */}
           <div className="space-y-2">
             <Label>Tags & Keywords</Label>
@@ -684,23 +599,40 @@ const NewCampaign = () => {
                   const platform = socialPlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   const previewImage = libraryAssets[0]?.url || generatedData?.generatedImageUrl;
+
+                  // Platform-specific aspect ratios and dimensions
+                  const platformSpecs: Record<string, { aspect: string; dimensions: string }> = {
+                    instagram: { aspect: "aspect-square", dimensions: "1080 × 1080" },
+                    facebook: { aspect: "aspect-video", dimensions: "1200 × 630" },
+                    twitter: { aspect: "aspect-video", dimensions: "1600 × 900" },
+                    linkedin: { aspect: "aspect-[1.91/1]", dimensions: "1200 × 627" },
+                    tiktok: { aspect: "aspect-[9/16]", dimensions: "1080 × 1920" },
+                    youtube: { aspect: "aspect-video", dimensions: "1280 × 720" },
+                    snapchat: { aspect: "aspect-[9/16]", dimensions: "1080 × 1920" },
+                    threads: { aspect: "aspect-square", dimensions: "1080 × 1080" },
+                  };
+                  const spec = platformSpecs[platformId] || { aspect: "aspect-square", dimensions: "1080 × 1080" };
+
                   return (
                     <Card key={platformId} className="overflow-hidden">
                       {/* Platform header */}
-                      <div className={`${platform.color} px-4 py-2.5 flex items-center gap-2`}>
-                        <div className={`w-5 h-5 flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "" : ""}`}>
-                          <img 
-                            src={platform.icon} 
-                            alt={platform.name}
-                            className="w-full h-full object-contain"
-                          />
+                      <div className={`${platform.color} px-4 py-2.5 flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <img 
+                              src={platform.icon} 
+                              alt={platform.name}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="text-white text-sm font-medium">{platform.name}</span>
                         </div>
-                        <span className="text-white text-sm font-medium">{platform.name}</span>
+                        <span className="text-white/70 text-[10px] font-mono">{spec.dimensions}</span>
                       </div>
                       {/* Preview body */}
                       <div className="p-4 space-y-3">
                         {previewImage && (
-                          <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                          <div className={`${spec.aspect} rounded-lg overflow-hidden bg-muted ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
                             <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
                           </div>
                         )}
@@ -715,7 +647,7 @@ const NewCampaign = () => {
                           </div>
                         )}
                         {!previewImage && !postCaption && (
-                          <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
+                          <div className={`${spec.aspect} rounded-lg bg-muted flex items-center justify-center ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
                             <span className="text-sm text-muted-foreground">No content preview available</span>
                           </div>
                         )}
