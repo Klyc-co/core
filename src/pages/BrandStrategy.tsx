@@ -60,6 +60,7 @@ const BrandStrategy = () => {
       case "email": return <EmailMarketingTool />;
       case "performance": return <SocialPerformanceTool />;
       case "brandcolors": return <BrandColorsTool />;
+    }
   };
 
   return (
