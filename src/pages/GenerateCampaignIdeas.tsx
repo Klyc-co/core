@@ -825,7 +825,63 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
-          {/* Upload My Own Content Button */}
+          {/* Post Idea / Prompt */}
+          {selectedContentType && selectedContentType !== "paid-ads" && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
+                <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
+                <Textarea
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="e.g. A promotional post for our summer sale featuring our new product line..."
+                  rows={4}
+                  className="resize-none"
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Platform Selection */}
+          {selectedContentType && selectedContentType !== "paid-ads" && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">Select Platforms</h2>
+                <p className="text-sm text-muted-foreground mb-4">Choose where you want to post this content</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {socialPlatforms.map((platform) => (
+                    <button
+                      key={platform.id}
+                      onClick={() => togglePlatform(platform.id)}
+                      className={`p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 flex flex-col items-center gap-2 ${
+                        selectedPlatforms.includes(platform.id)
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg ${platform.color} flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "p-0" : "p-2"}`}>
+                        <img 
+                          src={platform.icon} 
+                          alt={platform.name}
+                          className={platform.id === "linkedin" ? "w-9 h-9 rounded-lg object-contain" : platform.id === "snapchat" ? "w-12 h-12 rounded-lg object-contain" : "w-full h-full object-contain"}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-foreground">{platform.name}</span>
+                      {selectedPlatforms.includes(platform.id) && (
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {selectedPlatforms.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-3">
+                    {selectedPlatforms.length} platform{selectedPlatforms.length > 1 ? "s" : ""} selected
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Button
               variant="outline"
