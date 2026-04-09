@@ -67,6 +67,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
+  const [outputSize, setOutputSize] = useState<OutputSize>("portrait");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
