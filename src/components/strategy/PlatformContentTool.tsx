@@ -335,6 +335,8 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
 
 export default function PlatformContentTool() {
   const [colorsOpen, setColorsOpen] = useState(false);
+  const [charsOpen, setCharsOpen] = useState(false);
+  const [sceneOpen, setSceneOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -381,6 +383,50 @@ export default function PlatformContentTool() {
           <CollapsibleContent>
             <CardContent className="pt-0 pb-4">
               <BrandColorsTool />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Collapsible open={charsOpen} onOpenChange={setCharsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors rounded-lg">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Characters</div>
+                  <div className="text-xs text-muted-foreground">Define the people and characters appearing in your content</div>
+                </div>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${charsOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 pb-4">
+              <CharactersTool />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Collapsible open={sceneOpen} onOpenChange={setSceneOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors rounded-lg">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Scene & Setting</div>
+                  <div className="text-xs text-muted-foreground">Describe the visual environment and atmosphere for your content</div>
+                </div>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${sceneOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 pb-4">
+              <SceneSettingTool />
             </CardContent>
           </CollapsibleContent>
         </Card>
