@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket } from "lucide-react";
+import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket, Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import StrategyScreen from "@/pages/StrategyScreen";
 
 interface SectionProps {
@@ -42,6 +44,60 @@ function CollapsibleSection({ title, icon, children, defaultOpen = false }: Sect
 export default function StrategyDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pipeline");
+  const [betaUnlocked, setBetaUnlocked] = useState(false);
+  const [betaPasscode, setBetaPasscode] = useState("");
+
+  if (!betaUnlocked) {
+    return (
+      <div className="max-w-5xl mx-auto py-6 px-4 flex items-center justify-center min-h-[70vh]">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center text-center py-12 px-6 space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-foreground">Coming Soon</h1>
+              <p className="text-muted-foreground">Strategy is currently in beta. Enter the beta passcode to continue.</p>
+            </div>
+            <div className="flex items-center gap-2 w-full max-w-xs">
+              <Input
+                type="password"
+                placeholder="Enter passcode"
+                value={betaPasscode}
+                onChange={(e) => setBetaPasscode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (betaPasscode === "373737") {
+                      setBetaUnlocked(true);
+                    } else {
+                      setBetaPasscode("");
+                      toast.error("Invalid passcode");
+                    }
+                  }
+                }}
+                className="text-center"
+              />
+              <Button
+                onClick={() => {
+                  if (betaPasscode === "373737") {
+                    setBetaUnlocked(true);
+                  } else {
+                    setBetaPasscode("");
+                    toast.error("Invalid passcode");
+                  }
+                }}
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Enter
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Beta testers only</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 space-y-6">
