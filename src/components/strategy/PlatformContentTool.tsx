@@ -4,10 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import BrandColorsTool from "@/components/strategy/BrandColorsTool";
 
 function useAIGenerate() {
   const [loading, setLoading] = useState(false);
@@ -330,31 +332,57 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
 }
 
 export default function PlatformContentTool() {
-  return (
-    <Tabs defaultValue="linkedin" className="w-full">
-      <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
-        <TabsTrigger value="linkedin" className="text-xs sm:text-sm">LinkedIn</TabsTrigger>
-        <TabsTrigger value="twitter" className="text-xs sm:text-sm">X / Twitter</TabsTrigger>
-        <TabsTrigger value="instagram" className="text-xs sm:text-sm">Instagram</TabsTrigger>
-        <TabsTrigger value="tiktok" className="text-xs sm:text-sm">TikTok</TabsTrigger>
-        <TabsTrigger value="youtube" className="text-xs sm:text-sm">YouTube</TabsTrigger>
-      </TabsList>
+  const [colorsOpen, setColorsOpen] = useState(false);
 
-      <TabsContent value="linkedin">
-        <PlatformTab platform="LinkedIn" formats="1. Post draft (text post, 1300 chars max)\n2. Carousel outline (8-10 slides)\n3. Thread version (5-7 connected posts)" />
-      </TabsContent>
-      <TabsContent value="twitter">
-        <PlatformTab platform="X / Twitter" formats="1. Single tweet (280 chars)\n2. Thread (5-7 tweets)\n3. Quote tweet angles (3 options)" />
-      </TabsContent>
-      <TabsContent value="instagram">
-        <PlatformTab platform="Instagram" formats="1. Caption (with hashtags)\n2. Carousel outline (8-10 slides)\n3. Reel script (30-60 sec)\n4. Story sequence (5 slides)" />
-      </TabsContent>
-      <TabsContent value="tiktok">
-        <PlatformTab platform="TikTok" formats="1. Video script (30-60 sec)\n2. Hook options (5 scroll-stopping openers)\n3. Trending format adaptation\n4. Caption with hashtags" />
-      </TabsContent>
-      <TabsContent value="youtube">
-        <PlatformTab platform="YouTube" formats="1. Video title options (5)\n2. Description with timestamps\n3. Script outline\n4. Shorts script (60 sec)" />
-      </TabsContent>
-    </Tabs>
+  return (
+    <div className="space-y-6">
+      <Tabs defaultValue="linkedin" className="w-full">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="linkedin" className="text-xs sm:text-sm">LinkedIn</TabsTrigger>
+          <TabsTrigger value="twitter" className="text-xs sm:text-sm">X / Twitter</TabsTrigger>
+          <TabsTrigger value="instagram" className="text-xs sm:text-sm">Instagram</TabsTrigger>
+          <TabsTrigger value="tiktok" className="text-xs sm:text-sm">TikTok</TabsTrigger>
+          <TabsTrigger value="youtube" className="text-xs sm:text-sm">YouTube</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="linkedin">
+          <PlatformTab platform="LinkedIn" formats="1. Post draft (text post, 1300 chars max)\n2. Carousel outline (8-10 slides)\n3. Thread version (5-7 connected posts)" />
+        </TabsContent>
+        <TabsContent value="twitter">
+          <PlatformTab platform="X / Twitter" formats="1. Single tweet (280 chars)\n2. Thread (5-7 tweets)\n3. Quote tweet angles (3 options)" />
+        </TabsContent>
+        <TabsContent value="instagram">
+          <PlatformTab platform="Instagram" formats="1. Caption (with hashtags)\n2. Carousel outline (8-10 slides)\n3. Reel script (30-60 sec)\n4. Story sequence (5 slides)" />
+        </TabsContent>
+        <TabsContent value="tiktok">
+          <PlatformTab platform="TikTok" formats="1. Video script (30-60 sec)\n2. Hook options (5 scroll-stopping openers)\n3. Trending format adaptation\n4. Caption with hashtags" />
+        </TabsContent>
+        <TabsContent value="youtube">
+          <PlatformTab platform="YouTube" formats="1. Video title options (5)\n2. Description with timestamps\n3. Script outline\n4. Shorts script (60 sec)" />
+        </TabsContent>
+      </Tabs>
+
+      <Collapsible open={colorsOpen} onOpenChange={setColorsOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors rounded-lg">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-primary" />
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Brand Color Palette</div>
+                  <div className="text-xs text-muted-foreground">Define your brand's role-based color map for content generation</div>
+                </div>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${colorsOpen ? "rotate-180" : ""}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 pb-4">
+              <BrandColorsTool />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+    </div>
   );
 }
