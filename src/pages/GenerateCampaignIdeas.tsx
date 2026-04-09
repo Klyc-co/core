@@ -14,6 +14,8 @@ import type { User } from "@supabase/supabase-js";
 import ImageSourcePicker from "@/components/ImageSourcePicker";
 import PaidAdsDashboard from "@/components/PaidAdsDashboard";
 import { useClientContext } from "@/contexts/ClientContext";
+import linkedinLogo from "@/assets/linkedin-logo.png";
+import snapchatLogo from "@/assets/snapchat-logo.png";
 
 interface Product {
   id: string;
