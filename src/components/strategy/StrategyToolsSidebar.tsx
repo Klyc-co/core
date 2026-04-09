@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Search, MessageSquare, FileEdit, Mail, BarChart3, Palette } from "lucide-react";
+import { Search, MessageSquare, FileEdit, Mail, BarChart3 } from "lucide-react";
 
 export type StrategyTool = 
   | "research" 
