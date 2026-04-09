@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket } from "lucide-react";
+import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket, Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import StrategyScreen from "@/pages/StrategyScreen";
 
 interface SectionProps {
