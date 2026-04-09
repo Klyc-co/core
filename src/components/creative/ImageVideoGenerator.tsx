@@ -176,7 +176,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        const body: Record<string, any> = { prompt, model: imageModel };
+        const sizeConfig = OUTPUT_SIZE_OPTIONS.find((o) => o.value === outputSize) || OUTPUT_SIZE_OPTIONS[0];
+        const body: Record<string, any> = { prompt, model: imageModel, width: sizeConfig.width, height: sizeConfig.height };
         if (inspirationUrls.length > 0) body.inspirationImageUrl = inspirationUrls[0];
 
         const { data, error } = await supabase.functions.invoke("generate-image", { body });
