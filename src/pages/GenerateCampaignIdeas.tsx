@@ -450,6 +450,14 @@ const GenerateCampaignIdeas = () => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const togglePlatform = (platformId: string) => {
+    if (selectedPlatforms.includes(platformId)) {
+      setSelectedPlatforms(selectedPlatforms.filter(p => p !== platformId));
+    } else {
+      setSelectedPlatforms([...selectedPlatforms, platformId]);
+    }
+  };
+
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
@@ -637,6 +645,7 @@ const GenerateCampaignIdeas = () => {
         campaignObjective: campaignObjective || "",
         contentType: selectedContentType || "",
         generatedImageUrl: generatedImageUrl || "",
+        selectedPlatforms: selectedPlatforms || [],
       },
     });
   };
