@@ -543,10 +543,24 @@ const NewCampaign = () => {
 
 
 
-          {/* Add from Content Library */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold">Add from Content Library</Label>
-            <p className="text-sm text-muted-foreground">Select images and videos from your sources ({libraryAssets.length}/10)</p>
+          {/* Attached media preview (from previous page) */}
+          {libraryAssets.length > 0 && (
+            <div className="space-y-2">
+              <Label>Attached Media</Label>
+              <div className="flex flex-wrap gap-2">
+                {libraryAssets.map((asset) => (
+                  <div key={asset.id} className="relative group">
+                    <img
+                      src={asset.url}
+                      alt={asset.name}
+                      className="w-16 h-16 rounded-lg object-cover border"
+                      onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Upload from device */}
               <div
