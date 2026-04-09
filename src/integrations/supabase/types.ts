@@ -1115,6 +1115,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_brand_colors: {
+        Row: {
+          client_id: string
+          created_at: string
+          hex_value: string
+          hue: number | null
+          id: string
+          lightness: number | null
+          role: string
+          saturation: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          hex_value: string
+          hue?: number | null
+          id?: string
+          lightness?: number | null
+          role: string
+          saturation?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          hex_value?: string
+          hue?: number | null
+          id?: string
+          lightness?: number | null
+          role?: string
+          saturation?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           audience_data: Json | null

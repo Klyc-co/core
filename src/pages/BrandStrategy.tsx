@@ -14,6 +14,7 @@ import StrategyMessagingTool from "@/components/strategy/StrategyMessagingTool";
 import PlatformContentTool from "@/components/strategy/PlatformContentTool";
 import EmailMarketingTool from "@/components/strategy/EmailMarketingTool";
 import SocialPerformanceTool from "@/components/strategy/SocialPerformanceTool";
+import BrandColorsTool from "@/components/strategy/BrandColorsTool";
 import type { User } from "@supabase/supabase-js";
 
 const toolTitles: Record<StrategyTool, string> = {
@@ -22,6 +23,7 @@ const toolTitles: Record<StrategyTool, string> = {
   content: "Platform Content",
   email: "Email Marketing",
   performance: "Social Performance",
+  brandcolors: "Brand Colors",
 };
 
 const BrandStrategy = () => {
@@ -57,6 +59,7 @@ const BrandStrategy = () => {
       case "content": return <PlatformContentTool />;
       case "email": return <EmailMarketingTool />;
       case "performance": return <SocialPerformanceTool />;
+      case "brandcolors": return <BrandColorsTool />;
     }
   };
 
