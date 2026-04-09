@@ -34,6 +34,29 @@ const fetchImageBytes = async (imageUrl: string): Promise<Uint8Array> => {
 };
 
 /**
+ * Convert any image URL to a base64 data URL so the AI gateway doesn't
+ * need to fetch it. This also handles formats the gateway can't fetch
+ * (like .avif) by re-encoding them as PNG via ImageScript.
+ */
+const toBase64DataUrl = async (imageUrl: string): Promise<string> => {
+  // Already a data URL
+  if (typeof imageUrl === "string" && imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+  try {
+    const bytes = await fetchImageBytes(imageUrl);
+    // Decode and re-encode as PNG to handle any format (avif, webp, etc.)
+    const img = await Image.decode(bytes);
+    const pngBytes = await img.encode(1); // PNG
+    return `data:image/png;base64,${encodeBase64(pngBytes)}`;
+  } catch (e) {
+    console.warn(`Failed to convert image to base64, skipping: ${imageUrl}`, e);
+    // Return original URL as fallback - gateway may still handle it
+    return imageUrl;
+  }
+};
+
+/**
  * FIT (letterbox) instead of CROP:
  * Scales the image so that the ENTIRE source image fits inside the target
  * dimensions, then places it on a canvas of exactly target size.
@@ -373,17 +396,22 @@ CRITICAL FINAL INSTRUCTIONS:
       { type: "text", text: fusionPrompt }
     ];
 
+    // Pre-fetch and convert all image URLs to base64 to avoid gateway fetch issues (e.g. .avif)
+    console.log("Converting images to base64...");
+    const templateB64 = await toBase64DataUrl(templateImageUrl);
+
     // Add template image as first image
     messageContent.push({
       type: "image_url",
-      image_url: { url: templateImageUrl }
+      image_url: { url: templateB64 }
     });
 
     // Add campaign image if provided (second image)
     if (campaignImageUrl && !isEditMode) {
+      const campaignB64 = await toBase64DataUrl(campaignImageUrl);
       messageContent.push({
         type: "image_url",
-        image_url: { url: campaignImageUrl }
+        image_url: { url: campaignB64 }
       });
     }
 
@@ -391,9 +419,10 @@ CRITICAL FINAL INSTRUCTIONS:
     if (additionalAssets?.length > 0 && !isEditMode) {
       for (const assetUrl of additionalAssets) {
         if (assetUrl) {
+          const assetB64 = await toBase64DataUrl(assetUrl);
           messageContent.push({
             type: "image_url",
-            image_url: { url: assetUrl }
+            image_url: { url: assetB64 }
           });
         }
       }
