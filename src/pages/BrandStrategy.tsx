@@ -31,8 +31,6 @@ const BrandStrategy = () => {
   const [loading, setLoading] = useState(true);
   const [activeTool, setActiveTool] = useState<StrategyTool>("research");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [betaUnlocked, setBetaUnlocked] = useState(false);
-  const [betaPasscode, setBetaPasscode] = useState("");
 
   useEffect(() => {
     const checkUser = async () => {
@@ -48,57 +46,6 @@ const BrandStrategy = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  if (!betaUnlocked) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4">
-          <CardContent className="flex flex-col items-center text-center py-12 px-6 space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Lock className="w-8 h-8 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-foreground">Coming Soon</h1>
-              <p className="text-muted-foreground">Strategy is currently in beta. Enter the beta passcode to continue.</p>
-            </div>
-            <div className="flex items-center gap-2 w-full max-w-xs">
-              <Input
-                type="password"
-                placeholder="Enter passcode"
-                value={betaPasscode}
-                onChange={(e) => setBetaPasscode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    if (betaPasscode === "373737") {
-                      setBetaUnlocked(true);
-                    } else {
-                      setBetaPasscode("");
-                      import("sonner").then(({ toast }) => toast.error("Invalid passcode"));
-                    }
-                  }
-                }}
-                className="text-center"
-              />
-              <Button
-                onClick={() => {
-                  if (betaPasscode === "373737") {
-                    setBetaUnlocked(true);
-                  } else {
-                    setBetaPasscode("");
-                    import("sonner").then(({ toast }) => toast.error("Invalid passcode"));
-                  }
-                }}
-                className="gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                Enter
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">Beta testers only</p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
