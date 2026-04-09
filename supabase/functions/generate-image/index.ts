@@ -5,6 +5,58 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SUPPORTED_DATA_URL_PATTERN = /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i;
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
+};
+
+const normalizeReferenceImage = async (imageUrl: string): Promise<string | null> => {
+  if (typeof imageUrl !== "string") return null;
+
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return null;
+
+  if (SUPPORTED_DATA_URL_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (!/^https?:\/\//i.test(trimmed)) {
+    console.warn("Skipping unsupported reference image URL", trimmed.slice(0, 120));
+    return null;
+  }
+
+  try {
+    const response = await fetch(trimmed);
+    if (!response.ok) {
+      console.warn("Reference image fetch failed", response.status, trimmed);
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      console.warn("Reference image URL did not return image content", contentType, trimmed);
+      return null;
+    }
+
+    const base64 = arrayBufferToBase64(await response.arrayBuffer());
+    const normalizedType = contentType.split(";")[0].toLowerCase();
+    const safeType = normalizedType.match(/^image\/(png|jpeg|jpg|webp|gif)$/i) ? normalizedType : "image/png";
+    return `data:${safeType};base64,${base64}`;
+  } catch (error) {
+    console.warn("Failed to normalize reference image", trimmed, error);
+    return null;
+  }
+};
+
 // Platform-specific image size presets
 const PLATFORM_SIZES: Record<string, { width: number; height: number; label: string }> = {
   linkedin:  { width: 1200, height: 627,  label: "LinkedIn Feed" },
@@ -55,13 +107,20 @@ serve(async (req) => {
     if (directWidth && directHeight && LOVABLE_API_KEY) {
       try {
         const referenceImages: string[] = body.referenceImages || [];
+        const normalizedReferenceImages = (
+          await Promise.all(referenceImages.map((imgUrl) => normalizeReferenceImage(imgUrl)))
+        ).filter((imgUrl): imgUrl is string => Boolean(imgUrl));
+        const inspirationImageUrl = await normalizeReferenceImage(body.inspirationImageUrl || "");
+        if (inspirationImageUrl && !normalizedReferenceImages.includes(inspirationImageUrl)) {
+          normalizedReferenceImages.unshift(inspirationImageUrl);
+        }
 
         // Build message content — multimodal if reference images are provided
         let messageContent: any;
-        if (referenceImages.length > 0) {
+        if (normalizedReferenceImages.length > 0) {
           const parts: any[] = [];
           // Add reference images first
-          for (const imgUrl of referenceImages) {
+          for (const imgUrl of normalizedReferenceImages) {
             parts.push({ type: "image_url", image_url: { url: imgUrl } });
           }
           // Add the text prompt
@@ -71,6 +130,9 @@ serve(async (req) => {
           });
           messageContent = parts;
         } else {
+          if (referenceImages.length > 0) {
+            console.warn("All reference images were skipped after normalization; falling back to text-only generation");
+          }
           messageContent = `Generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. The image should be: ${prompt}`;
         }
 
