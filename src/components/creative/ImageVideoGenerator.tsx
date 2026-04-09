@@ -164,6 +164,23 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     }
   };
 
+  const imageUrlToBase64 = async (url: string): Promise<string> => {
+    if (url.startsWith("data:")) return url;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return url;
+    }
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a description");
@@ -178,7 +195,16 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       if (mode === "image") {
         const sizeConfig = OUTPUT_SIZE_OPTIONS.find((o) => o.value === outputSize) || OUTPUT_SIZE_OPTIONS[0];
         const body: Record<string, any> = { prompt, model: imageModel, width: sizeConfig.width, height: sizeConfig.height };
-        if (inspirationUrls.length > 0) body.inspirationImageUrl = inspirationUrls[0];
+
+        // Convert inspiration images to base64 so the edge function can use them
+        if (inspirationUrls.length > 0) {
+          const base64Images: string[] = [];
+          for (const url of inspirationUrls) {
+            const b64 = await imageUrlToBase64(url);
+            base64Images.push(b64);
+          }
+          body.referenceImages = base64Images;
+        }
 
         const { data, error } = await supabase.functions.invoke("generate-image", { body });
         if (error) throw error;

@@ -54,6 +54,26 @@ serve(async (req) => {
     // If width/height provided, use Lovable AI (Nano Banana 2) for single image
     if (directWidth && directHeight && LOVABLE_API_KEY) {
       try {
+        const referenceImages: string[] = body.referenceImages || [];
+
+        // Build message content — multimodal if reference images are provided
+        let messageContent: any;
+        if (referenceImages.length > 0) {
+          const parts: any[] = [];
+          // Add reference images first
+          for (const imgUrl of referenceImages) {
+            parts.push({ type: "image_url", image_url: { url: imgUrl } });
+          }
+          // Add the text prompt
+          parts.push({
+            type: "text",
+            text: `Using the attached reference image(s), generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. Incorporate the product/subject from the reference image(s) into the scene. Instructions: ${prompt}`,
+          });
+          messageContent = parts;
+        } else {
+          messageContent = `Generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. The image should be: ${prompt}`;
+        }
+
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -65,7 +85,7 @@ serve(async (req) => {
             messages: [
               {
                 role: "user",
-                content: `Generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. The image should be: ${prompt}`,
+                content: messageContent,
               },
             ],
             modalities: ["image", "text"],
