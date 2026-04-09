@@ -1151,6 +1151,45 @@ export type Database = {
         }
         Relationships: []
       }
+      client_characters: {
+        Row: {
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string | null
+          reference_image_url: string | null
+          role: string | null
+          sort_order: number | null
+          tags: Json | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string | null
+          reference_image_url?: string | null
+          role?: string | null
+          sort_order?: number | null
+          tags?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string | null
+          reference_image_url?: string | null
+          role?: string | null
+          sort_order?: number | null
+          tags?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           audience_data: Json | null
@@ -1211,6 +1250,45 @@ export type Database = {
           value_data?: Json | null
           value_proposition?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      client_scene_settings: {
+        Row: {
+          background_notes: string | null
+          client_id: string
+          created_at: string
+          id: string
+          lighting: string | null
+          mood_atmosphere: Json | null
+          reference_image_url: string | null
+          setting_description: string | null
+          setting_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          background_notes?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          lighting?: string | null
+          mood_atmosphere?: Json | null
+          reference_image_url?: string | null
+          setting_description?: string | null
+          setting_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          background_notes?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          lighting?: string | null
+          mood_atmosphere?: Json | null
+          reference_image_url?: string | null
+          setting_description?: string | null
+          setting_type?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
