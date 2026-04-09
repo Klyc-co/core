@@ -674,43 +674,93 @@ const NewCampaign = () => {
             )}
           </div>
 
-          {/* Platform Selection */}
-          <div className="space-y-4">
-            <Label>Select Platforms to Post</Label>
-            <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {socialPlatforms.map((platform) => (
-                <Card
-                  key={platform.id}
-                  className={`p-4 cursor-pointer transition-all duration-200 hover:scale-105 ${
-                    selectedPlatforms.includes(platform.id)
-                      ? "ring-2 ring-primary border-primary bg-primary/5"
-                      : "hover:border-primary/50"
-                  }`}
-                  onClick={() => togglePlatform(platform.id)}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "p-0" : "p-2.5"}`}>
-                      <img 
-                        src={platform.icon} 
-                        alt={platform.name}
-                        className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : platform.id === "snapchat" ? "w-14 h-14 rounded-lg object-contain" : "w-full h-full object-contain"}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-center">{platform.name}</span>
-                    {selectedPlatforms.includes(platform.id) && (
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                </Card>
-              ))}
+          {/* Platform Preview */}
+          {selectedPlatforms.length > 0 && (
+            <div className="space-y-4">
+              <Label>Platform Previews</Label>
+              <p className="text-sm text-muted-foreground">How your post will appear on each selected platform</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {selectedPlatforms.map((platformId) => {
+                  const platform = socialPlatforms.find(p => p.id === platformId);
+                  if (!platform) return null;
+                  const previewImage = libraryAssets[0]?.url || generatedData?.generatedImageUrl;
+                  return (
+                    <Card key={platformId} className="overflow-hidden">
+                      {/* Platform header */}
+                      <div className={`${platform.color} px-4 py-2.5 flex items-center gap-2`}>
+                        <div className={`w-5 h-5 flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "" : ""}`}>
+                          <img 
+                            src={platform.icon} 
+                            alt={platform.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <span className="text-white text-sm font-medium">{platform.name}</span>
+                      </div>
+                      {/* Preview body */}
+                      <div className="p-4 space-y-3">
+                        {previewImage && (
+                          <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                            <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        {postCaption && (
+                          <p className="text-sm text-foreground line-clamp-4">{postCaption}</p>
+                        )}
+                        {tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {tags.map((tag, i) => (
+                              <span key={i} className="text-xs text-primary">#{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                        {!previewImage && !postCaption && (
+                          <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
+                            <span className="text-sm text-muted-foreground">No content preview available</span>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-            {selectedPlatforms.length > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {selectedPlatforms.length} platform{selectedPlatforms.length > 1 ? "s" : ""} selected
-              </p>
-            )}
-          </div>
+          )}
+
+          {/* Platform selection fallback if none passed */}
+          {selectedPlatforms.length === 0 && (
+            <div className="space-y-4">
+              <Label>Select Platforms to Post</Label>
+              <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {socialPlatforms.map((platform) => (
+                  <Card
+                    key={platform.id}
+                    className={`p-4 cursor-pointer transition-all duration-200 hover:scale-105 ${
+                      selectedPlatforms.includes(platform.id)
+                        ? "ring-2 ring-primary border-primary bg-primary/5"
+                        : "hover:border-primary/50"
+                    }`}
+                    onClick={() => togglePlatform(platform.id)}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "p-0" : "p-2.5"}`}>
+                        <img 
+                          src={platform.icon} 
+                          alt={platform.name}
+                          className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : platform.id === "snapchat" ? "w-14 h-14 rounded-lg object-contain" : "w-full h-full object-contain"}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-center">{platform.name}</span>
+                      {selectedPlatforms.includes(platform.id) && (
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Schedule Date & Time */}
           <div className="space-y-4">
