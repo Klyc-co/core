@@ -48,8 +48,9 @@ const normalizeReferenceImage = async (imageUrl: string): Promise<string | null>
     }
 
     const base64 = arrayBufferToBase64(await response.arrayBuffer());
-    const normalizedType = contentType.split(";")[0] || "image/png";
-    return `data:${normalizedType};base64,${base64}`;
+    const normalizedType = contentType.split(";")[0].toLowerCase();
+    const safeType = /^image\/(png|jpeg|jpg|webp|gif)$/i.test(normalizedType) ? normalizedType : "image/png";
+    return `data:${safeType};base64,${base64}`;
   } catch (error) {
     console.warn("Failed to normalize reference image", trimmed, error);
     return null;
