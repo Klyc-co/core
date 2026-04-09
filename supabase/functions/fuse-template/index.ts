@@ -34,6 +34,29 @@ const fetchImageBytes = async (imageUrl: string): Promise<Uint8Array> => {
 };
 
 /**
+ * Convert any image URL to a base64 data URL so the AI gateway doesn't
+ * need to fetch it. This also handles formats the gateway can't fetch
+ * (like .avif) by re-encoding them as PNG via ImageScript.
+ */
+const toBase64DataUrl = async (imageUrl: string): Promise<string> => {
+  // Already a data URL
+  if (typeof imageUrl === "string" && imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+  try {
+    const bytes = await fetchImageBytes(imageUrl);
+    // Decode and re-encode as PNG to handle any format (avif, webp, etc.)
+    const img = await Image.decode(bytes);
+    const pngBytes = await img.encode(1); // PNG
+    return `data:image/png;base64,${encodeBase64(pngBytes)}`;
+  } catch (e) {
+    console.warn(`Failed to convert image to base64, skipping: ${imageUrl}`, e);
+    // Return original URL as fallback - gateway may still handle it
+    return imageUrl;
+  }
+};
+
+/**
  * FIT (letterbox) instead of CROP:
  * Scales the image so that the ENTIRE source image fits inside the target
  * dimensions, then places it on a canvas of exactly target size.
