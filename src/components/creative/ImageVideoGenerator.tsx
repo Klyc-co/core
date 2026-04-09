@@ -30,8 +30,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Monitor, Smartphone, Square } from "lucide-react";
+
 type ImageModel = "nano-banana" | "runway" | "fooocus";
 type VideoModel = "runway" | "kling";
+type OutputSize = "portrait" | "square" | "landscape";
+
+const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; icon: typeof Smartphone }[] = [
+  { value: "portrait", label: "Vertical", description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920", width: 1080, height: 1920, icon: Smartphone },
+  { value: "square", label: "Square", description: "Best for Feed posts", dimensions: "1080×1080", width: 1080, height: 1080, icon: Square },
+  { value: "landscape", label: "Horizontal", description: "Best for YouTube, LinkedIn", dimensions: "1920×1080", width: 1920, height: 1080, icon: Monitor },
+];
 
 const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
   { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
