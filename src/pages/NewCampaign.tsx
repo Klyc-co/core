@@ -599,23 +599,40 @@ const NewCampaign = () => {
                   const platform = socialPlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
                   const previewImage = libraryAssets[0]?.url || generatedData?.generatedImageUrl;
+
+                  // Platform-specific aspect ratios and dimensions
+                  const platformSpecs: Record<string, { aspect: string; dimensions: string }> = {
+                    instagram: { aspect: "aspect-square", dimensions: "1080 × 1080" },
+                    facebook: { aspect: "aspect-video", dimensions: "1200 × 630" },
+                    twitter: { aspect: "aspect-video", dimensions: "1600 × 900" },
+                    linkedin: { aspect: "aspect-[1.91/1]", dimensions: "1200 × 627" },
+                    tiktok: { aspect: "aspect-[9/16]", dimensions: "1080 × 1920" },
+                    youtube: { aspect: "aspect-video", dimensions: "1280 × 720" },
+                    snapchat: { aspect: "aspect-[9/16]", dimensions: "1080 × 1920" },
+                    threads: { aspect: "aspect-square", dimensions: "1080 × 1080" },
+                  };
+                  const spec = platformSpecs[platformId] || { aspect: "aspect-square", dimensions: "1080 × 1080" };
+
                   return (
                     <Card key={platformId} className="overflow-hidden">
                       {/* Platform header */}
-                      <div className={`${platform.color} px-4 py-2.5 flex items-center gap-2`}>
-                        <div className={`w-5 h-5 flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "" : ""}`}>
-                          <img 
-                            src={platform.icon} 
-                            alt={platform.name}
-                            className="w-full h-full object-contain"
-                          />
+                      <div className={`${platform.color} px-4 py-2.5 flex items-center justify-between`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <img 
+                              src={platform.icon} 
+                              alt={platform.name}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="text-white text-sm font-medium">{platform.name}</span>
                         </div>
-                        <span className="text-white text-sm font-medium">{platform.name}</span>
+                        <span className="text-white/70 text-[10px] font-mono">{spec.dimensions}</span>
                       </div>
                       {/* Preview body */}
                       <div className="p-4 space-y-3">
                         {previewImage && (
-                          <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                          <div className={`${spec.aspect} rounded-lg overflow-hidden bg-muted ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
                             <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
                           </div>
                         )}
@@ -630,7 +647,7 @@ const NewCampaign = () => {
                           </div>
                         )}
                         {!previewImage && !postCaption && (
-                          <div className="aspect-video rounded-lg bg-muted flex items-center justify-center">
+                          <div className={`${spec.aspect} rounded-lg bg-muted flex items-center justify-center ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
                             <span className="text-sm text-muted-foreground">No content preview available</span>
                           </div>
                         )}
