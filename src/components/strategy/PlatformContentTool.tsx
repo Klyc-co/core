@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions, ChevronDown } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions, ChevronDown, Users, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
