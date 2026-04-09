@@ -5,50 +5,67 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  RefreshCw, X, ArrowRight, ArrowLeft, Zap,
+  RefreshCw, X, ArrowRight, ArrowLeft, Zap, Network, AlertTriangle,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 
+// ── 15 registered edge functions (as of Apr 9 2026) ──
 const SUBMINDS = [
-  { id: "research", name: "Research", binary: "0001", status: "active", model: "Gemini 2.5 Pro" },
-  { id: "product", name: "Product", binary: "0010", status: "active", model: "GPT-5 Mini" },
-  { id: "narrative", name: "Narrative", binary: "0011", status: "active", model: "Gemini 2.5 Pro" },
-  { id: "creative", name: "Creative", binary: "0100", status: "active", model: "GPT-5 Mini" },
-  { id: "social", name: "Social", binary: "0101", status: "active", model: "Gemini 2.5 Flash" },
-  { id: "image", name: "Image", binary: "0110", status: "active", model: "Gemini 2.5 Flash" },
-  { id: "approval", name: "Approval", binary: "0111", status: "active", model: "GPT-5 Nano" },
-  { id: "viral", name: "Viral", binary: "1000", status: "stub", model: "—" },
-  { id: "analytics", name: "Analytics", binary: "1001", status: "stub", model: "—" },
-  { id: "learning", name: "Learning Engine", binary: "1010", status: "stub", model: "—" },
+  // AI text-gen subminds — Channel 2, KNP only
+  { id: "research",         name: "Research",         binary: "0001", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Market research & trend analysis" },
+  { id: "product",          name: "Product",           binary: "0010", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Product info extraction & enrichment" },
+  { id: "narrative",        name: "Narrative",         binary: "0011", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Brand story & messaging framework" },
+  { id: "creative",         name: "Creative",          binary: "0100", status: "active",   model: "claude-haiku-4-5-20251001", version: "v12", channel: "ch2",  api: "anthropic",    note: "Copy variants, hooks, captions" },
+  { id: "social",           name: "Social",            binary: "0101", status: "active",   model: "claude-haiku-4-5-20251001", version: "v12", channel: "ch2",  api: "anthropic",    note: "Platform-specific content adaptation" },
+  { id: "image",            name: "Image",             binary: "0110", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Asset review & brand compliance" },
+  { id: "approval",         name: "Approval",          binary: "0111", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Risk scoring & campaign approval" },
+  { id: "viral",            name: "Viral",             binary: "1000", status: "active",   model: "claude-haiku-4-5-20251001", version: "v11", channel: "ch2",  api: "anthropic",    note: "Virality & trend scoring" },
+  { id: "platform",         name: "Platform",          binary: "1001", status: "active",   model: "claude-haiku-4-5-20251001", version: "v10", channel: "ch2",  api: "anthropic",    note: "Platform rules & format enforcement" },
+  // User-facing AI (Channel 1)
+  { id: "klyc-chat",        name: "Klyc Chat",         binary: "1010", status: "active",   model: "claude-haiku-4-5-20251001", version: "v12", channel: "ch1",  api: "anthropic",    note: "Conversational campaign builder (user-facing)" },
+  // Needs provider decision
+  { id: "generate-image",   name: "Generate Image",    binary: "1011", status: "degraded", model: "TBD",                       version: "?",   channel: "ch2",  api: "needs_decision", note: "⚠️ Image gen — Nano Banana / DALL-E decision pending" },
+  // Infrastructure / routing (no swap needed)
+  { id: "orchestrator",     name: "Orchestrator",      binary: "1100", status: "active",   model: "claude-haiku-4-5-20251001", version: "v15", channel: "hub",  api: "anthropic",    note: "Central hub — all traffic routes through here" },
+  { id: "campaign-pipeline",name: "Campaign Pipeline",  binary: "1101", status: "active",   model: "claude-haiku-4-5-20251001", version: "v1",  channel: "ch2",  api: "anthropic",    note: "Full campaign generation pipeline" },
+  { id: "run-campaign",     name: "Run Campaign",       binary: "1110", status: "active",   model: "none",                      version: "v1",  channel: "ch2",  api: "none",         note: "Scheduling & execution trigger (no AI)" },
+  { id: "analytics",        name: "Analytics",         binary: "1111", status: "active",   model: "none",                      version: "v9",  channel: "ch2",  api: "none",         note: "Metrics aggregation (no AI)" },
 ];
 
 const INTENTS = ["CAMPAIGN_NEW", "TREND_ANALYSIS", "PERFORMANCE_REVIEW", "CONTENT_REVISION", "LEARNING_REPORT"];
 const INTENT_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#eab308", "#ef4444"];
 
 const SYNERGY_PAIRS = [
-  { a: "Research", b: "Narrative", affinity: 0.92, invocations: 847 },
-  { a: "Product", b: "Creative", affinity: 0.89, invocations: 723 },
-  { a: "Creative", b: "Social", affinity: 0.94, invocations: 912 },
-  { a: "Narrative", b: "Creative", affinity: 0.88, invocations: 681 },
-  { a: "Social", b: "Image", affinity: 0.91, invocations: 804 },
-  { a: "Research", b: "Product", affinity: 0.85, invocations: 592 },
-  { a: "Image", b: "Approval", affinity: 0.87, invocations: 534 },
+  { a: "Research",   b: "Narrative",  affinity: 0.92, invocations: 847 },
+  { a: "Product",    b: "Creative",   affinity: 0.89, invocations: 723 },
+  { a: "Creative",   b: "Social",     affinity: 0.94, invocations: 912 },
+  { a: "Narrative",  b: "Creative",   affinity: 0.88, invocations: 681 },
+  { a: "Social",     b: "Image",      affinity: 0.91, invocations: 804 },
+  { a: "Research",   b: "Product",    affinity: 0.85, invocations: 592 },
+  { a: "Image",      b: "Approval",   affinity: 0.87, invocations: 534 },
+  { a: "Platform",   b: "Social",     affinity: 0.83, invocations: 461 },
+  { a: "Viral",      b: "Creative",   affinity: 0.79, invocations: 398 },
 ];
 
 const UPSTREAM_MAP: Record<string, { upstream: string[]; downstream: string[] }> = {
-  research: { upstream: [], downstream: ["product", "narrative"] },
-  product: { upstream: ["research"], downstream: ["creative", "narrative"] },
-  narrative: { upstream: ["research", "product"], downstream: ["creative", "social"] },
-  creative: { upstream: ["narrative", "product"], downstream: ["social", "image"] },
-  social: { upstream: ["creative", "narrative"], downstream: ["image", "approval"] },
-  image: { upstream: ["creative", "social"], downstream: ["approval"] },
-  approval: { upstream: ["image", "social"], downstream: [] },
-  viral: { upstream: ["creative"], downstream: ["approval"] },
-  analytics: { upstream: ["approval"], downstream: ["learning"] },
-  learning: { upstream: ["analytics"], downstream: ["research"] },
+  "research":          { upstream: [],                              downstream: ["product", "narrative"] },
+  "product":           { upstream: ["research"],                    downstream: ["creative", "narrative"] },
+  "narrative":         { upstream: ["research", "product"],         downstream: ["creative", "social"] },
+  "creative":          { upstream: ["narrative", "product"],        downstream: ["social", "image"] },
+  "social":            { upstream: ["creative", "narrative"],       downstream: ["image", "approval"] },
+  "image":             { upstream: ["creative", "social"],          downstream: ["approval"] },
+  "approval":          { upstream: ["image", "social"],             downstream: [] },
+  "viral":             { upstream: ["creative"],                    downstream: ["approval"] },
+  "platform":          { upstream: ["narrative"],                   downstream: ["social", "creative"] },
+  "klyc-chat":         { upstream: [],                              downstream: ["campaign-pipeline"] },
+  "generate-image":    { upstream: ["creative"],                    downstream: ["image"] },
+  "orchestrator":      { upstream: ["klyc-chat", "campaign-pipeline"], downstream: ["research", "product", "narrative", "creative", "social", "image", "approval", "viral", "platform"] },
+  "campaign-pipeline": { upstream: ["klyc-chat"],                   downstream: ["orchestrator"] },
+  "run-campaign":      { upstream: ["approval"],                    downstream: [] },
+  "analytics":         { upstream: ["run-campaign"],                downstream: [] },
 };
 
 interface Snapshot {
@@ -63,11 +80,92 @@ interface Snapshot {
   window_start: string;
 }
 
+function ArchitectureOverview() {
+  return (
+    <Card className="bg-slate-900 border-slate-700">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm text-slate-200 flex items-center gap-2">
+          <Network className="w-4 h-4 text-blue-400" /> System Architecture
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Data flow */}
+        <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto">
+          <div className="text-slate-500 mb-2">// Data flow (both channels)</div>
+          <div className="flex items-center gap-1 flex-wrap text-[11px]">
+            <span className="text-green-400">User</span>
+            <span className="text-slate-500">──Ch1──▶</span>
+            <span className="text-yellow-400">Normalizer</span>
+            <span className="text-slate-500">──▶</span>
+            <span className="text-blue-400">Orchestrator</span>
+            <span className="text-slate-500">──Ch2──▶</span>
+            <span className="text-purple-400">Submind(s)</span>
+            <span className="text-slate-500">──Ch2──▶</span>
+            <span className="text-yellow-400">Normalizer</span>
+            <span className="text-slate-500">──▶</span>
+            <span className="text-blue-400">Orchestrator</span>
+            <span className="text-slate-500">──Ch1──▶</span>
+            <span className="text-green-400">User</span>
+          </div>
+        </div>
+
+        {/* Three pillars */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-yellow-500/20">
+            <p className="text-yellow-400 text-xs font-semibold mb-1">Normalizer (KNP Membrane)</p>
+            <p className="text-slate-400 text-xs">Wraps the Orchestrator. Compresses ALL data before it reaches any AI. Every payload in and out is KNP-encoded. AIs never receive or emit plain text internally.</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-blue-500/20">
+            <p className="text-blue-400 text-xs font-semibold mb-1">Orchestrator (Central Hub)</p>
+            <p className="text-slate-400 text-xs">All traffic routes through here. Decides which subminds to invoke, in what order, and whether to run them in parallel. Wrapped entirely by the Normalizer.</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-purple-500/20">
+            <p className="text-purple-400 text-xs font-semibold mb-1">Subminds (Channel 2 only)</p>
+            <p className="text-slate-400 text-xs">Never communicate directly with users. Receive and emit KNP-compressed payloads exclusively via Channel 2. Output returns through Normalizer → Orchestrator before hitting Channel 1.</p>
+          </div>
+        </div>
+
+        {/* Channel key */}
+        <div className="flex flex-wrap gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-green-500/40 border border-green-500 inline-block" />
+            <span className="text-slate-400"><strong className="text-slate-200">Ch1</strong> — User-facing (human-readable)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-purple-500/40 border border-purple-500 inline-block" />
+            <span className="text-slate-400"><strong className="text-slate-200">Ch2</strong> — AI-to-AI (KNP only)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-blue-500/40 border border-blue-500 inline-block" />
+            <span className="text-slate-400"><strong className="text-slate-200">Hub</strong> — Orchestrator (center of all routing)</span>
+          </div>
+        </div>
+
+        {/* Status summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          {[
+            { label: "Total Functions", value: "15", color: "text-white" },
+            { label: "On Anthropic API", value: "13", color: "text-green-400" },
+            { label: "No AI (infra)", value: "2", color: "text-slate-400" },
+            { label: "Needs Decision", value: "1", color: "text-yellow-400" },
+          ].map((s) => (
+            <div key={s.label} className="bg-slate-800/50 rounded p-2 text-center">
+              <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-slate-500">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function KlycAdminSubminds() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmind, setSelectedSubmind] = useState<string | null>(null);
   const [deepDiveRange, setDeepDiveRange] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [showArch, setShowArch] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,7 +180,6 @@ export default function KlycAdminSubminds() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Aggregate per submind
   const agg = new Map<string, { total: number; success: number; errors: number; latency: number[]; approvalRates: number[]; tokensIn: number[]; tokensOut: number[]; daily: Record<string, number> }>();
   snapshots.forEach((s) => {
     const e = agg.get(s.submind_id) ?? { total: 0, success: 0, errors: 0, latency: [], approvalRates: [], tokensIn: [], tokensOut: [], daily: {} };
@@ -114,21 +211,22 @@ export default function KlycAdminSubminds() {
   };
 
   const statusColor = (s: string) =>
-    s === "active" ? "bg-green-500/20 text-green-400 border-green-500/30"
+    s === "active"   ? "bg-green-500/20 text-green-400 border-green-500/30"
     : s === "degraded" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-    : s === "down" ? "bg-red-500/20 text-red-400 border-red-500/30"
+    : s === "down"     ? "bg-red-500/20 text-red-400 border-red-500/30"
     : "bg-slate-700/30 text-slate-500 border-slate-600/30";
+
+  const channelColor = (ch: string) =>
+    ch === "ch1" ? "text-green-400" : ch === "hub" ? "text-blue-400" : "text-purple-400";
 
   const rateColor = (r: number) => r >= 90 ? "text-green-400" : r >= 75 ? "text-yellow-400" : "text-red-400";
 
-  // Routing pie data
   const intentData = INTENTS.map((intent, i) => ({
     name: intent.replace(/_/g, " "),
     value: [45, 20, 15, 12, 8][i],
     fill: INTENT_COLORS[i],
   }));
 
-  // Affinity heatmap data
   const activeNames = SUBMINDS.map((s) => s.name);
   const affinityMatrix = activeNames.map((row) =>
     activeNames.map((col) => {
@@ -138,12 +236,10 @@ export default function KlycAdminSubminds() {
     })
   );
 
-  // Deep dive data
   const selectedDef = SUBMINDS.find((s) => s.id === selectedSubmind);
   const selectedStats = selectedSubmind ? getStats(selectedSubmind) : null;
   const selectedSnaps = snapshots.filter((s) => s.submind_id === selectedSubmind);
 
-  // Latency histogram
   const latencyBuckets = [0, 100, 200, 500, 1000, 2000, 5000];
   const latencyHist = latencyBuckets.slice(0, -1).map((min, i) => {
     const max = latencyBuckets[i + 1];
@@ -158,24 +254,46 @@ export default function KlycAdminSubminds() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Submind Health Monitor</h1>
-        <Button variant="outline" size="sm" onClick={load} className="border-slate-700 text-slate-300 hover:bg-slate-800">
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
-        </Button>
+        <h1 className="text-2xl font-bold text-white">AI Function Registry</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowArch((v) => !v)} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+            <Network className="w-3.5 h-3.5 mr-1.5" /> {showArch ? "Hide" : "Show"} Architecture
+          </Button>
+          <Button variant="outline" size="sm" onClick={load} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Architecture Overview ── */}
+      {showArch && <ArchitectureOverview />}
+
+      {/* ── generate-image alert ── */}
+      <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+        <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+        <div className="text-xs">
+          <p className="text-yellow-300 font-semibold">generate-image — Provider Decision Required</p>
+          <p className="text-slate-400 mt-0.5">Gemini image gen via Lovable gateway is broken (external key not accessible). Legacy <code className="text-slate-300">NANO_BANANA_API_KEY</code> path exists in the function. Confirm provider and verify secrets in Supabase dashboard. See blocker report.</p>
+        </div>
       </div>
 
       {/* ── SECTION 1: Status Grid ── */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-200">Submind Status</h2>
+        <h2 className="text-lg font-semibold text-slate-200">Function Status — 15 Registered</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {SUBMINDS.map((sm) => {
             const stats = getStats(sm.id);
-            const isStub = sm.status === "stub";
+            const isNoAI = sm.api === "none";
+            const isDecision = sm.api === "needs_decision";
             return (
               <Card
                 key={sm.id}
-                className={`bg-slate-900 border-slate-800 cursor-pointer transition-all hover:border-slate-600 ${selectedSubmind === sm.id ? "ring-1 ring-primary" : ""} ${isStub ? "opacity-50" : ""}`}
-                onClick={() => !isStub && setSelectedSubmind(selectedSubmind === sm.id ? null : sm.id)}
+                className={`bg-slate-900 border-slate-800 transition-all ${
+                  isNoAI ? "opacity-60" : "cursor-pointer hover:border-slate-600"
+                } ${selectedSubmind === sm.id ? "ring-1 ring-primary" : ""} ${
+                  isDecision ? "border-yellow-500/40" : ""
+                }`}
+                onClick={() => !isNoAI && setSelectedSubmind(selectedSubmind === sm.id ? null : sm.id)}
               >
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -184,25 +302,28 @@ export default function KlycAdminSubminds() {
                       {sm.status}
                     </Badge>
                   </div>
-                  <p className="text-[10px] font-mono text-slate-500">{sm.binary} · {sm.model}</p>
-                  <div className="grid grid-cols-2 gap-1 text-xs">
-                    <div>
-                      <p className="text-slate-500">Success</p>
-                      <p className={`font-semibold ${rateColor(stats.successRate)}`}>{stats.successRate}%</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500">Latency</p>
-                      <p className="font-semibold text-slate-200">{stats.avgLatency}ms</p>
-                    </div>
-                  </div>
-                  {stats.approvalRate !== null && (
-                    <div className="text-xs">
-                      <p className="text-slate-500">Approval</p>
-                      <p className="font-semibold text-slate-200">{stats.approvalRate}%</p>
+                  <p className="text-[10px] font-mono text-slate-500">
+                    {sm.binary} · <span className={channelColor(sm.channel)}>{sm.channel}</span> · {sm.version}
+                  </p>
+                  <p className="text-[10px] text-slate-600 truncate">
+                    {sm.model === "none" ? "no AI" : sm.model === "TBD" ? "⚠️ TBD" : "haiku-4-5"}
+                  </p>
+                  {!isNoAI && !isDecision && (
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div>
+                        <p className="text-slate-500">Success</p>
+                        <p className={`font-semibold ${rateColor(stats.successRate)}`}>{stats.successRate}%</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Latency</p>
+                        <p className="font-semibold text-slate-200">{stats.avgLatency}ms</p>
+                      </div>
                     </div>
                   )}
-                  {/* Mini sparkline */}
-                  {stats.dailyTrend.length > 1 && (
+                  {isDecision && (
+                    <p className="text-[10px] text-yellow-400">⚠️ Provider decision needed</p>
+                  )}
+                  {stats.dailyTrend.length > 1 && !isNoAI && (
                     <ResponsiveContainer width="100%" height={24}>
                       <LineChart data={stats.dailyTrend.slice(-7)}>
                         <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={1.5} dot={false} />
@@ -214,9 +335,48 @@ export default function KlycAdminSubminds() {
             );
           })}
         </div>
+
+        {/* Registry table */}
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Full Registry</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400">
+                  <th className="text-left p-2.5">Function</th>
+                  <th className="text-left p-2.5">Binary</th>
+                  <th className="text-left p-2.5">Channel</th>
+                  <th className="text-left p-2.5">Version</th>
+                  <th className="text-left p-2.5">API</th>
+                  <th className="text-left p-2.5">Status</th>
+                  <th className="text-left p-2.5">Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                {SUBMINDS.map((sm) => (
+                  <tr key={sm.id} className="border-b border-slate-800/50 text-slate-200 hover:bg-slate-800/30">
+                    <td className="p-2.5 font-medium">{sm.name}</td>
+                    <td className="p-2.5 font-mono text-slate-400">{sm.binary}</td>
+                    <td className={`p-2.5 font-mono ${channelColor(sm.channel)}`}>{sm.channel}</td>
+                    <td className="p-2.5 text-slate-400">{sm.version}</td>
+                    <td className="p-2.5">
+                      {sm.api === "anthropic"       ? <span className="text-green-400">Anthropic ✓</span>
+                      : sm.api === "needs_decision" ? <span className="text-yellow-400">⚠️ TBD</span>
+                      :                              <span className="text-slate-500">none</span>}
+                    </td>
+                    <td className="p-2.5">
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColor(sm.status)}`}>{sm.status}</Badge>
+                    </td>
+                    <td className="p-2.5 text-slate-400 max-w-[200px] truncate">{sm.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* ── SECTION 3: Deep Dive (shown when card selected) ── */}
+      {/* ── SECTION: Deep Dive ── */}
       {selectedSubmind && selectedDef && selectedStats && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -228,7 +388,8 @@ export default function KlycAdminSubminds() {
             </Button>
           </div>
 
-          {/* KPIs */}
+          <p className="text-xs text-slate-400">{selectedDef.note}</p>
+
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: "Invocations", value: selectedStats.invocations.toLocaleString() },
@@ -247,7 +408,6 @@ export default function KlycAdminSubminds() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Invocation trend */}
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -274,7 +434,6 @@ export default function KlycAdminSubminds() {
               </CardContent>
             </Card>
 
-            {/* Latency histogram */}
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Latency Distribution</CardTitle></CardHeader>
               <CardContent>
@@ -291,7 +450,6 @@ export default function KlycAdminSubminds() {
             </Card>
           </div>
 
-          {/* Upstream / Downstream */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Data Flow Pairings</CardTitle></CardHeader>
             <CardContent>
@@ -316,7 +474,6 @@ export default function KlycAdminSubminds() {
             </CardContent>
           </Card>
 
-          {/* Error log */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Recent Errors</CardTitle></CardHeader>
             <CardContent>
@@ -343,12 +500,10 @@ export default function KlycAdminSubminds() {
         </section>
       )}
 
-      {/* ── SECTION 2: Routing Analytics ── */}
+      {/* ── SECTION: Routing Analytics ── */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-200">Routing Analytics</h2>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Intent distribution */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Routing Templates</CardTitle></CardHeader>
             <CardContent className="flex items-center">
@@ -364,12 +519,11 @@ export default function KlycAdminSubminds() {
             </CardContent>
           </Card>
 
-          {/* Metrics + Synergy Table */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">High-Synergy Pairs</CardTitle></CardHeader>
             <CardContent className="p-0">
               <div className="px-4 py-2 flex gap-6 text-sm border-b border-slate-800">
-                <div><span className="text-slate-400">Avg subminds/task:</span> <span className="text-white font-semibold">4.2</span></div>
+                <div><span className="text-slate-400">Avg functions/task:</span> <span className="text-white font-semibold">4.2</span></div>
                 <div><span className="text-slate-400">Parallelism:</span> <span className="text-white font-semibold">67%</span></div>
               </div>
               <table className="w-full text-sm">
@@ -394,7 +548,6 @@ export default function KlycAdminSubminds() {
           </Card>
         </div>
 
-        {/* Affinity Heatmap */}
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Theory of Mind — Affinity Matrix</CardTitle></CardHeader>
           <CardContent className="overflow-x-auto">
@@ -413,13 +566,12 @@ export default function KlycAdminSubminds() {
                     <td className="p-1.5 text-slate-400 font-medium text-right pr-3 whitespace-nowrap">{row}</td>
                     {affinityMatrix[ri].map((val, ci) => {
                       const isHighlight = val >= 0.9 && ri !== ci;
-                      const intensity = Math.round(val * 255);
                       const bg = ri === ci
                         ? "#1e293b"
                         : `rgba(${isHighlight ? "34, 197, 94" : "59, 130, 246"}, ${val * 0.7})`;
                       return (
-                        <td key={ci} className="p-0 text-center" style={{ background: bg, width: 36, height: 28 }}>
-                          <span className={`text-[10px] ${val >= 0.8 ? "text-white" : "text-slate-400"}`}>
+                        <td key={ci} className="p-0 text-center" style={{ background: bg, width: 32, height: 26 }}>
+                          <span className={`text-[9px] ${val >= 0.8 ? "text-white" : "text-slate-400"}`}>
                             {ri === ci ? "—" : val.toFixed(2)}
                           </span>
                         </td>

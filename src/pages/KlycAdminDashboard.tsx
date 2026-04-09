@@ -73,10 +73,10 @@ export default function KlycAdminDashboard() {
         {/* Quick Nav */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Billing", path: "/klyc_admin/billing", icon: <CreditCard className="w-4 h-4" /> },
-            { label: "Employees", path: "/klyc_admin/employees", icon: <Users className="w-4 h-4" /> },
-            { label: "Channels", path: "/klyc_admin/channels", icon: <Activity className="w-4 h-4" /> },
-            { label: "Submind Health", path: "/klyc_admin/health", icon: <Brain className="w-4 h-4" /> },
+            { label: "Billing",        path: "/klyc_admin/billing",   icon: <CreditCard className="w-4 h-4" /> },
+            { label: "Employees",      path: "/klyc_admin/employees", icon: <Users className="w-4 h-4" /> },
+            { label: "Channels",       path: "/klyc_admin/channels",  icon: <Activity className="w-4 h-4" /> },
+            { label: "AI Functions",   path: "/klyc_admin/subminds",  icon: <Brain className="w-4 h-4" /> },
           ].map((item) => (
             <Button
               key={item.path}
