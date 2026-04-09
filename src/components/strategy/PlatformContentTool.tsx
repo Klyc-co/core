@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import BrandColorsTool from "@/components/strategy/BrandColorsTool";
+import CharactersTool from "@/components/strategy/CharactersTool";
+import SceneSettingTool from "@/components/strategy/SceneSettingTool";
 
 function useAIGenerate() {
   const [loading, setLoading] = useState(false);
