@@ -309,7 +309,43 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="mt-3">
+        <TabsContent value="image" className="mt-4 space-y-4">
+          {/* Output Size Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Monitor className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Output Size</Label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {OUTPUT_SIZE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = outputSize === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setOutputSize(opt.value)}
+                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="w-4 h-4 text-primary" />
+                      </div>
+                    )}
+                    <Icon className={`w-6 h-6 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                    <span className="text-xs text-muted-foreground">{opt.dimensions}</span>
+                    <span className="text-[11px] text-muted-foreground/70">{opt.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Model selector */}
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
