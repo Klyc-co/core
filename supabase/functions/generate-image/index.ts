@@ -45,10 +45,76 @@ serve(async (req) => {
       );
     }
 
-    // Which platforms to generate for (default: all)
-    const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
+    // Check for direct width/height (single image mode from Creative Studio)
+    const directWidth = body.width as number | undefined;
+    const directHeight = body.height as number | undefined;
 
-    // Use batch mode if available (50% cheaper)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    // If width/height provided, use Lovable AI (Nano Banana 2) for single image
+    if (directWidth && directHeight && LOVABLE_API_KEY) {
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            messages: [
+              {
+                role: "user",
+                content: `Generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. The image should be: ${prompt}`,
+              },
+            ],
+            modalities: ["image", "text"],
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "Unknown error");
+          console.error("AI gateway error:", response.status, errText);
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up in workspace settings." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          throw new Error(`AI gateway error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+        if (!imageUrl) {
+          throw new Error("No image returned from AI");
+        }
+
+        return new Response(JSON.stringify({
+          imageUrl,
+          size: `${directWidth}x${directHeight}`,
+          model: "nano-banana-2",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error("Single image generation error:", err);
+        return new Response(
+          JSON.stringify({ error: err.message || "Image generation failed." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // --- Legacy multi-platform generation path ---
+    const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
     const useBatch = body.batch !== false;
 
     const nanoBananaKey = Deno.env.get("NANO_BANANA_API_KEY");
@@ -62,7 +128,6 @@ serve(async (req) => {
 
     const nanoBananaEndpoint = Deno.env.get("NANO_BANANA_API_URL") || "https://api.nanobanana.com/v1/generate";
 
-    // Generate images for each platform
     const results: Record<string, any> = {};
     let totalCost = 0;
     let totalImages = 0;
@@ -98,7 +163,6 @@ serve(async (req) => {
 
         const data = await response.json();
 
-        // Cost estimation based on resolution tier (Nano Banana 2 pricing 2026)
         const pixels = size.width * size.height;
         let imageCost;
         if (pixels <= 512 * 512) imageCost = useBatch ? 0.022 : 0.045;
