@@ -81,7 +81,7 @@ export default function SocialPostWizard({
         },
       });
 
-      const timeoutMs = 120_000;
+      const timeoutMs = 300_000;
       const response = (await Promise.race([
         invokePromise,
         new Promise((_, reject) =>
