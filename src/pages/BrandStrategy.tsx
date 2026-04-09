@@ -32,6 +32,8 @@ const BrandStrategy = () => {
   const [loading, setLoading] = useState(true);
   const [activeTool, setActiveTool] = useState<StrategyTool>("research");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [betaUnlocked, setBetaUnlocked] = useState(false);
+  const [betaPasscode, setBetaPasscode] = useState("");
 
   useEffect(() => {
     const checkUser = async () => {
