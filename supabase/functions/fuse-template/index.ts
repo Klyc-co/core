@@ -396,17 +396,22 @@ CRITICAL FINAL INSTRUCTIONS:
       { type: "text", text: fusionPrompt }
     ];
 
+    // Pre-fetch and convert all image URLs to base64 to avoid gateway fetch issues (e.g. .avif)
+    console.log("Converting images to base64...");
+    const templateB64 = await toBase64DataUrl(templateImageUrl);
+
     // Add template image as first image
     messageContent.push({
       type: "image_url",
-      image_url: { url: templateImageUrl }
+      image_url: { url: templateB64 }
     });
 
     // Add campaign image if provided (second image)
     if (campaignImageUrl && !isEditMode) {
+      const campaignB64 = await toBase64DataUrl(campaignImageUrl);
       messageContent.push({
         type: "image_url",
-        image_url: { url: campaignImageUrl }
+        image_url: { url: campaignB64 }
       });
     }
 
@@ -414,9 +419,10 @@ CRITICAL FINAL INSTRUCTIONS:
     if (additionalAssets?.length > 0 && !isEditMode) {
       for (const assetUrl of additionalAssets) {
         if (assetUrl) {
+          const assetB64 = await toBase64DataUrl(assetUrl);
           messageContent.push({
             type: "image_url",
-            image_url: { url: assetUrl }
+            image_url: { url: assetB64 }
           });
         }
       }
