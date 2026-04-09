@@ -38,6 +38,24 @@ const contentTypes = [
   { id: "paid-ads", label: "Paid Ads", icon: DollarSign },
 ];
 
+interface SocialPlatform {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+const socialPlatforms: SocialPlatform[] = [
+  { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/FFFFFF", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
+  { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
+  { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
+  { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
+  { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
+  { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
+  { id: "snapchat", name: "Snapchat", icon: snapchatLogo, color: "bg-transparent" },
+  { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
+];
+
 // Campaign Strategy Component (shared between content types)
 const CampaignStrategy = ({ 
   tags, 
@@ -249,7 +267,7 @@ const GenerateCampaignIdeas = () => {
   const [showSamplesPreGenerate, setShowSamplesPreGenerate] = useState(false);
   const [selectedSampleCampaignIndex, setSelectedSampleCampaignIndex] = useState<number | null>(null);
   const { getEffectiveUserId } = useClientContext();
-
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   // Voiceover state
   const [voiceoverSource, setVoiceoverSource] = useState<"script" | "objective">("script");
   const [selectedVoice, setSelectedVoice] = useState("JBFqnCBsd6RMkjVDRZzb");
