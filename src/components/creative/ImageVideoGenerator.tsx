@@ -30,8 +30,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Monitor, Smartphone, Square } from "lucide-react";
+
 type ImageModel = "nano-banana" | "runway" | "fooocus";
 type VideoModel = "runway" | "kling";
+type OutputSize = "portrait" | "square" | "landscape";
+
+const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; icon: typeof Smartphone }[] = [
+  { value: "portrait", label: "Vertical", description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920", width: 1080, height: 1920, icon: Smartphone },
+  { value: "square", label: "Square", description: "Best for Feed posts", dimensions: "1080×1080", width: 1080, height: 1080, icon: Square },
+  { value: "landscape", label: "Horizontal", description: "Best for YouTube, LinkedIn", dimensions: "1920×1080", width: 1920, height: 1080, icon: Monitor },
+];
 
 const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
   { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
@@ -58,6 +67,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
+  const [outputSize, setOutputSize] = useState<OutputSize>("portrait");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
@@ -166,7 +176,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        const body: Record<string, any> = { prompt, model: imageModel };
+        const sizeConfig = OUTPUT_SIZE_OPTIONS.find((o) => o.value === outputSize) || OUTPUT_SIZE_OPTIONS[0];
+        const body: Record<string, any> = { prompt, model: imageModel, width: sizeConfig.width, height: sizeConfig.height };
         if (inspirationUrls.length > 0) body.inspirationImageUrl = inspirationUrls[0];
 
         const { data, error } = await supabase.functions.invoke("generate-image", { body });
@@ -299,7 +310,43 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="mt-3">
+        <TabsContent value="image" className="mt-4 space-y-4">
+          {/* Output Size Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Monitor className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Output Size</Label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {OUTPUT_SIZE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = outputSize === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setOutputSize(opt.value)}
+                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="w-4 h-4 text-primary" />
+                      </div>
+                    )}
+                    <Icon className={`w-6 h-6 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                    <span className="text-xs text-muted-foreground">{opt.dimensions}</span>
+                    <span className="text-[11px] text-muted-foreground/70">{opt.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Model selector */}
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
