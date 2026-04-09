@@ -110,6 +110,10 @@ serve(async (req) => {
         const normalizedReferenceImages = (
           await Promise.all(referenceImages.map((imgUrl) => normalizeReferenceImage(imgUrl)))
         ).filter((imgUrl): imgUrl is string => Boolean(imgUrl));
+        const inspirationImageUrl = await normalizeReferenceImage(body.inspirationImageUrl || "");
+        if (inspirationImageUrl && !normalizedReferenceImages.includes(inspirationImageUrl)) {
+          normalizedReferenceImages.unshift(inspirationImageUrl);
+        }
 
         // Build message content — multimodal if reference images are provided
         let messageContent: any;
