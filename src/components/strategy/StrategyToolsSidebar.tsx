@@ -6,8 +6,7 @@ export type StrategyTool =
   | "messaging" 
   | "content" 
   | "email" 
-  | "performance"
-  | "brandcolors";
+  | "performance";
 
 const tools: { id: StrategyTool; label: string; description: string; icon: typeof Search }[] = [
   { id: "research", label: "Research & Insights", description: "Reports, competitors, trends", icon: Search },
@@ -15,7 +14,6 @@ const tools: { id: StrategyTool; label: string; description: string; icon: typeo
   { id: "content", label: "Platform Content", description: "Native posts by platform", icon: FileEdit },
   { id: "email", label: "Email Marketing", description: "Campaigns, sequences, optimization", icon: Mail },
   { id: "performance", label: "Social Performance", description: "Metrics & optimization", icon: BarChart3 },
-  { id: "brandcolors", label: "Brand Colors", description: "Color palette & brand map", icon: Palette },
 ];
 
 interface StrategyToolsSidebarProps {
