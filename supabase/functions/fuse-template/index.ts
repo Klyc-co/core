@@ -402,7 +402,7 @@ CRITICAL FINAL INSTRUCTIONS:
     console.log("Sending fusion request with", messageContent.length, "content items (1 prompt +", messageContent.length - 1, "images)");
 
     // Use the newer pro image model for better instruction following
-    const imageModel = "google/gemini-3-pro-image-preview";
+    const imageModel = "google/gemini-3.1-flash-image-preview";
     console.log("Using image model:", imageModel);
     
     let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
