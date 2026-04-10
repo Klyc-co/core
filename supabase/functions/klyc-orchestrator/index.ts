@@ -6,7 +6,23 @@ const corsHeaders = {
 };
 
 // ── Orchestrator identity ─────────────────────────────────────────────────────
-const ORCHESTRATOR_VERSION = "v3";
+const ORCHESTRATOR_VERSION = "v4";
+
+// ── Slot encoding dictionaries ────────────────────────────────────────────────
+const KNP_STYLE_CODES: Record<string, string> = {
+  "IMG:001": "photorealistic lifestyle photography, authentic, UGC-style",
+  "IMG:002": "photorealistic lifestyle photography, no text, no words, no typography, no overlays",
+  "IMG:003": "cinematic, high contrast, Gen Z aesthetic",
+  "TONE:001": "authentic, conversational, Gen Z",
+  "TONE:002": "professional, authoritative, B2B",
+  "TONE:003": "playful, energetic, consumer brand",
+};
+
+const KNP_PLATFORM_CODES: Record<string, string> = {
+  "ALL6": "tiktok,instagram,linkedin,youtube,twitter,facebook",
+  "SOCIAL3": "tiktok,instagram,twitter",
+  "B2B2": "linkedin,youtube",
+};
 
 // ── Agent registry — keyed by lane (functional IDs, no names) ────────────────
 const AGENT_REGISTRY: Record<string, { fn: string; lane: string }> = {
@@ -21,6 +37,43 @@ const AGENT_REGISTRY: Record<string, { fn: string; lane: string }> = {
 const PEER_REGISTRY: Record<string, { fn: string }> = Object.fromEntries(
   Object.entries(AGENT_REGISTRY).map(([lane, cfg]) => [lane, { fn: cfg.fn }])
 );
+
+// ── KNP envelope helper ───────────────────────────────────────────────────────
+function knpEnvelope(sigmaO: unknown, elapsedMs: number, confidence = 0.95): Record<string, unknown> {
+  return {
+    "σo": sigmaO,
+    "δi": "orchestrator",
+    "κw": confidence,
+    "τt": new Date().toISOString(),
+    "ρs": "klyc-orchestrator∷v4",
+    "knp": "Ψ3",
+    "elapsed_ms": elapsedMs,
+  };
+}
+
+// ── Slot decoding ─────────────────────────────────────────────────────────────
+function decodeKnpSlot(value: string, dict: Record<string, string>): string {
+  return dict[value] || value;
+}
+
+// ── Tiered brief compression ──────────────────────────────────────────────────
+function tierBrief(brief: string, lane: string): string {
+  const words = brief.split(/\s+/);
+  if (lane === "research") return brief; // full
+  if (lane === "strategy" || lane === "performance") {
+    const tier = words.slice(0, 60).join(" ");
+    return words.length > 60 ? tier + "…" : tier;
+  }
+  if (lane === "copy") {
+    const tier = words.slice(0, 20).join(" ");
+    return words.length > 20 ? tier + "…" : tier;
+  }
+  if (lane === "image") {
+    const tier = words.slice(0, 15).join(" ");
+    return words.length > 15 ? tier + "…" : tier;
+  }
+  return brief;
+}
 
 // ── Sequence resolution ───────────────────────────────────────────────────────
 function resolveSequence(intent: string, flags: string, hasPlatforms: boolean): string[] {
@@ -42,13 +95,27 @@ async function dispatchAgent(
   const cfg = AGENT_REGISTRY[lane];
   if (!cfg) return { lane, result: null, error: `Unknown lane: ${lane}` };
 
+  // Decode slot codes in θc and μp
+  let decodedEnvelope = { ...envelope };
+  if (decodedEnvelope["θc"]) {
+    decodedEnvelope["θc"] = decodeKnpSlot(decodedEnvelope["θc"], KNP_STYLE_CODES);
+  }
+  if (decodedEnvelope["μp"]) {
+    decodedEnvelope["μp"] = decodeKnpSlot(decodedEnvelope["μp"], KNP_PLATFORM_CODES);
+  }
+
+  // Apply tiered brief compression
+  if (decodedEnvelope["ξb"]) {
+    decodedEnvelope["ξb"] = tierBrief(decodedEnvelope["ξb"], lane);
+  }
+
   const url = `${supabaseUrl}/functions/v1/${cfg.fn}`;
   try {
     const resp = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...envelope,
+        ...decodedEnvelope,
         lane: cfg.lane,
         peer_registry: PEER_REGISTRY,
         supabase_url: supabaseUrl,
@@ -125,7 +192,12 @@ serve(async (req) => {
         if (error) {
           errors[lane] = error;
         } else if (agentResult) {
-          final_products[lane] = agentResult;
+          // Unpack σo from image responses (generate-image v21 wraps in KNP envelope)
+          if (lane === "image" && agentResult["σo"]) {
+            final_products[lane] = agentResult["σo"];
+          } else {
+            final_products[lane] = agentResult;
+          }
         }
       } else {
         errors[`unknown_${Math.random().toString(36).slice(2)}`] = result.reason?.message || "Promise rejected";
@@ -133,8 +205,7 @@ serve(async (req) => {
     }
 
     const elapsed = Date.now() - startTime;
-
-    return new Response(JSON.stringify({
+    const outputEnvelope = knpEnvelope({
       version: ORCHESTRATOR_VERSION,
       "λv": lambdaV,
       sequence,
@@ -142,8 +213,9 @@ serve(async (req) => {
       agents_succeeded: Object.keys(final_products).length,
       agents_failed: Object.keys(errors).length,
       errors: Object.keys(errors).length > 0 ? errors : undefined,
-      elapsed_ms: elapsed,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }, elapsed);
+
+    return new Response(JSON.stringify(outputEnvelope), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error: any) {
     console.error("Orchestrator error:", error);
