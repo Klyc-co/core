@@ -67,6 +67,35 @@ type ChatMessage = {
   compressionStats?: CompressionStats;
 };
 
+// ── Client-side navigation intent detection (instant redirect, no AI round-trip needed) ──
+const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
+  {
+    pattern: /make (a |my )?(first |new )?post|create (a |new )?post|generate (a |new )?post|write (a |new )?post|where.*make.*post|show me.*post|take me.*post/i,
+    route: "/campaigns/generate",
+    reply: "Taking you there now — let's build something. 🚀",
+  },
+  {
+    pattern: /\b(go to|take me to|open|show me|navigate to)\b.*\b(campaign|campaigns)\b/i,
+    route: "/campaigns",
+    reply: "Opening your campaigns now.",
+  },
+  {
+    pattern: /\b(go to|take me to|open|show me)\b.*\bdashboard\b/i,
+    route: "/dashboard",
+    reply: "Taking you to the dashboard.",
+  },
+  {
+    pattern: /\b(go to|take me to|open|show me)\b.*\bsettings\b/i,
+    route: "/settings",
+    reply: "Opening settings.",
+  },
+  {
+    pattern: /\b(go to|take me to|open|show me)\b.*\bonboard/i,
+    route: "/onboarding",
+    reply: "Taking you to onboarding.",
+  },
+];
+
 // ── Route all chat through klyc-chat (C-lane entry point) ───────────────────
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
@@ -217,25 +246,32 @@ const SidebarChat = () => {
 
     setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", content: text };
-    const placeholder: ChatMessage = { role: "assistant", content: "" };
-    setMessages((prev) => [...prev, userMsg, placeholder]);
+    setMessages((prev) => [...prev, userMsg]);
     if (!overrideText) setInput("");
-    setIsLoading(true);
     setQuestionAnswers({});
+
+    // ── Client-side nav intent: instant redirect without waiting for AI ──
+    const navMatch = NAV_INTENTS.find((n) => n.pattern.test(text));
+    if (navMatch) {
+      setMessages((prev) => [...prev, { role: "assistant", content: navMatch.reply }]);
+      setTimeout(() => navigate(navMatch.route), 400);
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const history = messages.filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content }));
       const result = await callOrchestrator({ message: text, history });
 
-      setMessages((prev) => {
-        const next = [...prev];
-        next[next.length - 1] = {
+      setMessages((prev) => [
+        ...prev,
+        {
           role: "assistant",
           content: result.text,
           compressionStats: result.text !== FALLBACK_MSG ? calcCompressionStats(result.text, result.usage) : undefined,
-        };
-        return next;
-      });
+        },
+      ]);
 
       // ── Navigate if AI returned a route ──────────────────────────────────
       if (result.nav_target) {
@@ -244,11 +280,10 @@ const SidebarChat = () => {
     } catch (error) {
       console.error("Chat error:", error);
       setLastFailedText(text);
-      setMessages((prev) => {
-        const next = [...prev];
-        next[next.length - 1] = { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." };
-        return next;
-      });
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -327,7 +362,7 @@ const SidebarChat = () => {
           ))}
 
           {/* ── Animated loading message ── */}
-          {isLoading && messages[messages.length - 1]?.role === "user" && (
+          {isLoading && (
             <div className="flex justify-start w-full items-start">
               <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
               <div className="bg-muted rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground italic animate-pulse">
