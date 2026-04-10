@@ -72,7 +72,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error generating Google Analytics auth URL:', error);
     return new Response(JSON.stringify({ error: 'Failed to generate auth URL' }), {
       status: 500,

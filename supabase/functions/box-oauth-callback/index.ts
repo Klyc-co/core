@@ -108,7 +108,7 @@ serve(async (req) => {
     }
 
     return createRedirectResponse("/profile/import?success=box");
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("OAuth callback error:", error);
     return createRedirectResponse("/profile/import?error=callback_failed");
   }

@@ -116,7 +116,7 @@ serve(async (req) => {
             content: item.content, embedding: embeddingStr,
             category: item.category, lane_affinity: item.lane_affinity, metadata: item.metadata,
           });
-          if (error) throw new Error(error.message);
+          if (error) throw new Error((error as Error).message);
           return true;
         })
       );

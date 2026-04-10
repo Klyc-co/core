@@ -41,7 +41,7 @@ async function importKey(): Promise<CryptoKey | null> {
       false,
       ["encrypt", "decrypt"]
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to import encryption key:", error);
     return null;
   }
@@ -81,7 +81,7 @@ export async function encryptToken(plaintext: string): Promise<string> {
     
     // Format: ENC:v1:<iv>:<ciphertext+tag>
     return `ENC:v1:${bytesToHex(iv)}:${bytesToHex(ciphertextBytes)}`;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Encryption failed:", error);
     // On encryption failure, return plaintext (with warning logged)
     return plaintext;
@@ -127,7 +127,7 @@ export async function decryptToken(ciphertext: string): Promise<string> {
     // Decode the plaintext
     const decoder = new TextDecoder();
     return decoder.decode(decrypted);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Decryption failed:", error);
     throw new Error("Failed to decrypt token");
   }

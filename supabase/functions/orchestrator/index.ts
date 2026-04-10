@@ -82,7 +82,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ response: text, elapsed_ms: elapsed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     const elapsed = Date.now() - startTime;
     await logHealth("orchestrator", false, elapsed, null, null);
     console.error("Orchestrator error:", error);

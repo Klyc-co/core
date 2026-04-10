@@ -134,7 +134,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in Google Analytics OAuth callback:', error);
     return new Response(JSON.stringify({ error: 'OAuth callback failed' }), {
       status: 500,

@@ -145,7 +145,7 @@ async function firecrawlSearch(query: string): Promise<string[]> {
     return results
       .map((r) => r.url)
       .filter((u): u is string => typeof u === "string" && u.length > 0);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Firecrawl search error:", error);
     return [];
   }
@@ -269,7 +269,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("resolve-trend-url error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

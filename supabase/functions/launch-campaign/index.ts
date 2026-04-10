@@ -491,7 +491,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in launch-campaign:", error);
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : "Unknown error",

@@ -60,7 +60,7 @@ async function uploadToStorage(
   const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, bytes, {
     contentType: mimeType, upsert: true,
   });
-  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+  if (error) throw new Error(`Storage upload failed: ${(error as Error).message}`);
 
   const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
   return urlData.publicUrl;
@@ -257,7 +257,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("generate-image error:", error);
     return new Response(JSON.stringify(
-      knpEnvelope({ error: error.message || "Image generation failed" }, Date.now() - start, 0)
+      knpEnvelope({ error: (error as Error).message || "Image generation failed" }, Date.now() - start, 0)
     ), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

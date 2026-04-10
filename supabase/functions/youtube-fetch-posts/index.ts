@@ -39,7 +39,7 @@ async function refreshYouTubeToken(refreshToken: string): Promise<{ accessToken:
       accessToken: data.access_token,
       expiresIn: data.expires_in || 3600,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Token refresh error:", error);
     return null;
   }

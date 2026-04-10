@@ -88,7 +88,7 @@ serve(async (req) => {
       metadata: body.metadata || {},
     }).select("id, content, category, lane_affinity, created_at").single();
 
-    if (error) throw new Error(`Insert error: ${error.message}`);
+    if (error) throw new Error(`Insert error: ${(error as Error).message}`);
 
     return new Response(JSON.stringify({ success: true, item: data }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

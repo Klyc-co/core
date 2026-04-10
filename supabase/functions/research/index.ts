@@ -431,7 +431,7 @@ Current trends: ${trendSummary}`;
       },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const elapsed = Date.now() - t0;
     await logHealth("research", false, elapsed, null, null);
     console.error("Research error:", error);

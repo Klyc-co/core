@@ -382,7 +382,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching analytics data:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch analytics data' }), {
       status: 500,
