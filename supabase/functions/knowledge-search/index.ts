@@ -11,7 +11,7 @@ const EMBED_DIMS = 768;
 
 async function generateEmbedding(text: string, geminiKey: string): Promise<number[]> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,8 +41,8 @@ serve(async (req) => {
 
     if (body.action === "health") {
       return new Response(JSON.stringify({
-        status: "ok", version: "v2", embed_model: EMBED_MODEL, embed_dims: EMBED_DIMS,
-        api_version: "v1", timestamp: new Date().toISOString(),
+        status: "ok", version: "v3", embed_model: EMBED_MODEL, embed_dims: EMBED_DIMS,
+        api_version: "v1beta", timestamp: new Date().toISOString(),
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
