@@ -65,6 +65,7 @@ type ChatMessage = {
   content: string;
   structured?: StructuredResponse;
   compressionStats?: CompressionStats;
+  next_questions?: NextQuestion[];
 };
 
 // ── Client-side navigation intent detection (instant redirect, no AI round-trip needed) ──
@@ -180,7 +181,7 @@ const SidebarChat = () => {
 
   const callOrchestrator = async (
     payload: { message: string; history?: Array<{ role: string; content: string }> },
-  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number }; nav_target?: string }> => {
+  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number }; nav_target?: string; next_questions?: NextQuestion[] }> => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
@@ -215,6 +216,7 @@ const SidebarChat = () => {
       text,
       usage: data.usage,
       nav_target: data.nav_target as string | undefined,
+      next_questions: (data.next_questions || []) as NextQuestion[],
     };
   };
 
@@ -270,6 +272,7 @@ const SidebarChat = () => {
           role: "assistant",
           content: result.text,
           compressionStats: result.text !== FALLBACK_MSG ? calcCompressionStats(result.text, result.usage) : undefined,
+          next_questions: result.next_questions?.length ? result.next_questions : undefined,
         },
       ]);
 
@@ -353,6 +356,25 @@ const SidebarChat = () => {
                       <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground/60">
                         <Zap className="h-2 w-2" />
                         <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {msg.next_questions && msg.next_questions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {msg.next_questions.map((q, qi) => (
+                          <button
+                            key={qi}
+                            onClick={() => {
+                              setMessages((prev) =>
+                                prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m)
+                              );
+                              handleSend(q.question || q.field);
+                            }}
+                            disabled={isLoading}
+                            className="text-[11px] px-2.5 py-1 rounded-md border border-primary/50 text-primary hover:bg-primary/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+                          >
+                            {q.question || q.field}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </>
