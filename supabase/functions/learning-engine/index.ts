@@ -586,7 +586,7 @@ serve(async (req: Request) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Learning engine error:", error);
     const errorSegments: Record<string, string> = {
       [KNP.σo]: KNP_NULL,

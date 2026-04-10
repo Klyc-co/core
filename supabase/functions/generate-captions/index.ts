@@ -128,7 +128,7 @@ Create engaging captions optimized for TikTok, Instagram, LinkedIn, and Twitter/
       JSON.stringify({ captions }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating captions:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

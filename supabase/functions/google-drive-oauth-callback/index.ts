@@ -107,7 +107,7 @@ serve(async (req) => {
 
     // Redirect to success
     return createRedirectResponse("/profile/import?success=google_drive");
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("OAuth callback error:", error);
     return createRedirectResponse("/profile/import?error=callback_failed");
   }

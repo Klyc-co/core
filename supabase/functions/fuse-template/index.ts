@@ -568,7 +568,7 @@ SIMPLIFIED MODE:
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in fuse-template:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     const status = message.startsWith("Generation returned") ? 422 : 500;

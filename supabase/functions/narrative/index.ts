@@ -392,7 +392,7 @@ Rules:
     return new Response(JSON.stringify(output), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     const elapsed = Date.now() - start;
     await logHealth("narrative", false, elapsed, null, null);
     console.error("Narrative error:", error);

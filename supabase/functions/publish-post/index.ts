@@ -190,7 +190,7 @@ serve(async (req) => {
           })
           .eq("id", target.id);
 
-      } catch (error) {
+      } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         results.push({
           platform: target.platform,
@@ -229,7 +229,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in publish-post:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
@@ -308,7 +308,7 @@ async function publishToTwitter(post: any, _connection: any): Promise<{ success:
     }
 
     return { success: true, postId: data?.data?.id };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Twitter publish error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown Twitter error" };
   }
@@ -429,7 +429,7 @@ async function publishToLinkedIn(post: any, connection: any): Promise<{ success:
     const postId = publishRes.headers.get("x-restli-id") || publishRes.headers.get("x-linkedin-id") || "unknown";
     console.log("LinkedIn post published successfully:", postId);
     return { success: true, postId };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("LinkedIn publish error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown LinkedIn error" };
   }
@@ -559,7 +559,7 @@ async function publishToYouTube(post: any, connection: any): Promise<{ success: 
 
     console.log("YouTube video uploaded successfully:", videoId);
     return { success: true, postId: videoId };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("YouTube publish error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown YouTube error" };
   }

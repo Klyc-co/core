@@ -410,7 +410,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const elapsed = Date.now() - startTime;
     await logHealth("klyc-chat", false, elapsed, null, null);
     console.error("Klyc chat error:", error);

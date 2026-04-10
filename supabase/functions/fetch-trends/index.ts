@@ -97,7 +97,7 @@ async function searchTrendingTopics(platform: string, query: string, retries = 2
       // If no trends found, use fallback
       return generateFallbackTrends(platform);
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error searching trends for ${platform}:`, error);
       if (attempt === retries) {
         return generateFallbackTrends(platform);
@@ -289,7 +289,7 @@ async function fetchGoogleTrends(): Promise<TrendItem[]> {
     }
     
     return generateFallbackTrends('google');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching Google Trends:', error);
     return generateFallbackTrends('google');
   }

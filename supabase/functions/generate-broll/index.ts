@@ -313,7 +313,7 @@ async function generateBrollTask(segmentId: string, prompt: string) {
     }
 
     console.log("B-roll generated successfully for segment:", segmentId, videoUrl);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Generate B-roll error:", error);
     await supabase.from("segments").update({ broll_status: "failed" }).eq("id", segmentId);
   }

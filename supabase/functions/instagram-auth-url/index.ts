@@ -75,7 +75,7 @@ serve(async (req) => {
       JSON.stringify({ url: authUrl.toString() }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating Instagram auth URL:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

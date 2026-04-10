@@ -132,7 +132,7 @@ serve(async (req) => {
       JSON.stringify({ message: `Processed ${results.length} campaigns`, results }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in process-scheduled-campaigns:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
