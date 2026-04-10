@@ -1,8 +1,8 @@
 // ============================================================
-// KLYC NARRATIVE SUBMIND — Story Framework Architect v2.1
+// NARRATIVE — Story Framework Architect v2.1
 // Builds narrative structures, emotional arcs, brand voice.
 // Does NOT write copy — that's Creative's job.
-// All output returns to the Orchestrator via KNP.
+// All output returns to the Orchestrator.
 //
 // Decision Tree: Story Dimension → Emotional Calibration →
 //   NarrativeRank Scoring → Cross-Platform Orchestration
@@ -17,7 +17,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── KNP Constants ──
+// ── Protocol Constants ──
 const KNP_VERSION = "Ψ3";
 const KNP_NULL = "∅";
 
@@ -39,6 +39,28 @@ function compress(v: unknown): string {
   return s.trim().slice(0, 400);
 }
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 // ── Story Dimension Weights (WP-48) ──
 interface DimensionWeights {
   story: number;
@@ -51,20 +73,16 @@ function calcDimensionWeights(brief: string, audience: string): DimensionWeights
   const b = (brief + " " + audience).toLowerCase();
   const w: DimensionWeights = { story: 0.35, meaning: 0.25, ritual: 0.20, transmedia: 0.20 };
 
-  // Purpose/mission-driven brands boost STORY + MEANING
   if (/sustainab|purpose|mission|social.?impact|eco|ethical|fair.?trade/i.test(b)) {
     w.story = 0.40; w.meaning = 0.35; w.ritual = 0.10; w.transmedia = 0.15;
   }
-  // Community brands boost RITUAL
   if (/communit|tribe|belong|movement|gen.?z|fandom/i.test(b)) {
     w.ritual = 0.30; w.story = 0.30; w.meaning = 0.20; w.transmedia = 0.20;
   }
-  // Multi-platform boost TRANSMEDIA
   if (/multi.?platform|cross.?channel|omni|transmedia/i.test(b)) {
     w.transmedia = 0.30; w.story = 0.30; w.meaning = 0.20; w.ritual = 0.20;
   }
 
-  // Normalize
   const sum = w.story + w.meaning + w.ritual + w.transmedia;
   w.story /= sum; w.meaning /= sum; w.ritual /= sum; w.transmedia /= sum;
   return w;
@@ -165,16 +183,16 @@ function buildTransmediaDefaults(): TransmediaSlice[] {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const start = Date.now();
+
   try {
     const url = new URL(req.url);
 
-    // Health check
     if (url.searchParams.get("health") === "true" || req.method === "GET") {
       return new Response(JSON.stringify({
         submind: "narrative",
         status: "online",
         version: "2.1",
-        protocol: KNP_VERSION,
         capabilities: [
           "4D_story_framework",
           "emotional_calibration",
@@ -186,9 +204,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const start = Date.now();
 
-    // Extract KNP fields
     const brief = body[K.ξb] || body.brief || "";
     const audience = body[K.ζq] || body.audience || "";
     const product = body[K.μp] || body.product || "";
@@ -211,14 +227,16 @@ serve(async (req) => {
     const emotionalArc = buildEmotionalArc(goal);
 
     // ── Step 3: AI-powered narrative framework generation ──
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const moatContext = positioning
       ? `Moat rating: ${positioning.moat || "UNKNOWN"}. Messaging: ${positioning.messaging || "N/A"}.`
       : "No positioning data available.";
 
-    const aiPrompt = `You are a narrative strategist for KLYC. Build a FRAMEWORK (not copy) for a marketing campaign.
+    const systemPrompt = `You are a narrative strategist specializing in brand storytelling and campaign architecture. Return valid JSON only. No markdown fences. NEVER reference internal system names, protocols, or technical identifiers in any output.`;
+
+    const userPrompt = `Build a narrative FRAMEWORK (not copy) for a marketing campaign.
 
 BRIEF: ${brief}
 AUDIENCE: ${audience}
@@ -249,10 +267,10 @@ Generate a narrative FRAMEWORK with these sections. Return valid JSON:
     { "beat": "hook | build | pivot | climax | resolution", "emotion": "string", "technique": "string" }
   ],
   "narrative_rank_targets": {
-    "contextual_cues": 0.0-5.0,
-    "emotional_engagement": 0.0-5.0,
-    "mental_cognition": 0.0-5.0,
-    "immersive_experience": 0.0-5.0
+    "contextual_cues": 0.0,
+    "emotional_engagement": 0.0,
+    "mental_cognition": 0.0,
+    "immersive_experience": 0.0
   },
   "transmedia_plan": [
     { "platform": "string", "narrative_slice": "string", "format": "string", "unique_angle": "string" }
@@ -268,36 +286,31 @@ Rules:
 - NarrativeRank targets must be ≥ 3.5 each for publication quality
 - Be specific to "${brief}" — no generic templates`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a narrative strategist. Return valid JSON only. No markdown fences." },
-          { role: "user", content: aiPrompt },
-        ],
-        temperature: 0.5,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, errText);
-      if (aiResp.status === 429 || aiResp.status === 402) {
-        return new Response(JSON.stringify({
-          submind: "narrative", status: "error",
-          error: aiResp.status === 429 ? "Rate limited" : "Credits exhausted",
-        }), { status: aiResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
+      console.error("AI error:", aiResp.status, errText);
       throw new Error(`AI error: ${aiResp.status}`);
     }
 
     const aiData = await aiResp.json();
-    const rawText = aiData.choices?.[0]?.message?.content || "";
+    const tokensIn = aiData.usage?.input_tokens ?? null;
+    const tokensOut = aiData.usage?.output_tokens ?? null;
+    const rawText = aiData.content?.[0]?.text || "";
 
     let framework: any = {};
     try {
@@ -327,7 +340,7 @@ Rules:
     // ── Step 5: Build transmedia structure ──
     const transmedia = framework.transmedia_plan || buildTransmediaDefaults();
 
-    // ── Step 6: Build KNP output ──
+    // ── Step 6: Build output ──
     const segments: Record<string, string> = {
       [K.Ν]: compress({
         core_narrative: framework.core_narrative,
@@ -343,6 +356,9 @@ Rules:
         campaign_goal: goal,
       }),
     };
+
+    const elapsed = Date.now() - start;
+    await logHealth("narrative", true, elapsed, tokensIn, tokensOut);
 
     const output = {
       submind: "narrative",
@@ -363,8 +379,8 @@ Rules:
         goal,
       },
       _meta: {
-        elapsed_ms: Date.now() - start,
-        model: "google/gemini-2.5-flash",
+        elapsed_ms: elapsed,
+        model: "claude-haiku-4-5-20251001",
         routing: [
           nrScores.threshold === "amplify" ? "ACTIVATE:viral" : null,
           "ACTIVATE:creative",
@@ -377,7 +393,9 @@ Rules:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Narrative submind error:", error);
+    const elapsed = Date.now() - start;
+    await logHealth("narrative", false, elapsed, null, null);
+    console.error("Narrative error:", error);
     return new Response(JSON.stringify({
       submind: "narrative",
       status: "error",

@@ -1,5 +1,5 @@
 // ============================================================
-// KLYC VIRAL SUBMIND — Scoring Engine
+// VIRAL — Scoring Engine
 // Evaluates content for viral potential with diagnostic feedback.
 // Called many times per session — optimized for speed/consistency.
 // Only speaks KNP. Never outputs directly to users.
@@ -14,7 +14,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ---- KNP Constants ----
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
+// ---- Protocol Constants ----
 const KNP_NULL = "∅";
 const KNP_JOINER = "⊕";
 const KNP_SEP = "∷";
@@ -63,7 +85,6 @@ interface ScoredVariant {
   threshold_status: string;
   diagnostics: string[];
   card_level: number;
-  // Gaming card Level 1 data
   card_data: {
     hook: number;
     emotion: number;
@@ -100,15 +121,12 @@ function isNull(val: string): boolean {
 // ---- Parse Variants from Various Formats ----
 
 function parseVariants(body: Record<string, unknown>): ContentVariant[] {
-  // Try structured variants first
   if (Array.isArray(body.variants_structured)) {
     return body.variants_structured as ContentVariant[];
   }
 
-  // Try σo as KNP-encoded string
   const sigmaO = String(body["σo"] || body.σo || "");
   if (sigmaO && sigmaO !== KNP_NULL) {
-    // Format: headline∷val⊕hook∷val⊕...|||headline∷val⊕...
     const variantStrs = sigmaO.split("|||");
     return variantStrs.map((vs) => {
       const fields: Record<string, string> = {};
@@ -177,11 +195,11 @@ async function scoreVariants(
   brief: string,
   platforms: string,
   weights: typeof DEFAULT_WEIGHTS
-): Promise<ScoredVariant[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+): Promise<{ scored: ScoredVariant[]; tokensIn: number | null; tokensOut: number | null }> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-  const systemPrompt = `You are a viral content scoring engine. Score each content variant on 5 dimensions (0.0-1.0):
+  const systemPrompt = `You are a viral content scoring engine. Score each content variant on 5 dimensions (0.0-1.0). NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 DIMENSIONS:
 - hook (30%): First 3 seconds / first line — "can't look away" factor. Does it stop the scroll?
@@ -200,19 +218,18 @@ Respond ONLY with a JSON array. Each object: { "hook_score": 0.0, "emotion_score
     `Variant ${i + 1} [${v.platform}/${v.strategy_angle || "unknown"}]:\nHeadline: ${v.headline}\nHook: ${v.hook}\nBody: ${v.body?.slice(0, 200)}\nCTA: ${v.cta}`
   ).join("\n\n---\n\n");
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Brief: ${brief}\n\n${variantDescriptions}` },
-      ],
-      temperature: 0.15,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: "user", content: `Brief: ${brief}\n\n${variantDescriptions}` }],
     }),
   });
 
@@ -223,7 +240,9 @@ Respond ONLY with a JSON array. Each object: { "hook_score": 0.0, "emotion_score
   }
 
   const aiResult = await response.json();
-  const raw = aiResult.choices?.[0]?.message?.content || "[]";
+  const tokensIn = aiResult.usage?.input_tokens ?? null;
+  const tokensOut = aiResult.usage?.output_tokens ?? null;
+  const raw = aiResult.content?.[0]?.text || "[]";
 
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error("AI did not return valid JSON array for scoring");
@@ -237,7 +256,7 @@ Respond ONLY with a JSON array. Each object: { "hook_score": 0.0, "emotion_score
     diagnostics: string[];
   }>;
 
-  return variants.map((v, i) => {
+  const scored = variants.map((v, i) => {
     const s = scores[i] || { hook_score: 0.3, emotion_score: 0.3, share_score: 0.3, platform_score: 0.3, audience_score: 0.3, diagnostics: ["No scoring data available"] };
     const viralScore =
       (s.hook_score * weights.hook) +
@@ -274,6 +293,8 @@ Respond ONLY with a JSON array. Each object: { "hook_score": 0.0, "emotion_score
       },
     };
   });
+
+  return { scored, tokensIn, tokensOut };
 }
 
 // ---- Campaign Card (Level 2) ----
@@ -285,7 +306,6 @@ function buildCampaignCard(scored: ScoredVariant[]): CampaignCard {
   const emotions = scored.map(s => s.emotion_score);
   const shares = scored.map(s => s.share_score);
 
-  // Consistency = 1 - standard deviation of scores (higher = more consistent)
   const mean = avg(scores);
   const variance = avg(scores.map(s => (s - mean) ** 2));
   const consistency = Math.max(0, 1 - Math.sqrt(variance) * 2);
@@ -301,59 +321,7 @@ function buildCampaignCard(scored: ScoredVariant[]): CampaignCard {
   };
 }
 
-// ---- Checkpoint Trajectory Assessment ----
-
-function assessTrajectory(checkpointData: string): { trajectory: string; assessment: string } {
-  try {
-    const data = JSON.parse(checkpointData);
-    if (Array.isArray(data) && data.length >= 2) {
-      const latest = data[data.length - 1]?.score || 0;
-      const previous = data[data.length - 2]?.score || 0;
-      const delta = latest - previous;
-
-      if (delta > 0.05) return { trajectory: "accelerating", assessment: "Engagement is growing — consider amplifying spend and distribution." };
-      if (delta < -0.05) return { trajectory: "decelerating", assessment: "Engagement is dropping — consider pausing or pivoting messaging." };
-      return { trajectory: "stable", assessment: "Performance is steady — monitor for another checkpoint before adjusting." };
-    }
-  } catch {
-    // Not valid checkpoint data
-  }
-  return { trajectory: "unknown", assessment: "Insufficient checkpoint data for trajectory analysis." };
-}
-
-// ---- Log Scores ----
-
-async function logViralScores(
-  clientId: string,
-  scored: ScoredVariant[],
-  campaignCard: CampaignCard,
-  iteration: number,
-  loopStatus: string
-): Promise<void> {
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    await supabase.from("viral_log").insert({
-      client_id: clientId !== KNP_NULL ? clientId : null,
-      iteration_round: iteration,
-      loop_status: loopStatus,
-      variant_scores: scored,
-      campaign_card: campaignCard,
-      top_score: Math.max(...scored.map(s => s.viral_score)),
-      avg_score: scored.reduce((a, s) => a + s.viral_score, 0) / Math.max(scored.length, 1),
-      variants_accepted: scored.filter(s => s.threshold_status === "AMPLIFY" || s.threshold_status === "MONITOR").length,
-    });
-  } catch (e) {
-    console.warn("Failed to log viral scores:", e);
-  }
-}
-
-// ============================================================
-// SERVE
-// ============================================================
+// ---- Main Handler ----
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -365,17 +333,15 @@ serve(async (req: Request) => {
   try {
     const body = await req.json();
 
-    // ---- Decode KNP Input ----
     const brief = parseKnpField(body["ξb"] || body.ξb);
     const platformsRaw = parseKnpField(body["μp"] || body.μp);
     const clientId = parseKnpField(body["θc"] || body.θc || body.client_id);
-    const checkpointData = parseKnpField(body["πf"] || body.πf);
-    const iterationRound = parseInt(String(body.iteration_round || body["πf_round"] || "1"), 10) || 1;
 
-    // ---- Parse Content Variants ----
     const variants = parseVariants(body);
 
     if (variants.length === 0) {
+      const elapsed = Date.now() - startTime;
+      await logHealth("viral", false, elapsed, null, null);
       return new Response(
         JSON.stringify({
           version: "Ψ3",
@@ -383,44 +349,27 @@ serve(async (req: Request) => {
           status: "error",
           λv: KNP_NULL,
           error: "No content variants provided for scoring",
-          elapsed_ms: Date.now() - startTime,
+          elapsed_ms: elapsed,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ---- Load Adaptive Weights ----
     const weights = await loadAdaptiveWeights(clientId);
-
-    // ---- Score Variants ----
-    const scored = await scoreVariants(variants, brief, platformsRaw, weights);
-
-    // ---- Build Campaign Card (Level 2) ----
+    const { scored, tokensIn, tokensOut } = await scoreVariants(variants, brief, platformsRaw, weights);
     const campaignCard = buildCampaignCard(scored);
 
-    // ---- Checkpoint Trajectory (if live monitoring) ----
-    let trajectory = null;
-    if (!isNull(checkpointData)) {
-      trajectory = assessTrajectory(checkpointData);
-    }
-
-    // ---- Determine Loop Status ----
     const anyMeetsThreshold = scored.some(s => s.viral_score >= 0.50);
-    const maxIteration = iterationRound >= 3;
-    const loopStatus = (anyMeetsThreshold || maxIteration)
-      ? `σo${KNP_SEP}LOOP_COMPLETE${KNP_NULL}`
-      : `σo${KNP_SEP}LOOP_CONTINUE${KNP_NULL}`;
+    const loopStatus = anyMeetsThreshold ? `σo${KNP_SEP}LOOP_COMPLETE${KNP_NULL}` : `σo${KNP_SEP}LOOP_CONTINUE${KNP_NULL}`;
 
-    // ---- Log Scores ----
-    await logViralScores(clientId, scored, campaignCard, iterationRound, loopStatus);
-
-    // ---- Encode Diagnostics for Creative Feedback ----
     const diagnosticsFeedback = scored
       .filter(s => s.viral_score < 0.50)
       .map(s => `[${s.strategy_angle}] score=${s.viral_score}: ${s.diagnostics.join("; ")}`)
       .join(" || ");
 
-    // ---- Build Response ----
+    const elapsed = Date.now() - startTime;
+    await logHealth("viral", true, elapsed, tokensIn, tokensOut);
+
     return new Response(
       JSON.stringify({
         version: "Ψ3",
@@ -432,15 +381,16 @@ serve(async (req: Request) => {
         avg_score: Math.round((scored.reduce((a, s) => a + s.viral_score, 0) / scored.length) * 1000) / 1000,
         diagnostics: diagnosticsFeedback,
         campaign_card: campaignCard,
-        trajectory,
-        iteration_round: iterationRound,
+        iteration_round: 1,
         top_variants: scored.sort((a, b) => b.viral_score - a.viral_score).slice(0, 3),
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
-    console.error("Viral submind error:", e);
+    const elapsed = Date.now() - startTime;
+    await logHealth("viral", false, elapsed, null, null);
+    console.error("Viral error:", e);
     return new Response(
       JSON.stringify({
         version: "Ψ3",
@@ -448,7 +398,7 @@ serve(async (req: Request) => {
         status: "error",
         λv: KNP_NULL,
         error: e instanceof Error ? e.message : "Unknown error",
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       {
         status: 500,

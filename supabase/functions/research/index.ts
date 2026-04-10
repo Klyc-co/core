@@ -1,5 +1,5 @@
 // ============================================================
-// KLYC RESEARCH SUBMIND — Market Intelligence Engine v2.1
+// RESEARCH — Market Intelligence Engine v2.1
 // Speaks ONLY KNP. Never communicates directly with users.
 // All output returns to the Orchestrator.
 //
@@ -16,7 +16,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── KNP Constants ──
+// ── Protocol Constants ──
 const KNP_VERSION = "Ψ3";
 const KNP_NULL = "∅";
 
@@ -39,29 +39,59 @@ function jsonRes(data: unknown, status = 200) {
   });
 }
 
-// ── AI Client (Lovable Gateway) ──
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
 
-async function callAI(system: string, user: string): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return "Research unavailable — API key missing.";
+// ── AI Client (Anthropic) ──
+
+async function callAI(system: string, user: string): Promise<{ text: string; tokensIn: number | null; tokensOut: number | null }> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) return { text: "Research unavailable — API key missing.", tokensIn: null, tokensOut: null };
 
   try {
-    const res = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.3,
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 2000,
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        system,
+        messages: [{ role: "user", content: user }],
       }),
     });
-    if (!res.ok) { console.error("AI error:", res.status); return "Research analysis error."; }
+    if (!res.ok) { console.error("AI error:", res.status); return { text: "Research analysis error.", tokensIn: null, tokensOut: null }; }
     const d = await res.json();
-    return d.choices?.[0]?.message?.content || "No output.";
+    return {
+      text: d.content?.[0]?.text || "No output.",
+      tokensIn: d.usage?.input_tokens ?? null,
+      tokensOut: d.usage?.output_tokens ?? null,
+    };
   } catch (e) {
     console.error("AI exception:", e);
-    return "Research exception.";
+    return { text: "Research exception.", tokensIn: null, tokensOut: null };
   }
 }
 
@@ -153,13 +183,14 @@ function buildRoutingRecommendation(
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const t0 = Date.now();
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceKey);
     const body = await req.json();
 
-    // Health check
     if (body.action === "health") {
       return jsonRes({
         version: "2.1-knp", submind: "research", status: "operational",
@@ -188,15 +219,12 @@ serve(async (req) => {
       return jsonRes({ error: "Invalid KNP payload. Research only speaks KNP." }, 400);
     }
 
-    const t0 = Date.now();
-
     const brief = segments[K.ξb] || KNP_NULL;
     const audience = segments[K.ζq] || KNP_NULL;
     const platform = segments[K.μp] || segments[K.πf] || KNP_NULL;
     const keywords = segments[K.κw] || KNP_NULL;
     const clientId = segments[K.θc] || KNP_NULL;
 
-    // Validate
     if (brief === KNP_NULL && audience === KNP_NULL) {
       const seg: Record<string, string> = {
         [K.σo]: KNP_NULL, [K.πf]: "0.0",
@@ -218,10 +246,8 @@ serve(async (req) => {
       getSocialTrends(sb, platform),
     ]);
 
-    // ── Signal Classification ──
     const signalType = classifySignals(brief, competitors, trends);
 
-    // ── Build context strings ──
     const compSummary = competitors.length > 0
       ? competitors.slice(0, 5).map((c: any) => `${c.competitor_name}: ${c.observed_action} (${c.platform}, conf:${c.confidence})`).join("; ")
       : "No competitor data.";
@@ -245,7 +271,7 @@ serve(async (req) => {
     }
 
     // ── AI Analysis ──
-    const systemPrompt = `You are the KLYC Research Submind — an analytical intelligence engine for marketing strategy. Temperature 0.3. Be precise and data-oriented.
+    const systemPrompt = `You are a market research analyst with deep expertise in signal classification, opportunity scoring, and competitive intelligence. Temperature 0.3. Be precise and data-oriented. NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 Signal type detected: ${signalType}
 
@@ -273,8 +299,8 @@ OPPORTUNITY_FACTORS:
   competitive_gap: [0.0-1.0]
 CONFIDENCE: [0.0-1.0]
 VS_PRELIMINARY: hook=[0-1] emotion=[0-1] share=[0-1]
-FORMAT_REC: [content format recommendation for Creative submind]
-MOAT_FLAGS: [data points for Product submind moat analysis]
+FORMAT_REC: [content format recommendation]
+MOAT_FLAGS: [data points for competitive moat analysis]
 RECOMMENDATION: [1 sentence next action]`;
 
     const userPrompt = `Brief: ${brief !== KNP_NULL ? brief : "General market analysis"}
@@ -287,7 +313,7 @@ Competitor observations: ${compSummary}
 Campaign history: ${memSummary}
 Current trends: ${trendSummary}`;
 
-    const aiResponse = await callAI(systemPrompt, userPrompt);
+    const { text: aiResponse, tokensIn, tokensOut } = await callAI(systemPrompt, userPrompt);
 
     // ── Parse AI output ──
     const parseField = (pattern: RegExp, fallback: string) => {
@@ -303,7 +329,6 @@ Current trends: ${trendSummary}`;
 
     const entities = parseField(/ENTITIES:\s*(.+?)(?=\n[A-Z]|\n*$)/i, "").slice(0, 200);
 
-    // Parse opportunity factors
     const factors: OpportunityFactors = {
       relevance: parseFloat(parseField(/relevance:\s*([\d.]+)/i, "0.5")),
       freshness: parseFloat(parseField(/freshness:\s*([\d.]+)/i, "0.5")),
@@ -313,23 +338,14 @@ Current trends: ${trendSummary}`;
     };
     const opportunityScore = computeOpportunityScore(factors);
 
-    // VS preliminary for Viral submind
     const vsPrelim = parseField(/VS_PRELIMINARY:\s*(.+?)(?=\n|$)/i, "").slice(0, 100);
-
-    // Format rec for Creative submind
     const formatRec = parseField(/FORMAT_REC:\s*(.+?)(?=\n|$)/i, "").slice(0, 150);
-
-    // Moat flags for Product submind
     const moatFlags = parseField(/MOAT_FLAGS:\s*(.+?)(?=\n|$)/i, "").slice(0, 150);
-
-    // Competitor intel section
     const competitorIntel = parseField(/COMPETITOR_INTEL:\s*(.+?)(?=\nAUDI|\n[A-Z]{2,}:)/is, compSummary)
       .slice(0, 300);
 
-    // ── Routing recommendation ──
     const routing = buildRoutingRecommendation(signalType, opportunityScore, competitors.length > 0);
 
-    // ── Build KNP response ──
     const compressedFindings = aiResponse.trim().slice(0, 400);
 
     const responseSegments: Record<string, string> = {
@@ -356,7 +372,6 @@ Current trends: ${trendSummary}`;
       [K.χc]: competitorIntel,
     };
 
-    // Mark missing fields
     if (audience === KNP_NULL) responseSegments[`${K.ζq}∷MISSING`] = KNP_NULL;
 
     const checksum = knpChecksum(responseSegments);
@@ -396,6 +411,7 @@ Current trends: ${trendSummary}`;
     }
 
     const elapsed = Date.now() - t0;
+    await logHealth("research", true, elapsed, tokensIn, tokensOut);
 
     return jsonRes({
       version: KNP_VERSION,
@@ -416,7 +432,9 @@ Current trends: ${trendSummary}`;
     });
 
   } catch (error) {
-    console.error("Research submind error:", error);
+    const elapsed = Date.now() - t0;
+    await logHealth("research", false, elapsed, null, null);
+    console.error("Research error:", error);
     return jsonRes({
       version: KNP_VERSION, submind: "research", status: "error",
       error: error instanceof Error ? error.message : "Unknown research error",

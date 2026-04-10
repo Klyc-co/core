@@ -24,6 +24,28 @@ function parseJsonField(v: string): any {
   try { return JSON.parse(v); } catch { return null; }
 }
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 // Gate thresholds
 const GATE_THRESHOLDS = {
   factual_accuracy: { pass: 0.8, hard_fail: 0.5, weight: 0.30 },
@@ -132,17 +154,18 @@ serve(async (req: Request) => {
         reviewer: "ai",
       };
       await logDecision(rejected, clientId, campaignId);
+      const elapsed = Date.now() - startTime;
+      await logHealth("approval", false, elapsed, null, null);
       return new Response(
-        JSON.stringify({ version: "Ψ3", submind: "approval", status: "complete", ...rejected, elapsed_ms: Date.now() - startTime }),
+        JSON.stringify({ version: "Ψ3", submind: "approval", status: "complete", ...rejected, elapsed_ms: elapsed }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-    const systemPrompt = `You are the KLYC Approval Submind — a permanent Quality Gate.
-You can NEVER be bypassed. Every piece of content must pass your 4 gates before publishing.
+    const systemPrompt = `You are a brand compliance and content quality reviewer. You evaluate marketing content against factual accuracy, brand alignment, audience fit, and quality standards. You can NEVER be bypassed. NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 ## FOUR PERMANENT GATES — Score each 0.0 to 1.0:
 
@@ -174,48 +197,48 @@ If the creative pushes in one direction but positioning/guardrails push another,
 
 ## OUTPUT FORMAT — Return ONLY this JSON:
 {
-  "factual_accuracy": { "score": 0.0-1.0, "notes": ["specific issues"] },
-  "brand_alignment": { "score": 0.0-1.0, "notes": ["specific issues"] },
-  "audience_fit": { "score": 0.0-1.0, "notes": ["specific issues"] },
-  "quality_standards": { "score": 0.0-1.0, "notes": ["specific issues"] },
-  "conflicts": ["any submind disagreements detected"],
+  "factual_accuracy": { "score": 0.0, "notes": ["specific issues"] },
+  "brand_alignment": { "score": 0.0, "notes": ["specific issues"] },
+  "audience_fit": { "score": 0.0, "notes": ["specific issues"] },
+  "quality_standards": { "score": 0.0, "notes": ["specific issues"] },
+  "conflicts": ["any disagreements detected"],
   "overall_notes": "summary of key findings"
 }
 
 Be strict. This gate exists to prevent bad content from reaching the public.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Review this creative content for approval (iteration ${iterationNum}):\n${JSON.stringify(creative)}` },
-        ],
-        temperature: 0.2,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: "user", content: `Review this creative content for approval (iteration ${iterationNum}):\n${JSON.stringify(creative)}` }],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
+      console.error("AI error:", response.status, errText);
       if (response.status === 429) throw new Error("RATE_LIMITED");
       if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
       throw new Error(`AI generation failed: ${response.status}`);
     }
 
     const aiResult = await response.json();
-    const raw = aiResult.choices?.[0]?.message?.content || "{}";
+    const tokensIn = aiResult.usage?.input_tokens ?? null;
+    const tokensOut = aiResult.usage?.output_tokens ?? null;
+    const raw = aiResult.content?.[0]?.text || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("AI did not return valid JSON");
 
     const aiScores = JSON.parse(jsonMatch[0]);
 
-    // Build gate scores
     const gates: Record<string, GateScore> = {};
     for (const [gate, config] of Object.entries(GATE_THRESHOLDS)) {
       const aiGate = aiScores[gate] || { score: 0.5, notes: [] };
@@ -228,7 +251,6 @@ Be strict. This gate exists to prevent bad content from reaching the public.`;
       };
     }
 
-    // Composite score
     const composite = Object.entries(GATE_THRESHOLDS).reduce(
       (sum, [gate, config]) => sum + (gates[gate]?.score || 0) * config.weight, 0
     );
@@ -277,6 +299,9 @@ Be strict. This gate exists to prevent bad content from reaching the public.`;
 
     await logDecision(result, clientId, campaignId);
 
+    const elapsed = Date.now() - startTime;
+    await logHealth("approval", true, elapsed, tokensIn, tokensOut);
+
     return new Response(
       JSON.stringify({
         version: "Ψ3",
@@ -284,15 +309,17 @@ Be strict. This gate exists to prevent bad content from reaching the public.`;
         status: "complete",
         σo: JSON.stringify(result),
         ...result,
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : "Unknown error";
     const status = errMsg === "RATE_LIMITED" ? 429 : errMsg === "PAYMENT_REQUIRED" ? 402 : 500;
+    const elapsed = Date.now() - startTime;
+    await logHealth("approval", false, elapsed, null, null);
     return new Response(
-      JSON.stringify({ version: "Ψ3", submind: "approval", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: Date.now() - startTime }),
+      JSON.stringify({ version: "Ψ3", submind: "approval", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: elapsed }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
