@@ -11,7 +11,7 @@ const EMBED_DIMS = 768;
 
 async function generateEmbedding(text: string, geminiKey: string): Promise<number[]> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,9 +38,9 @@ serve(async (req) => {
     const body = await req.json();
 
     if (body.action === "health") {
-      return new Response(JSON.stringify({ status: "ok", version: "v1", embed_model: EMBED_MODEL }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        status: "ok", version: "v2", embed_model: EMBED_MODEL, api_version: "v1",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
@@ -51,7 +51,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // ── Batch mode ────────────────────────────────────────────────────────────
     if (Array.isArray(body.items)) {
       const results: any[] = [];
       for (const item of body.items) {
@@ -71,7 +70,6 @@ serve(async (req) => {
       });
     }
 
-    // ── Single item ───────────────────────────────────────────────────────────
     const content = body.content as string;
     if (!content?.trim()) {
       return new Response(JSON.stringify({ error: "content is required" }), {
