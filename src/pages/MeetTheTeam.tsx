@@ -12,7 +12,7 @@ import lyraImg from "@/assets/team/lyra.png";
 const specialists = [
   {
     name: "Atlas",
-    title: "Research & Insights Submind",
+    title: "Research & Insights Agent",
     description:
       "Atlas uncovers the truth layer behind every campaign. He identifies audience behavior, trend momentum, competitor signals, and insight opportunities so the rest of the system starts from real data, not guesses.",
     items: ["Audience research", "Trend discovery", "Competitor analysis", "Insight packs"],
@@ -20,7 +20,7 @@ const specialists = [
   },
   {
     name: "Iris",
-    title: "Creative Media Submind",
+    title: "Creative Media Agent",
     description:
       "Iris leads visual direction across the platform. She defines image concepts, carousel structures, creative styling, and repurposing logic so every campaign looks intentional and brand-right.",
     items: ["Visual direction", "Image concepts", "Carousel layouts", "Repurposing plans"],
@@ -28,7 +28,7 @@ const specialists = [
   },
   {
     name: "Sloane",
-    title: "Strategy & Messaging Submind",
+    title: "Strategy & Messaging Agent",
     description:
       "Sloane turns insights into direction. She develops messaging pillars, hooks, CTAs, and content angles that align with awareness, lead generation, authority, and nurture goals.",
     items: ["Positioning", "Messaging pillars", "Hooks and CTAs", "Campaign direction"],
@@ -36,7 +36,7 @@ const specialists = [
   },
   {
     name: "Fylix",
-    title: "Platform Content Submind",
+    title: "Platform Content Agent",
     description:
       "Fylix translates strategy into platform-native execution. He adapts messaging for the unique style, structure, and behavior of each channel so content feels native everywhere it appears.",
     items: ["LinkedIn content", "X content", "Instagram formatting", "TikTok / YouTube adaptation"],
@@ -44,7 +44,7 @@ const specialists = [
   },
   {
     name: "Lyra",
-    title: "Social Performance Submind",
+    title: "Social Performance Agent",
     description:
       "Lyra monitors early engagement signals and identifies what is gaining traction. She helps Klyc understand when to iterate, boost, or double down based on real performance momentum.",
     items: ["Early velocity tracking", "Engagement signals", "Boost recommendations", "Optimization loops"],

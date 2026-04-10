@@ -167,7 +167,7 @@ export default function StrategyDashboard() {
         <TabsContent value="intelligence" className="mt-4 space-y-3">
           <CollapsibleSection title="Market Intelligence" icon={<BookOpen className="w-4 h-4 text-primary" />} defaultOpen>
             <p className="text-sm text-muted-foreground">
-              Trend monitoring, audience insights, and market signals collected by the Research submind.
+              Trend monitoring, audience insights, and market signals collected by Klyc.
             </p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/trend-monitor")}>
               View Trends

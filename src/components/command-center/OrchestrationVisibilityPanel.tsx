@@ -36,7 +36,7 @@ const PIPELINE_META: Record<string, { icon: React.ReactNode; label: string }> = 
   "Platform Evaluator": { icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Platform Evaluator" },
   "Narrative Simulation": { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Narrative Simulation" },
   "Product Positioning": { icon: <Layers className="w-3.5 h-3.5" />, label: "Product Positioning" },
-  "Research Agent": { icon: <Search className="w-3.5 h-3.5" />, label: "Research Submind" },
+  "Research Agent": { icon: <Search className="w-3.5 h-3.5" />, label: "Research Agent" },
   "Orchestration Planner": { icon: <Network className="w-3.5 h-3.5" />, label: "Klyc Planner" },
 };
 
