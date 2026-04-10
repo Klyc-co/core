@@ -38,7 +38,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { messages } = body;
+    let { messages } = body;
+
+    // Support action-based payloads from useKlycOrchestrator hook
+    if ((!messages || messages.length === 0) && body.action) {
+      const userContent = body.message || body.action || "";
+      messages = [{ role: "user", content: userContent }];
+    }
 
     if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({ error: "No messages provided" }), {
