@@ -11,7 +11,7 @@ const EMBED_DIMS = 768;
 
 async function generateEmbedding(text: string, geminiKey: string): Promise<number[]> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,11 +39,10 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    // Health
     if (body.action === "health") {
       return new Response(JSON.stringify({
-        status: "ok", version: "v1", embed_model: EMBED_MODEL, embed_dims: EMBED_DIMS,
-        timestamp: new Date().toISOString(),
+        status: "ok", version: "v2", embed_model: EMBED_MODEL, embed_dims: EMBED_DIMS,
+        api_version: "v1", timestamp: new Date().toISOString(),
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -66,11 +65,9 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Generate query embedding
     const embedding = await generateEmbedding(query.slice(0, 1500), geminiKey);
     const embeddingStr = `[${embedding.join(",")}]`;
 
-    // Search via RPC
     const { data, error } = await supabase.rpc("search_knowledge", {
       query_embedding: embeddingStr,
       p_lane: lane || null,
@@ -89,9 +86,7 @@ serve(async (req) => {
     }));
 
     return new Response(JSON.stringify({
-      chunks,
-      count: chunks.length,
-      query_lane: lane || "all",
+      chunks, count: chunks.length, query_lane: lane || "all",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e: any) {
