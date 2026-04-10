@@ -8,10 +8,26 @@ const corsHeaders = {
 
 // ── Lane Lock ─────────────────────────────────────────────────────────────────
 const AGENT_ID = "image";
-const AGENT_VERSION = "v20";
+const AGENT_VERSION = "v21";
 const PERMITTED_LANES = new Set(["image"]);
 const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 const STORAGE_BUCKET = "generated-images";
+
+// ── KNP σo envelope builder ───────────────────────────────────────────────────
+// All returns from this submind MUST be wrapped in a KNP σo envelope.
+// The caller (klyc-orchestrator / normalizer) is responsible for unpacking σo
+// back to full JSON for the C-lane client.
+function knpEnvelope(sigmaO: unknown, elapsedMs: number, confidence = 0.95): Record<string, unknown> {
+  return {
+    "σo": sigmaO,           // Compressed output — image URL(s) only
+    "δi": AGENT_ID,         // Identity stamp
+    "κw": confidence,       // Confidence weight
+    "τt": new Date().toISOString(), // Timestamp
+    "ρs": `generate-image∷${AGENT_VERSION}`, // Source
+    "knp": "Ψ3",
+    "elapsed_ms": elapsedMs,
+  };
+}
 
 // ── Platform sizes ────────────────────────────────────────────────────────────
 const PLATFORM_SIZES: Record<string, { width: number; height: number; label: string }> = {
@@ -131,6 +147,7 @@ serve(async (req) => {
         "δi": AGENT_ID, lane: "image", model: GEMINI_IMAGE_MODEL,
         permitted_lanes: [...PERMITTED_LANES],
         platforms: Object.keys(PLATFORM_SIZES),
+        knp_envelope: "σo wrapped — all returns compressed",
         timestamp: new Date().toISOString(),
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -168,13 +185,16 @@ serve(async (req) => {
     );
 
     // ── Resolve prompt ────────────────────────────────────────────────────────
-    // From KNP envelope (ξb = brief) or direct prompt field
+    // Accepts KNP envelope (ξb = brief, θc = context, μp = platform)
     const briefRaw = body["ξb"] || body.prompt || "";
     const prompt = String(briefRaw).trim();
+    const clientContext = String(body["θc"] || "").trim();
+    const platform = String(body["μp"] || "tiktok").trim();
+
     if (!prompt) {
-      return new Response(JSON.stringify({
-        error: "Image prompt required (body.prompt or ξb)", "δi": AGENT_ID, lane: "image",
-      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(
+        knpEnvelope({ error: "Image prompt required (ξb or prompt field)" }, Date.now() - start, 0)
+      ), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Reference images
@@ -190,51 +210,54 @@ serve(async (req) => {
     const isKnpDispatch = requestedLane === "image";
 
     if (isKnpDispatch || (directWidth && directHeight)) {
+      const contextStr = clientContext ? ` Context: ${clientContext}.` : "";
       const aspectPrompt = (directWidth && directHeight)
-        ? `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio. ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`
-        : `Generate a high-quality marketing campaign image. ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`;
+        ? `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`
+        : `Generate a high-quality marketing campaign image for ${platform}.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`;
 
       const { base64, mimeType } = await callGemini(geminiKey, aspectPrompt, normalizedRefs);
       const publicUrl = await uploadToStorage(supabase, base64, mimeType);
       const imageUrl = await shortenUrl(publicUrl);
 
-      return new Response(JSON.stringify({
-        imageUrl, model: GEMINI_IMAGE_MODEL,
-        size: directWidth ? `${directWidth}x${directHeight}` : "auto",
-        "δi": AGENT_ID, lane: "image", elapsed_ms: Date.now() - start,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // ── KNP σo compressed return ──────────────────────────────────────────
+      // σo contains only the essential output: the image URL.
+      // Caller (orchestrator/normalizer) unpacks σo and expands to full client JSON.
+      return new Response(JSON.stringify(
+        knpEnvelope(imageUrl, Date.now() - start)
+      ), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Multi-platform mode (UI direct call) ──────────────────────────────────
+    // ── Multi-platform mode ───────────────────────────────────────────────────
     const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
-    const results: Record<string, any> = {};
+    const sigmaOImages: Record<string, string> = {};
     let totalImages = 0;
+    const errors: string[] = [];
 
-    for (const platform of platforms) {
-      const size = PLATFORM_SIZES[platform];
-      if (!size) { results[platform] = { error: `Unknown platform: ${platform}` }; continue; }
+    for (const plt of platforms) {
+      const size = PLATFORM_SIZES[plt];
+      if (!size) { errors.push(`Unknown platform: ${plt}`); continue; }
       try {
         const platformPrompt = `Generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). ${normalizedRefs.length ? "Use the attached reference images. " : ""}${prompt}`;
         const { base64, mimeType } = await callGemini(geminiKey, platformPrompt, normalizedRefs);
         const publicUrl = await uploadToStorage(supabase, base64, mimeType);
         const imageUrl = await shortenUrl(publicUrl);
         totalImages++;
-        results[platform] = { imageUrl, url: imageUrl, size: `${size.width}x${size.height}`, label: size.label, model: GEMINI_IMAGE_MODEL };
+        sigmaOImages[plt] = imageUrl; // σo: platform → URL only
       } catch (err: any) {
-        results[platform] = { error: err.message };
+        errors.push(`${plt}: ${err.message}`);
       }
     }
 
-    return new Response(JSON.stringify({
-      images: results, totalImages, model: GEMINI_IMAGE_MODEL,
-      "δi": AGENT_ID, lane: "image", elapsed_ms: Date.now() - start,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // ── KNP σo compressed return (multi-platform) ─────────────────────────────
+    // σo = { platform: imageUrl } — minimal. Caller expands with size/label/model metadata.
+    return new Response(JSON.stringify(
+      { ...knpEnvelope(sigmaOImages, Date.now() - start), totalImages, ...(errors.length ? { errors } : {}) }
+    ), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error: any) {
     console.error("generate-image error:", error);
-    return new Response(JSON.stringify({
-      error: error.message || "Image generation failed",
-      "δi": AGENT_ID, lane: "image", elapsed_ms: Date.now() - start,
-    }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(
+      knpEnvelope({ error: error.message || "Image generation failed" }, Date.now() - start, 0)
+    ), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
