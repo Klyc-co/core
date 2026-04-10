@@ -220,7 +220,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Orchestrator error:", error);
     return new Response(JSON.stringify({
-      error: error.message || "Orchestrator failed",
+      error: (error as Error).message || "Orchestrator failed",
       elapsed_ms: Date.now() - startTime,
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

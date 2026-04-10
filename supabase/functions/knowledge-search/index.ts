@@ -75,7 +75,7 @@ serve(async (req) => {
       p_threshold: threshold,
     });
 
-    if (error) throw new Error(`Search RPC error: ${error.message}`);
+    if (error) throw new Error(`Search RPC error: ${(error as Error).message}`);
 
     const chunks = (data || []).map((row: any) => ({
       content: row.content,

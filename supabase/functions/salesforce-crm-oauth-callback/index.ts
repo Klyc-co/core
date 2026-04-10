@@ -151,7 +151,7 @@ serve(async (req) => {
     console.error("Salesforce OAuth callback error:", error);
     const origin = Deno.env.get("FRONTEND_URL") || Deno.env.get("SITE_URL") || "https://idea-to-idiom.lovable.app";
     return Response.redirect(
-      `${origin}/profile/import?error=${encodeURIComponent(error.message)}`,
+      `${origin}/profile/import?error=${encodeURIComponent((error as Error).message)}`,
       302
     );
   }

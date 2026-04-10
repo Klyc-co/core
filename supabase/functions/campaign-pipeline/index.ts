@@ -329,7 +329,7 @@ serve(async (req) => {
     const elapsed = Date.now() - startTime;
     console.error("campaign-pipeline error:", error);
     return new Response(JSON.stringify({
-      error: error.message || "Unknown error", elapsed_ms: elapsed,
+      error: (error as Error).message || "Unknown error", elapsed_ms: elapsed,
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
