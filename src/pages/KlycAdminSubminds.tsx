@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,16 +38,18 @@ const SUBMINDS = [
 const INTENTS = ["CAMPAIGN_NEW", "TREND_ANALYSIS", "PERFORMANCE_REVIEW", "CONTENT_REVISION", "LEARNING_REPORT"];
 const INTENT_COLORS = ["#3b82f6", "#22c55e", "#a855f7", "#eab308", "#ef4444"];
 
-const SYNERGY_PAIRS = [
-  { a: "Research",   b: "Narrative",  affinity: 0.92, invocations: 847 },
-  { a: "Product",    b: "Creative",   affinity: 0.89, invocations: 723 },
-  { a: "Creative",   b: "Social",     affinity: 0.94, invocations: 912 },
-  { a: "Narrative",  b: "Creative",   affinity: 0.88, invocations: 681 },
-  { a: "Social",     b: "Image",      affinity: 0.91, invocations: 804 },
-  { a: "Research",   b: "Product",    affinity: 0.85, invocations: 592 },
-  { a: "Image",      b: "Approval",   affinity: 0.87, invocations: 534 },
-  { a: "Platform",   b: "Social",     affinity: 0.83, invocations: 461 },
-  { a: "Viral",      b: "Creative",   affinity: 0.79, invocations: 398 },
+// Design-time synergy data — affinity scores are architecture-derived.
+// Invocation counts update from live health snapshots once traffic flows.
+const SYNERGY_PAIRS_BASE = [
+  { a: "Research",   b: "Narrative",  affinity: 0.92, invocations: 0 },
+  { a: "Product",    b: "Creative",   affinity: 0.89, invocations: 0 },
+  { a: "Creative",   b: "Social",     affinity: 0.94, invocations: 0 },
+  { a: "Narrative",  b: "Creative",   affinity: 0.88, invocations: 0 },
+  { a: "Social",     b: "Image",      affinity: 0.91, invocations: 0 },
+  { a: "Research",   b: "Product",    affinity: 0.85, invocations: 0 },
+  { a: "Image",      b: "Approval",   affinity: 0.87, invocations: 0 },
+  { a: "Platform",   b: "Social",     affinity: 0.83, invocations: 0 },
+  { a: "Viral",      b: "Creative",   affinity: 0.79, invocations: 0 },
 ];
 
 const UPSTREAM_MAP: Record<string, { upstream: string[]; downstream: string[] }> = {
@@ -78,6 +80,22 @@ interface Snapshot {
   avg_tokens_out: number | null;
   error_count: number;
   window_start: string;
+}
+
+// Topology-based affinity (deterministic — no Math.random()).
+// Direct connection in UPSTREAM_MAP → 0.78, 2-hop → 0.58, no path → 0.32.
+// Known high-synergy pairs use their design affinity value.
+function topoAffinity(aName: string, bName: string): number {
+  const aId = SUBMINDS.find((s) => s.name === aName)?.id ?? "";
+  const bId = SUBMINDS.find((s) => s.name === bName)?.id ?? "";
+  const aMap = UPSTREAM_MAP[aId];
+  if (!aMap) return 0.32;
+  if (aMap.upstream.includes(bId) || aMap.downstream.includes(bId)) return 0.78;
+  for (const mid of [...aMap.upstream, ...aMap.downstream]) {
+    const midMap = UPSTREAM_MAP[mid];
+    if (midMap && (midMap.upstream.includes(bId) || midMap.downstream.includes(bId))) return 0.58;
+  }
+  return 0.32;
 }
 
 function ArchitectureOverview() {
@@ -210,6 +228,34 @@ export default function KlycAdminSubminds() {
     };
   };
 
+  // Derive synergy pair invocations from real health data.
+  // Uses min(submind_a_total, submind_b_total) as a co-invocation proxy.
+  // Falls back to 0 (awaiting traffic) when no snapshots yet.
+  const synergyPairs = useMemo(() => {
+    return SYNERGY_PAIRS_BASE.map((p) => {
+      const aId = SUBMINDS.find((s) => s.name === p.a)?.id ?? "";
+      const bId = SUBMINDS.find((s) => s.name === p.b)?.id ?? "";
+      const aTotal = agg.get(aId)?.total ?? 0;
+      const bTotal = agg.get(bId)?.total ?? 0;
+      return { ...p, invocations: Math.min(aTotal, bTotal) };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshots]);
+
+  // Topology-based affinity matrix — fully deterministic, no Math.random().
+  // Known high-synergy pairs use their design affinity. Others use UPSTREAM_MAP hop distance.
+  const activeNames = SUBMINDS.map((s) => s.name);
+  const affinityMatrix = useMemo(() =>
+    activeNames.map((row) =>
+      activeNames.map((col) => {
+        if (row === col) return 1;
+        const pair = SYNERGY_PAIRS_BASE.find((p) => (p.a === row && p.b === col) || (p.a === col && p.b === row));
+        if (pair) return pair.affinity;
+        return topoAffinity(row, col);
+      })
+    ),
+  []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const statusColor = (s: string) =>
     s === "active"   ? "bg-green-500/20 text-green-400 border-green-500/30"
     : s === "degraded" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
@@ -221,20 +267,12 @@ export default function KlycAdminSubminds() {
 
   const rateColor = (r: number) => r >= 90 ? "text-green-400" : r >= 75 ? "text-yellow-400" : "text-red-400";
 
+  // Intent distribution — architecture design targets (no live routing-intent data yet)
   const intentData = INTENTS.map((intent, i) => ({
     name: intent.replace(/_/g, " "),
     value: [45, 20, 15, 12, 8][i],
     fill: INTENT_COLORS[i],
   }));
-
-  const activeNames = SUBMINDS.map((s) => s.name);
-  const affinityMatrix = activeNames.map((row) =>
-    activeNames.map((col) => {
-      if (row === col) return 1;
-      const pair = SYNERGY_PAIRS.find((p) => (p.a === row && p.b === col) || (p.a === col && p.b === row));
-      return pair?.affinity ?? +(0.3 + Math.random() * 0.4).toFixed(2);
-    })
-  );
 
   const selectedDef = SUBMINDS.find((s) => s.id === selectedSubmind);
   const selectedStats = selectedSubmind ? getStats(selectedSubmind) : null;
@@ -246,6 +284,9 @@ export default function KlycAdminSubminds() {
     const count = selectedSnaps.filter((s) => s.avg_latency_ms >= min && s.avg_latency_ms < max).length;
     return { range: `${min}-${max}ms`, count };
   });
+
+  const totalInvocations = snapshots.reduce((sum, s) => sum + s.invocation_count, 0);
+  const hasLiveData = totalInvocations > 0;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>;
@@ -267,6 +308,17 @@ export default function KlycAdminSubminds() {
 
       {/* ── Architecture Overview ── */}
       {showArch && <ArchitectureOverview />}
+
+      {/* ── Live data status banner ── */}
+      {!hasLiveData && (
+        <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+          <Zap className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+          <div className="text-xs">
+            <p className="text-blue-300 font-semibold">12 functions deployed and live — awaiting first production request</p>
+            <p className="text-slate-400 mt-0.5">Health snapshots will populate automatically on first invocation. Success rates, latency, and token usage will appear here in real time.</p>
+          </div>
+        </div>
+      )}
 
       {/* ── generate-image alert ── */}
       <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
@@ -312,11 +364,15 @@ export default function KlycAdminSubminds() {
                     <div className="grid grid-cols-2 gap-1 text-xs">
                       <div>
                         <p className="text-slate-500">Success</p>
-                        <p className={`font-semibold ${rateColor(stats.successRate)}`}>{stats.successRate}%</p>
+                        <p className={`font-semibold ${stats.invocations > 0 ? rateColor(stats.successRate) : "text-slate-500"}`}>
+                          {stats.invocations > 0 ? `${stats.successRate}%` : "—"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-slate-500">Latency</p>
-                        <p className="font-semibold text-slate-200">{stats.avgLatency}ms</p>
+                        <p className="font-semibold text-slate-200">
+                          {stats.invocations > 0 ? `${stats.avgLatency}ms` : "—"}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -349,27 +405,34 @@ export default function KlycAdminSubminds() {
                   <th className="text-left p-2.5">Version</th>
                   <th className="text-left p-2.5">API</th>
                   <th className="text-left p-2.5">Status</th>
+                  <th className="text-right p-2.5">Invocations</th>
                   <th className="text-left p-2.5">Purpose</th>
                 </tr>
               </thead>
               <tbody>
-                {SUBMINDS.map((sm) => (
-                  <tr key={sm.id} className="border-b border-slate-800/50 text-slate-200 hover:bg-slate-800/30">
-                    <td className="p-2.5 font-medium">{sm.name}</td>
-                    <td className="p-2.5 font-mono text-slate-400">{sm.binary}</td>
-                    <td className={`p-2.5 font-mono ${channelColor(sm.channel)}`}>{sm.channel}</td>
-                    <td className="p-2.5 text-slate-400">{sm.version}</td>
-                    <td className="p-2.5">
-                      {sm.api === "anthropic"       ? <span className="text-green-400">Anthropic ✓</span>
-                      : sm.api === "needs_decision" ? <span className="text-yellow-400">⚠️ TBD</span>
-                      :                              <span className="text-slate-500">none</span>}
-                    </td>
-                    <td className="p-2.5">
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColor(sm.status)}`}>{sm.status}</Badge>
-                    </td>
-                    <td className="p-2.5 text-slate-400 max-w-[200px] truncate">{sm.note}</td>
-                  </tr>
-                ))}
+                {SUBMINDS.map((sm) => {
+                  const stats = getStats(sm.id);
+                  return (
+                    <tr key={sm.id} className="border-b border-slate-800/50 text-slate-200 hover:bg-slate-800/30">
+                      <td className="p-2.5 font-medium">{sm.name}</td>
+                      <td className="p-2.5 font-mono text-slate-400">{sm.binary}</td>
+                      <td className={`p-2.5 font-mono ${channelColor(sm.channel)}`}>{sm.channel}</td>
+                      <td className="p-2.5 text-slate-400">{sm.version}</td>
+                      <td className="p-2.5">
+                        {sm.api === "anthropic"       ? <span className="text-green-400">Anthropic ✓</span>
+                        : sm.api === "needs_decision" ? <span className="text-yellow-400">⚠️ TBD</span>
+                        :                              <span className="text-slate-500">none</span>}
+                      </td>
+                      <td className="p-2.5">
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColor(sm.status)}`}>{sm.status}</Badge>
+                      </td>
+                      <td className="p-2.5 text-right text-slate-300">
+                        {stats.invocations > 0 ? stats.invocations.toLocaleString() : <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="p-2.5 text-slate-400 max-w-[200px] truncate">{sm.note}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </CardContent>
@@ -390,65 +453,98 @@ export default function KlycAdminSubminds() {
 
           <p className="text-xs text-slate-400">{selectedDef.note}</p>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { label: "Invocations", value: selectedStats.invocations.toLocaleString() },
-              { label: "Errors", value: selectedStats.errors.toLocaleString() },
-              { label: "Avg Tokens In", value: selectedStats.avgTokensIn.toLocaleString() },
-              { label: "Avg Tokens Out", value: selectedStats.avgTokensOut.toLocaleString() },
-              { label: "Total Tokens", value: ((selectedStats.avgTokensIn + selectedStats.avgTokensOut) * Math.max(selectedStats.invocations, 1)).toLocaleString() },
-            ].map((m) => (
-              <Card key={m.label} className="bg-slate-900 border-slate-800">
-                <CardContent className="p-3">
-                  <p className="text-xs text-slate-400">{m.label}</p>
-                  <p className="text-lg font-bold text-white">{m.value}</p>
+          {selectedStats.invocations === 0 ? (
+            <div className="bg-slate-800/40 border border-slate-700 rounded-lg p-6 text-center">
+              <p className="text-slate-400 text-sm">No invocations recorded yet.</p>
+              <p className="text-slate-500 text-xs mt-1">Health data will appear here after the first request hits this function.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: "Invocations", value: selectedStats.invocations.toLocaleString() },
+                  { label: "Errors", value: selectedStats.errors.toLocaleString() },
+                  { label: "Avg Tokens In", value: selectedStats.avgTokensIn.toLocaleString() },
+                  { label: "Avg Tokens Out", value: selectedStats.avgTokensOut.toLocaleString() },
+                  { label: "Total Tokens", value: ((selectedStats.avgTokensIn + selectedStats.avgTokensOut) * Math.max(selectedStats.invocations, 1)).toLocaleString() },
+                ].map((m) => (
+                  <Card key={m.label} className="bg-slate-900 border-slate-800">
+                    <CardContent className="p-3">
+                      <p className="text-xs text-slate-400">{m.label}</p>
+                      <p className="text-lg font-bold text-white">{m.value}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="bg-slate-900 border-slate-800">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm text-slate-300">Invocations</CardTitle>
+                      <Tabs value={deepDiveRange} onValueChange={(v) => setDeepDiveRange(v as typeof deepDiveRange)}>
+                        <TabsList className="h-7 bg-slate-800">
+                          <TabsTrigger value="daily" className="text-xs h-5 px-2">Daily</TabsTrigger>
+                          <TabsTrigger value="weekly" className="text-xs h-5 px-2">Weekly</TabsTrigger>
+                          <TabsTrigger value="monthly" className="text-xs h-5 px-2">Monthly</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={selectedStats.dailyTrend.length > 0 ? selectedStats.dailyTrend : [{ day: "—", count: 0 }]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="day" tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
+                        <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-900 border-slate-800">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Latency Distribution</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={latencyHist}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="range" tick={{ fill: "#94a3b8", fontSize: 9 }} />
+                        <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
+                        <Bar dataKey="count" fill="#a855f7" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card className="bg-slate-900 border-slate-800">
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Recent Errors</CardTitle></CardHeader>
+                <CardContent>
+                  {selectedSnaps.filter((s) => s.error_count > 0).length === 0 ? (
+                    <p className="text-sm text-slate-500">No errors recorded 🎉</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b border-slate-800 text-slate-400">
+                        <th className="text-left p-2">Window</th><th className="text-right p-2">Errors</th><th className="text-right p-2">Latency</th>
+                      </tr></thead>
+                      <tbody>
+                        {selectedSnaps.filter((s) => s.error_count > 0).slice(0, 20).map((s, i) => (
+                          <tr key={i} className="border-b border-slate-800/50 text-slate-200">
+                            <td className="p-2 text-xs">{new Date(s.window_start).toLocaleString()}</td>
+                            <td className="text-right p-2 text-red-400">{s.error_count}</td>
+                            <td className="text-right p-2">{s.avg_latency_ms}ms</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="bg-slate-900 border-slate-800">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm text-slate-300">Invocations</CardTitle>
-                  <Tabs value={deepDiveRange} onValueChange={(v) => setDeepDiveRange(v as typeof deepDiveRange)}>
-                    <TabsList className="h-7 bg-slate-800">
-                      <TabsTrigger value="daily" className="text-xs h-5 px-2">Daily</TabsTrigger>
-                      <TabsTrigger value="weekly" className="text-xs h-5 px-2">Weekly</TabsTrigger>
-                      <TabsTrigger value="monthly" className="text-xs h-5 px-2">Monthly</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={selectedStats.dailyTrend.length > 0 ? selectedStats.dailyTrend : [{ day: "—", count: 0 }]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="day" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-900 border-slate-800">
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Latency Distribution</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={latencyHist}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="range" tick={{ fill: "#94a3b8", fontSize: 9 }} />
-                    <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                    <Bar dataKey="count" fill="#a855f7" radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+            </>
+          )}
 
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Data Flow Pairings</CardTitle></CardHeader>
@@ -473,30 +569,6 @@ export default function KlycAdminSubminds() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Recent Errors</CardTitle></CardHeader>
-            <CardContent>
-              {selectedSnaps.filter((s) => s.error_count > 0).length === 0 ? (
-                <p className="text-sm text-slate-500">No errors recorded 🎉</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-slate-800 text-slate-400">
-                    <th className="text-left p-2">Window</th><th className="text-right p-2">Errors</th><th className="text-right p-2">Latency</th>
-                  </tr></thead>
-                  <tbody>
-                    {selectedSnaps.filter((s) => s.error_count > 0).slice(0, 20).map((s, i) => (
-                      <tr key={i} className="border-b border-slate-800/50 text-slate-200">
-                        <td className="p-2 text-xs">{new Date(s.window_start).toLocaleString()}</td>
-                        <td className="text-right p-2 text-red-400">{s.error_count}</td>
-                        <td className="text-right p-2">{s.avg_latency_ms}ms</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
         </section>
       )}
 
@@ -505,7 +577,12 @@ export default function KlycAdminSubminds() {
         <h2 className="text-lg font-semibold text-slate-200">Routing Analytics</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Routing Templates</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-slate-300 flex items-center justify-between">
+                Routing Templates
+                <span className="text-[10px] font-normal text-slate-500 italic">architecture targets</span>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="flex items-center">
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -520,7 +597,12 @@ export default function KlycAdminSubminds() {
           </Card>
 
           <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">High-Synergy Pairs</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-slate-300 flex items-center justify-between">
+                High-Synergy Pairs
+                <span className="text-[10px] font-normal text-slate-500 italic">invocations: live estimate</span>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-0">
               <div className="px-4 py-2 flex gap-6 text-sm border-b border-slate-800">
                 <div><span className="text-slate-400">Avg functions/task:</span> <span className="text-white font-semibold">4.2</span></div>
@@ -531,7 +613,7 @@ export default function KlycAdminSubminds() {
                   <th className="text-left p-2.5">Pair</th><th className="text-right p-2.5">Affinity</th><th className="text-right p-2.5">Invocations</th>
                 </tr></thead>
                 <tbody>
-                  {SYNERGY_PAIRS.sort((a, b) => b.affinity - a.affinity).map((p) => (
+                  {synergyPairs.sort((a, b) => b.affinity - a.affinity).map((p) => (
                     <tr key={`${p.a}-${p.b}`} className="border-b border-slate-800/50 text-slate-200">
                       <td className="p-2.5">{p.a} → {p.b}</td>
                       <td className="text-right p-2.5">
@@ -539,7 +621,9 @@ export default function KlycAdminSubminds() {
                           {p.affinity.toFixed(2)}
                         </span>
                       </td>
-                      <td className="text-right p-2.5">{p.invocations.toLocaleString()}</td>
+                      <td className="text-right p-2.5">
+                        {p.invocations > 0 ? p.invocations.toLocaleString() : <span className="text-slate-600">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -549,7 +633,12 @@ export default function KlycAdminSubminds() {
         </div>
 
         <Card className="bg-slate-900 border-slate-800">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Theory of Mind — Affinity Matrix</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-slate-300 flex items-center justify-between">
+              Theory of Mind — Affinity Matrix
+              <span className="text-[10px] font-normal text-slate-500 italic">topology-derived · static</span>
+            </CardTitle>
+          </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="text-xs min-w-[600px]">
               <thead>
