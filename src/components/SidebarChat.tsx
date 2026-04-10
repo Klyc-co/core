@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Send, Loader2, Mic, Zap, ExternalLink, RefreshCw } from "lucide-react";
+import { Send, Zap, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,25 @@ import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterv
 import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
+
+// ── Funny loading messages ────────────────────────────────────────────────────
+const LOADING_MESSAGES = [
+  "Focusing objectives...",
+  "Warning VPS of incoming data...",
+  "Calculating viral potential...",
+  "Consulting the engagement oracle...",
+  "Untangling the feed algorithm...",
+  "Downloading more RAM for your campaign...",
+  "Finding the right platform to be mad on...",
+  "Summoning the marketing spirits...",
+  "Bribing the content gods...",
+  "Running A/B tests in parallel universes...",
+  "Interrogating the algorithm...",
+  "Compressing genius into pixels...",
+  "Asking the audience what they want (they lied)...",
+  "Converting caffeine into strategy...",
+  "Aligning the brand chakras...",
+];
 
 interface NextQuestion {
   field: string;
@@ -32,6 +51,7 @@ interface StructuredResponse {
   risk_level?: "low" | "medium" | "high";
   requires_approval?: boolean;
   session_id?: string;
+  nav_target?: string;
 }
 
 interface CompressionStats {
@@ -61,6 +81,7 @@ const SidebarChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
@@ -83,6 +104,13 @@ const SidebarChat = () => {
       ]);
     }
   }, [location.pathname]);
+
+  // ── Cycle loading messages while waiting ────────────────────────────────────
+  useEffect(() => {
+    if (!isLoading) { setLoadingMsgIdx(0); return; }
+    const id = setInterval(() => setLoadingMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length), 1800);
+    return () => clearInterval(id);
+  }, [isLoading]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -123,7 +151,7 @@ const SidebarChat = () => {
 
   const callOrchestrator = async (
     payload: { message: string; history?: Array<{ role: string; content: string }> },
-  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number } }> => {
+  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number }; nav_target?: string }> => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
@@ -154,7 +182,11 @@ const SidebarChat = () => {
 
     const data = await resp.json();
     const text = extractResponseText(data) || FALLBACK_MSG;
-    return { text, usage: data.usage };
+    return {
+      text,
+      usage: data.usage,
+      nav_target: data.nav_target as string | undefined,
+    };
   };
 
   const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
@@ -204,6 +236,11 @@ const SidebarChat = () => {
         };
         return next;
       });
+
+      // ── Navigate if AI returned a route ──────────────────────────────────
+      if (result.nav_target) {
+        setTimeout(() => navigate(result.nav_target!), 700);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       setLastFailedText(text);
@@ -288,10 +325,13 @@ const SidebarChat = () => {
               </div>
             </div>
           ))}
+
+          {/* ── Animated loading message ── */}
           {isLoading && messages[messages.length - 1]?.role === "user" && (
-            <div className="flex justify-start w-full">
-              <div className="bg-muted rounded-lg px-2.5 py-1.5">
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            <div className="flex justify-start w-full items-start">
+              <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
+              <div className="bg-muted rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground italic animate-pulse">
+                {LOADING_MESSAGES[loadingMsgIdx]}
               </div>
             </div>
           )}
