@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,23 +12,18 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   let binary = "";
   const chunkSize = 0x8000;
-
   for (let i = 0; i < bytes.length; i += chunkSize) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
-
   return btoa(binary);
 };
 
 const normalizeReferenceImage = async (imageUrl: string): Promise<string | null> => {
   if (typeof imageUrl !== "string") return null;
-
   const trimmed = imageUrl.trim();
   if (!trimmed) return null;
 
-  if (SUPPORTED_DATA_URL_PATTERN.test(trimmed)) {
-    return trimmed;
-  }
+  if (SUPPORTED_DATA_URL_PATTERN.test(trimmed)) return trimmed;
 
   if (!/^https?:\/\//i.test(trimmed)) {
     console.warn("Skipping unsupported reference image URL", trimmed.slice(0, 120));
@@ -40,13 +36,11 @@ const normalizeReferenceImage = async (imageUrl: string): Promise<string | null>
       console.warn("Reference image fetch failed", response.status, trimmed);
       return null;
     }
-
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.toLowerCase().startsWith("image/")) {
       console.warn("Reference image URL did not return image content", contentType, trimmed);
       return null;
     }
-
     const base64 = arrayBufferToBase64(await response.arrayBuffer());
     const normalizedType = contentType.split(";")[0].toLowerCase();
     const safeType = normalizedType.match(/^image\/(png|jpeg|jpg|webp|gif)$/i) ? normalizedType : "image/png";
@@ -68,10 +62,73 @@ const PLATFORM_SIZES: Record<string, { width: number; height: number; label: str
   story:     { width: 1080, height: 1920, label: "Story (IG/FB)" },
 };
 
+async function logHealth(functionName: string, success: boolean, elapsedMs: number) {
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    await supabase.from("submind_health_snapshots").insert({
+      function_name: functionName,
+      success,
+      elapsed_ms: elapsedMs,
+    });
+  } catch (_) {
+    // non-blocking — never let health logging break the response
+  }
+}
+
+async function callGeminiImageGen(
+  geminiKey: string,
+  prompt: string,
+  referenceImages: string[] = [],
+): Promise<string> {
+  // Build parts: reference images first (inlineData), then text prompt
+  const parts: any[] = [];
+  for (const imgUrl of referenceImages) {
+    const mimeMatch = imgUrl.match(/^data:([^;]+)/);
+    const mimeType = mimeMatch?.[1] || "image/png";
+    const base64Data = imgUrl.split(",")[1];
+    if (base64Data) {
+      parts.push({ inlineData: { mimeType, data: base64Data } });
+    }
+  }
+  parts.push({ text: prompt });
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${geminiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "Unknown error");
+    throw new Error(`Gemini API error ${response.status}: ${errText}`);
+  }
+
+  const data = await response.json();
+  const imageData = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
+
+  if (!imageData) {
+    throw new Error("No image returned from Gemini");
+  }
+
+  return `data:${imageData.mimeType};base64,${imageData.data}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const start = Date.now();
+  let success = false;
 
   try {
     const body = await req.json();
@@ -81,9 +138,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "ok",
-          provider: "nano-banana-2",
+          provider: "gemini-2.0-flash-image",
           platforms: Object.keys(PLATFORM_SIZES),
-          version: "v2"
+          version: "v3",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -97,121 +154,61 @@ serve(async (req) => {
       );
     }
 
-    // Check for direct width/height (single image mode from Creative Studio)
+    const geminiKey = Deno.env.get("Gemini");
+    if (!geminiKey) {
+      console.error("Gemini API key not configured.");
+      return new Response(
+        JSON.stringify({ error: "Image generation not configured. Contact support." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Normalize all reference images upfront
+    const rawRefs: string[] = body.referenceImages || [];
+    const inspirationRaw: string = body.inspirationImageUrl || "";
+    const normalizedRefs = (
+      await Promise.all(rawRefs.map((u) => normalizeReferenceImage(u)))
+    ).filter((u): u is string => Boolean(u));
+    const inspirationNorm = await normalizeReferenceImage(inspirationRaw);
+    if (inspirationNorm && !normalizedRefs.includes(inspirationNorm)) {
+      normalizedRefs.unshift(inspirationNorm);
+    }
+
+    // --- Single image mode (Creative Studio — width + height provided) ---
     const directWidth = body.width as number | undefined;
     const directHeight = body.height as number | undefined;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-    // If width/height provided, use Lovable AI (Nano Banana 2) for single image
-    if (directWidth && directHeight && LOVABLE_API_KEY) {
+    if (directWidth && directHeight) {
       try {
-        const referenceImages: string[] = body.referenceImages || [];
-        const normalizedReferenceImages = (
-          await Promise.all(referenceImages.map((imgUrl) => normalizeReferenceImage(imgUrl)))
-        ).filter((imgUrl): imgUrl is string => Boolean(imgUrl));
-        const inspirationImageUrl = await normalizeReferenceImage(body.inspirationImageUrl || "");
-        if (inspirationImageUrl && !normalizedReferenceImages.includes(inspirationImageUrl)) {
-          normalizedReferenceImages.unshift(inspirationImageUrl);
-        }
+        const aspectNote = normalizedRefs.length > 0
+          ? `Using the attached reference image(s), generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio. Incorporate the product/subject from the reference(s). Instructions: ${prompt}`
+          : `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio. ${prompt}`;
 
-        // Build message content — multimodal if reference images are provided
-        let messageContent: any;
-        if (normalizedReferenceImages.length > 0) {
-          const parts: any[] = [];
-          // Add reference images first
-          for (const imgUrl of normalizedReferenceImages) {
-            parts.push({ type: "image_url", image_url: { url: imgUrl } });
-          }
-          // Add the text prompt
-          parts.push({
-            type: "text",
-            text: `Using the attached reference image(s), generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. Incorporate the product/subject from the reference image(s) into the scene. Instructions: ${prompt}`,
-          });
-          messageContent = parts;
-        } else {
-          if (referenceImages.length > 0) {
-            console.warn("All reference images were skipped after normalization; falling back to text-only generation");
-          }
-          messageContent = `Generate a high-quality marketing image at exactly ${directWidth}x${directHeight} pixels. The image should be: ${prompt}`;
-        }
+        const imageUrl = await callGeminiImageGen(geminiKey, aspectNote, normalizedRefs);
+        success = true;
 
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image-preview",
-            messages: [
-              {
-                role: "user",
-                content: messageContent,
-              },
-            ],
-            modalities: ["image", "text"],
+        return new Response(
+          JSON.stringify({
+            imageUrl,
+            size: `${directWidth}x${directHeight}`,
+            model: "gemini-2.0-flash-image",
           }),
-        });
-
-        if (!response.ok) {
-          const errText = await response.text().catch(() => "Unknown error");
-          console.error("AI gateway error:", response.status, errText);
-          if (response.status === 429) {
-            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-              status: 429,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          if (response.status === 402) {
-            return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up in workspace settings." }), {
-              status: 402,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          throw new Error(`AI gateway error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-        if (!imageUrl) {
-          throw new Error("No image returned from AI");
-        }
-
-        return new Response(JSON.stringify({
-          imageUrl,
-          size: `${directWidth}x${directHeight}`,
-          model: "nano-banana-2",
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       } catch (err) {
         console.error("Single image generation error:", err);
         return new Response(
           JSON.stringify({ error: err.message || "Image generation failed." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
+      } finally {
+        await logHealth("generate-image", success, Date.now() - start);
       }
     }
 
-    // --- Legacy multi-platform generation path ---
+    // --- Multi-platform generation path ---
     const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
-    const useBatch = body.batch !== false;
-
-    const nanoBananaKey = Deno.env.get("NANO_BANANA_API_KEY");
-    if (!nanoBananaKey) {
-      console.error("NANO_BANANA_API_KEY is not set in environment variables.");
-      return new Response(
-        JSON.stringify({ error: "Nano Banana API key not configured. Please add NANO_BANANA_API_KEY in project secrets." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const nanoBananaEndpoint = Deno.env.get("NANO_BANANA_API_URL") || "https://api.nanobanana.com/v1/generate";
-
     const results: Record<string, any> = {};
-    let totalCost = 0;
     let totalImages = 0;
 
     for (const platform of platforms) {
@@ -222,66 +219,42 @@ serve(async (req) => {
       }
 
       try {
-        const response = await fetch(nanoBananaEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${nanoBananaKey}`,
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            width: size.width,
-            height: size.height,
-            model: "nano-banana-2",
-            batch: useBatch,
-          }),
-        });
+        const platformPrompt = normalizedRefs.length > 0
+          ? `Using the attached reference image(s), generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). Instructions: ${prompt}`
+          : `Generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). ${prompt}`;
 
-        if (!response.ok) {
-          const errText = await response.text().catch(() => "Unknown error");
-          results[platform] = { error: `Nano Banana error: ${errText}`, status: response.status };
-          continue;
-        }
-
-        const data = await response.json();
-
-        const pixels = size.width * size.height;
-        let imageCost;
-        if (pixels <= 512 * 512) imageCost = useBatch ? 0.022 : 0.045;
-        else if (pixels <= 1024 * 1024) imageCost = useBatch ? 0.034 : 0.067;
-        else if (pixels <= 2048 * 2048) imageCost = useBatch ? 0.050 : 0.101;
-        else imageCost = useBatch ? 0.075 : 0.151;
-
-        totalCost += imageCost;
+        const imageUrl = await callGeminiImageGen(geminiKey, platformPrompt, normalizedRefs);
         totalImages++;
 
         results[platform] = {
-          url: data.url || data.image_url || null,
+          url: imageUrl,
           size: `${size.width}x${size.height}`,
           label: size.label,
-          cost: imageCost,
-          model: "nano-banana-2",
-          batch: useBatch,
+          model: "gemini-2.0-flash-image",
         };
       } catch (err) {
+        console.error(`Platform ${platform} image gen error:`, err);
         results[platform] = { error: err.message };
       }
     }
 
-    return new Response(JSON.stringify({
-      images: results,
-      totalImages,
-      totalCost,
-      model: "nano-banana-2",
-      batch: useBatch,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    success = totalImages > 0;
+
+    return new Response(
+      JSON.stringify({
+        images: results,
+        totalImages,
+        model: "gemini-2.0-flash-image",
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
     console.error("Image generation error:", error);
     return new Response(
       JSON.stringify({ error: "Image generation failed. Please try again." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    await logHealth("generate-image", success, Date.now() - start);
   }
 });
