@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Shield, LogOut, LayoutDashboard, Users, CreditCard,
-  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map, Megaphone,
+  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map, Megaphone, FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { label: "Roadmap", path: "/klyc_admin/roadmap", icon: Map },
   { label: "Marketing", path: "/klyc_admin/marketing", icon: Megaphone },
   { label: "Financials", path: "/klyc_admin/financials", icon: CreditCard },
+  { label: "AI Testing & Measurement", path: "/klyc_admin/ai-testing", icon: FlaskConical },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
 ];
@@ -60,7 +61,8 @@ export default function KlycAdminLayout({ children }: Props) {
                   active
                     ? "bg-primary/20 text-primary font-medium"
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                )}
+                )
+              }
               >
                 <item.icon className="w-4 h-4" />
                 {item.label}
