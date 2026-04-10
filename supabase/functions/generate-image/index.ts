@@ -51,7 +51,6 @@ const normalizeReferenceImage = async (imageUrl: string): Promise<string | null>
   }
 };
 
-// Platform-specific image size presets
 const PLATFORM_SIZES: Record<string, { width: number; height: number; label: string }> = {
   linkedin:  { width: 1200, height: 627,  label: "LinkedIn Feed" },
   twitter:   { width: 1200, height: 675,  label: "X/Twitter Post" },
@@ -74,7 +73,7 @@ async function logHealth(functionName: string, success: boolean, elapsedMs: numb
       elapsed_ms: elapsedMs,
     });
   } catch (_) {
-    // non-blocking — never let health logging break the response
+    // non-blocking
   }
 }
 
@@ -83,7 +82,6 @@ async function callGeminiImageGen(
   prompt: string,
   referenceImages: string[] = [],
 ): Promise<string> {
-  // Build parts: reference images first (inlineData), then text prompt
   const parts: any[] = [];
   for (const imgUrl of referenceImages) {
     const mimeMatch = imgUrl.match(/^data:([^;]+)/);
@@ -133,7 +131,6 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    // Health check
     if (body.action === "health") {
       return new Response(
         JSON.stringify({
@@ -154,16 +151,15 @@ serve(async (req) => {
       );
     }
 
-    const geminiKey = Deno.env.get("Gemini");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
     if (!geminiKey) {
-      console.error("Gemini API key not configured.");
+      console.error("GEMINI_API_KEY not configured.");
       return new Response(
         JSON.stringify({ error: "Image generation not configured. Contact support." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Normalize all reference images upfront
     const rawRefs: string[] = body.referenceImages || [];
     const inspirationRaw: string = body.inspirationImageUrl || "";
     const normalizedRefs = (
@@ -174,7 +170,6 @@ serve(async (req) => {
       normalizedRefs.unshift(inspirationNorm);
     }
 
-    // --- Single image mode (Creative Studio — width + height provided) ---
     const directWidth = body.width as number | undefined;
     const directHeight = body.height as number | undefined;
 
@@ -206,7 +201,6 @@ serve(async (req) => {
       }
     }
 
-    // --- Multi-platform generation path ---
     const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
     const results: Record<string, any> = {};
     let totalImages = 0;
