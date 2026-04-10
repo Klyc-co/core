@@ -47,7 +47,8 @@ type ChatMessage = {
   compressionStats?: CompressionStats;
 };
 
-const ORCHESTRATOR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/orchestrator`;
+// ── Route all chat through klyc-chat (C-lane entry point) ───────────────────
+const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
 const SidebarChat = () => {
@@ -112,7 +113,8 @@ const SidebarChat = () => {
       return data;
     }
     if (!data || typeof data !== "object") return "";
-    for (const key of ["reply", "response", "text", "content", "message", "result"]) {
+    // klyc-chat returns structured response with .message as primary text field
+    for (const key of ["message", "reply", "response", "text", "content", "result"]) {
       const val = data[key];
       if (typeof val === "string" && val.trim().length > 0) return val;
     }
@@ -126,19 +128,28 @@ const SidebarChat = () => {
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    const resp = await fetch(ORCHESTRATOR_URL, {
+    // Build messages array for klyc-chat: history + current user message
+    const messages = [
+      ...(payload.history || []),
+      { role: "user", content: payload.message },
+    ];
+
+    const resp = await fetch(KLYC_CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        messages,
+        request_id: crypto.randomUUID(),
+      }),
     });
 
     if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
-      throw new Error(errorData.reply || errorData.error || `Request failed (${resp.status})`);
+      throw new Error(errorData.message || errorData.error || `Request failed (${resp.status})`);
     }
 
     const data = await resp.json();
