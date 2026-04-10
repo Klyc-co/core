@@ -10,7 +10,7 @@ const EMBED_MODEL = "text-embedding-004";
 
 async function generateEmbedding(text: string, geminiKey: string): Promise<number[]> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
