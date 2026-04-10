@@ -6,9 +6,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 // ── Rate-limit config ──
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
-const RATE_LIMIT_MAX = 30; // 30 requests per window
+const RATE_LIMIT_MAX = 30;
 
 // ── System prompt ──
 const SYSTEM_PROMPT = `You are Klyc, an AI marketing strategist and campaign command center.
@@ -19,6 +41,7 @@ IMPORTANT RULES:
 - You ONLY create drafts and scheduling suggestions. Publishing is handled separately.
 - You guide users through campaign creation via structured questions.
 - When a user wants to create a campaign, interview them step-by-step for: campaign name, target audience, platforms, content type, schedule, and goals.
+- NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 CAMPAIGN INTERVIEW MODE:
 When the intent is "campaign_interview", you must ask questions sequentially to collect:
@@ -46,105 +69,91 @@ When all fields are collected, set draft_updates._campaign_complete to true and 
 ONBOARDING INTERVIEW MODE:
 When the intent is "onboarding_interview", ask questions about the user's business one at a time.`;
 
+// ── Anthropic tool definition (native format) ──
 const TOOLS = [
   {
-    type: "function",
-    function: {
-      name: "klyc_respond",
-      description: "Respond to the user with structured intent, message, optional follow-up questions, and optional draft updates for campaign data.",
-      parameters: {
-        type: "object",
-        properties: {
-          intent: {
-            type: "string",
-            enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "other"],
-            description: "The detected intent of the user's message.",
-          },
-          message: {
-            type: "string",
-            description: "The conversational response to show the user.",
-          },
-          next_questions: {
-            type: "array",
-            description: "Follow-up questions to gather more info.",
-            items: {
-              type: "object",
-              properties: {
-                field: { type: "string" },
-                question: { type: "string" },
-                type: { type: "string", enum: ["text", "select", "date", "bool"] },
-                options: { type: "array", items: { type: "string" } },
-              },
-              required: ["field", "question", "type"],
-              additionalProperties: false,
-            },
-          },
-          draft_updates: {
+    name: "klyc_respond",
+    description: "Respond to the user with structured intent, message, optional follow-up questions, and optional draft updates for campaign data.",
+    input_schema: {
+      type: "object",
+      properties: {
+        intent: {
+          type: "string",
+          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "other"],
+          description: "The detected intent of the user's message.",
+        },
+        message: {
+          type: "string",
+          description: "The conversational response to show the user.",
+        },
+        next_questions: {
+          type: "array",
+          description: "Follow-up questions to gather more info.",
+          items: {
             type: "object",
-            description: "Partial updates to apply to the campaign draft or onboarding profile.",
             properties: {
-              // Campaign draft fields (nested under campaign_draft)
-              campaign_draft: {
-                type: "object",
-                description: "Campaign draft fields collected during voice campaign interview.",
-                properties: {
-                  campaign_name: { type: "string" },
-                  goal: { type: "string" },
-                  theme: { type: "string" },
-                  platforms: {
-                    oneOf: [
-                      { type: "string" },
-                      { type: "array", items: { type: "string" } },
-                    ],
-                  },
-                  duration_days: { type: "number" },
-                  posts_per_week: { type: "number" },
-                  cta: { type: "string" },
-                  audience_segment: { type: "string" },
-                  target_audience_description: { type: "string" },
-                  product_focus: { type: "string" },
-                },
-                additionalProperties: false,
-              },
-              // Legacy campaign fields (for launch_campaign intent)
-              campaign_idea: { type: "string" },
-              content_type: { type: "string" },
-              target_audience: { type: "string" },
-              campaign_goals: { type: "string" },
-              campaign_objective: { type: "string" },
-              target_audience_description: { type: "string" },
-              post_caption: { type: "string" },
-              tags: { type: "array", items: { type: "string" } },
-              // Onboarding fields
-              business_name: { type: "string" },
-              company_description: { type: "string" },
-              description: { type: "string" },
-              industry: { type: "string" },
-              value_proposition: { type: "string" },
-              positioning: { type: "string" },
-              tone: { type: "string" },
-              writing_style: { type: "string" },
-              emoji_usage: { type: "string" },
-              main_competitors: { type: "string" },
-              product_category: { type: "string" },
-              website: { type: "string" },
-              marketing_goals: { type: "string" },
-              _onboarding_complete: { type: "boolean" },
-              _campaign_complete: { type: "boolean" },
+              field: { type: "string" },
+              question: { type: "string" },
+              type: { type: "string", enum: ["text", "select", "date", "bool"] },
+              options: { type: "array", items: { type: "string" } },
             },
-            additionalProperties: false,
-          },
-          risk_level: {
-            type: "string",
-            enum: ["low", "medium", "high"],
-          },
-          requires_approval: {
-            type: "boolean",
+            required: ["field", "question", "type"],
           },
         },
-        required: ["intent", "message"],
-        additionalProperties: false,
+        draft_updates: {
+          type: "object",
+          description: "Partial updates to apply to the campaign draft or onboarding profile.",
+          properties: {
+            campaign_draft: {
+              type: "object",
+              description: "Campaign draft fields collected during voice campaign interview.",
+              properties: {
+                campaign_name: { type: "string" },
+                goal: { type: "string" },
+                theme: { type: "string" },
+                platforms: { type: "array", items: { type: "string" } },
+                duration_days: { type: "number" },
+                posts_per_week: { type: "number" },
+                cta: { type: "string" },
+                audience_segment: { type: "string" },
+                target_audience_description: { type: "string" },
+                product_focus: { type: "string" },
+              },
+            },
+            campaign_idea: { type: "string" },
+            content_type: { type: "string" },
+            target_audience: { type: "string" },
+            campaign_goals: { type: "string" },
+            campaign_objective: { type: "string" },
+            target_audience_description: { type: "string" },
+            post_caption: { type: "string" },
+            tags: { type: "array", items: { type: "string" } },
+            business_name: { type: "string" },
+            company_description: { type: "string" },
+            description: { type: "string" },
+            industry: { type: "string" },
+            value_proposition: { type: "string" },
+            positioning: { type: "string" },
+            tone: { type: "string" },
+            writing_style: { type: "string" },
+            emoji_usage: { type: "string" },
+            main_competitors: { type: "string" },
+            product_category: { type: "string" },
+            website: { type: "string" },
+            marketing_goals: { type: "string" },
+            _onboarding_complete: { type: "boolean" },
+            _campaign_complete: { type: "boolean" },
+          },
+        },
+        risk_level: {
+          type: "string",
+          enum: ["low", "medium", "high"],
+        },
+        requires_approval: {
+          type: "boolean",
+        },
       },
+      required: ["intent", "message"],
     },
   },
 ];
@@ -158,44 +167,25 @@ function errorResponse(status: number, message: string) {
   });
 }
 
-async function checkRateLimit(
-  serviceClient: any,
-  userId: string,
-): Promise<boolean> {
+async function checkRateLimit(serviceClient: any, userId: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
-
   const { count, error } = await serviceClient
     .from("ai_requests")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .gte("created_at", windowStart);
-
-  if (error) {
-    console.error("Rate limit check error:", error);
-    return false; // fail open on DB error
-  }
-
+  if (error) { console.error("Rate limit check error:", error); return false; }
   return (count || 0) >= RATE_LIMIT_MAX;
 }
 
 async function recordRequest(
-  serviceClient: any,
-  requestId: string,
-  userId: string,
-  intent: string | null,
-  clientId: string | null,
-  tokenEstimate: number | null,
+  serviceClient: any, requestId: string, userId: string,
+  intent: string | null, clientId: string | null, tokenEstimate: number | null,
 ): Promise<boolean> {
   const { error } = await serviceClient.from("ai_requests").insert({
-    request_id: requestId,
-    user_id: userId,
-    intent,
-    client_id: clientId,
-    token_count_estimate: tokenEstimate,
+    request_id: requestId, user_id: userId, intent, client_id: clientId, token_count_estimate: tokenEstimate,
   });
-
   if (error) {
-    // Unique constraint violation = duplicate request
     if (error.code === "23505") return false;
     console.error("Record request error:", error);
   }
@@ -203,38 +193,23 @@ async function recordRequest(
 }
 
 async function emitActivityEvent(
-  serviceClient: any,
-  userId: string,
-  eventType: string,
-  message: string,
-  clientId?: string,
-  metadata?: Record<string, any>,
+  serviceClient: any, userId: string, eventType: string, message: string,
+  clientId?: string, metadata?: Record<string, any>,
 ) {
   await serviceClient.from("activity_events").insert({
-    user_id: userId,
-    event_type: eventType,
-    event_message: message,
-    client_id: clientId || null,
-    metadata: metadata || {},
+    user_id: userId, event_type: eventType, event_message: message,
+    client_id: clientId || null, metadata: metadata || {},
   });
 }
 
 async function validateMarketerAccess(
-  serviceClient: any,
-  userId: string,
-  marketerClientId: string,
+  serviceClient: any, userId: string, marketerClientId: string,
 ): Promise<{ marketer_id: string; client_id: string } | null> {
   const { data } = await serviceClient
-    .from("marketer_clients")
-    .select("marketer_id, client_id")
-    .eq("id", marketerClientId)
-    .single();
-
+    .from("marketer_clients").select("marketer_id, client_id")
+    .eq("id", marketerClientId).single();
   if (!data) return null;
-
-  // User must be either the marketer or the client
   if (data.marketer_id !== userId && data.client_id !== userId) return null;
-
   return data;
 }
 
@@ -245,12 +220,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
     // ── 1. JWT Authentication ──
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return errorResponse(401, "Missing authorization");
-    }
+    if (!authHeader?.startsWith("Bearer ")) return errorResponse(401, "Missing authorization");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -262,31 +237,17 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
-      return errorResponse(401, "Invalid authorization token");
-    }
+    if (claimsError || !claimsData?.claims?.sub) return errorResponse(401, "Invalid authorization token");
 
     const userId = claimsData.claims.sub as string;
     const serviceClient = createClient(supabaseUrl, serviceKey);
 
     // ── 2. Parse body ──
     const body = await req.json();
-    const {
-      messages,
-      client_id,
-      marketer_client_id,
-      context_summary,
-      draft_id,
-      request_id,
-      timestamp,
-    } = body;
+    const { messages, client_id, marketer_client_id, context_summary, draft_id, request_id, timestamp } = body;
 
     // ── 3. Request signing validation ──
-    if (!request_id || typeof request_id !== "string") {
-      return errorResponse(400, "Missing request_id");
-    }
-
-    // Reject requests older than 5 minutes (replay prevention)
+    if (!request_id || typeof request_id !== "string") return errorResponse(400, "Missing request_id");
     if (timestamp) {
       const reqTime = new Date(timestamp).getTime();
       if (isNaN(reqTime) || Math.abs(Date.now() - reqTime) > 5 * 60 * 1000) {
@@ -296,9 +257,7 @@ serve(async (req) => {
 
     // ── 4. Duplicate request check ──
     const isUnique = await recordRequest(serviceClient, request_id, userId, null, client_id || userId, null);
-    if (!isUnique) {
-      return errorResponse(409, "Duplicate request_id");
-    }
+    if (!isUnique) return errorResponse(409, "Duplicate request_id");
 
     // ── 5. Rate limiting ──
     const rateLimited = await checkRateLimit(serviceClient, userId);
@@ -310,64 +269,55 @@ serve(async (req) => {
     // ── 6. Marketer-client access validation ──
     if (marketer_client_id) {
       const access = await validateMarketerAccess(serviceClient, userId, marketer_client_id);
-      if (!access) {
-        return errorResponse(403, "Unauthorized client access");
-      }
+      if (!access) return errorResponse(403, "Unauthorized client access");
     }
 
     const effectiveClientId = client_id || userId;
 
-    // ── 7. Call AI (never from client) ──
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    // ── 7. Call Anthropic API ──
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     let enrichedSystem = SYSTEM_PROMPT;
-    if (context_summary) {
-      enrichedSystem += `\n\nClient context:\n${context_summary}`;
-    }
+    if (context_summary) enrichedSystem += `\n\nClient context:\n${context_summary}`;
 
-    // Log minimal metadata only (no full prompts)
     console.log("Klyc chat:", JSON.stringify({
-      user_id: userId,
-      client_id: effectiveClientId,
-      message_count: messages?.length || 0,
-      request_id,
+      user_id: userId, client_id: effectiveClientId,
+      message_count: messages?.length || 0, request_id,
     }));
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: enrichedSystem },
-          ...(messages || []),
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: enrichedSystem,
         tools: TOOLS,
-        tool_choice: { type: "function", function: { name: "klyc_respond" } },
+        tool_choice: { type: "tool", name: "klyc_respond" },
+        messages: messages || [],
       }),
     });
 
     if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return errorResponse(429, "AI rate limits exceeded, please try again later.");
-      }
-      if (aiResponse.status === 402) {
-        return errorResponse(402, "Payment required, please add funds.");
-      }
+      if (aiResponse.status === 429) return errorResponse(429, "AI rate limits exceeded, please try again later.");
+      if (aiResponse.status === 402) return errorResponse(402, "Payment required, please add funds.");
       const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      throw new Error("AI gateway error");
+      console.error("Anthropic API error:", aiResponse.status, errText);
+      throw new Error("Anthropic API error");
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
 
-    // Estimate token usage for audit
-    const tokenEstimate = aiData.usage?.total_tokens || null;
+    // Anthropic tool use response format: content[].type === "tool_use"
+    const toolUse = aiData.content?.find((c: any) => c.type === "tool_use");
+    const tokensIn = aiData.usage?.input_tokens ?? null;
+    const tokensOut = aiData.usage?.output_tokens ?? null;
+    const tokenEstimate = tokensIn && tokensOut ? tokensIn + tokensOut : null;
 
     let structured = {
       intent: "other" as string,
@@ -378,29 +328,23 @@ serve(async (req) => {
       requires_approval: false,
     };
 
-    if (toolCall?.function?.arguments) {
-      try {
-        const parsed = JSON.parse(toolCall.function.arguments);
-        structured = {
-          intent: parsed.intent || "other",
-          message: parsed.message || structured.message,
-          next_questions: parsed.next_questions || [],
-          draft_updates: parsed.draft_updates || {},
-          risk_level: parsed.risk_level || "low",
-          requires_approval: parsed.requires_approval ?? false,
-        };
-      } catch (e) {
-        console.error("Failed to parse tool call arguments:", e);
-      }
+    if (toolUse?.input) {
+      // Anthropic tool input is already a parsed object (not a JSON string)
+      const parsed = toolUse.input;
+      structured = {
+        intent: parsed.intent || "other",
+        message: parsed.message || structured.message,
+        next_questions: parsed.next_questions || [],
+        draft_updates: parsed.draft_updates || {},
+        risk_level: parsed.risk_level || "low",
+        requires_approval: parsed.requires_approval ?? false,
+      };
     }
 
-    // ── 8. Update ai_requests record with intent + token count ──
+    // ── 8. Update ai_requests record ──
     await serviceClient
       .from("ai_requests")
-      .update({
-        intent: structured.intent,
-        token_count_estimate: tokenEstimate,
-      })
+      .update({ intent: structured.intent, token_count_estimate: tokenEstimate })
       .eq("request_id", request_id);
 
     // ── 9. Persist messages if marketer_client_id provided ──
@@ -411,52 +355,42 @@ serve(async (req) => {
         if (mcData) {
           const receiverId = userId === mcData.marketer_id ? mcData.client_id : mcData.marketer_id;
           await serviceClient.from("messages").insert({
-            sender_id: userId,
-            receiver_id: receiverId,
-            marketer_client_id: marketer_client_id,
-            content: lastUserMsg.content,
+            sender_id: userId, receiver_id: receiverId,
+            marketer_client_id, content: lastUserMsg.content,
           });
         }
       }
     }
 
-    // ── 10. Campaign draft upsert (for launch_campaign and campaign_interview intents) ──
+    // ── 10. Campaign draft upsert ──
     const draftIntents = ["launch_campaign", "campaign_interview", "campaign_step", "campaign_summary"];
     if (draftIntents.includes(structured.intent) && Object.keys(structured.draft_updates).length > 0) {
-      // Filter out non-column fields and nested campaign_draft
       const { _draft_id, _onboarding_complete, _campaign_complete, campaign_draft, ...draftCols } = structured.draft_updates;
 
-      // For campaign_interview intents, the client-side handles upsert via campaignInterviewHelpers
-      // Server-side only handles launch_campaign legacy flow
       if (structured.intent === "launch_campaign") {
         if (draft_id) {
-          await serviceClient
-            .from("campaign_drafts")
+          await serviceClient.from("campaign_drafts")
             .update({ ...draftCols, updated_at: new Date().toISOString() })
             .eq("id", draft_id);
           structured.draft_updates._draft_id = draft_id;
         } else if (Object.keys(draftCols).length > 0) {
-          const { data: newDraft } = await serviceClient
-            .from("campaign_drafts")
-            .insert({
-              user_id: userId,
-              client_id: effectiveClientId,
-              ...draftCols,
-            })
-            .select("id")
-            .single();
-
-          if (newDraft) {
-            structured.draft_updates._draft_id = newDraft.id;
-          }
+          const { data: newDraft } = await serviceClient.from("campaign_drafts")
+            .insert({ user_id: userId, client_id: effectiveClientId, ...draftCols })
+            .select("id").single();
+          if (newDraft) structured.draft_updates._draft_id = newDraft.id;
         }
       }
     }
+
+    const elapsed = Date.now() - startTime;
+    await logHealth("klyc-chat", true, elapsed, tokensIn, tokensOut);
 
     return new Response(JSON.stringify(structured), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    const elapsed = Date.now() - startTime;
+    await logHealth("klyc-chat", false, elapsed, null, null);
     console.error("Klyc chat error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),

@@ -1,5 +1,5 @@
 // ============================================================
-// IMAGE SUBMIND — Asset Management Engine
+// IMAGE — Asset Management Engine
 // Reviews user-provided images, assesses platform suitability,
 // manages reference links. Zero binary media stored.
 // Only speaks KNP.
@@ -36,6 +36,28 @@ function knpChecksum(segments: Record<string, string>): string {
   return "Ψ" + Math.abs(h).toString(36);
 }
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 // ---- Platform Sizing Specs ----
 
 interface PlatformImageSpec {
@@ -44,7 +66,7 @@ interface PlatformImageSpec {
   width: number;
   height: number;
   aspect_ratio: string;
-  min_resolution: number; // minimum dimension
+  min_resolution: number;
 }
 
 const PLATFORM_SPECS: PlatformImageSpec[] = [
@@ -76,23 +98,20 @@ async function checkImageUrl(url: string): Promise<{ reachable: boolean; content
   try {
     const response = await fetch(url, { method: "HEAD", redirect: "follow" });
     const contentType = response.headers.get("content-type");
-    return {
-      reachable: response.ok,
-      contentType: contentType,
-    };
+    return { reachable: response.ok, contentType };
   } catch {
     return { reachable: false, contentType: null };
   }
 }
 
-// ---- Brand Consistency Scoring (WP-31/32/33) ----
+// ---- Brand Consistency Scoring ----
 
 interface BrandDimensionScores {
-  color_harmony: number;    // weight 0.25
-  typography: number;       // weight 0.20
-  logo_placement: number;   // weight 0.20
-  motif_repetition: number; // weight 0.15
-  layout_framework: number; // weight 0.20
+  color_harmony: number;
+  typography: number;
+  logo_placement: number;
+  motif_repetition: number;
+  layout_framework: number;
 }
 
 function computeBrandScore(scores: BrandDimensionScores): number {
@@ -105,7 +124,7 @@ function computeBrandScore(scores: BrandDimensionScores): number {
   ) * 100) / 100;
 }
 
-// ---- AI-Powered Image Review ----
+// ---- AI-Powered Image Review (Anthropic) ----
 
 interface ImageReview {
   url: string;
@@ -124,7 +143,7 @@ async function reviewImages(
   brief: string,
   useContext: string,
 ): Promise<ImageReview[]> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
 
   const specs = getSpecsForPlatforms(platforms);
   const specsDesc = specs
@@ -147,20 +166,7 @@ async function reviewImages(
   }
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.3,
-        messages: [
-          {
-            role: "system",
-            content: `You are the KLYC Image Submind — a Visual Design Direction engine.
-You review image assets for brand consistency and platform compliance. You do NOT generate images.
+    const systemPrompt = `You are a visual design direction and brand compliance reviewer. You review image assets for brand consistency and platform compliance. NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 For each image URL, assess and score brand consistency on 5 dimensions (0.0-1.0 each):
 - color_harmony (weight 0.25): Match with brand palette
@@ -173,13 +179,23 @@ Platform requirements: ${specsDesc}
 
 Since you cannot view actual images, score based on URL context, file patterns, and provided metadata. Be conservative — flag unknowns.
 
-Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reason":null|"reason","brand_alignment":"assessment","brand_dimension_scores":{"color_harmony":0.0-1.0,"typography":0.0-1.0,"logo_placement":0.0-1.0,"motif_repetition":0.0-1.0,"layout_framework":0.0-1.0},"platform_suitability":{"platform":true/false},"suggestions":["..."]}]`,
-          },
-          {
-            role: "user",
-            content: `Review these image URLs for a campaign:\nBrief: ${brief.slice(0, 500)}\nUse context: ${useContext}\nTarget platforms: ${platforms.join(", ")}\n\nURLs:\n${imageUrls.map((u, i) => `${i + 1}. ${u}`).join("\n")}`,
-          },
-        ],
+Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reason":null|"reason","brand_alignment":"assessment","brand_dimension_scores":{"color_harmony":0.0-1.0,"typography":0.0-1.0,"logo_placement":0.0-1.0,"motif_repetition":0.0-1.0,"layout_framework":0.0-1.0},"platform_suitability":{"platform":true/false},"suggestions":["..."]}]`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{
+          role: "user",
+          content: `Review these image URLs for a campaign:\nBrief: ${brief.slice(0, 500)}\nUse context: ${useContext}\nTarget platforms: ${platforms.join(", ")}\n\nURLs:\n${imageUrls.map((u, i) => `${i + 1}. ${u}`).join("\n")}`,
+        }],
       }),
     });
 
@@ -195,7 +211,7 @@ Return JSON array: [{"url":"...","status":"accepted"|"rejected","rejection_reaso
     }
 
     const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content;
+    const rawContent = data.content?.[0]?.text;
     if (!rawContent) throw new Error("No content");
 
     const jsonMatch = rawContent.match(/\[[\s\S]*\]/);
@@ -241,7 +257,6 @@ serve(async (req: Request) => {
     const clientId = segments[KNP.θc] || segments.θc || null;
     const useContext = segments.zq || segments[KNP.ζq] || "HERO";
 
-    // Parse image URLs (may be ⊕-joined or JSON array)
     let imageUrls: string[] = [];
     if (imageUrlsRaw.startsWith("[")) {
       try { imageUrls = JSON.parse(imageUrlsRaw); } catch { imageUrls = [imageUrlsRaw]; }
@@ -253,12 +268,10 @@ serve(async (req: Request) => {
       ? platformsRaw.split(KNP_VALUE_JOINER).map((p: string) => p.trim().toUpperCase()).filter(Boolean)
       : ["INSTAGRAM"];
 
-    // Initialize Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get user ID
     const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
     if (authHeader) {
@@ -267,26 +280,17 @@ serve(async (req: Request) => {
       userId = userData?.user?.id || null;
     }
 
-    // Check URL reachability in parallel
-    const reachabilityChecks = await Promise.all(
-      imageUrls.map((url) => checkImageUrl(url))
-    );
+    const reachabilityChecks = await Promise.all(imageUrls.map((url) => checkImageUrl(url)));
 
-    // Filter reachable URLs
     const reachableUrls: string[] = [];
     const staleUrls: string[] = [];
     imageUrls.forEach((url, i) => {
-      if (reachabilityChecks[i].reachable) {
-        reachableUrls.push(url);
-      } else {
-        staleUrls.push(url);
-      }
+      if (reachabilityChecks[i].reachable) reachableUrls.push(url);
+      else staleUrls.push(url);
     });
 
-    // AI review of reachable images
     const reviews = await reviewImages(reachableUrls, platforms, brief, useContext);
 
-    // Add stale entries
     for (const url of staleUrls) {
       reviews.push({
         url,
@@ -300,7 +304,6 @@ serve(async (req: Request) => {
       });
     }
 
-    // Get platform specs for accepted images
     const specs = getSpecsForPlatforms(platforms);
     const specsMap: Record<string, PlatformImageSpec[]> = {};
     for (const s of specs) {
@@ -308,7 +311,6 @@ serve(async (req: Request) => {
       specsMap[s.platform].push(s);
     }
 
-    // Persist to image_assets
     let referencesStored = false;
     if (userId) {
       const inserts = reviews.map((r) => ({
@@ -322,10 +324,7 @@ serve(async (req: Request) => {
         reviewed_at: new Date().toISOString(),
       }));
 
-      const { error: insertError } = await supabase
-        .from("image_assets")
-        .insert(inserts);
-
+      const { error: insertError } = await supabase.from("image_assets").insert(inserts);
       if (insertError) {
         console.warn("Image assets insert warning:", insertError.message);
       } else {
@@ -333,10 +332,8 @@ serve(async (req: Request) => {
       }
     }
 
-    // Collect suggestions
     const allSuggestions = reviews.flatMap((r) => r.suggestions).filter(Boolean);
 
-    // Build KNP response
     const reviewEncoded = reviews.map((r) =>
       [
         `url${KNP_FIELD_SEPARATOR}${r.url.slice(0, 200)}`,
@@ -355,23 +352,19 @@ serve(async (req: Request) => {
       [KNP.λv]: specsEncoded || KNP_NULL_MARKER,
     };
 
-    if (referencesStored) {
-      responseSegments[`${KNP.θc}${KNP_FIELD_SEPARATOR}REFERENCES_STORED`] = KNP_NULL_MARKER;
-    }
-    if (allSuggestions.length > 0) {
-      responseSegments[`zq${KNP_FIELD_SEPARATOR}SUGGESTIONS`] = KNP_NULL_MARKER;
-    }
+    if (referencesStored) responseSegments[`${KNP.θc}${KNP_FIELD_SEPARATOR}REFERENCES_STORED`] = KNP_NULL_MARKER;
+    if (allSuggestions.length > 0) responseSegments[`zq${KNP_FIELD_SEPARATOR}SUGGESTIONS`] = KNP_NULL_MARKER;
 
     const elapsed = Date.now() - startTime;
+    await logHealth("image", true, elapsed, null, null);
 
-    const response = {
+    return new Response(JSON.stringify({
       version: KNP_VERSION,
       submind: "image",
       status: "complete",
       checksum: knpChecksum(responseSegments),
       timestamp: Date.now(),
       ...responseSegments,
-      // Structured data for Orchestrator
       reviews,
       accepted_count: reviews.filter((r) => r.status === "accepted").length,
       rejected_count: reviews.filter((r) => r.status === "rejected").length,
@@ -380,32 +373,29 @@ serve(async (req: Request) => {
       references_stored: referencesStored,
       suggestions: allSuggestions,
       elapsed_ms: elapsed,
-    };
-
-    return new Response(JSON.stringify(response), {
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (e) {
     console.error("Image submind error:", e);
+    const elapsed = Date.now() - startTime;
+    await logHealth("image", false, elapsed, null, null);
     const errorSegments: Record<string, string> = {
       [KNP.σo]: KNP_NULL_MARKER,
       [KNP.λv]: KNP_NULL_MARKER,
     };
-    return new Response(
-      JSON.stringify({
-        version: KNP_VERSION,
-        submind: "image",
-        status: "error",
-        checksum: knpChecksum(errorSegments),
-        ...errorSegments,
-        error: e instanceof Error ? e.message : "Unknown error",
-        elapsed_ms: Date.now() - startTime,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+    return new Response(JSON.stringify({
+      version: KNP_VERSION,
+      submind: "image",
+      status: "error",
+      checksum: knpChecksum(errorSegments),
+      ...errorSegments,
+      error: e instanceof Error ? e.message : "Unknown error",
+      elapsed_ms: elapsed,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
