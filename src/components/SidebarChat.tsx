@@ -252,8 +252,10 @@ const SidebarChat = () => {
     if (!overrideText) setInput("");
     setQuestionAnswers({});
 
-    // ── Client-side nav intent: instant redirect without waiting for AI ──
-    const navMatch = NAV_INTENTS.find((n) => n.pattern.test(text));
+    // ── Client-side nav intent: only fire for SHORT navigation-only messages ──
+    // If the message is detailed (>80 chars) it's a brief/request — let the AI handle it fully
+    const isNavOnlyMessage = text.trim().length <= 80;
+    const navMatch = isNavOnlyMessage ? NAV_INTENTS.find((n) => n.pattern.test(text)) : null;
     if (navMatch) {
       setMessages((prev) => [...prev, { role: "assistant", content: navMatch.reply }]);
       setTimeout(() => navigate(navMatch.route), 400);
