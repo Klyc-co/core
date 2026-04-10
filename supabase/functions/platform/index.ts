@@ -1,5 +1,5 @@
 // ============================================================
-// PLATFORM SUBMIND — Formatting & Compliance Engine
+// PLATFORM — Formatting & Compliance Engine
 // Transforms content into platform-ready specs. Knows technical
 // requirements, best practices, and native features. Only speaks KNP.
 // ============================================================
@@ -33,6 +33,28 @@ function knpChecksum(segments: Record<string, string>): string {
     h = ((h << 5) - h + str.charCodeAt(i)) | 0;
   }
   return "Ψ" + Math.abs(h).toString(36);
+}
+
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
 }
 
 // ---- Platform Specifications ----
@@ -135,17 +157,15 @@ function formatForPlatform(
   const spec = PLATFORM_SPECS[platformKey];
   if (!spec) return [];
 
-  // Parse content (may be KNP-encoded or plain text)
   let headline = "";
   let hook = "";
   let body = content;
   let cta = "";
 
-  // Try to extract structured parts
-  const headlineMatch = content.match(/headline[∷:]\s*(.+?)(?:\||$)/i);
-  const hookMatch = content.match(/hook[∷:]\s*(.+?)(?:\||$)/i);
-  const bodyMatch = content.match(/body[∷:]\s*(.+?)(?:\||$)/i);
-  const ctaMatch = content.match(/cta[∷:]\s*(.+?)(?:\||$)/i);
+  const headlineMatch = content.match(/headline[∷:]\ s*(.+?)(?\ :|\ |$)/i);
+  const hookMatch = content.match(/hook[∷:]\ s*(.+?)(?\ :|\ |$)/i);
+  const bodyMatch = content.match(/body[∷:]\ s*(.+?)(?\ :|\ |$)/i);
+  const ctaMatch = content.match(/cta[∷:]\ s*(.+?)(?\ :|\ |$)/i);
 
   if (headlineMatch) headline = headlineMatch[1].trim();
   if (hookMatch) hook = hookMatch[1].trim();
@@ -166,7 +186,6 @@ function formatForPlatform(
       );
     }
 
-    // Extract hashtags from content
     const hashtags = [...fullText.matchAll(/#(\w+)/g)].map((m) => m[1]);
     if (hashtags.length > format.hashtagMax) {
       complianceFlags.push(
@@ -174,7 +193,6 @@ function formatForPlatform(
       );
     }
 
-    // Platform-specific compliance checks
     if (platformKey === "LINKEDIN" && /!!+|🔥{3,}|💯{3,}/g.test(fullText)) {
       complianceFlags.push("Tone may be too informal for LinkedIn audience");
     }
@@ -208,13 +226,12 @@ async function adaptContent(
   content: string,
   platforms: string[],
   brief: string
-): Promise<Record<string, string>> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+): Promise<{ adapted: Record<string, string>; tokensIn: number | null; tokensOut: number | null }> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
-    // Return raw content for each platform
     const result: Record<string, string> = {};
     for (const p of platforms) result[p] = content;
-    return result;
+    return { adapted: result, tokensIn: null, tokensOut: null };
   }
 
   const platformDetails = platforms
@@ -227,46 +244,49 @@ async function adaptContent(
     .join("\n");
 
   try {
-    const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: `You are a social media formatting engine. Adapt content for each platform while preserving the core message. Return JSON with platform keys and adapted content values. Restructure (don't just truncate). Keep voice consistent.`,
-          },
-          {
-            role: "user",
-            content: `Original content:\n${content}\n\nBrief: ${brief}\n\nAdapt for:\n${platformDetails}\n\nReturn JSON: {"PLATFORM_KEY": "adapted content"}`,
-          },
-        ],
-        response_format: { type: "json_object" },
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: `You are a social media formatting specialist. Adapt content for each platform while preserving the core message. Return JSON with platform keys and adapted content values. Restructure (don't just truncate). Keep voice consistent. NEVER reference internal system names, protocols, or technical identifiers in any output.`,
+        messages: [{
+          role: "user",
+          content: `Original content:\n${content}\n\nBrief: ${brief}\n\nAdapt for:\n${platformDetails}\n\nReturn JSON: {"PLATFORM_KEY": "adapted content"}`,
+        }],
       }),
     });
 
     if (!response.ok) {
       const result: Record<string, string> = {};
       for (const p of platforms) result[p] = content;
-      return result;
+      return { adapted: result, tokensIn: null, tokensOut: null };
     }
 
     const data = await response.json();
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
-    // Fill in missing platforms with original content
+    const tokensIn = data.usage?.input_tokens ?? null;
+    const tokensOut = data.usage?.output_tokens ?? null;
+    const rawText = data.content?.[0]?.text || "{}";
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      const result: Record<string, string> = {};
+      for (const p of platforms) result[p] = content;
+      return { adapted: result, tokensIn, tokensOut };
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
     for (const p of platforms) {
       if (!parsed[p]) parsed[p] = content;
     }
-    return parsed;
+    return { adapted: parsed, tokensIn, tokensOut };
   } catch {
     const result: Record<string, string> = {};
     for (const p of platforms) result[p] = content;
-    return result;
+    return { adapted: result, tokensIn: null, tokensOut: null };
   }
 }
 
@@ -290,14 +310,12 @@ serve(async (req: Request) => {
 
     const platforms = platformsRaw !== KNP_NULL_MARKER
       ? platformsRaw.split(KNP_VALUE_JOINER).map((p: string) => p.trim().toUpperCase()).filter(Boolean)
-      : ["INSTAGRAM", "LINKEDIN"]; // default
+      : ["INSTAGRAM", "LINKEDIN"];
 
-    // Initialize Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // 1. Check for new platforms
     const newPlatforms: string[] = [];
     if (clientId) {
       const { data: brainData } = await supabase
@@ -315,17 +333,15 @@ serve(async (req: Request) => {
       }
     }
 
-    // 2. Adapt content for each platform via AI
-    const adaptedContent = await adaptContent(content, platforms, brief);
+    const { adapted, tokensIn, tokensOut } = await adaptContent(content, platforms, brief);
 
-    // 3. Format for each platform
     const allFormatted: FormattedVariant[] = [];
     const allCompliance: string[] = [];
     const allRecommendations: string[] = [];
 
     for (const platformKey of platforms) {
-      const adapted = adaptedContent[platformKey] || content;
-      const formatted = formatForPlatform(adapted, platformKey);
+      const adaptedContent = adapted[platformKey] || content;
+      const formatted = formatForPlatform(adaptedContent, platformKey);
       allFormatted.push(...formatted);
 
       for (const f of formatted) {
@@ -336,7 +352,6 @@ serve(async (req: Request) => {
       }
     }
 
-    // 4. Build KNP response
     const formattedEncoded = allFormatted
       .map((f) =>
         [
@@ -358,13 +373,13 @@ serve(async (req: Request) => {
       zq: allCompliance.length > 0 ? allCompliance.join(KNP_VALUE_JOINER) : KNP_NULL_MARKER,
     };
 
-    // Set new platform flag
     if (newPlatforms.length > 0) {
       responseSegments[`${KNP.θc}${KNP_FIELD_SEPARATOR}NEW_PLATFORM`] =
         `${KNP_NULL_MARKER}${KNP_VALUE_JOINER}${newPlatforms.join(KNP_VALUE_JOINER)}`;
     }
 
     const elapsed = Date.now() - startTime;
+    await logHealth("platform", true, elapsed, tokensIn, tokensOut);
 
     const response = {
       version: KNP_VERSION,
@@ -373,7 +388,6 @@ serve(async (req: Request) => {
       checksum: knpChecksum(responseSegments),
       timestamp: Date.now(),
       ...responseSegments,
-      // Structured data for Orchestrator
       formatted_variants: allFormatted,
       new_platforms: newPlatforms,
       compliance_flags: allCompliance,
@@ -387,7 +401,9 @@ serve(async (req: Request) => {
       status: 200,
     });
   } catch (e) {
-    console.error("Platform submind error:", e);
+    const elapsed = Date.now() - startTime;
+    await logHealth("platform", false, elapsed, null, null);
+    console.error("Platform error:", e);
     const errorSegments: Record<string, string> = {
       [KNP.σo]: KNP_NULL_MARKER,
       [KNP.λv]: KNP_NULL_MARKER,
@@ -401,7 +417,7 @@ serve(async (req: Request) => {
         checksum: knpChecksum(errorSegments),
         ...errorSegments,
         error: e instanceof Error ? e.message : "Unknown error",
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

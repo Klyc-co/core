@@ -1,5 +1,5 @@
 // ============================================================
-// PRODUCT SUBMIND — Truth Map Engine
+// PRODUCT — Truth Map Engine
 // Analyzes products, classifies claims, maps features to pain
 // points, provides guardrails to Creative. Only speaks KNP.
 // ============================================================
@@ -13,7 +13,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ---- KNP Constants ----
+// ---- Protocol Constants ----
 const KNP_VERSION = "Ψ3";
 const KNP_FIELD_SEPARATOR = "∷";
 const KNP_VALUE_JOINER = "⊕";
@@ -45,6 +45,28 @@ function knpEncode(segments: Record<string, string>): string {
   });
 }
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 // ---- Claim Classification ----
 interface ClaimClassification {
   green: string[];
@@ -58,14 +80,12 @@ function classifyClaims(features: string[], description: string): ClaimClassific
   const red: string[] = [];
 
   const allClaims = [...features];
-  // Extract sentences from description as additional claims
   const descSentences = description.split(/[.!?]+/).filter((s) => s.trim().length > 10);
   allClaims.push(...descSentences.map((s) => s.trim()));
 
   for (const claim of allClaims) {
     const lower = claim.toLowerCase();
 
-    // RED: superlatives without data, health/medical claims
     if (
       /\b(the best|unmatched|unrivaled|superior to all|guaranteed results|cure|heal|treat|prevent disease)\b/i.test(lower) ||
       /\b(#1|number one|world's? (best|first|only))\b/i.test(lower)
@@ -74,7 +94,6 @@ function classifyClaims(features: string[], description: string): ClaimClassific
       continue;
     }
 
-    // GREEN: measurable data, certifications, provable facts
     if (
       /\b(\d+%|\d+x|\d+ (times|percent|hours|days|minutes))\b/i.test(lower) ||
       /\b(certified|certification|FDA|USDA|ISO|UL|CE|organic|fair trade|patent|awarded|peer.?reviewed)\b/i.test(lower) ||
@@ -84,7 +103,6 @@ function classifyClaims(features: string[], description: string): ClaimClassific
       continue;
     }
 
-    // YELLOW: positive but unverified
     if (
       /\b(premium|high.?quality|industry.?leading|best.?in.?class|cutting.?edge|innovative|revolutionary|game.?changing|world.?class)\b/i.test(lower)
     ) {
@@ -92,7 +110,6 @@ function classifyClaims(features: string[], description: string): ClaimClassific
       continue;
     }
 
-    // Default: if it's a factual statement, green; if opinion, yellow
     if (/\b(is|has|includes|features|provides|offers|contains|supports)\b/i.test(lower)) {
       green.push(claim);
     } else {
@@ -117,7 +134,6 @@ function classifyAudienceOutcome(
   const clientLower = clientAudience.toLowerCase();
   const researchLower = researchFindings.toLowerCase();
 
-  // Check for mismatch signals
   const mismatchSignals = [
     "actually", "contrary", "different from", "not aligned",
     "mismatch", "wrong assumption", "data shows otherwise",
@@ -129,7 +145,6 @@ function classifyAudienceOutcome(
     };
   }
 
-  // Check for wider signals
   const widerSignals = [
     "untapped", "additional segment", "broader", "expand",
     "new market", "underserved", "opportunity",
@@ -141,7 +156,6 @@ function classifyAudienceOutcome(
     };
   }
 
-  // Check for narrower signals
   const narrowerSignals = [
     "niche", "specific", "specialized", "focused",
     "subset", "micro", "targeted",
@@ -184,10 +198,9 @@ function buildMoatData(
     "platform_presence",
   ];
 
-  // Score client based on brief content signals
   const briefLower = productBrief.toLowerCase();
   const clientScores = dimensions.map((dim) => {
-    let score = 0.5; // baseline
+    let score = 0.5;
     switch (dim) {
       case "price_competitiveness":
         if (/\b(affordable|cheap|value|budget|low.?cost)\b/.test(briefLower)) score = 0.8;
@@ -202,20 +215,10 @@ function buildMoatData(
       case "brand_trust":
         if (/\b(years|established|trusted|reputation|heritage)\b/.test(briefLower)) score = 0.7;
         break;
-      case "audience_loyalty":
-        score = 0.5; // Need actual data
-        break;
-      case "content_engagement":
-        score = 0.5; // Need actual data
-        break;
-      case "platform_presence":
-        score = 0.5; // Need actual data
-        break;
     }
     return Math.round(score * 100) / 100;
   });
 
-  // Generate competitor scores (baseline with variance)
   const competitorData = competitors.slice(0, 5).map((name) => ({
     name,
     scores: dimensions.map(() => Math.round((0.3 + Math.random() * 0.5) * 100) / 100),
@@ -229,7 +232,6 @@ function extractVoiceIndicators(brief: string): Record<string, string> {
   const lower = brief.toLowerCase();
   const indicators: Record<string, string> = {};
 
-  // Formality
   if (/\b(professional|corporate|formal|enterprise|B2B)\b/i.test(lower)) {
     indicators.formality = "formal";
   } else if (/\b(casual|fun|playful|young|Gen Z|millennial)\b/i.test(lower)) {
@@ -238,7 +240,6 @@ function extractVoiceIndicators(brief: string): Record<string, string> {
     indicators.formality = "balanced";
   }
 
-  // Emotion
   if (/\b(inspiring|empower|transform|dream|vision)\b/i.test(lower)) {
     indicators.emotion = "inspirational";
   } else if (/\b(trust|reliable|safe|secure|proven)\b/i.test(lower)) {
@@ -249,7 +250,6 @@ function extractVoiceIndicators(brief: string): Record<string, string> {
     indicators.emotion = "informative";
   }
 
-  // Complexity
   if (/\b(technical|spec|engineer|developer|API)\b/i.test(lower)) {
     indicators.complexity = "technical";
   } else if (/\b(simple|easy|beginner|everyone|anyone)\b/i.test(lower)) {
@@ -261,7 +261,7 @@ function extractVoiceIndicators(brief: string): Record<string, string> {
   return indicators;
 }
 
-// ---- AI Analysis via Lovable AI Gateway ----
+// ---- AI Analysis via Anthropic ----
 async function analyzeWithAI(
   brief: string,
   competitors: string[],
@@ -272,14 +272,15 @@ async function analyzeWithAI(
   features: string[];
   differentiators: string[];
   certifications: string[];
+  tokensIn: number | null;
+  tokensOut: number | null;
 }> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
-    // Fallback: extract basic info from brief
-    return extractBasicInfo(brief);
+    return { ...extractBasicInfo(brief), tokensIn: null, tokensOut: null };
   }
 
-  const systemPrompt = `You are a product analyst. Given a product brief, extract structured information.
+  const systemPrompt = `You are a product analyst. Given a product brief, extract structured information. NEVER reference internal system names, protocols, or technical identifiers in any output.
 Return ONLY valid JSON with these fields:
 - product_name: string
 - category: string (e.g. "SaaS", "Consumer Electronics", "Food & Beverage")
@@ -294,43 +295,48 @@ ${competitors.length > 0 ? `Known Competitors: ${competitors.join(", ")}` : ""}
 ${researchFindings ? `Research Context: ${researchFindings}` : ""}`;
 
   try {
-    const response = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
     if (!response.ok) {
       console.error("AI analysis failed:", response.status);
-      return extractBasicInfo(brief);
+      return { ...extractBasicInfo(brief), tokensIn: null, tokensOut: null };
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return extractBasicInfo(brief);
+    const tokensIn = data.usage?.input_tokens ?? null;
+    const tokensOut = data.usage?.output_tokens ?? null;
+    const content = data.content?.[0]?.text;
+    if (!content) return { ...extractBasicInfo(brief), tokensIn, tokensOut };
 
-    const parsed = JSON.parse(content);
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { ...extractBasicInfo(brief), tokensIn, tokensOut };
+
+    const parsed = JSON.parse(jsonMatch[0]);
     return {
       product_name: parsed.product_name || "Unknown Product",
       category: parsed.category || "General",
       features: parsed.features || [],
       differentiators: parsed.differentiators || [],
       certifications: parsed.certifications || [],
+      tokensIn,
+      tokensOut,
     };
   } catch (e) {
     console.error("AI analysis error:", e);
-    return extractBasicInfo(brief);
+    return { ...extractBasicInfo(brief), tokensIn: null, tokensOut: null };
   }
 }
 
@@ -341,7 +347,6 @@ function extractBasicInfo(brief: string): {
   differentiators: string[];
   certifications: string[];
 } {
-  // Simple extraction from brief text
   const words = brief.split(/\s+/);
   const name = words.slice(0, 3).join(" ");
   const features = brief
@@ -371,7 +376,6 @@ serve(async (req: Request) => {
   try {
     const payload = await req.json();
 
-    // Extract KNP fields
     const segments = payload.segments || payload;
     const brief = segments[KNP.ξb] || segments.ξb || "";
     const pdfRef = segments[KNP.ζq] || segments.ζq || KNP_NULL_MARKER;
@@ -386,22 +390,12 @@ serve(async (req: Request) => {
 
     const research = researchFindings !== KNP_NULL_MARKER ? researchFindings : null;
 
-    // 1. AI-powered product analysis
     const aiAnalysis = await analyzeWithAI(brief, competitors, research);
-
-    // 2. Classify claims
-    const claims = classifyClaims(aiAnalysis.features, brief);
-
-    // 3. Extract voice indicators
+    const { tokensIn, tokensOut, ...aiAnalysisData } = aiAnalysis;
+    const claims = classifyClaims(aiAnalysisData.features, brief);
     const voiceIndicators = extractVoiceIndicators(brief);
+    const audienceResult = classifyAudienceOutcome(brief, research);
 
-    // 4. Classify audience outcome
-    const audienceResult = classifyAudienceOutcome(
-      brief, // client's stated audience is embedded in brief
-      research
-    );
-
-    // 5. Build competitive moat data
     let moatData: MoatData | null = null;
     let moatReady = false;
     if (competitors.length > 0 || research) {
@@ -409,12 +403,10 @@ serve(async (req: Request) => {
       moatReady = true;
     }
 
-    // 6. Persist Truth Map to product_profiles
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get user_id from the request context or use a service-level insert
     const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
     if (authHeader) {
@@ -424,22 +416,21 @@ serve(async (req: Request) => {
     }
 
     if (userId && clientId) {
-      // Upsert the product profile
       const { error: upsertError } = await supabase
         .from("product_profiles")
         .upsert(
           {
             user_id: userId,
             client_id: clientId,
-            product_name: aiAnalysis.product_name,
-            category: aiAnalysis.category,
-            key_features: aiAnalysis.features,
+            product_name: aiAnalysisData.product_name,
+            category: aiAnalysisData.category,
+            key_features: aiAnalysisData.features,
             green_claims: claims.green,
             yellow_claims: claims.yellow,
             red_claims: claims.red,
             voice_indicators: voiceIndicators,
-            differentiators: aiAnalysis.differentiators,
-            certifications: aiAnalysis.certifications,
+            differentiators: aiAnalysisData.differentiators,
+            certifications: aiAnalysisData.certifications,
             audience_outcome: audienceResult.outcome,
             moat_data: moatData || {},
             updated_at: new Date().toISOString(),
@@ -449,21 +440,19 @@ serve(async (req: Request) => {
 
       if (upsertError) {
         console.warn("Product profile upsert warning:", upsertError.message);
-        // Non-fatal — continue with response
       }
     }
 
-    // 7. Build KNP response
     const truthMapEncoded = [
-      `product_name${KNP_FIELD_SEPARATOR}${aiAnalysis.product_name}`,
-      `category${KNP_FIELD_SEPARATOR}${aiAnalysis.category}`,
-      `features${KNP_FIELD_SEPARATOR}${aiAnalysis.features.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
+      `product_name${KNP_FIELD_SEPARATOR}${aiAnalysisData.product_name}`,
+      `category${KNP_FIELD_SEPARATOR}${aiAnalysisData.category}`,
+      `features${KNP_FIELD_SEPARATOR}${aiAnalysisData.features.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
       `green_claims${KNP_FIELD_SEPARATOR}${claims.green.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
       `yellow_claims${KNP_FIELD_SEPARATOR}${claims.yellow.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
       `red_claims${KNP_FIELD_SEPARATOR}${claims.red.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
       `voice${KNP_FIELD_SEPARATOR}${JSON.stringify(voiceIndicators)}`,
-      `differentiators${KNP_FIELD_SEPARATOR}${aiAnalysis.differentiators.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
-      `certifications${KNP_FIELD_SEPARATOR}${aiAnalysis.certifications.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
+      `differentiators${KNP_FIELD_SEPARATOR}${aiAnalysisData.differentiators.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
+      `certifications${KNP_FIELD_SEPARATOR}${aiAnalysisData.certifications.join(KNP_VALUE_JOINER) || KNP_NULL_MARKER}`,
     ].join("|");
 
     const responseSegments: Record<string, string> = {
@@ -471,17 +460,16 @@ serve(async (req: Request) => {
       [KNP.λv]: audienceResult.outcome + KNP_VALUE_JOINER + audienceResult.explanation,
     };
 
-    // Set moat ready flag
     if (moatReady) {
       responseSegments[`${KNP.θc}${KNP_FIELD_SEPARATOR}MOAT_READY`] = KNP_NULL_MARKER;
     }
 
-    // Set audience correction flag
     if (audienceResult.outcome === "WRONG") {
       responseSegments[`${KNP.ζq}${KNP_FIELD_SEPARATOR}AUDIENCE_CORRECTION`] = KNP_NULL_MARKER;
     }
 
     const elapsed = Date.now() - startTime;
+    await logHealth("product", true, elapsed, tokensIn, tokensOut);
 
     const response = {
       version: KNP_VERSION,
@@ -490,18 +478,17 @@ serve(async (req: Request) => {
       checksum: knpChecksum(responseSegments),
       timestamp: Date.now(),
       ...responseSegments,
-      // Structured data for Orchestrator consumption
       truth_map: {
-        product_name: aiAnalysis.product_name,
-        category: aiAnalysis.category,
-        price_point: null, // extracted from brief if available
-        key_features: aiAnalysis.features,
+        product_name: aiAnalysisData.product_name,
+        category: aiAnalysisData.category,
+        price_point: null,
+        key_features: aiAnalysisData.features,
         green_claims: claims.green,
         yellow_claims: claims.yellow,
         red_claims: claims.red,
         voice_indicators: voiceIndicators,
-        differentiators: aiAnalysis.differentiators,
-        certifications: aiAnalysis.certifications,
+        differentiators: aiAnalysisData.differentiators,
+        certifications: aiAnalysisData.certifications,
       },
       audience_outcome: audienceResult.outcome,
       audience_explanation: audienceResult.explanation,
@@ -515,7 +502,9 @@ serve(async (req: Request) => {
       status: 200,
     });
   } catch (e) {
-    console.error("Product submind error:", e);
+    const elapsed = Date.now() - startTime;
+    await logHealth("product", false, elapsed, null, null);
+    console.error("Product error:", e);
     const errorSegments: Record<string, string> = {
       [KNP.σo]: KNP_NULL_MARKER,
       [KNP.λv]: "SIMILAR",
@@ -528,7 +517,7 @@ serve(async (req: Request) => {
         checksum: knpChecksum(errorSegments),
         ...errorSegments,
         error: e instanceof Error ? e.message : "Unknown error",
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -82,9 +82,31 @@ function buildGuardrailInstructions(guardrails: Guardrail[]): string {
   return out;
 }
 
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 async function generateCreativeVariants(input: CreativeInput): Promise<CreativeVariant[]> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
   const platformSpecs = input.platforms
     .map(p => {
@@ -93,7 +115,7 @@ async function generateCreativeVariants(input: CreativeInput): Promise<CreativeV
     })
     .join("\n");
 
-  const systemPrompt = `You are the KLYC Creative Engine. You generate campaign copy variants.
+  const systemPrompt = `You are a creative copywriter and campaign content strategist. You generate campaign copy variants. NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 TASK: Generate exactly 3 creative variants at different risk levels.
 
@@ -132,32 +154,32 @@ Return ONLY a JSON array of exactly 3 objects:
 ]
 Distribute across platforms: ${input.platforms.join(", ")}. Each variant on a different platform if possible.`;
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      system: systemPrompt,
       messages: [
-        { role: "system", content: systemPrompt },
         { role: "user", content: `Brief: ${input.brief}` },
       ],
-      temperature: 0.8,
     }),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error("AI gateway error:", response.status, errText);
+    console.error("Anthropic API error:", response.status, errText);
     if (response.status === 429) throw new Error("RATE_LIMITED");
-    if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
     throw new Error(`AI generation failed: ${response.status}`);
   }
 
   const aiResult = await response.json();
-  const raw = aiResult.choices?.[0]?.message?.content || "[]";
+  const raw = aiResult.content?.[0]?.text || "[]";
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error("AI did not return valid JSON array");
 
@@ -257,6 +279,9 @@ serve(async (req: Request) => {
       console.warn("Failed to log creative output:", e);
     }
 
+    const elapsed = Date.now() - startTime;
+    await logHealth("creative", true, elapsed, null, null);
+
     return new Response(
       JSON.stringify({
         version: "Ψ3",
@@ -266,15 +291,17 @@ serve(async (req: Request) => {
         σo: JSON.stringify(variants),
         variant_count: variants.length,
         variants_structured: variants,
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : "Unknown error";
-    const status = errMsg === "RATE_LIMITED" ? 429 : errMsg === "PAYMENT_REQUIRED" ? 402 : 500;
+    const status = errMsg === "RATE_LIMITED" ? 429 : 500;
+    const elapsed = Date.now() - startTime;
+    await logHealth("creative", false, elapsed, null, null);
     return new Response(
-      JSON.stringify({ version: "Ψ3", submind: "creative", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: Date.now() - startTime }),
+      JSON.stringify({ version: "Ψ3", submind: "creative", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: elapsed }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

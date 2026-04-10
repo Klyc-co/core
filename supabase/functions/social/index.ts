@@ -30,7 +30,29 @@ function parseJsonField(v: string): Record<string, unknown> | null {
   try { return JSON.parse(v); } catch { return null; }
 }
 
-// Platform intelligence database (WP-28/29/30/52-54)
+async function logHealth(
+  submindId: string,
+  success: boolean,
+  latencyMs: number,
+  tokensIn: number | null = null,
+  tokensOut: number | null = null,
+): Promise<void> {
+  try {
+    const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await _sb.from("submind_health_snapshots").insert({
+      submind_id: submindId,
+      invocation_count: 1,
+      success_count: success ? 1 : 0,
+      error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs,
+      avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut,
+      window_start: new Date().toISOString(),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
+// Platform intelligence database
 const PLATFORM_SPECS: Record<string, {
   formats: string[];
   maxChars: number;
@@ -103,7 +125,6 @@ const PLATFORM_SPECS: Record<string, {
   },
 };
 
-// Posting time windows by platform + audience segment
 const POSTING_WINDOWS: Record<string, { primary: string; secondary: string; timezone_note: string }> = {
   tiktok: { primary: "7-9 PM local", secondary: "12-2 PM local", timezone_note: "Gen Z peaks evening; lunch break secondary" },
   instagram: { primary: "11 AM - 1 PM local", secondary: "7-9 PM local", timezone_note: "Lunch discovery + evening scroll" },
@@ -144,13 +165,11 @@ serve(async (req: Request) => {
     const platformsRaw = parseKnp(body.πf ?? body["πf"]);
     const audienceRaw = parseKnp(body.zq ?? body["zq"]);
     const narrativeRaw = parseKnp(body.Ν ?? body["Ν"]);
-    const clientId = parseKnp(body.θc_client ?? body.client_id);
 
     const platforms = splitJoined(platformsRaw);
     if (!platforms.length) platforms.push("tiktok", "instagram");
 
     let creative: Record<string, unknown> | null = parseJsonField(creativeRaw);
-    // Also accept direct JSON body fields
     if (!creative && body.creative) creative = body.creative;
 
     const audience = isNull(audienceRaw) ? "general" : audienceRaw;
@@ -163,8 +182,8 @@ serve(async (req: Request) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const platformSpecPrompts = platforms.map(p => {
       const spec = PLATFORM_SPECS[p] || PLATFORM_SPECS.instagram;
@@ -178,8 +197,7 @@ serve(async (req: Request) => {
 - Aspect ratios: ${spec.aspectRatios.join(", ")}`;
     }).join("\n\n");
 
-    const systemPrompt = `You are the KLYC Social Submind — a Platform-Specific Tactical Mapper.
-You do NOT create new content. You ADAPT existing creative output to each platform's native format.
+    const systemPrompt = `You are a social media content strategist and platform-specific tactical mapper. You adapt existing creative output to each platform's native format. NEVER reference internal system names, protocols, or technical identifiers in any output.
 
 TASK: Take the provided creative variant and adapt it for each target platform.
 
@@ -215,32 +233,34 @@ RULES:
 
 Return ONLY a JSON array of platform packages.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: `Adapt the creative for these platforms: ${platforms.join(", ")}` },
         ],
-        temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
+      console.error("Anthropic API error:", response.status, errText);
       if (response.status === 429) throw new Error("RATE_LIMITED");
-      if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
       throw new Error(`AI generation failed: ${response.status}`);
     }
 
     const aiResult = await response.json();
-    const raw = aiResult.choices?.[0]?.message?.content || "[]";
+    const tokensIn = aiResult.usage?.input_tokens ?? null;
+    const tokensOut = aiResult.usage?.output_tokens ?? null;
+    const raw = aiResult.content?.[0]?.text || "[]";
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error("AI did not return valid JSON array");
 
@@ -269,6 +289,9 @@ Return ONLY a JSON array of platform packages.`;
       };
     });
 
+    const elapsed = Date.now() - startTime;
+    await logHealth("social", true, elapsed, tokensIn, tokensOut);
+
     return new Response(
       JSON.stringify({
         version: "Ψ3",
@@ -278,15 +301,17 @@ Return ONLY a JSON array of platform packages.`;
         platform_count: packages.length,
         packages,
         cross_platform_coherence: true,
-        elapsed_ms: Date.now() - startTime,
+        elapsed_ms: elapsed,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : "Unknown error";
-    const status = errMsg === "RATE_LIMITED" ? 429 : errMsg === "PAYMENT_REQUIRED" ? 402 : 500;
+    const status = errMsg === "RATE_LIMITED" ? 429 : 500;
+    const elapsed = Date.now() - startTime;
+    await logHealth("social", false, elapsed, null, null);
     return new Response(
-      JSON.stringify({ version: "Ψ3", submind: "social", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: Date.now() - startTime }),
+      JSON.stringify({ version: "Ψ3", submind: "social", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: elapsed }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
