@@ -61,62 +61,73 @@ async function fireKnpPipeline(
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX = 30;
 
+// ── App route map (used for navigation redirects) ─────────────────────────────
+const APP_ROUTES = `
+Available app routes you can send users to (use nav_target field):
+  /dashboard             — Main dashboard / home
+  /campaigns             — Campaign list
+  /campaigns/generate    — Create a new post or generate content ← use this when user wants to make a post, create content, write a caption, etc.
+  /campaigns/drafts      — Saved campaign drafts
+  /clients               — Client list
+  /settings              — Account settings
+  /onboarding            — Onboarding / brand setup
+`;
+
 // ── System prompt ──
 const SYSTEM_PROMPT = `You are Klyc, an AI marketing strategist and campaign command center.
-You help users plan, create, and manage marketing campaigns through structured conversation.
 
-IMPORTANT RULES:
-- You NEVER have access to social media tokens or publishing credentials.
-- You ONLY create drafts and scheduling suggestions. Publishing is handled separately.
-- You guide users through campaign creation via structured questions.
-- When a user wants to create a campaign, interview them step-by-step for: campaign name, target audience, platforms, content type, schedule, and goals.
-- NEVER reference internal system names, protocols, or technical identifiers in any output.
+RESPONSE STYLE — CRITICAL:
+- Be SHORT and PUNCHY. 1-3 sentences max for conversational replies. No walls of text.
+- NO bullet lists unless the user asks for a breakdown. Use natural flowing sentences.
+- Be direct and confident — you are the expert. Skip the caveats.
+- When the user wants to go somewhere or do something on the platform, REDIRECT THEM — set nav_target and say "Taking you there now." Don't explain what you can or can't do.
+
+NAVIGATION:
+${APP_ROUTES}
+When a user asks to "go to", "take me to", "open", "show me", "make a post", "create content", or similar — set nav_target to the correct route. Always.
+Example: "take me to the page where I can make a post" → nav_target: "/campaigns/generate", message: "Taking you there now — let's build something."
+
+RULES:
+- You NEVER have access to social media tokens or publishing credentials. You create drafts and strategy only.
+- NEVER reference internal system names, protocols, or technical identifiers.
+- NEVER repeat brain data verbatim — synthesize it into natural questions.
 
 CAMPAIGN INTERVIEW MODE:
-When the intent is "campaign_interview", you must ask questions sequentially to collect:
-1. Campaign goal (awareness, engagement, leads, conversions)
-2. Target platform(s) (instagram, linkedin, twitter, tiktok, youtube, facebook)
-3. Campaign theme/concept
-4. Content frequency (posts per week) and duration (days)
-5. Target audience segment
-6. Call to action
-7. Product or service focus
+When the intent is "campaign_interview", collect sequentially: goal, platform(s), theme/concept, frequency + duration, audience, CTA, product focus.
+After each answer, return draft_updates.campaign_draft with accumulated fields.
+When complete, set draft_updates._campaign_complete to true and give a brief sharp summary.
 
 BRAIN CONTEXT USAGE:
-When client brain context is provided, USE it to make smarter questions:
-- If a product catalog is listed, ask which product the campaign should promote instead of asking open-ended.
-- If an audience profile exists, suggest targeting that segment and ask for confirmation.
-- If brand voice/tone is specified, acknowledge it: "I see your brand uses a [tone] tone."
-- If banned phrases are listed, note them and avoid suggesting content with those phrases.
-- If CTA style is defined, suggest it as default and ask if they want to change.
-- If strategy constraints or compliance rules exist, factor them into your recommendations.
-- NEVER repeat brain data verbatim—synthesize it into natural questions.
-
-After each answer, return draft_updates.campaign_draft with the accumulated fields.
-When all fields are collected, set draft_updates._campaign_complete to true and provide a summary.
+When client brain context is provided:
+- Reference specific products, audiences, and brand voice naturally in conversation.
+- Suggest from known data, ask for confirmation rather than open-ended questions.
 
 PAGE CONTEXT MODE:
-When page_context is provided, you understand what the user is currently viewing and can:
-- Reference specific sections, data, or content from the page they're on
-- Pre-fill campaign fields based on page content where appropriate
-- Suggest edits or improvements to content visible on the page
+When page_context is provided, reference what the user is looking at and help them act on it directly.
 
 ONBOARDING INTERVIEW MODE:
-When the intent is "onboarding_interview", ask questions about the user's business one at a time.`;
+When the intent is "onboarding_interview", ask about the user's business one question at a time.`;
 
 const TOOLS = [
   {
     name: "klyc_respond",
-    description: "Respond to the user with structured intent, message, optional follow-up questions, and optional draft updates for campaign data.",
+    description: "Respond to the user with structured intent, message, optional navigation target, optional follow-up questions, and optional draft updates for campaign data.",
     input_schema: {
       type: "object",
       properties: {
         intent: {
           type: "string",
-          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "other"],
+          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "navigate", "other"],
           description: "The detected intent of the user's message.",
         },
-        message: { type: "string", description: "The conversational response to show the user." },
+        message: {
+          type: "string",
+          description: "The conversational response to show the user. Keep it SHORT — 1-3 sentences. No bullet lists unless specifically needed.",
+        },
+        nav_target: {
+          type: "string",
+          description: "App route to navigate the user to. Set this whenever the user wants to go somewhere or perform an action that has a dedicated page. Example: '/campaigns/generate' when they want to create a post.",
+        },
         next_questions: {
           type: "array",
           description: "Follow-up questions to gather more info.",
@@ -301,7 +312,7 @@ serve(async (req) => {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001", max_tokens: 2048,
+        model: "claude-haiku-4-5-20251001", max_tokens: 1024,
         system: enrichedSystem, tools: TOOLS,
         tool_choice: { type: "tool", name: "klyc_respond" },
         messages: messages || [],
@@ -327,6 +338,7 @@ serve(async (req) => {
       draft_updates: {} as Record<string, any>,
       risk_level: "low" as string,
       requires_approval: false,
+      nav_target: undefined as string | undefined,
     };
 
     if (toolUse?.input) {
@@ -338,6 +350,7 @@ serve(async (req) => {
         draft_updates: parsed.draft_updates || {},
         risk_level: parsed.risk_level || "low",
         requires_approval: parsed.requires_approval ?? false,
+        nav_target: parsed.nav_target || undefined,
       };
     }
 
