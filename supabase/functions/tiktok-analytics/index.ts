@@ -139,7 +139,7 @@ serve(async (req) => {
       console.error("TikTok videos API error:", videosData);
       return new Response(
         JSON.stringify({ 
-          error: videosData.(error as Error).message || "Failed to fetch videos",
+          error: (videosData.error as Error).message || "Failed to fetch videos",
           code: videosData.error.code 
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
