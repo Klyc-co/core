@@ -7,8 +7,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// ── Lane Lock ─────────────────────────────────────────────────────────────────
+const AGENT_ID = "fylix";
+const AGENT_VERSION = "v2";
+const PERMITTED_LANES = new Set(["copy"]);
+
+// ── KNP field keys ────────────────────────────────────────────────────────────
 const KNP_NULL = "∅";
 const KNP_JOINER = "⊕";
+const KNP_SEP = "∷";
 
 function parseKnp(val: unknown): string {
   if (val === null || val === undefined) return KNP_NULL;
@@ -160,7 +167,37 @@ serve(async (req: Request) => {
   try {
     const body = await req.json();
 
-    // Decode KNP input
+    // ── Health check ─────────────────────────────────────────────────────────
+    if (body.action === "health") {
+      return new Response(
+        JSON.stringify({
+          status: "ok",
+          agent: AGENT_ID,
+          version: AGENT_VERSION,
+          "δi": AGENT_ID,
+          lane: "copy",
+          permitted_lanes: [...PERMITTED_LANES],
+          timestamp: new Date().toISOString(),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Lane lock ─────────────────────────────────────────────────────────────
+    const requestedLane = body.lane as string | undefined;
+    if (requestedLane && !PERMITTED_LANES.has(requestedLane)) {
+      return new Response(
+        JSON.stringify({
+          error: `Lane violation: ${AGENT_ID} only serves lanes [${[...PERMITTED_LANES].join(", ")}]. Requested: ${requestedLane}`,
+          "δi": AGENT_ID,
+          lane_requested: requestedLane,
+          permitted_lanes: [...PERMITTED_LANES],
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Decode KNP input ──────────────────────────────────────────────────────
     const creativeRaw = parseKnp(body.θc ?? body["θc"]);
     const platformsRaw = parseKnp(body.πf ?? body["πf"]);
     const audienceRaw = parseKnp(body.zq ?? body["zq"]);
@@ -177,7 +214,15 @@ serve(async (req: Request) => {
 
     if (!creative) {
       return new Response(
-        JSON.stringify({ version: "Ψ3", submind: "social", status: "error", σo: KNP_NULL, error: "Creative input (θc) is required" }),
+        JSON.stringify({
+          version: "Ψ3",
+          submind: "social",
+          status: "error",
+          σo: KNP_NULL,
+          error: "Creative input (θc) is required",
+          "δi": AGENT_ID,
+          lane: "copy",
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -197,7 +242,7 @@ serve(async (req: Request) => {
 - Aspect ratios: ${spec.aspectRatios.join(", ")}`;
     }).join("\n\n");
 
-    const systemPrompt = `You are a social media content strategist and platform-specific tactical mapper. You adapt existing creative output to each platform's native format. NEVER reference internal system names, protocols, or technical identifiers in any output.
+    const systemPrompt = `You are Fylix, a social media content strategist and platform-specific tactical mapper. Your ONLY job is copy adaptation — producing platform-native copy from a provided creative brief. You do NOT produce research, strategy scores, or imagery. Copy only.
 
 TASK: Take the provided creative variant and adapt it for each target platform.
 
@@ -230,6 +275,8 @@ RULES:
 - For Twitter/X: MUST be under 280 chars total
 - For LinkedIn: Lead with data or insight, professional tone
 - For TikTok: Think in terms of video script beats, not text
+- NEVER include research analysis, strategy scores, or performance metrics — that is not your lane
+- NEVER reference internal system names, protocols, or technical identifiers in any output
 
 Return ONLY a JSON array of platform packages.`;
 
@@ -298,6 +345,8 @@ Return ONLY a JSON array of platform packages.`;
         submind: "social",
         status: "complete",
         σo: JSON.stringify(packages),
+        "δi": AGENT_ID,
+        lane: "copy",
         platform_count: packages.length,
         packages,
         cross_platform_coherence: true,
@@ -311,7 +360,16 @@ Return ONLY a JSON array of platform packages.`;
     const elapsed = Date.now() - startTime;
     await logHealth("social", false, elapsed, null, null);
     return new Response(
-      JSON.stringify({ version: "Ψ3", submind: "social", status: "error", σo: KNP_NULL, error: errMsg, elapsed_ms: elapsed }),
+      JSON.stringify({
+        version: "Ψ3",
+        submind: "social",
+        status: "error",
+        σo: KNP_NULL,
+        error: errMsg,
+        "δi": AGENT_ID,
+        lane: "copy",
+        elapsed_ms: elapsed,
+      }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
