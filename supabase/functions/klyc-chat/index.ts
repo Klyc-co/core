@@ -7,29 +7,58 @@ const corsHeaders = {
 };
 
 async function logHealth(
-  submindId: string,
-  success: boolean,
-  latencyMs: number,
-  tokensIn: number | null = null,
-  tokensOut: number | null = null,
+  submindId: string, success: boolean, latencyMs: number,
+  tokensIn: number | null = null, tokensOut: number | null = null,
 ): Promise<void> {
   try {
     const _sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     await _sb.from("submind_health_snapshots").insert({
-      submind_id: submindId,
-      invocation_count: 1,
-      success_count: success ? 1 : 0,
-      error_count: success ? 0 : 1,
-      avg_latency_ms: latencyMs,
-      avg_tokens_in: tokensIn,
-      avg_tokens_out: tokensOut,
-      window_start: new Date().toISOString(),
+      submind_id: submindId, invocation_count: 1,
+      success_count: success ? 1 : 0, error_count: success ? 0 : 1,
+      avg_latency_ms: latencyMs, avg_tokens_in: tokensIn,
+      avg_tokens_out: tokensOut, window_start: new Date().toISOString(),
     });
   } catch (_) { /* non-blocking */ }
 }
 
+// ── KNP pipeline fire ─────────────────────────────────────────────────────────
+async function fireKnpPipeline(
+  campaignDraft: Record<string, any>,
+  supabaseUrl: string,
+  pageContext?: string,
+): Promise<Record<string, any> | null> {
+  try {
+    // Layer 2: Compress (C-lane → A-lane)
+    const normalizeResp = await fetch(`${supabaseUrl}/functions/v1/normalize-input`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ campaign_draft: campaignDraft, page_context: pageContext }),
+    });
+    if (!normalizeResp.ok) {
+      console.error("normalize-input error:", normalizeResp.status, await normalizeResp.text());
+      return null;
+    }
+    const knpEnvelope = await normalizeResp.json();
+
+    // Layer 3: Orchestrate (A-lane dispatch)
+    const orchResp = await fetch(`${supabaseUrl}/functions/v1/klyc-orchestrator`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ knp_envelope: knpEnvelope, meta: knpEnvelope.meta || {} }),
+    });
+    if (!orchResp.ok) {
+      console.error("orchestrator error:", orchResp.status, await orchResp.text());
+      return null;
+    }
+    return await orchResp.json();
+  } catch (e) {
+    console.error("fireKnpPipeline error:", e);
+    return null;
+  }
+}
+
 // ── Rate-limit config ──
-const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX = 30;
 
 // ── System prompt ──
@@ -66,10 +95,15 @@ When client brain context is provided, USE it to make smarter questions:
 After each answer, return draft_updates.campaign_draft with the accumulated fields.
 When all fields are collected, set draft_updates._campaign_complete to true and provide a summary.
 
+PAGE CONTEXT MODE:
+When page_context is provided, you understand what the user is currently viewing and can:
+- Reference specific sections, data, or content from the page they're on
+- Pre-fill campaign fields based on page content where appropriate
+- Suggest edits or improvements to content visible on the page
+
 ONBOARDING INTERVIEW MODE:
 When the intent is "onboarding_interview", ask questions about the user's business one at a time.`;
 
-// ── Anthropic tool definition (native format) ──
 const TOOLS = [
   {
     name: "klyc_respond",
@@ -82,10 +116,7 @@ const TOOLS = [
           enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "other"],
           description: "The detected intent of the user's message.",
         },
-        message: {
-          type: "string",
-          description: "The conversational response to show the user.",
-        },
+        message: { type: "string", description: "The conversational response to show the user." },
         next_questions: {
           type: "array",
           description: "Follow-up questions to gather more info.",
@@ -106,7 +137,6 @@ const TOOLS = [
           properties: {
             campaign_draft: {
               type: "object",
-              description: "Campaign draft fields collected during voice campaign interview.",
               properties: {
                 campaign_name: { type: "string" },
                 goal: { type: "string" },
@@ -125,7 +155,6 @@ const TOOLS = [
             target_audience: { type: "string" },
             campaign_goals: { type: "string" },
             campaign_objective: { type: "string" },
-            target_audience_description: { type: "string" },
             post_caption: { type: "string" },
             tags: { type: "array", items: { type: "string" } },
             business_name: { type: "string" },
@@ -145,35 +174,25 @@ const TOOLS = [
             _campaign_complete: { type: "boolean" },
           },
         },
-        risk_level: {
-          type: "string",
-          enum: ["low", "medium", "high"],
-        },
-        requires_approval: {
-          type: "boolean",
-        },
+        risk_level: { type: "string", enum: ["low", "medium", "high"] },
+        requires_approval: { type: "boolean" },
       },
       required: ["intent", "message"],
     },
   },
 ];
 
-// ── Helpers ──
-
 function errorResponse(status: number, message: string) {
   return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 async function checkRateLimit(serviceClient: any, userId: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
   const { count, error } = await serviceClient
-    .from("ai_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", windowStart);
+    .from("ai_requests").select("id", { count: "exact", head: true })
+    .eq("user_id", userId).gte("created_at", windowStart);
   if (error) { console.error("Rate limit check error:", error); return false; }
   return (count || 0) >= RATE_LIMIT_MAX;
 }
@@ -185,10 +204,7 @@ async function recordRequest(
   const { error } = await serviceClient.from("ai_requests").insert({
     request_id: requestId, user_id: userId, intent, client_id: clientId, token_count_estimate: tokenEstimate,
   });
-  if (error) {
-    if (error.code === "23505") return false;
-    console.error("Record request error:", error);
-  }
+  if (error) { if (error.code === "23505") return false; console.error("Record request error:", error); }
   return true;
 }
 
@@ -213,17 +229,12 @@ async function validateMarketerAccess(
   return data;
 }
 
-// ── Main handler ──
-
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const startTime = Date.now();
 
   try {
-    // ── 1. JWT Authentication ──
+    // ── 1. JWT Auth ───────────────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return errorResponse(401, "Missing authorization");
 
@@ -242,11 +253,14 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const serviceClient = createClient(supabaseUrl, serviceKey);
 
-    // ── 2. Parse body ──
+    // ── 2. Parse body ─────────────────────────────────────────────────────────
     const body = await req.json();
     const { messages, client_id, marketer_client_id, context_summary, draft_id, request_id, timestamp } = body;
+    const pageContext = body.page_context as string | undefined;
+    const campaignDraftFromBody = body.campaign_draft as Record<string, any> | undefined;
+    const campaignCompleteFromBody = body.campaign_complete === true;
 
-    // ── 3. Request signing validation ──
+    // ── 3. Request validation ─────────────────────────────────────────────────
     if (!request_id || typeof request_id !== "string") return errorResponse(400, "Missing request_id");
     if (timestamp) {
       const reqTime = new Date(timestamp).getTime();
@@ -255,18 +269,18 @@ serve(async (req) => {
       }
     }
 
-    // ── 4. Duplicate request check ──
+    // ── 4. Duplicate check ────────────────────────────────────────────────────
     const isUnique = await recordRequest(serviceClient, request_id, userId, null, client_id || userId, null);
     if (!isUnique) return errorResponse(409, "Duplicate request_id");
 
-    // ── 5. Rate limiting ──
+    // ── 5. Rate limit ─────────────────────────────────────────────────────────
     const rateLimited = await checkRateLimit(serviceClient, userId);
     if (rateLimited) {
-      await emitActivityEvent(serviceClient, userId, "rate_limited", `AI chat rate limit exceeded (${RATE_LIMIT_MAX}/${RATE_LIMIT_WINDOW_MS / 60000}min)`, client_id);
+      await emitActivityEvent(serviceClient, userId, "rate_limited", `AI chat rate limit exceeded`, client_id);
       return errorResponse(429, "Rate limit exceeded. Please wait a few minutes.");
     }
 
-    // ── 6. Marketer-client access validation ──
+    // ── 6. Marketer access ────────────────────────────────────────────────────
     if (marketer_client_id) {
       const access = await validateMarketerAccess(serviceClient, userId, marketer_client_id);
       if (!access) return errorResponse(403, "Unauthorized client access");
@@ -274,30 +288,21 @@ serve(async (req) => {
 
     const effectiveClientId = client_id || userId;
 
-    // ── 7. Call Anthropic API ──
+    // ── 7. Build system prompt with page context ──────────────────────────────
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     let enrichedSystem = SYSTEM_PROMPT;
     if (context_summary) enrichedSystem += `\n\nClient context:\n${context_summary}`;
+    if (pageContext) enrichedSystem += `\n\nCurrent page context (user is viewing this):\n${pageContext}`;
 
-    console.log("Klyc chat:", JSON.stringify({
-      user_id: userId, client_id: effectiveClientId,
-      message_count: messages?.length || 0, request_id,
-    }));
-
+    // ── 8. Call Anthropic ─────────────────────────────────────────────────────
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 2048,
-        system: enrichedSystem,
-        tools: TOOLS,
+        model: "claude-haiku-4-5-20251001", max_tokens: 2048,
+        system: enrichedSystem, tools: TOOLS,
         tool_choice: { type: "tool", name: "klyc_respond" },
         messages: messages || [],
       }),
@@ -306,14 +311,10 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) return errorResponse(429, "AI rate limits exceeded, please try again later.");
       if (aiResponse.status === 402) return errorResponse(402, "Payment required, please add funds.");
-      const errText = await aiResponse.text();
-      console.error("Anthropic API error:", aiResponse.status, errText);
       throw new Error("Anthropic API error");
     }
 
     const aiData = await aiResponse.json();
-
-    // Anthropic tool use response format: content[].type === "tool_use"
     const toolUse = aiData.content?.find((c: any) => c.type === "tool_use");
     const tokensIn = aiData.usage?.input_tokens ?? null;
     const tokensOut = aiData.usage?.output_tokens ?? null;
@@ -329,7 +330,6 @@ serve(async (req) => {
     };
 
     if (toolUse?.input) {
-      // Anthropic tool input is already a parsed object (not a JSON string)
       const parsed = toolUse.input;
       structured = {
         intent: parsed.intent || "other",
@@ -341,13 +341,12 @@ serve(async (req) => {
       };
     }
 
-    // ── 8. Update ai_requests record ──
-    await serviceClient
-      .from("ai_requests")
+    // ── 9. Update request record ──────────────────────────────────────────────
+    await serviceClient.from("ai_requests")
       .update({ intent: structured.intent, token_count_estimate: tokenEstimate })
       .eq("request_id", request_id);
 
-    // ── 9. Persist messages if marketer_client_id provided ──
+    // ── 10. Persist messages ──────────────────────────────────────────────────
     if (marketer_client_id) {
       const lastUserMsg = messages?.filter((m: any) => m.role === "user").pop();
       if (lastUserMsg) {
@@ -355,39 +354,62 @@ serve(async (req) => {
         if (mcData) {
           const receiverId = userId === mcData.marketer_id ? mcData.client_id : mcData.marketer_id;
           await serviceClient.from("messages").insert({
-            sender_id: userId, receiver_id: receiverId,
-            marketer_client_id, content: lastUserMsg.content,
+            sender_id: userId, receiver_id: receiverId, marketer_client_id, content: lastUserMsg.content,
           });
         }
       }
     }
 
-    // ── 10. Campaign draft upsert ──
+    // ── 11. Campaign draft upsert ─────────────────────────────────────────────
     const draftIntents = ["launch_campaign", "campaign_interview", "campaign_step", "campaign_summary"];
     if (draftIntents.includes(structured.intent) && Object.keys(structured.draft_updates).length > 0) {
       const { _draft_id, _onboarding_complete, _campaign_complete, campaign_draft, ...draftCols } = structured.draft_updates;
-
       if (structured.intent === "launch_campaign") {
         if (draft_id) {
           await serviceClient.from("campaign_drafts")
-            .update({ ...draftCols, updated_at: new Date().toISOString() })
-            .eq("id", draft_id);
+            .update({ ...draftCols, updated_at: new Date().toISOString() }).eq("id", draft_id);
           structured.draft_updates._draft_id = draft_id;
         } else if (Object.keys(draftCols).length > 0) {
           const { data: newDraft } = await serviceClient.from("campaign_drafts")
-            .insert({ user_id: userId, client_id: effectiveClientId, ...draftCols })
-            .select("id").single();
+            .insert({ user_id: userId, client_id: effectiveClientId, ...draftCols }).select("id").single();
           if (newDraft) structured.draft_updates._draft_id = newDraft.id;
         }
       }
     }
 
+    // ── 12. Fire KNP pipeline if campaign complete ────────────────────────────
+    const campaignComplete =
+      structured.draft_updates?._campaign_complete === true || campaignCompleteFromBody;
+
+    let knpFired = false;
+    let pipelineResult: Record<string, any> | null = null;
+
+    if (campaignComplete) {
+      const draftForPipeline =
+        campaignDraftFromBody ||
+        structured.draft_updates?.campaign_draft ||
+        (() => {
+          const { _campaign_complete, _onboarding_complete, _draft_id, campaign_draft, ...rest } = structured.draft_updates;
+          return rest;
+        })();
+      pipelineResult = await fireKnpPipeline(draftForPipeline, supabaseUrl, pageContext);
+      knpFired = !!pipelineResult;
+    }
+
+    // ── 13. Return ────────────────────────────────────────────────────────────
     const elapsed = Date.now() - startTime;
     await logHealth("klyc-chat", true, elapsed, tokensIn, tokensOut);
 
-    return new Response(JSON.stringify(structured), {
+    const responsePayload: Record<string, any> = { ...structured };
+    if (knpFired && pipelineResult) {
+      responsePayload._knp_fired = true;
+      responsePayload.pipeline = pipelineResult;
+    }
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (error) {
     const elapsed = Date.now() - startTime;
     await logHealth("klyc-chat", false, elapsed, null, null);
