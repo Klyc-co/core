@@ -77,7 +77,7 @@ serve(async (req) => {
     if (rpcResult.error) {
       return new Response(
         JSON.stringify({
-          error: rpcResult.(error as Error).message || "Authentication failed. Check your credentials.",
+          error: (rpcResult.error as Record<string, unknown>)?.message || "Authentication failed. Check your credentials.",
         }),
         {
           status: 400,
