@@ -94,7 +94,7 @@ async function callGeminiImageGen(
   parts.push({ text: prompt });
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,9 +135,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "ok",
-          provider: "gemini-2.0-flash-image",
+          provider: "gemini-2.0-flash-preview-image",
           platforms: Object.keys(PLATFORM_SIZES),
-          version: "v3",
+          version: "v4",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -186,7 +186,7 @@ serve(async (req) => {
           JSON.stringify({
             imageUrl,
             size: `${directWidth}x${directHeight}`,
-            model: "gemini-2.0-flash-image",
+            model: "gemini-2.0-flash-preview-image",
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -224,7 +224,7 @@ serve(async (req) => {
           url: imageUrl,
           size: `${size.width}x${size.height}`,
           label: size.label,
-          model: "gemini-2.0-flash-image",
+          model: "gemini-2.0-flash-preview-image",
         };
       } catch (err) {
         console.error(`Platform ${platform} image gen error:`, err);
@@ -238,7 +238,7 @@ serve(async (req) => {
       JSON.stringify({
         images: results,
         totalImages,
-        model: "gemini-2.0-flash-image",
+        model: "gemini-2.0-flash-preview-image",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
