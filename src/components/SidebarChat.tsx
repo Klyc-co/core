@@ -16,7 +16,13 @@ import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Marketing loading quotes from every era ───────────────────────────────────
+// ── Marketing loading quotes from every era ─────────────────────────────────
+// Extract the attribution (everything after the last "— ") to avoid back-to-back same source
+function getQuoteAuthor(msg: string): string {
+  const m = msg.match(/— (.+)$/);
+  return m ? m[1] : msg;
+}
+
 const LOADING_MESSAGES = [
   // Mad Men — Don Draper
   "\"What you call love was invented by guys like me, to sell nylons.\" — Don Draper",
@@ -128,11 +134,11 @@ const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
   },
 ];
 
-// ── Route all chat through klyc-chat (C-lane entry point) ───────────────────
+// ── Route all chat through klyc-chat (C-lane entry point) ───────────────────────
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
-// ── Pipeline result extraction helpers ──────────────────────────────────────
+// ── Pipeline result extraction helpers ────────────────────────────────────
 function extractPostsFromPipeline(pipeline: any): any[] | null {
   if (!pipeline) return null;
   try {
@@ -213,8 +219,16 @@ const SidebarChat = () => {
     if (!isLoading) { setLoadingMsgIdx(0); return; }
     const id = setInterval(() => {
       setLoadingMsgIdx((i) => {
-        let next = Math.floor(Math.random() * LOADING_MESSAGES.length);
-        while (next === i) next = Math.floor(Math.random() * LOADING_MESSAGES.length);
+        const currentAuthor = getQuoteAuthor(LOADING_MESSAGES[i]);
+        let next: number;
+        let attempts = 0;
+        do {
+          next = Math.floor(Math.random() * LOADING_MESSAGES.length);
+          attempts++;
+        } while (
+          (next === i || getQuoteAuthor(LOADING_MESSAGES[next]) === currentAuthor) &&
+          attempts < 20
+        );
         return next;
       });
     }, 4500);
@@ -359,12 +373,12 @@ const SidebarChat = () => {
         },
       ]);
 
-      // ── Navigate if AI returned a route ──────────────────────────────────
+      // ── Navigate if AI returned a route ────────────────────────────────────
       if (result.nav_target) {
         setTimeout(() => navigate(result.nav_target!), 700);
       }
 
-      // ── Show generated posts if pipeline fired ────────────────────────────
+      // ── Show generated posts if pipeline fired ────────────────────────────────
       if (result._knp_fired && result.pipeline) {
         const posts = extractPostsFromPipeline(result.pipeline);
         if (posts && posts.length > 0) {
