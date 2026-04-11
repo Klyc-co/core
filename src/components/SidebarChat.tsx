@@ -1,76 +1,55 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Send, Zap, ExternalLink, RefreshCw } from "lucide-react";
+import { Send, Zap, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useClientContext } from "@/contexts/ClientContext";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterviewMode";
-import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Marketing loading quotes from every era ─────────────────────────────────
-// Extract the attribution (everything after the last "— ") to avoid back-to-back same source
-function getQuoteAuthor(msg: string): string {
-  const m = msg.match(/— (.+)$/);
-  return m ? m[1] : msg;
+// ── Client-side field options for button enforcement ────────────────────────
+const CLIENT_FIELD_OPTIONS: Record<string, string[]> = {
+  goal: ["Launch a product", "Grow my audience", "Drive sales", "Build brand awareness"],
+  platform: ["Instagram", "LinkedIn", "TikTok", "Twitter/X"],
+  tone: ["Bold & direct", "Friendly & warm", "Professional", "Witty & fun"],
+  audience: ["Gen Z consumers", "B2B decision makers", "Local community", "Niche enthusiasts"],
+  format: ["Short-form video", "Static image post", "Carousel", "Long-form article"],
+  budget: ["Under $500", "$500\u2013$2k", "$2k\u2013$10k", "$10k+"],
+  timeline: ["This week", "This month", "Next quarter", "Flexible"],
+  industry: ["E-commerce", "SaaS / Tech", "Food & Beverage", "Health & Wellness"],
+  content_type: ["Educational", "Promotional", "Behind-the-scenes", "User-generated"],
+};
+
+function extractFrontendQuestion(text: string): string {
+  const lines = text.split("\n").filter((l) => l.trim().length > 0);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim().endsWith("?")) return lines[i].trim();
+  }
+  return lines[lines.length - 1] || text;
 }
 
-const LOADING_MESSAGES = [
-  // Mad Men — Don Draper
-  "\"What you call love was invented by guys like me, to sell nylons.\" — Don Draper",
-  "\"If you don't like what's being said, change the conversation.\" — Don Draper",
-  "\"Advertising is based on one thing: happiness.\" — Don Draper",
-  "\"Make it simple, but significant.\" — Don Draper",
-  "\"The most important idea in advertising is 'new'.\" — Don Draper",
-  "\"People want to be told what to do so badly they'll listen to anyone.\" — Don Draper",
-  "\"You are the product. You feeling something — that's what sells.\" — Don Draper",
-  "\"I want to tell you something because you're very dear to me: in this business, you can't know what's coming.\" — Don Draper",
-  // David Ogilvy
-  "\"The consumer isn't a moron; she is your wife.\" — David Ogilvy",
-  "\"On average, five times as many people read the headline as the body copy.\" — David Ogilvy",
-  "\"If it doesn't sell, it isn't creative.\" — David Ogilvy",
-  "\"Never run an advertisement you wouldn't want your family to see.\" — David Ogilvy",
-  "\"The best ideas come as jokes. Make your thinking as funny as possible.\" — David Ogilvy",
-  // Bill Bernbach
-  "\"An idea can turn to dust or magic, depending on the talent that rubs against it.\" — Bill Bernbach",
-  "\"Nobody counts the number of ads you run; they just remember the impression you make.\" — Bill Bernbach",
-  "\"A great ad campaign will make a bad product fail faster.\" — Bill Bernbach",
-  "\"All of us who professionally use the mass media are the shapers of society.\" — Bill Bernbach",
-  // Leo Burnett
-  "\"Make it simple. Make it memorable. Make it inviting to look at.\" — Leo Burnett",
-  "\"What helps people, helps business.\" — Leo Burnett",
-  "\"Good advertising does not just circulate information. It penetrates the public mind with desires and belief.\" — Leo Burnett",
-  // Seth Godin
-  "\"Marketing is no longer about the stuff you make, but about the stories you tell.\" — Seth Godin",
-  "\"People do not buy goods and services. They buy relations, stories and magic.\" — Seth Godin",
-  "\"In a crowded marketplace, fitting in is failing.\" — Seth Godin",
-  // Devil Wears Prada
-  "\"Florals? For spring? Groundbreaking.\" — Miranda Priestly",
-  "\"By all means move at a glacial pace. You know how that thrills me.\" — Miranda Priestly",
-  "\"Details of your incompetence do not interest me.\" — Miranda Priestly",
-  "\"That's all.\" — Miranda Priestly",
-  "\"You have no idea how many legends have walked these halls.\" — Nigel, DWP",
-  "\"You chose fashion.\" — Nigel, DWP",
-  "\"It's not just blue. It's cerulean. And it's in a pile of stuff.\" — Miranda Priestly",
-  // Industry legends
-  "\"Half the money I spend on advertising is wasted; the trouble is I don't know which half.\" — John Wanamaker",
-  "\"In the factory we make cosmetics; in the drugstore we sell hope.\" — Charles Revson",
-  "\"Marketing is about values.\" — Steve Jobs",
-  "\"The best marketing doesn't feel like marketing.\" — Tom Fishburne",
-  "\"Content is king, but context is God.\" — Gary Vaynerchuk",
-  "\"Marketing takes a day to learn. Unfortunately it takes a lifetime to master.\" — Philip Kotler",
-  "\"Creativity is the last unfair competitive advantage we have over the competition.\" — Dave Trott",
-  "\"You can't bore people into buying your product.\" — David Abbott",
-  "\"Doing business without advertising is like winking at a girl in the dark.\" — Stuart H. Britt",
-];
+function enforceFrontendButtons(nq: NextQuestion[]): NextQuestion[] {
+  if (nq.length === 0) return nq;
+  const buttons = nq.filter((q) => q.type !== "fill_in");
+  const hasFillIn = nq.some((q) => q.type === "fill_in");
+  const realButtons = buttons.filter((q) => !q.question?.trim().endsWith("?"));
+  if (realButtons.length >= 3) {
+    return hasFillIn ? nq : [...nq, { field: "custom", question: "Something else...", type: "fill_in" as const }];
+  }
+  const field = (nq[0]?.field || "goal").toLowerCase().replace(/[^a-z_]/g, "");
+  const options = CLIENT_FIELD_OPTIONS[field] || CLIENT_FIELD_OPTIONS["goal"];
+  return [
+    ...options.map((opt) => ({ field, question: opt, type: "button" as const })),
+    { field: "custom", question: "Something else...", type: "fill_in" as const },
+  ];
+}
 
 interface NextQuestion {
   field: string;
@@ -105,12 +84,12 @@ type ChatMessage = {
   next_questions?: NextQuestion[];
 };
 
-// ── Client-side navigation intent detection (instant redirect, no AI round-trip needed) ──
+// ── Client-side navigation intent detection ──────────────────────────────────
 const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
   {
     pattern: /make (a |my )?(first |new )?post|create (a |new )?post|generate (a |new )?post|write (a |new )?post|where.*make.*post|show me.*post|take me.*post/i,
     route: "/campaigns/generate",
-    reply: "Taking you there now — let's build something. 🚀",
+    reply: "Taking you there now \u2014 let's build something. \uD83D\uDE80",
   },
   {
     pattern: /\b(go to|take me to|open|show me|navigate to)\b.*\b(campaign|campaigns)\b/i,
@@ -134,15 +113,13 @@ const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
   },
 ];
 
-// ── Route all chat through klyc-chat (C-lane entry point) ───────────────────────
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
-// ── Pipeline result extraction helpers ────────────────────────────────────
+// ── Pipeline result extraction helpers ──────────────────────────────────────
 function extractPostsFromPipeline(pipeline: any): any[] | null {
   if (!pipeline) return null;
   try {
-    // Navigate: pipeline.σo.a_lane_envelopes.copy.posts || .σo || .packages
     const sigmaO = pipeline["\u03c3o"] || pipeline;
     const aLane = sigmaO?.a_lane_envelopes || sigmaO?.final_products;
     const copyLane = aLane?.copy;
@@ -157,17 +134,17 @@ function extractPostsFromPipeline(pipeline: any): any[] | null {
 
 function formatPostsForChat(posts: any[]): string {
   const platformEmoji: Record<string, string> = {
-    linkedin: "💼",
-    twitter: "🐦",
-    instagram: "📷",
-    tiktok: "🎵",
-    youtube: "▶️",
-    facebook: "📘",
+    linkedin: "\uD83D\uDCBC",
+    twitter: "\uD83D\uDC26",
+    instagram: "\uD83D\uDCF7",
+    tiktok: "\uD83C\uDFB5",
+    youtube: "\u25B6\uFE0F",
+    facebook: "\uD83D\uDCD8",
   };
-  let out = "✅ **Posts ready! Here's what I built:**\n\n";
+  let out = "\u2705 **Posts ready! Here's what I built:**\n\n";
   for (const p of posts) {
     const pl = (p.platform || "").toLowerCase();
-    const em = platformEmoji[pl] || "📱";
+    const em = platformEmoji[pl] || "\uD83D\uDCF1";
     out += `---\n**${em} ${pl.toUpperCase()}**\n\n`;
     if (p.hook) out += `**Hook:** ${p.hook}\n\n`;
     if (p.body) out += `${p.body}\n\n`;
@@ -175,7 +152,7 @@ function formatPostsForChat(posts: any[]): string {
     if (Array.isArray(p.hashtags) && p.hashtags.length) {
       out += p.hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ") + "\n\n";
     }
-    if (p.posting_time?.primary) out += `🕐 *Best time: ${p.posting_time.primary}*\n\n`;
+    if (p.posting_time?.primary) out += `\uD83D\uDD50 *Best time: ${p.posting_time.primary}*\n\n`;
   }
   return out.trim();
 }
@@ -190,7 +167,7 @@ const SidebarChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMsgIdx, setLoadingMsgIdx] = useState(() => Math.floor(Math.random() * LOADING_MESSAGES.length));
+  const [loadingQuote, setLoadingQuote] = useState<{ quote: string; author: string } | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
@@ -208,32 +185,43 @@ const SidebarChat = () => {
         ...prev,
         {
           role: "assistant",
-          content: "📝 **Let's create a post!**\n\nTell me about your post — what's the idea, what are you promoting, and who's your target audience? I'll help shape the strategy while you pick your content type on the right.",
+          content: "\uD83D\uDCDD **Let's create a post!**\n\nTell me about your post \u2014 what's the idea, what are you promoting, and who's your target audience? I'll help shape the strategy while you pick your content type on the right.",
         },
       ]);
     }
   }, [location.pathname]);
 
-  // ── Cycle loading messages while waiting (random, non-repeating, slow enough to read) ──
-  useEffect(() => {
-    if (!isLoading) { setLoadingMsgIdx(0); return; }
-    const id = setInterval(() => {
-      setLoadingMsgIdx((i) => {
-        const currentAuthor = getQuoteAuthor(LOADING_MESSAGES[i]);
-        let next: number;
-        let attempts = 0;
-        do {
-          next = Math.floor(Math.random() * LOADING_MESSAGES.length);
-          attempts++;
-        } while (
-          (next === i || getQuoteAuthor(LOADING_MESSAGES[next]) === currentAuthor) &&
-          attempts < 20
-        );
-        return next;
+  // ── Fetch a random loading quote from Supabase, excluding current author ──
+  const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
+    try {
+      const { data, error } = await supabase.rpc("get_random_quote", {
+        p_exclude_author: excludeAuthor || null,
       });
+      if (!error && data && data.length > 0) {
+        setLoadingQuote({ quote: data[0].quote, author: data[0].author });
+        return data[0].author as string;
+      }
+    } catch {
+      // silently fail — loading quote is cosmetic
+    }
+    return excludeAuthor;
+  }, []);
+
+  // ── Cycle loading quotes while waiting ──────────────────────────────────────
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingQuote(null);
+      return;
+    }
+    // Fetch first quote immediately
+    let currentAuthor: string | undefined;
+    fetchLoadingQuote().then((author) => { currentAuthor = author; });
+
+    const id = setInterval(() => {
+      fetchLoadingQuote(currentAuthor).then((author) => { currentAuthor = author; });
     }, 4500);
     return () => clearInterval(id);
-  }, [isLoading]);
+  }, [isLoading, fetchLoadingQuote]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -264,7 +252,6 @@ const SidebarChat = () => {
       return data;
     }
     if (!data || typeof data !== "object") return "";
-    // klyc-chat returns structured response with .message as primary text field
     for (const key of ["message", "reply", "response", "text", "content", "result"]) {
       const val = data[key];
       if (typeof val === "string" && val.trim().length > 0) return val;
@@ -279,8 +266,7 @@ const SidebarChat = () => {
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
 
-    // Build messages array for klyc-chat: history + current user message
-    const messages = [
+    const msgs = [
       ...(payload.history || []),
       { role: "user", content: payload.message },
     ];
@@ -293,7 +279,7 @@ const SidebarChat = () => {
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({
-        messages,
+        messages: msgs,
         request_id: crypto.randomUUID(),
       }),
     });
@@ -304,12 +290,20 @@ const SidebarChat = () => {
     }
 
     const data = await resp.json();
-    const text = extractResponseText(data) || FALLBACK_MSG;
+    let finalText = extractResponseText(data) || FALLBACK_MSG;
+    let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
+
+    // ── Client-side enforcement: strip preamble + guarantee button format ──
+    if (finalNQ.length > 0) {
+      finalText = extractFrontendQuestion(finalText);
+      finalNQ = enforceFrontendButtons(finalNQ);
+    }
+
     return {
-      text,
+      text: finalText,
       usage: data.usage,
       nav_target: data.nav_target as string | undefined,
-      next_questions: (data.next_questions || []) as NextQuestion[],
+      next_questions: finalNQ,
       _knp_fired: data._knp_fired as boolean | undefined,
       pipeline: data.pipeline,
     };
@@ -347,8 +341,6 @@ const SidebarChat = () => {
     if (!overrideText) setInput("");
     setQuestionAnswers({});
 
-    // ── Client-side nav intent: only fire for SHORT navigation-only messages ──
-    // If the message is detailed (>80 chars) it's a brief/request — let the AI handle it fully
     const isNavOnlyMessage = text.trim().length <= 80;
     const navMatch = isNavOnlyMessage ? NAV_INTENTS.find((n) => n.pattern.test(text)) : null;
     if (navMatch) {
@@ -373,12 +365,10 @@ const SidebarChat = () => {
         },
       ]);
 
-      // ── Navigate if AI returned a route ────────────────────────────────────
       if (result.nav_target) {
         setTimeout(() => navigate(result.nav_target!), 700);
       }
 
-      // ── Show generated posts if pipeline fired ────────────────────────────────
       if (result._knp_fired && result.pipeline) {
         const posts = extractPostsFromPipeline(result.pipeline);
         if (posts && posts.length > 0) {
@@ -386,7 +376,6 @@ const SidebarChat = () => {
           setTimeout(() => {
             setMessages((prev) => [...prev, { role: "assistant", content: postsContent }]);
           }, 400);
-          // Navigate to campaigns so user can review generated content
           setTimeout(() => navigate("/campaigns"), 2200);
         }
       }
@@ -465,7 +454,7 @@ const SidebarChat = () => {
                     {msg.compressionStats && (
                       <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground/60">
                         <Zap className="h-2 w-2" />
-                        <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()}</span>
+                        <span>{msg.compressionStats.ratio}x \u00b7 {msg.compressionStats.originalTokens.toLocaleString()}\u2192{msg.compressionStats.compressedTokens.toLocaleString()}</span>
                       </div>
                     )}
                     {msg.next_questions && msg.next_questions.length > 0 && (
@@ -524,12 +513,15 @@ const SidebarChat = () => {
             </div>
           ))}
 
-          {/* ── Animated loading message ── */}
+          {/* ── Animated loading quote from Supabase ── */}
           {isLoading && (
             <div className="flex justify-start w-full items-start">
               <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
-              <div className="bg-muted rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground italic animate-pulse">
-                {LOADING_MESSAGES[loadingMsgIdx]}
+              <div className="bg-muted rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground italic animate-pulse max-w-[85%]">
+                {loadingQuote
+                  ? <><span>{loadingQuote.quote}</span><span className="block mt-0.5 text-[9px] not-italic opacity-60">\u2014 {loadingQuote.author}</span></>
+                  : <span>\u2026<\/span>
+                }
               </div>
             </div>
           )}
