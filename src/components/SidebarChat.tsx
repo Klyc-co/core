@@ -291,7 +291,7 @@ const SidebarChat = () => {
 
   const callOrchestrator = async (
     payload: { message: string; history?: Array<{ role: string; content: string }> },
-  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number }; nav_target?: string; next_questions?: NextQuestion[]; _knp_fired?: boolean; pipeline?: any }> => {
+  ): Promise<{ text: string; usage?: { input_tokens: number; output_tokens: number }; nav_target?: string; next_questions?: NextQuestion[]; _knp_fired?: boolean; pipeline?: any; draft_updates?: Record<string, any> }> => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
@@ -341,6 +341,7 @@ const SidebarChat = () => {
       next_questions: finalNQ,
       _knp_fired: data._knp_fired as boolean | undefined,
       pipeline: data.pipeline,
+      draft_updates: data.draft_updates,
     };
   };
 
@@ -402,6 +403,30 @@ const SidebarChat = () => {
 
       if (result.nav_target) {
         setTimeout(() => navigate(result.nav_target!), 700);
+      }
+
+      // Guard 3 fired on backend: _campaign_complete + _draft_id → run pipeline async
+      if (result.draft_updates?._campaign_complete && result.draft_updates?._draft_id) {
+        const guardDraftId = result.draft_updates._draft_id as string;
+        runCampaignPipeline(guardDraftId, { auto_schedule: false })
+          .then((pr) => {
+            if (pr.success) {
+              const count = pr.post_queue_ids?.length || 0;
+              toast({ title: "Campaign ready!", description: `${count} posts generated.` });
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: `\u2705 **${count} posts** generated and queued. Taking you to campaigns now.`,
+                },
+              ]);
+              setTimeout(() => navigate("/campaigns"), 600);
+            }
+          })
+          .catch((e) => {
+            console.error("Pipeline error from Guard 3:", e);
+            toast({ title: "Generation issue", description: "Brief saved — try from Campaigns.", variant: "destructive" });
+          });
       }
 
       if (result._knp_fired && result.pipeline) {
