@@ -14,14 +14,14 @@ import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterv
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Client-side field options for button enforcement ────────────────────────
+// -- Client-side field options for button enforcement
 const CLIENT_FIELD_OPTIONS: Record<string, string[]> = {
   goal: ["Launch a product", "Grow my audience", "Drive sales", "Build brand awareness"],
   platform: ["Instagram", "LinkedIn", "TikTok", "Twitter/X"],
   tone: ["Bold & direct", "Friendly & warm", "Professional", "Witty & fun"],
   audience: ["Gen Z consumers", "B2B decision makers", "Local community", "Niche enthusiasts"],
   format: ["Short-form video", "Static image post", "Carousel", "Long-form article"],
-  budget: ["Under $500", "$500\u2013$2k", "$2k\u2013$10k", "$10k+"],
+  budget: ["Under $500", "$500-$2k", "$2k-$10k", "$10k+"],
   timeline: ["This week", "This month", "Next quarter", "Flexible"],
   industry: ["E-commerce", "SaaS / Tech", "Food & Beverage", "Health & Wellness"],
   content_type: ["Educational", "Promotional", "Behind-the-scenes", "User-generated"],
@@ -84,12 +84,11 @@ type ChatMessage = {
   next_questions?: NextQuestion[];
 };
 
-// ── Client-side navigation intent detection ──────────────────────────────────
 const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
   {
     pattern: /make (a |my )?(first |new )?post|create (a |new )?post|generate (a |new )?post|write (a |new )?post|where.*make.*post|show me.*post|take me.*post/i,
     route: "/campaigns/generate",
-    reply: "Taking you there now \u2014 let's build something. \uD83D\uDE80",
+    reply: "Taking you there now - let's build something.",
   },
   {
     pattern: /\b(go to|take me to|open|show me|navigate to)\b.*\b(campaign|campaigns)\b/i,
@@ -116,7 +115,6 @@ const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
-// ── Pipeline result extraction helpers ──────────────────────────────────────
 function extractPostsFromPipeline(pipeline: any): any[] | null {
   if (!pipeline) return null;
   try {
@@ -134,17 +132,17 @@ function extractPostsFromPipeline(pipeline: any): any[] | null {
 
 function formatPostsForChat(posts: any[]): string {
   const platformEmoji: Record<string, string> = {
-    linkedin: "\uD83D\uDCBC",
-    twitter: "\uD83D\uDC26",
-    instagram: "\uD83D\uDCF7",
-    tiktok: "\uD83C\uDFB5",
-    youtube: "\u25B6\uFE0F",
-    facebook: "\uD83D\uDCD8",
+    linkedin: "💼",
+    twitter: "🐦",
+    instagram: "📷",
+    tiktok: "🎵",
+    youtube: "▶️",
+    facebook: "📘",
   };
-  let out = "\u2705 **Posts ready! Here's what I built:**\n\n";
+  let out = "✅ **Posts ready! Here's what I built:**\n\n";
   for (const p of posts) {
     const pl = (p.platform || "").toLowerCase();
-    const em = platformEmoji[pl] || "\uD83D\uDCF1";
+    const em = platformEmoji[pl] || "📱";
     out += `---\n**${em} ${pl.toUpperCase()}**\n\n`;
     if (p.hook) out += `**Hook:** ${p.hook}\n\n`;
     if (p.body) out += `${p.body}\n\n`;
@@ -152,7 +150,7 @@ function formatPostsForChat(posts: any[]): string {
     if (Array.isArray(p.hashtags) && p.hashtags.length) {
       out += p.hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ") + "\n\n";
     }
-    if (p.posting_time?.primary) out += `\uD83D\uDD50 *Best time: ${p.posting_time.primary}*\n\n`;
+    if (p.posting_time?.primary) out += `🕐 *Best time: ${p.posting_time.primary}*\n\n`;
   }
   return out.trim();
 }
@@ -177,7 +175,6 @@ const SidebarChat = () => {
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-prompt when user lands on the generate page
   useEffect(() => {
     if (location.pathname === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
       setLastPromptedRoute("/campaigns/generate");
@@ -185,13 +182,12 @@ const SidebarChat = () => {
         ...prev,
         {
           role: "assistant",
-          content: "\uD83D\uDCDD **Let's create a post!**\n\nTell me about your post \u2014 what's the idea, what are you promoting, and who's your target audience? I'll help shape the strategy while you pick your content type on the right.",
+          content: "📝 **Let's create a post!**\n\nTell me about your post — what's the idea, what are you promoting, and who's your target audience?",
         },
       ]);
     }
   }, [location.pathname]);
 
-  // ── Fetch a random loading quote from Supabase, excluding current author ──
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
       const { data, error } = await supabase.rpc("get_random_quote", {
@@ -202,21 +198,18 @@ const SidebarChat = () => {
         return data[0].author as string;
       }
     } catch {
-      // silently fail — loading quote is cosmetic
+      // silently fail
     }
     return excludeAuthor;
   }, []);
 
-  // ── Cycle loading quotes while waiting ──────────────────────────────────────
   useEffect(() => {
     if (!isLoading) {
       setLoadingQuote(null);
       return;
     }
-    // Fetch first quote immediately
     let currentAuthor: string | undefined;
     fetchLoadingQuote().then((author) => { currentAuthor = author; });
-
     const id = setInterval(() => {
       fetchLoadingQuote(currentAuthor).then((author) => { currentAuthor = author; });
     }, 4500);
@@ -293,7 +286,7 @@ const SidebarChat = () => {
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
 
-    // ── Client-side enforcement: strip preamble + guarantee button format ──
+    // Client-side enforcement: strip preamble + guarantee button format
     if (finalNQ.length > 0) {
       finalText = extractFrontendQuestion(finalText);
       finalNQ = enforceFrontendButtons(finalNQ);
@@ -425,7 +418,6 @@ const SidebarChat = () => {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Messages */}
       <ScrollArea className="flex-1 px-3 py-2" ref={scrollRef}>
         <div className="space-y-2">
           {messages.map((msg, i) => (
@@ -454,7 +446,7 @@ const SidebarChat = () => {
                     {msg.compressionStats && (
                       <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground/60">
                         <Zap className="h-2 w-2" />
-                        <span>{msg.compressionStats.ratio}x \u00b7 {msg.compressionStats.originalTokens.toLocaleString()}\u2192{msg.compressionStats.compressedTokens.toLocaleString()}</span>
+                        <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()}</span>
                       </div>
                     )}
                     {msg.next_questions && msg.next_questions.length > 0 && (
@@ -513,22 +505,24 @@ const SidebarChat = () => {
             </div>
           ))}
 
-          {/* ── Animated loading quote from Supabase ── */}
           {isLoading && (
             <div className="flex justify-start w-full items-start">
               <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
               <div className="bg-muted rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground italic animate-pulse max-w-[85%]">
-                {loadingQuote
-                  ? <><span>{loadingQuote.quote}</span><span className="block mt-0.5 text-[9px] not-italic opacity-60">\u2014 {loadingQuote.author}</span></>
-                  : <span>\u2026<\/span>
-                }
+                {loadingQuote ? (
+                  <>
+                    <span>{loadingQuote.quote}</span>
+                    <span className="block mt-0.5 text-[9px] not-italic opacity-60">— {loadingQuote.author}</span>
+                  </>
+                ) : (
+                  <span>...</span>
+                )}
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Input */}
       <div className="px-2 py-1.5 border-t border-border flex items-center gap-1.5 shrink-0">
         <Textarea
           value={input}
