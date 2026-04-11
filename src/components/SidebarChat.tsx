@@ -184,7 +184,7 @@ const SidebarChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(() => Math.floor(Math.random() * LOADING_MESSAGES.length));
   const [draftId, setDraftId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
@@ -208,10 +208,16 @@ const SidebarChat = () => {
     }
   }, [location.pathname]);
 
-  // ── Cycle loading messages while waiting ────────────────────────────────────
+  // ── Cycle loading messages while waiting (random, non-repeating, slow enough to read) ──
   useEffect(() => {
     if (!isLoading) { setLoadingMsgIdx(0); return; }
-    const id = setInterval(() => setLoadingMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length), 1800);
+    const id = setInterval(() => {
+      setLoadingMsgIdx((i) => {
+        let next = Math.floor(Math.random() * LOADING_MESSAGES.length);
+        while (next === i) next = Math.floor(Math.random() * LOADING_MESSAGES.length);
+        return next;
+      });
+    }, 4500);
     return () => clearInterval(id);
   }, [isLoading]);
 
@@ -450,21 +456,52 @@ const SidebarChat = () => {
                     )}
                     {msg.next_questions && msg.next_questions.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {msg.next_questions.map((q, qi) => (
-                          <button
-                            key={qi}
-                            onClick={() => {
-                              setMessages((prev) =>
-                                prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m)
-                              );
-                              handleSend(q.question || q.field);
-                            }}
-                            disabled={isLoading}
-                            className="text-[11px] px-2.5 py-1 rounded-md border border-primary/50 text-primary hover:bg-primary/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium"
-                          >
-                            {q.question || q.field}
-                          </button>
-                        ))}
+                        {msg.next_questions.map((q, qi) =>
+                          q.type === "fill_in" ? (
+                            <div key={qi} className="flex gap-1 w-full mt-0.5">
+                              <Input
+                                value={fillInValue}
+                                onChange={(e) => setFillInValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && fillInValue.trim()) {
+                                    setMessages((prev) => prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m));
+                                    handleSend(fillInValue.trim());
+                                    setFillInValue("");
+                                  }
+                                }}
+                                placeholder={q.question || "Type your answer..."}
+                                className="text-[11px] h-7 flex-1"
+                                disabled={isLoading}
+                              />
+                              <Button
+                                size="sm"
+                                disabled={!fillInValue.trim() || isLoading}
+                                onClick={() => {
+                                  setMessages((prev) => prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m));
+                                  handleSend(fillInValue.trim());
+                                  setFillInValue("");
+                                }}
+                                className="h-7 text-[10px] px-2 shrink-0"
+                              >
+                                <Send className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              key={qi}
+                              onClick={() => {
+                                setMessages((prev) =>
+                                  prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m)
+                                );
+                                handleSend(q.question || q.field);
+                              }}
+                              disabled={isLoading}
+                              className="text-[11px] px-2.5 py-1 rounded-md border border-primary/50 text-primary hover:bg-primary/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+                            >
+                              {q.question || q.field}
+                            </button>
+                          )
+                        )}
                       </div>
                     )}
                   </>
