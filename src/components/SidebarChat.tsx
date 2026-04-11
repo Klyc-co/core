@@ -16,23 +16,54 @@ import { autoPopulateFromDraftUpdates } from "@/lib/onboardingAutoPopulate";
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Mad Men era loading messages ─────────────────────────────────────────────
+// ── Marketing loading quotes from every era ───────────────────────────────────
 const LOADING_MESSAGES = [
-  "\"Gentlemen, we have their attention. Now we take their money.\"",
-  "\"The alternative to a good ad is a bad ad. Not no ad.\"",
-  "\"They don't buy products. They buy identities.\"",
-  "\"Run it again. Wider margins. Bigger type.\"",
-  "\"Tell them what they want to hear. Then give them no choice.\"",
-  "\"In this business we don't make mistakes. We make decisions.\"",
-  "\"The consumer isn't a moron. She is your wife.\"",
-  "\"Loyalty is measured in repeat purchases, not warm feelings.\"",
-  "\"An understated ad is a feat of discipline. Or an accident.\"",
-  "\"We must loop in Research. No we mustn't.\"",
-  "\"The most rhetorical question in advertising: 'Why not?'\"",
-  "\"This campaign needs presence. And a different font.\"",
-  "\"Sell the sizzle. The steak is an afterthought.\"",
-  "\"I need a drinker's line. A real one. Get Don.\"",
-  "\"The only rule in advertising: make them feel something.\"",
+  // Mad Men — Don Draper
+  "\"What you call love was invented by guys like me, to sell nylons.\" — Don Draper",
+  "\"If you don't like what's being said, change the conversation.\" — Don Draper",
+  "\"Advertising is based on one thing: happiness.\" — Don Draper",
+  "\"Make it simple, but significant.\" — Don Draper",
+  "\"The most important idea in advertising is 'new'.\" — Don Draper",
+  "\"People want to be told what to do so badly they'll listen to anyone.\" — Don Draper",
+  "\"You are the product. You feeling something — that's what sells.\" — Don Draper",
+  "\"I want to tell you something because you're very dear to me: in this business, you can't know what's coming.\" — Don Draper",
+  // David Ogilvy
+  "\"The consumer isn't a moron; she is your wife.\" — David Ogilvy",
+  "\"On average, five times as many people read the headline as the body copy.\" — David Ogilvy",
+  "\"If it doesn't sell, it isn't creative.\" — David Ogilvy",
+  "\"Never run an advertisement you wouldn't want your family to see.\" — David Ogilvy",
+  "\"The best ideas come as jokes. Make your thinking as funny as possible.\" — David Ogilvy",
+  // Bill Bernbach
+  "\"An idea can turn to dust or magic, depending on the talent that rubs against it.\" — Bill Bernbach",
+  "\"Nobody counts the number of ads you run; they just remember the impression you make.\" — Bill Bernbach",
+  "\"A great ad campaign will make a bad product fail faster.\" — Bill Bernbach",
+  "\"All of us who professionally use the mass media are the shapers of society.\" — Bill Bernbach",
+  // Leo Burnett
+  "\"Make it simple. Make it memorable. Make it inviting to look at.\" — Leo Burnett",
+  "\"What helps people, helps business.\" — Leo Burnett",
+  "\"Good advertising does not just circulate information. It penetrates the public mind with desires and belief.\" — Leo Burnett",
+  // Seth Godin
+  "\"Marketing is no longer about the stuff you make, but about the stories you tell.\" — Seth Godin",
+  "\"People do not buy goods and services. They buy relations, stories and magic.\" — Seth Godin",
+  "\"In a crowded marketplace, fitting in is failing.\" — Seth Godin",
+  // Devil Wears Prada
+  "\"Florals? For spring? Groundbreaking.\" — Miranda Priestly",
+  "\"By all means move at a glacial pace. You know how that thrills me.\" — Miranda Priestly",
+  "\"Details of your incompetence do not interest me.\" — Miranda Priestly",
+  "\"That's all.\" — Miranda Priestly",
+  "\"You have no idea how many legends have walked these halls.\" — Nigel, DWP",
+  "\"You chose fashion.\" — Nigel, DWP",
+  "\"It's not just blue. It's cerulean. And it's in a pile of stuff.\" — Miranda Priestly",
+  // Industry legends
+  "\"Half the money I spend on advertising is wasted; the trouble is I don't know which half.\" — John Wanamaker",
+  "\"In the factory we make cosmetics; in the drugstore we sell hope.\" — Charles Revson",
+  "\"Marketing is about values.\" — Steve Jobs",
+  "\"The best marketing doesn't feel like marketing.\" — Tom Fishburne",
+  "\"Content is king, but context is God.\" — Gary Vaynerchuk",
+  "\"Marketing takes a day to learn. Unfortunately it takes a lifetime to master.\" — Philip Kotler",
+  "\"Creativity is the last unfair competitive advantage we have over the competition.\" — Dave Trott",
+  "\"You can't bore people into buying your product.\" — David Abbott",
+  "\"Doing business without advertising is like winking at a girl in the dark.\" — Stuart H. Britt",
 ];
 
 interface NextQuestion {
