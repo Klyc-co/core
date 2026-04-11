@@ -42,7 +42,6 @@ const FALLBACK_QUOTES: Array<{ quote: string; author: string }> = [
 const CLIENT_FIELD_OPTIONS: Record<string, string[]> = {
   goal: ["Launch a product", "Grow my audience", "Drive sales", "Build brand awareness"],
   platform: ["Instagram", "LinkedIn", "TikTok", "Twitter/X"],
-  // tone/vibe/style/voice all map to tone options so AI vibe questions get right buttons
   tone: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
   vibe: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
   style: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
@@ -231,7 +230,6 @@ const SidebarChat = () => {
     } catch {
       // fall through to hardcoded fallback
     }
-    // Fallback: pick a random quote from the hardcoded list, avoiding same author
     const pool = excludeAuthor
       ? FALLBACK_QUOTES.filter((q) => q.author !== excludeAuthor)
       : FALLBACK_QUOTES;
@@ -301,6 +299,14 @@ const SidebarChat = () => {
       { role: "user", content: payload.message },
     ];
 
+    // ── [KLYC DEBUG] Log outgoing request ──
+    const _dbgUserMsgs = msgs.filter((m) => m.role === "user");
+    console.log("[KLYC DEBUG] → request", {
+      total_msgs: msgs.length,
+      user_msg_count: _dbgUserMsgs.length,
+      last_user_preview: (_dbgUserMsgs[_dbgUserMsgs.length - 1]?.content || "").slice(0, 150),
+    });
+
     const resp = await fetch(KLYC_CHAT_URL, {
       method: "POST",
       headers: {
@@ -320,6 +326,19 @@ const SidebarChat = () => {
     }
 
     const data = await resp.json();
+
+    // ── [KLYC DEBUG] Log raw backend response ──
+    console.log("[KLYC DEBUG] ← response", {
+      intent: data.intent,
+      msg_preview: (data.message || "").slice(0, 100),
+      nq_count: Array.isArray(data.next_questions) ? data.next_questions.length : 0,
+      _campaign_complete: data.draft_updates?._campaign_complete,
+      _draft_id: data.draft_updates?._draft_id,
+      nav_target: data.nav_target,
+      draft_keys: Object.keys(data.draft_updates || {}),
+      error: data.error || null,
+    });
+
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
 
@@ -391,6 +410,15 @@ const SidebarChat = () => {
       const history = messages.filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content }));
       const result = await callOrchestrator({ message: text, history });
 
+      // ── [KLYC DEBUG] Log Guard 3 pipeline trigger check ──
+      console.log("[KLYC DEBUG] pipeline check", {
+        _campaign_complete: result.draft_updates?._campaign_complete,
+        _draft_id: result.draft_updates?._draft_id,
+        will_trigger_pipeline: !!(result.draft_updates?._campaign_complete && result.draft_updates?._draft_id),
+        nav_target: result.nav_target,
+        nq_count: result.next_questions?.length ?? 0,
+      });
+
       setMessages((prev) => [
         ...prev,
         {
@@ -408,8 +436,10 @@ const SidebarChat = () => {
       // Guard 3 fired on backend: _campaign_complete + _draft_id → run pipeline async
       if (result.draft_updates?._campaign_complete && result.draft_updates?._draft_id) {
         const guardDraftId = result.draft_updates._draft_id as string;
+        console.log("[KLYC DEBUG] firing runCampaignPipeline for draft:", guardDraftId);
         runCampaignPipeline(guardDraftId, { auto_schedule: false })
           .then((pr) => {
+            console.log("[KLYC DEBUG] pipeline result", { success: pr.success, post_count: pr.post_queue_ids?.length });
             if (pr.success) {
               const count = pr.post_queue_ids?.length || 0;
               toast({ title: "Campaign ready!", description: `${count} posts generated.` });
@@ -424,7 +454,7 @@ const SidebarChat = () => {
             }
           })
           .catch((e) => {
-            console.error("Pipeline error from Guard 3:", e);
+            console.error("[KLYC DEBUG] pipeline error from Guard 3:", e);
             toast({ title: "Generation issue", description: "Brief saved — try from Campaigns.", variant: "destructive" });
           });
       }
