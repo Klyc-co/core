@@ -193,12 +193,16 @@ const SidebarChat = () => {
       const { data, error } = await supabase.rpc("get_random_quote", {
         p_exclude_author: excludeAuthor || null,
       });
-      if (!error && data && data.length > 0) {
-        setLoadingQuote({ quote: data[0].quote, author: data[0].author });
-        return data[0].author as string;
+      if (!error && data) {
+        // Defensive: Supabase may return array or single object depending on client version
+        const rows = Array.isArray(data) ? data : [data];
+        if (rows.length > 0 && rows[0]?.quote) {
+          setLoadingQuote({ quote: rows[0].quote, author: rows[0].author });
+          return rows[0].author as string;
+        }
       }
     } catch {
-      // silently fail
+      // silently fail — show "..." fallback
     }
     return excludeAuthor;
   }, []);
@@ -288,14 +292,16 @@ const SidebarChat = () => {
 
     // Client-side enforcement:
     // Only show buttons when the AI is genuinely asking a question (contains "?").
-    // If the message has no "?", the AI is transitioning to content generation —
-    // clear the buttons so we don't loop back into the intake flow.
+    // If no "?", AI is transitioning to content generation — clear buttons and
+    // strip to first line so we don't show a wall of text with no action.
     if (finalNQ.length > 0) {
       if (finalText.includes("?")) {
         finalText = extractFrontendQuestion(finalText);
         finalNQ = enforceFrontendButtons(finalNQ);
       } else {
         finalNQ = [];
+        const firstLine = finalText.split("\n").find((l) => l.trim().length > 0)?.trim();
+        if (firstLine) finalText = firstLine;
       }
     }
 
