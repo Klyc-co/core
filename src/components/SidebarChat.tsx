@@ -14,11 +14,39 @@ import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterv
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
+// -- Fallback quotes: shown if Supabase RPC silently fails
+const FALLBACK_QUOTES: Array<{ quote: string; author: string }> = [
+  { quote: "If you don't like what's being said, change the conversation.", author: "Don Draper" },
+  { quote: "The consumer isn't a moron; she is your wife.", author: "David Ogilvy" },
+  { quote: "Nobody reads advertising. People read what interests them.", author: "Howard Gossage" },
+  { quote: "A principle isn't a principle until it costs you something.", author: "Bill Bernbach" },
+  { quote: "Marketing is no longer about the stuff that you make, but about the stories you tell.", author: "Seth Godin" },
+  { quote: "In God we trust. All others must bring data.", author: "W. Edwards Deming" },
+  { quote: "Change is neither good nor bad. It simply is.", author: "Don Draper" },
+  { quote: "Your brand is what other people say about you when you're not in the room.", author: "Jeff Bezos" },
+  { quote: "Curiosity about life in all of its aspects is the secret of great creative people.", author: "Leo Burnett" },
+  { quote: "Advertising is the most fun you can have with your clothes on.", author: "Jerry Della Femina" },
+  { quote: "Design is not just what it looks like. Design is how it works.", author: "Steve Jobs" },
+  { quote: "Stopping advertising to save money is like stopping your watch to save time.", author: "Henry Ford" },
+  { quote: "By all means, move at a glacial pace. You know how that thrills me.", author: "Miranda Priestly" },
+  { quote: "The best marketing doesn't feel like marketing.", author: "Tom Fishburne" },
+  { quote: "Content is fire. Social media is gasoline.", author: "Jay Baer" },
+  { quote: "Make it simple. Make it memorable. Make it inviting to look at.", author: "Leo Burnett" },
+  { quote: "Either write something worth reading or do something worth writing about.", author: "Benjamin Franklin" },
+  { quote: "Positioning is not what you do to a product. It's what you do to the mind of the prospect.", author: "Al Ries" },
+  { quote: "Word of mouth is the best medium of all.", author: "Bill Bernbach" },
+  { quote: "You can't use up creativity. The more you use, the more you have.", author: "Maya Angelou" },
+];
+
 // -- Client-side field options for button enforcement
 const CLIENT_FIELD_OPTIONS: Record<string, string[]> = {
   goal: ["Launch a product", "Grow my audience", "Drive sales", "Build brand awareness"],
   platform: ["Instagram", "LinkedIn", "TikTok", "Twitter/X"],
-  tone: ["Bold & direct", "Friendly & warm", "Professional", "Witty & fun"],
+  // tone/vibe/style/voice all map to tone options so AI vibe questions get right buttons
+  tone: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
+  vibe: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
+  style: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
+  voice: ["Bold & direct", "Witty & fun", "Friendly & warm", "Professional"],
   audience: ["Gen Z consumers", "B2B decision makers", "Local community", "Niche enthusiasts"],
   format: ["Short-form video", "Static image post", "Carousel", "Long-form article"],
   budget: ["Under $500", "$500-$2k", "$2k-$10k", "$10k+"],
@@ -194,7 +222,6 @@ const SidebarChat = () => {
         p_exclude_author: excludeAuthor || null,
       });
       if (!error && data) {
-        // Defensive: Supabase may return array or single object depending on client version
         const rows = Array.isArray(data) ? data : [data];
         if (rows.length > 0 && rows[0]?.quote) {
           setLoadingQuote({ quote: rows[0].quote, author: rows[0].author });
@@ -202,9 +229,15 @@ const SidebarChat = () => {
         }
       }
     } catch {
-      // silently fail — show "..." fallback
+      // fall through to hardcoded fallback
     }
-    return excludeAuthor;
+    // Fallback: pick a random quote from the hardcoded list, avoiding same author
+    const pool = excludeAuthor
+      ? FALLBACK_QUOTES.filter((q) => q.author !== excludeAuthor)
+      : FALLBACK_QUOTES;
+    const pick = pool[Math.floor(Math.random() * pool.length)] || FALLBACK_QUOTES[0];
+    setLoadingQuote(pick);
+    return pick.author;
   }, []);
 
   useEffect(() => {
@@ -290,10 +323,6 @@ const SidebarChat = () => {
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
 
-    // Client-side enforcement:
-    // Only show buttons when the AI is genuinely asking a question (contains "?").
-    // If no "?", AI is transitioning to content generation — clear buttons and
-    // strip to first line so we don't show a wall of text with no action.
     if (finalNQ.length > 0) {
       if (finalText.includes("?")) {
         finalText = extractFrontendQuestion(finalText);
