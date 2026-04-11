@@ -132,17 +132,17 @@ function extractPostsFromPipeline(pipeline: any): any[] | null {
 
 function formatPostsForChat(posts: any[]): string {
   const platformEmoji: Record<string, string> = {
-    linkedin: "💼",
-    twitter: "🐦",
-    instagram: "📷",
-    tiktok: "🎵",
-    youtube: "▶️",
-    facebook: "📘",
+    linkedin: "\uD83D\uDCBC",
+    twitter: "\uD83D\uDC26",
+    instagram: "\uD83D\uDCF7",
+    tiktok: "\uD83C\uDFB5",
+    youtube: "\u25B6\uFE0F",
+    facebook: "\uD83D\uDCD8",
   };
-  let out = "✅ **Posts ready! Here's what I built:**\n\n";
+  let out = "\u2705 **Posts ready! Here's what I built:**\n\n";
   for (const p of posts) {
     const pl = (p.platform || "").toLowerCase();
-    const em = platformEmoji[pl] || "📱";
+    const em = platformEmoji[pl] || "\uD83D\uDCF1";
     out += `---\n**${em} ${pl.toUpperCase()}**\n\n`;
     if (p.hook) out += `**Hook:** ${p.hook}\n\n`;
     if (p.body) out += `${p.body}\n\n`;
@@ -150,7 +150,7 @@ function formatPostsForChat(posts: any[]): string {
     if (Array.isArray(p.hashtags) && p.hashtags.length) {
       out += p.hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ") + "\n\n";
     }
-    if (p.posting_time?.primary) out += `🕐 *Best time: ${p.posting_time.primary}*\n\n`;
+    if (p.posting_time?.primary) out += `\uD83D\uDD50 *Best time: ${p.posting_time.primary}*\n\n`;
   }
   return out.trim();
 }
@@ -182,7 +182,7 @@ const SidebarChat = () => {
         ...prev,
         {
           role: "assistant",
-          content: "📝 **Let's create a post!**\n\nTell me about your post — what's the idea, what are you promoting, and who's your target audience?",
+          content: "\uD83D\uDCDD **Let's create a post!**\n\nTell me about your post \u2014 what's the idea, what are you promoting, and who's your target audience?",
         },
       ]);
     }
@@ -286,10 +286,17 @@ const SidebarChat = () => {
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
 
-    // Client-side enforcement: strip preamble + guarantee button format
+    // Client-side enforcement:
+    // Only show buttons when the AI is genuinely asking a question (contains "?").
+    // If the message has no "?", the AI is transitioning to content generation —
+    // clear the buttons so we don't loop back into the intake flow.
     if (finalNQ.length > 0) {
-      finalText = extractFrontendQuestion(finalText);
-      finalNQ = enforceFrontendButtons(finalNQ);
+      if (finalText.includes("?")) {
+        finalText = extractFrontendQuestion(finalText);
+        finalNQ = enforceFrontendButtons(finalNQ);
+      } else {
+        finalNQ = [];
+      }
     }
 
     return {
@@ -446,7 +453,7 @@ const SidebarChat = () => {
                     {msg.compressionStats && (
                       <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground/60">
                         <Zap className="h-2 w-2" />
-                        <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()}</span>
+                        <span>{msg.compressionStats.ratio}x \u00b7 {msg.compressionStats.originalTokens.toLocaleString()}\u2192{msg.compressionStats.compressedTokens.toLocaleString()}</span>
                       </div>
                     )}
                     {msg.next_questions && msg.next_questions.length > 0 && (
@@ -512,7 +519,7 @@ const SidebarChat = () => {
                 {loadingQuote ? (
                   <>
                     <span>{loadingQuote.quote}</span>
-                    <span className="block mt-0.5 text-[9px] not-italic opacity-60">— {loadingQuote.author}</span>
+                    <span className="block mt-0.5 text-[9px] not-italic opacity-60">\u2014 {loadingQuote.author}</span>
                   </>
                 ) : (
                   <span>...</span>
