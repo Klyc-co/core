@@ -79,38 +79,44 @@ async function shortenUrl(longUrl: string): Promise<string> {
 }
 
 async function callGemini(
-  geminiKey: string, prompt: string, referenceImages: string[] = [],
+  apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
-  const parts: any[] = [];
-  for (const img of referenceImages) {
-    const mimeMatch = img.match(/^data:([^;]+)/);
-    const mime = mimeMatch?.[1] || "image/png";
-    const b64 = img.split(",")[1];
-    if (b64) parts.push({ inlineData: { mimeType: mime, data: b64 } });
-  }
-  parts.push({ text: prompt });
+  const contentParts: any[] = [];
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-      }),
+  // Add reference images as image_url parts
+  for (const img of referenceImages) {
+    contentParts.push({ type: "image_url", image_url: { url: img } });
+  }
+
+  // Add text prompt
+  contentParts.push({ type: "text", text: prompt });
+
+  const response = await fetch(LOVABLE_AI_GATEWAY, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      model: GEMINI_IMAGE_MODEL,
+      messages: [{ role: "user", content: contentParts }],
+      modalities: ["image", "text"],
+    }),
+  });
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "unknown");
-    throw new Error(`Gemini ${response.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`AI Gateway ${response.status}: ${errText.slice(0, 300)}`);
   }
 
   const data = await response.json();
-  const imageData = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
-  if (!imageData) throw new Error("No image returned from Gemini");
-  return { base64: imageData.data, mimeType: imageData.mimeType || "image/png" };
+  const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!imageResult) throw new Error("No image returned from AI gateway");
+
+  // Extract base64 data from data URL
+  const match = imageResult.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Unexpected image format from AI gateway");
+  return { base64: match[2], mimeType: match[1] };
 }
 
 async function normalizeReferenceImage(imageUrl: string): Promise<string | null> {
