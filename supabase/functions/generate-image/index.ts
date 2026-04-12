@@ -10,8 +10,9 @@ const corsHeaders = {
 const AGENT_ID = "image";
 const AGENT_VERSION = "v21";
 const PERMITTED_LANES = new Set(["image"]);
-const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+const GEMINI_IMAGE_MODEL = "google/gemini-2.5-flash-image";
 const STORAGE_BUCKET = "generated-images";
+const LOVABLE_AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ── KNP σo envelope builder ───────────────────────────────────────────────────
 // All returns from this submind MUST be wrapped in a KNP σo envelope.
