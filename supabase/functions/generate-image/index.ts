@@ -159,19 +159,12 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── List models ───────────────────────────────────────────────────────────
+    // ── List models (simplified — gateway doesn't expose model listing) ──────
     if (body.action === "list-models") {
-      const geminiKey = Deno.env.get("GEMINI_API_KEY");
-      if (!geminiKey) throw new Error("GEMINI_API_KEY not configured");
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-      const data = await r.json();
-      const imageModels = (data.models || []).filter((m: any) =>
-        m.supportedGenerationMethods?.includes("generateContent") &&
-        (m.name?.toLowerCase().includes("image") || m.displayName?.toLowerCase().includes("image"))
-      );
-      return new Response(JSON.stringify({ image_models: imageModels, total: imageModels.length }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        image_models: [{ name: GEMINI_IMAGE_MODEL, via: "Lovable AI Gateway" }],
+        total: 1,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── Lane lock ─────────────────────────────────────────────────────────────
@@ -183,8 +176,8 @@ serve(async (req) => {
       }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiKey) throw new Error("GEMINI_API_KEY not configured");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
