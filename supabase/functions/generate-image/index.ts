@@ -215,7 +215,7 @@ serve(async (req) => {
         ? `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`
         : `Generate a high-quality marketing campaign image for ${platform}.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`;
 
-      const { base64, mimeType } = await callGemini(geminiKey, aspectPrompt, normalizedRefs);
+      const { base64, mimeType } = await callGemini(apiKey, aspectPrompt, normalizedRefs);
       const publicUrl = await uploadToStorage(supabase, base64, mimeType);
       const imageUrl = await shortenUrl(publicUrl);
 
@@ -238,7 +238,7 @@ serve(async (req) => {
       if (!size) { errors.push(`Unknown platform: ${plt}`); continue; }
       try {
         const platformPrompt = `Generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). ${normalizedRefs.length ? "Use the attached reference images. " : ""}${prompt}`;
-        const { base64, mimeType } = await callGemini(geminiKey, platformPrompt, normalizedRefs);
+        const { base64, mimeType } = await callGemini(apiKey, platformPrompt, normalizedRefs);
         const publicUrl = await uploadToStorage(supabase, base64, mimeType);
         const imageUrl = await shortenUrl(publicUrl);
         totalImages++;
