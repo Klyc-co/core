@@ -10,8 +10,9 @@ const corsHeaders = {
 const AGENT_ID = "image";
 const AGENT_VERSION = "v21";
 const PERMITTED_LANES = new Set(["image"]);
-const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+const GEMINI_IMAGE_MODEL = "google/gemini-2.5-flash-image";
 const STORAGE_BUCKET = "generated-images";
+const LOVABLE_AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ── KNP σo envelope builder ───────────────────────────────────────────────────
 // All returns from this submind MUST be wrapped in a KNP σo envelope.
@@ -78,38 +79,44 @@ async function shortenUrl(longUrl: string): Promise<string> {
 }
 
 async function callGemini(
-  geminiKey: string, prompt: string, referenceImages: string[] = [],
+  apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
-  const parts: any[] = [];
-  for (const img of referenceImages) {
-    const mimeMatch = img.match(/^data:([^;]+)/);
-    const mime = mimeMatch?.[1] || "image/png";
-    const b64 = img.split(",")[1];
-    if (b64) parts.push({ inlineData: { mimeType: mime, data: b64 } });
-  }
-  parts.push({ text: prompt });
+  const contentParts: any[] = [];
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-      }),
+  // Add reference images as image_url parts
+  for (const img of referenceImages) {
+    contentParts.push({ type: "image_url", image_url: { url: img } });
+  }
+
+  // Add text prompt
+  contentParts.push({ type: "text", text: prompt });
+
+  const response = await fetch(LOVABLE_AI_GATEWAY, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      model: GEMINI_IMAGE_MODEL,
+      messages: [{ role: "user", content: contentParts }],
+      modalities: ["image", "text"],
+    }),
+  });
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "unknown");
-    throw new Error(`Gemini ${response.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`AI Gateway ${response.status}: ${errText.slice(0, 300)}`);
   }
 
   const data = await response.json();
-  const imageData = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
-  if (!imageData) throw new Error("No image returned from Gemini");
-  return { base64: imageData.data, mimeType: imageData.mimeType || "image/png" };
+  const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!imageResult) throw new Error("No image returned from AI gateway");
+
+  // Extract base64 data from data URL
+  const match = imageResult.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Unexpected image format from AI gateway");
+  return { base64: match[2], mimeType: match[1] };
 }
 
 async function normalizeReferenceImage(imageUrl: string): Promise<string | null> {
@@ -152,19 +159,12 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── List models ───────────────────────────────────────────────────────────
+    // ── List models (simplified — gateway doesn't expose model listing) ──────
     if (body.action === "list-models") {
-      const geminiKey = Deno.env.get("GEMINI_API_KEY");
-      if (!geminiKey) throw new Error("GEMINI_API_KEY not configured");
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-      const data = await r.json();
-      const imageModels = (data.models || []).filter((m: any) =>
-        m.supportedGenerationMethods?.includes("generateContent") &&
-        (m.name?.toLowerCase().includes("image") || m.displayName?.toLowerCase().includes("image"))
-      );
-      return new Response(JSON.stringify({ image_models: imageModels, total: imageModels.length }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        image_models: [{ name: GEMINI_IMAGE_MODEL, via: "Lovable AI Gateway" }],
+        total: 1,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── Lane lock ─────────────────────────────────────────────────────────────
@@ -176,8 +176,8 @@ serve(async (req) => {
       }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!geminiKey) throw new Error("GEMINI_API_KEY not configured");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -215,7 +215,7 @@ serve(async (req) => {
         ? `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`
         : `Generate a high-quality marketing campaign image for ${platform}.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`;
 
-      const { base64, mimeType } = await callGemini(geminiKey, aspectPrompt, normalizedRefs);
+      const { base64, mimeType } = await callGemini(apiKey, aspectPrompt, normalizedRefs);
       const publicUrl = await uploadToStorage(supabase, base64, mimeType);
       const imageUrl = await shortenUrl(publicUrl);
 
@@ -238,7 +238,7 @@ serve(async (req) => {
       if (!size) { errors.push(`Unknown platform: ${plt}`); continue; }
       try {
         const platformPrompt = `Generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). ${normalizedRefs.length ? "Use the attached reference images. " : ""}${prompt}`;
-        const { base64, mimeType } = await callGemini(geminiKey, platformPrompt, normalizedRefs);
+        const { base64, mimeType } = await callGemini(apiKey, platformPrompt, normalizedRefs);
         const publicUrl = await uploadToStorage(supabase, base64, mimeType);
         const imageUrl = await shortenUrl(publicUrl);
         totalImages++;
