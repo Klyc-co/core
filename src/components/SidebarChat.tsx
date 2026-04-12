@@ -217,7 +217,7 @@ const SidebarChat = () => {
 
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
-      const { data, error } = await supabase.rpc("get_random_quote", {
+      const { data, error } = await (supabase.rpc as any)("get_random_quote", {
         p_exclude_author: excludeAuthor || null,
       });
       if (!error && data) {
