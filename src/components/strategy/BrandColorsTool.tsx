@@ -211,7 +211,7 @@ export default function BrandColorsTool() {
     if (!user) { toast.error("Not authenticated"); setSaving(false); return; }
     for (const c of colors) {
       const { error } = await supabase.from("client_brand_colors").upsert(
-        { client_id: user.id, role: c.role, hex_value: c.hex, hue: c.h, saturation: c.s, lightness: c.l },
+        { client_id: user.id, role: c.role, hex_value: c.hex, hue: c.h, saturation: c.s, lightness: c.l, reference_media_url: c.role === "primary" ? (referenceUrl || null) : undefined } as any,
         { onConflict: "client_id,role" }
       );
       if (error) { toast.error(`Failed to save ${c.role}: ${error.message}`); setSaving(false); return; }
