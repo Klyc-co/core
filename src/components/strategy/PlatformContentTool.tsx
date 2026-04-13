@@ -340,32 +340,7 @@ export default function PlatformContentTool() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="linkedin" className="w-full">
-        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="linkedin" className="text-xs sm:text-sm">LinkedIn</TabsTrigger>
-          <TabsTrigger value="twitter" className="text-xs sm:text-sm">X / Twitter</TabsTrigger>
-          <TabsTrigger value="instagram" className="text-xs sm:text-sm">Instagram</TabsTrigger>
-          <TabsTrigger value="tiktok" className="text-xs sm:text-sm">TikTok</TabsTrigger>
-          <TabsTrigger value="youtube" className="text-xs sm:text-sm">YouTube</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="linkedin">
-          <PlatformTab platform="LinkedIn" formats="1. Post draft (text post, 1300 chars max)\n2. Carousel outline (8-10 slides)\n3. Thread version (5-7 connected posts)" />
-        </TabsContent>
-        <TabsContent value="twitter">
-          <PlatformTab platform="X / Twitter" formats="1. Single tweet (280 chars)\n2. Thread (5-7 tweets)\n3. Quote tweet angles (3 options)" />
-        </TabsContent>
-        <TabsContent value="instagram">
-          <PlatformTab platform="Instagram" formats="1. Caption (with hashtags)\n2. Carousel outline (8-10 slides)\n3. Reel script (30-60 sec)\n4. Story sequence (5 slides)" />
-        </TabsContent>
-        <TabsContent value="tiktok">
-          <PlatformTab platform="TikTok" formats="1. Video script (30-60 sec)\n2. Hook options (5 scroll-stopping openers)\n3. Trending format adaptation\n4. Caption with hashtags" />
-        </TabsContent>
-        <TabsContent value="youtube">
-          <PlatformTab platform="YouTube" formats="1. Video title options (5)\n2. Description with timestamps\n3. Script outline\n4. Shorts script (60 sec)" />
-        </TabsContent>
-      </Tabs>
-
+      {/* ─── Collapsible Configuration Sections ─────────────────── */}
       <Collapsible open={colorsOpen} onOpenChange={setColorsOpen}>
         <Card>
           <CollapsibleTrigger asChild>
@@ -431,6 +406,33 @@ export default function PlatformContentTool() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* ─── Platform Tabs ──────────────────────────────────────── */}
+      <Tabs defaultValue="linkedin" className="w-full">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="linkedin" className="text-xs sm:text-sm">LinkedIn</TabsTrigger>
+          <TabsTrigger value="twitter" className="text-xs sm:text-sm">X / Twitter</TabsTrigger>
+          <TabsTrigger value="instagram" className="text-xs sm:text-sm">Instagram</TabsTrigger>
+          <TabsTrigger value="tiktok" className="text-xs sm:text-sm">TikTok</TabsTrigger>
+          <TabsTrigger value="youtube" className="text-xs sm:text-sm">YouTube</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="linkedin">
+          <PlatformTab platform="LinkedIn" formats="1. Post draft (text post, 1300 chars max)\n2. Carousel outline (8-10 slides)\n3. Thread version (5-7 connected posts)" />
+        </TabsContent>
+        <TabsContent value="twitter">
+          <PlatformTab platform="X / Twitter" formats="1. Single tweet (280 chars)\n2. Thread (5-7 tweets)\n3. Quote tweet angles (3 options)" />
+        </TabsContent>
+        <TabsContent value="instagram">
+          <PlatformTab platform="Instagram" formats="1. Caption (with hashtags)\n2. Carousel outline (8-10 slides)\n3. Reel script (30-60 sec)\n4. Story sequence (5 slides)" />
+        </TabsContent>
+        <TabsContent value="tiktok">
+          <PlatformTab platform="TikTok" formats="1. Video script (30-60 sec)\n2. Hook options (5 scroll-stopping openers)\n3. Trending format adaptation\n4. Caption with hashtags" />
+        </TabsContent>
+        <TabsContent value="youtube">
+          <PlatformTab platform="YouTube" formats="1. Video title options (5)\n2. Description with timestamps\n3. Script outline\n4. Shorts script (60 sec)" />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
