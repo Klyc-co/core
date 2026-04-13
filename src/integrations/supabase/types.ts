@@ -1123,6 +1123,7 @@ export type Database = {
           hue: number | null
           id: string
           lightness: number | null
+          reference_media_url: string | null
           role: string
           saturation: number | null
           updated_at: string
@@ -1134,6 +1135,7 @@ export type Database = {
           hue?: number | null
           id?: string
           lightness?: number | null
+          reference_media_url?: string | null
           role: string
           saturation?: number | null
           updated_at?: string
@@ -1145,6 +1147,7 @@ export type Database = {
           hue?: number | null
           id?: string
           lightness?: number | null
+          reference_media_url?: string | null
           role?: string
           saturation?: number | null
           updated_at?: string

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ReferenceMediaField from "@/components/strategy/ReferenceMediaField";
 
 interface Character {
   id?: string;
@@ -118,10 +119,12 @@ export default function CharactersTool() {
               <label className="text-xs font-medium mb-1 block text-muted-foreground">Description</label>
               <Textarea placeholder="Physical appearance, personality, vibe..." value={char.description} onChange={(e) => update(i, "description", e.target.value)} className="min-h-[60px]" />
             </div>
-            <div>
-              <label className="text-xs font-medium mb-1 block text-muted-foreground">Reference Image URL</label>
-              <Input placeholder="https://..." value={char.reference_image_url} onChange={(e) => update(i, "reference_image_url", e.target.value)} />
-            </div>
+            <ReferenceMediaField
+              value={char.reference_image_url}
+              onChange={(url) => update(i, "reference_image_url", url)}
+              label="Reference Image / Video"
+              storagePath="characters"
+            />
             <div>
               <label className="text-xs font-medium mb-1 block text-muted-foreground">Tags</label>
               <div className="flex gap-2">
