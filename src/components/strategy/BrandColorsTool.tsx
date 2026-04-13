@@ -179,6 +179,10 @@ export default function BrandColorsTool() {
           if (idx !== -1) {
             loaded[idx] = { role: row.role, hex: row.hex_value, h: row.hue ?? 0, s: row.saturation ?? 0, l: row.lightness ?? 50 };
           }
+          // Load reference media from first row that has it
+          if (row.reference_media_url && !referenceUrl) {
+            setReferenceUrl(row.reference_media_url);
+          }
         });
         setColors(loaded);
       }
