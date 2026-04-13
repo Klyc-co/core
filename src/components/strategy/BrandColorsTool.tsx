@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { Loader2, Check, X } from "lucide-react";
+import ReferenceMediaField from "@/components/strategy/ReferenceMediaField";
 
 type ColorRole = "primary" | "secondary" | "accent" | "background" | "text";
 
@@ -158,6 +159,7 @@ export default function BrandColorsTool() {
   const [hexInput, setHexInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [referenceUrl, setReferenceUrl] = useState("");
 
   const active = colors.find((c) => c.role === activeRole)!;
 
