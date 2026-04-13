@@ -425,11 +425,16 @@ export default function PlatformContentTool() {
       {/* ─── Platform Tabs ──────────────────────────────────────── */}
       <Tabs defaultValue="linkedin" className="w-full">
         <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="linkedin" className="text-xs sm:text-sm">LinkedIn</TabsTrigger>
-          <TabsTrigger value="twitter" className="text-xs sm:text-sm">X / Twitter</TabsTrigger>
-          <TabsTrigger value="instagram" className="text-xs sm:text-sm">Instagram</TabsTrigger>
-          <TabsTrigger value="tiktok" className="text-xs sm:text-sm">TikTok</TabsTrigger>
-          <TabsTrigger value="youtube" className="text-xs sm:text-sm">YouTube</TabsTrigger>
+          {(["linkedin", "twitter", "instagram", "tiktok", "youtube"] as const).map((key) => {
+            const { icon: Icon, color } = PLATFORM_ICONS[key];
+            const labels: Record<string, string> = { linkedin: "LinkedIn", twitter: "X / Twitter", instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube" };
+            return (
+              <TabsTrigger key={key} value={key} className="text-xs sm:text-sm flex items-center gap-1.5">
+                <Icon size={16} color={color} />
+                {labels[key]}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value="linkedin">
