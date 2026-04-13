@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions, ChevronDown, Users, MapPin } from "lucide-react";
-import { SiLinkedin, SiX, SiInstagram, SiTiktok, SiYoutube } from "react-icons/si";
+import { SiLinkedin, SiX, SiInstagram, SiTiktok, SiYoutube } from "@icons-pack/react-simple-icons";
 
 const PLATFORM_ICONS: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; color: string }> = {
   linkedin: { icon: SiLinkedin, color: "#0A66C2" },
