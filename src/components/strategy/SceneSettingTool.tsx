@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ReferenceMediaField from "@/components/strategy/ReferenceMediaField";
 
 const SETTING_TYPES = ["Studio", "Outdoor", "Office", "Home", "Urban", "Nature", "Abstract", "Custom"];
 const MOOD_OPTIONS = ["Warm", "Cool", "Energetic", "Calm", "Professional", "Playful", "Dramatic", "Natural", "Luxurious", "Gritty"];
@@ -110,10 +111,12 @@ export default function SceneSettingTool() {
         <label className="text-xs font-medium mb-1 block text-muted-foreground">Background Notes</label>
         <Textarea placeholder="Additional background/prop details..." value={backgroundNotes} onChange={(e) => setBackgroundNotes(e.target.value)} className="min-h-[60px]" />
       </div>
-      <div>
-        <label className="text-xs font-medium mb-1 block text-muted-foreground">Reference Image URL</label>
-        <Input placeholder="https://..." value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} />
-      </div>
+      <ReferenceMediaField
+        value={referenceUrl}
+        onChange={setReferenceUrl}
+        label="Reference Image / Video"
+        storagePath="scene"
+      />
       <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white">
         {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
         Save Scene Settings
