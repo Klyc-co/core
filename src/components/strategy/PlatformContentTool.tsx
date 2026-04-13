@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Copy, Check, TrendingUp, Palette, Music, X, Search, Captions, ChevronDown, Users, MapPin } from "lucide-react";
+import { SiLinkedin, SiX, SiInstagram, SiTiktok, SiYoutube } from "react-icons/si";
+
+const PLATFORM_ICONS: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; color: string }> = {
+  linkedin: { icon: SiLinkedin, color: "#0A66C2" },
+  twitter: { icon: SiX, color: "#000000" },
+  instagram: { icon: SiInstagram, color: "#E4405F" },
+  tiktok: { icon: SiTiktok, color: "#000000" },
+  youtube: { icon: SiYoutube, color: "#FF0000" },
+};
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
