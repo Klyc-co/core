@@ -104,6 +104,8 @@ import KlycAdminRoadmap from "./pages/KlycAdminRoadmap";
 import KlycAdminMarketing from "./pages/KlycAdminMarketing";
 import KlycAdminFinancials from "./pages/KlycAdminFinancials";
 import KlycAdminAiTesting from "./pages/KlycAdminAiTesting";
+import KlycAdminChannels from "./pages/KlycAdminChannels";
+import KlycAdminAudit from "./pages/KlycAdminAudit";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
@@ -161,6 +163,8 @@ const App = () => (
             <Route path="/klyc_admin/marketing" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminMarketing /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/financials" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminFinancials /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/ai-testing" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminAiTesting /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/channels" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminChannels /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/audit" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminAudit /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             
