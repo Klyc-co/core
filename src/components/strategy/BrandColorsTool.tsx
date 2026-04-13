@@ -407,6 +407,18 @@ export default function BrandColorsTool() {
           </CardContent>
         </Card>
 
+        {/* Reference Media (Inspiration Board) */}
+        <Card>
+          <CardContent className="p-4">
+            <ReferenceMediaField
+              value={referenceUrl}
+              onChange={setReferenceUrl}
+              label="Reference Media (optional — inspiration board)"
+              storagePath="brand-colors"
+            />
+          </CardContent>
+        </Card>
+
         {/* Save */}
         <Button
           onClick={handleSave}
