@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import BrandColorsTool from "@/components/strategy/BrandColorsTool";
 import CharactersTool from "@/components/strategy/CharactersTool";
 import SceneSettingTool from "@/components/strategy/SceneSettingTool";
+import PlatformPostActions from "@/components/strategy/PlatformPostActions";
 
 function useAIGenerate() {
   const [loading, setLoading] = useState(false);
@@ -344,6 +345,9 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
           </CardContent>
         </Card>
       )}
+
+      {/* Post to Platform actions */}
+      <PlatformPostActions platform={platform} generatedContent={result} />
     </div>
   );
 }
