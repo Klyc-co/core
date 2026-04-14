@@ -186,7 +186,7 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
           <div className="flex items-center gap-2">
             <span className={cn(
               "w-2.5 h-2.5 rounded-full",
-              isConnected ? "bg-green-500" : "bg-muted-foreground/40"
+              isConnected ? "bg-success" : "bg-muted-foreground/40"
             )} />
             <span className="text-xs font-medium text-muted-foreground">
               {isConnected ? "Connected" : "Not connected"}
