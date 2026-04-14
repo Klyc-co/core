@@ -345,6 +345,9 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
           </CardContent>
         </Card>
       )}
+
+      {/* Post to Platform actions */}
+      <PlatformPostActions platform={platform} generatedContent={result} />
     </div>
   );
 }
