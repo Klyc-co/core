@@ -1193,6 +1193,45 @@ export type Database = {
         }
         Relationships: []
       }
+      client_platform_connections: {
+        Row: {
+          access_token: string
+          client_id: string
+          connected_at: string
+          created_at: string
+          id: string
+          platform: string
+          refresh_token: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          connected_at?: string
+          created_at?: string
+          id?: string
+          platform: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          connected_at?: string
+          created_at?: string
+          id?: string
+          platform?: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           audience_data: Json | null
@@ -3607,6 +3646,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
           video_url?: string | null
+        }
+        Relationships: []
+      }
+      scheduled_posts: {
+        Row: {
+          client_id: string
+          content_payload: Json
+          created_at: string
+          id: string
+          platform: string
+          scheduled_for: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content_payload?: Json
+          created_at?: string
+          id?: string
+          platform: string
+          scheduled_for: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content_payload?: Json
+          created_at?: string
+          id?: string
+          platform?: string
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
