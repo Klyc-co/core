@@ -185,9 +185,16 @@ export function useKlycOrchestrator() {
     async (payload: Record<string, unknown>) => {
       setThinking(true);
       try {
+        // Build conversation history for the orchestrator so it tracks state
+        const history = state.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
         const { data, error } = await supabase.functions.invoke("orchestrator", {
           body: {
             ...payload,
+            messages: history,
             session_id: sessionRef.current,
             mode: state.mode,
           },
@@ -242,7 +249,7 @@ export function useKlycOrchestrator() {
         setThinking(false);
       }
     },
-    [state.mode, addMessage, setThinking]
+    [state.mode, state.messages, addMessage, setThinking]
   );
 
   const startSession = useCallback(
