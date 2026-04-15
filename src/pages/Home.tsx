@@ -38,7 +38,7 @@ const Home = () => {
   };
 
   const quickActions = [
-    { label: "Start a Campaign", icon: MessageSquare, path: "/campaigns", color: "text-primary" },
+    { label: "Post to Social", icon: MessageSquare, path: "/campaigns", color: "text-primary" },
     { label: "View Analytics", icon: BarChart3, path: "/analytics", color: "text-accent" },
     { label: "Pending Approvals", icon: ShieldCheck, path: "/campaigns?filter=pending_approval", color: "text-warning" },
     { label: "Learning Insights", icon: Lightbulb, path: "/learning", color: "text-success" },
