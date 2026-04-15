@@ -69,7 +69,53 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
     setLoading(false);
   };
 
+  // Listen for OAuth callback redirect params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthSuccess = params.get("oauth_success");
+    const oauthError = params.get("oauth_error");
+
+    if (oauthSuccess === platformKey) {
+      toast.success(`${platform} connected successfully!`);
+      fetchConnection();
+      // Clean up URL params
+      const url = new URL(window.location.href);
+      url.searchParams.delete("oauth_success");
+      window.history.replaceState({}, "", url.toString());
+    }
+    if (oauthError) {
+      toast.error(`OAuth error: ${oauthError}`);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("oauth_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
   const handleConnect = async () => {
+    // Platforms with real OAuth support
+    const oauthPlatforms = ["linkedin"];
+
+    if (oauthPlatforms.includes(platformKey)) {
+      setConnecting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("linkedin-oauth-initiate", {
+          body: { redirect_uri: window.location.origin + window.location.pathname },
+        });
+        if (error) throw error;
+        if (data?.auth_url) {
+          // Navigate to LinkedIn OAuth page
+          window.location.href = data.auth_url;
+          return; // Page will redirect
+        }
+        throw new Error("No auth URL returned");
+      } catch (e: any) {
+        toast.error(e.message || "Failed to start OAuth");
+        setConnecting(false);
+      }
+      return;
+    }
+
+    // Fallback mock connection for other platforms
     setConnecting(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -78,7 +124,6 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
       return;
     }
 
-    // Mock connection — in production this would initiate OAuth
     const { error } = await supabase
       .from("client_platform_connections")
       .upsert({

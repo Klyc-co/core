@@ -1,10 +1,68 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+async function postToLinkedIn(accessToken: string, content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  // Get the user's LinkedIn profile URN
+  const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!profileRes.ok) {
+    const errText = await profileRes.text();
+    console.error("[LinkedIn] Profile fetch failed:", profileRes.status, errText);
+    return { success: false, error: `LinkedIn auth failed (${profileRes.status}). Please reconnect your account.` };
+  }
+
+  const profile = await profileRes.json();
+  const personUrn = `urn:li:person:${profile.sub}`;
+
+  // Create a text post using the UGC Post API
+  const postBody = {
+    author: personUrn,
+    lifecycleState: "PUBLISHED",
+    specificContent: {
+      "com.linkedin.ugc.ShareContent": {
+        shareCommentary: { text: content },
+        shareMediaCategory: "NONE",
+      },
+    },
+    visibility: {
+      "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+    },
+  };
+
+  const postRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+    },
+    body: JSON.stringify(postBody),
+  });
+
+  if (!postRes.ok) {
+    const errText = await postRes.text();
+    console.error("[LinkedIn] Post failed:", postRes.status, errText);
+    return { success: false, error: `LinkedIn post failed (${postRes.status}): ${errText}` };
+  }
+
+  const postData = await postRes.json();
+  const postId = postData.id;
+
+  const activityId = postId?.replace("urn:li:ugcPost:", "urn:li:activity:");
+  const permalink = activityId
+    ? `https://www.linkedin.com/feed/update/${activityId}/`
+    : undefined;
+
+  return { success: true, post_id: postId, permalink };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,10 +84,7 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -64,10 +119,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify the user has a connected account for this platform
-    const { data: connection } = await supabase
+    // Use service role to read access_token
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: connection } = await serviceClient
       .from("client_platform_connections")
-      .select("id, status")
+      .select("id, status, access_token, refresh_token, token_expires_at")
       .eq("client_id", user.id)
       .eq("platform", platform.toLowerCase())
       .eq("status", "active")
@@ -80,16 +140,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── MOCK SUCCESS ──
-    // TODO: Wire up actual platform API calls here
-    console.log(`[post-to-platform] Mock post to ${platform} by user ${user.id}, content length: ${content.length}`);
+    // Decrypt the stored token
+    const accessToken = await decryptToken(connection.access_token);
+    const platformLower = platform.toLowerCase();
+
+    let result: { success: boolean; post_id?: string; permalink?: string; error?: string };
+
+    if (platformLower === "linkedin") {
+      result = await postToLinkedIn(accessToken, content);
+    } else {
+      // Other platforms remain mock
+      console.log(`[post-to-platform] Mock post to ${platform} by user ${user.id}`);
+      result = { success: true, post_id: crypto.randomUUID() };
+    }
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: result.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         platform,
-        message: `Content successfully posted to ${platform} (mock)`,
-        post_id: crypto.randomUUID(),
+        message: `Content successfully posted to ${platform}!`,
+        post_id: result.post_id,
+        permalink: result.permalink,
         posted_at: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
