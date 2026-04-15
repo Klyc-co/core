@@ -15,12 +15,34 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const code = url.searchParams.get('code')
     const error = url.searchParams.get('error')
-    const state = url.searchParams.get('state') // user_id passed via state param
+    const state = url.searchParams.get('state')
 
     const siteUrl = Deno.env.get('SITE_URL') || 'https://idea-to-idiom.lovable.app'
 
+    let clientUserId: string | null = state
+    let returnTo = '/campaigns/new'
+    if (state) {
+      try {
+        const parsedState = JSON.parse(state)
+        if (parsedState?.userId && typeof parsedState.userId === 'string') {
+          clientUserId = parsedState.userId
+        }
+        if (parsedState?.returnTo && typeof parsedState.returnTo === 'string' && parsedState.returnTo.startsWith('/')) {
+          returnTo = parsedState.returnTo
+        }
+      } catch {
+        clientUserId = state
+      }
+    }
+
+    const buildRedirectUrl = (params: Record<string, string>) => {
+      const redirectUrl = new URL(returnTo, siteUrl)
+      Object.entries(params).forEach(([key, value]) => redirectUrl.searchParams.set(key, value))
+      return redirectUrl.toString()
+    }
+
     if (error || !code) {
-      return Response.redirect(`${siteUrl}/client/profile/social?error=${error || 'no_code'}`, 302)
+      return Response.redirect(buildRedirectUrl({ oauth_error: error || 'no_code' }), 302)
     }
 
     const clientId = Deno.env.get('INSTAGRAM_CLIENT_ID')!
@@ -64,12 +86,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // Determine the user_id from the state parameter
-    const clientUserId = state
-
     if (!clientUserId) {
       console.error('No user_id in state parameter — cannot associate Threads connection')
-      return Response.redirect(`${siteUrl}/client/profile/social?error=missing_user`, 302)
+      return Response.redirect(buildRedirectUrl({ oauth_error: 'missing_user' }), 302)
     }
 
     // Store in client_platform_connections (the table used by post-to-platform)
@@ -88,14 +107,14 @@ Deno.serve(async (req) => {
 
     if (upsertError) {
       console.error('Upsert error:', upsertError)
-      return Response.redirect(`${siteUrl}/client/profile/social?error=save_failed`, 302)
+      return Response.redirect(buildRedirectUrl({ oauth_error: 'save_failed' }), 302)
     }
 
-    return Response.redirect(`${siteUrl}/client/profile/social?oauth_success=threads`, 302)
+    return Response.redirect(buildRedirectUrl({ oauth_success: 'threads' }), 302)
   } catch (err) {
     console.error('Threads callback error:', err)
     const siteUrl = Deno.env.get('SITE_URL') || 'https://idea-to-idiom.lovable.app'
     const msg = err instanceof Error ? err.message : 'Unknown error'
-    return Response.redirect(`${siteUrl}/client/profile/social?error=${encodeURIComponent(msg)}`, 302)
+    return Response.redirect(`${siteUrl}/campaigns/new?oauth_error=${encodeURIComponent(msg)}`, 302)
   }
 })

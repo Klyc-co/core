@@ -173,7 +173,7 @@ const NewCampaign = () => {
       try {
         const body = platformId === "linkedin"
           ? { redirect_uri: window.location.origin + window.location.pathname }
-          : {};
+          : { returnTo: `${window.location.pathname}${window.location.search}` };
         const { data, error } = await supabase.functions.invoke(oauthConfig.functionName, { body });
         if (error) throw error;
         const authUrl = data?.[oauthConfig.urlKey];
