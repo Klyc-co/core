@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -9,16 +11,39 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Threads uses the same Meta/Instagram app credentials
     const clientId = Deno.env.get('INSTAGRAM_CLIENT_ID')
     if (!clientId) {
       throw new Error('INSTAGRAM_CLIENT_ID not configured')
     }
 
+    // Get the user to pass their ID via state param
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    )
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const userId = claimsData.claims.sub as string
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const redirectUri = `${supabaseUrl}/functions/v1/threads-auth-callback`
 
-    // Threads API OAuth URL
     const scopes = [
       'threads_basic',
       'threads_content_publish',
@@ -26,14 +51,15 @@ Deno.serve(async (req) => {
       'threads_manage_replies',
     ].join(',')
 
-    const authUrl = `https://threads.net/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code`
+    const authUrl = `https://threads.net/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${userId}`
 
     return new Response(JSON.stringify({ authUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })
