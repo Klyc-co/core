@@ -109,6 +109,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_activity_log: {
+        Row: {
+          client_id: string | null
+          cost_estimate: number | null
+          function_name: string | null
+          id: string
+          metadata: Json | null
+          model_used: string | null
+          timestamp: string
+          tokens_in: number | null
+          tokens_out: number | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          cost_estimate?: number | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          timestamp?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          cost_estimate?: number | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          timestamp?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_requests: {
         Row: {
           campaign_id: string | null
