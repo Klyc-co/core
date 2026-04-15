@@ -112,7 +112,9 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
         if (error) throw error;
         const authUrl = data?.[oauthConfig.urlKey];
         if (authUrl) {
-          window.location.href = authUrl;
+          window.open(authUrl, '_blank', 'noopener,noreferrer');
+          toast.success(`Complete ${platform} authorization in the new window`);
+          setConnecting(false);
           return;
         }
         throw new Error("No auth URL returned");
