@@ -41,6 +41,16 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string
 
+    let returnTo = '/campaigns/new'
+    try {
+      const body = await req.json().catch(() => ({}))
+      if (body?.returnTo && typeof body.returnTo === 'string' && body.returnTo.startsWith('/')) {
+        returnTo = body.returnTo
+      }
+    } catch {
+      // ignore malformed JSON and fall back to default return path
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const redirectUri = `${supabaseUrl}/functions/v1/threads-auth-callback`
 
@@ -51,7 +61,8 @@ Deno.serve(async (req) => {
       'threads_manage_replies',
     ].join(',')
 
-    const authUrl = `https://threads.net/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${userId}`
+    const state = encodeURIComponent(JSON.stringify({ userId, returnTo }))
+    const authUrl = `https://www.threads.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${state}`
 
     return new Response(JSON.stringify({ authUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
