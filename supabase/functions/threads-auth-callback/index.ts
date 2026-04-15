@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
       return Response.redirect(buildRedirectUrl({ oauth_error: error || 'no_code' }), 302)
     }
 
-    const clientId = Deno.env.get('INSTAGRAM_CLIENT_ID')!
-    const clientSecret = Deno.env.get('INSTAGRAM_CLIENT_SECRET')!
+    const clientId = Deno.env.get('THREADS_APP_ID')!
+    const clientSecret = Deno.env.get('THREADS_APP_SECRET')!
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const redirectUri = `${supabaseUrl}/functions/v1/threads-auth-callback`
 

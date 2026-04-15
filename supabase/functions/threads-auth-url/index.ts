@@ -11,9 +11,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const clientId = Deno.env.get('INSTAGRAM_CLIENT_ID')
+    const clientId = Deno.env.get('THREADS_APP_ID')
     if (!clientId) {
-      throw new Error('INSTAGRAM_CLIENT_ID not configured')
+      throw new Error('THREADS_APP_ID not configured')
     }
 
     // Get the user to pass their ID via state param
