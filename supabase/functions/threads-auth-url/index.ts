@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       'threads_manage_replies',
     ].join(',')
 
-    const state = encodeURIComponent(JSON.stringify({ userId, returnTo }))
+    const state = encodeURIComponent(JSON.stringify({ userId, returnTo, originUrl }))
     const authUrl = `https://www.threads.net/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${state}`
 
     return new Response(JSON.stringify({ authUrl }), {
