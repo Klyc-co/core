@@ -462,6 +462,16 @@ const NewCampaign = () => {
       return;
     }
 
+    const unconnected = selectedPlatforms.filter(p => !platformConnections[p]);
+    if (unconnected.length > 0) {
+      toast({
+        title: "Platforms not connected",
+        description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!scheduledDate) {
       toast({
         title: "Select date",
