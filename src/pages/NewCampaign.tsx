@@ -445,10 +445,61 @@ const NewCampaign = () => {
       return;
     }
     
-    toast({
-      title: "Post Scheduled! 🚀",
-      description: `Your post "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
-    });
+    // Post to connected platforms immediately
+    const contentToPost = postCaption || campaignName.trim();
+    const postResults: { platform: string; success: boolean; permalink?: string; error?: string }[] = [];
+
+    for (const platformId of selectedPlatforms) {
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke("post-to-platform", {
+          body: { platform: platformId, content: contentToPost },
+        });
+        if (fnError) {
+          postResults.push({ platform: platformId, success: false, error: fnError.message });
+        } else if (data?.success) {
+          postResults.push({ platform: platformId, success: true, permalink: data.permalink });
+        } else {
+          postResults.push({ platform: platformId, success: false, error: data?.error || "Unknown error" });
+        }
+      } catch (e: any) {
+        postResults.push({ platform: platformId, success: false, error: e.message });
+      }
+    }
+
+    const succeeded = postResults.filter(r => r.success);
+    const failed = postResults.filter(r => !r.success);
+
+    if (succeeded.length > 0) {
+      const linkedinResult = succeeded.find(r => r.platform === "linkedin");
+      toast({
+        title: "Post Launched! 🚀",
+        description: (
+          <div className="space-y-1">
+            <p>Posted to {succeeded.map(r => r.platform).join(", ")}!</p>
+            {linkedinResult?.permalink && (
+              <a href={linkedinResult.permalink} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">
+                View LinkedIn post →
+              </a>
+            )}
+          </div>
+        ),
+      });
+    }
+
+    if (failed.length > 0) {
+      toast({
+        title: "Some platforms failed",
+        description: failed.map(r => `${r.platform}: ${r.error}`).join("; "),
+        variant: "destructive",
+      });
+    }
+
+    if (succeeded.length === 0 && failed.length === 0) {
+      toast({
+        title: "Post Scheduled! 🚀",
+        description: `Your post "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
+      });
+    }
     
     setIsLaunching(false);
     navigate("/campaigns/schedule");
