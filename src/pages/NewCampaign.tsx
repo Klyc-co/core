@@ -819,6 +819,44 @@ const NewCampaign = () => {
             </div>
           )}
 
+          {/* Platform connection status */}
+          {selectedPlatforms.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Platform Connections</Label>
+              <div className="flex flex-wrap gap-2">
+                {selectedPlatforms.map((platformId) => {
+                  const isConnected = platformConnections[platformId];
+                  const platformName = socialPlatforms.find(p => p.id === platformId)?.name || platformId;
+                  return (
+                    <div key={platformId} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm">
+                      <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-muted-foreground/40"}`} />
+                      <span>{platformName}</span>
+                      {!isConnected && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-primary"
+                          onClick={() => handleConnectPlatform(platformId)}
+                          disabled={connectingPlatform === platformId}
+                        >
+                          {connectingPlatform === platformId ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Link2 className="w-3 h-3" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
+                      {isConnected && (
+                        <span className="text-xs text-green-600">Connected</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Schedule Date & Time */}
           <div className="space-y-4">
             <Label>Schedule Post</Label>
