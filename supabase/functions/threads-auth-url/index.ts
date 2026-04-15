@@ -42,10 +42,14 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string
 
     let returnTo = '/campaigns/new'
+    let originUrl = ''
     try {
       const body = await req.json().catch(() => ({}))
       if (body?.returnTo && typeof body.returnTo === 'string' && body.returnTo.startsWith('/')) {
         returnTo = body.returnTo
+      }
+      if (body?.originUrl && typeof body.originUrl === 'string') {
+        originUrl = body.originUrl
       }
     } catch {
       // ignore malformed JSON and fall back to default return path
