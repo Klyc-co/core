@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ClientHeader from "@/components/ClientHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, HardDrive, FolderOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, HardDrive, FolderOpen, ExternalLink, AtSign } from "lucide-react";
+import ThreadsIcon from "@/components/icons/ThreadsIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -84,6 +85,13 @@ const socialPlatforms: SocialPlatform[] = [
     textColor: "text-black dark:text-white",
     customOAuth: true,
   },
+  { 
+    name: "Threads", 
+    icon: AtSign, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    customOAuth: true,
+  },
 ];
 
 const ClientSocialAssets = () => {
@@ -124,6 +132,12 @@ const ClientSocialAssets = () => {
     if (success === "dropbox") {
       toast.success("Dropbox connected successfully!");
       setConnectionStatus(prev => ({ ...prev, Dropbox: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (success === "threads") {
+      toast.success("Threads connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Threads: 'connected' }));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -195,6 +209,18 @@ const ClientSocialAssets = () => {
     
     if (linkedinConnection) {
       newStatus['LinkedIn'] = 'connected';
+    }
+
+    // Check Threads connection
+    const { data: threadsConnection } = await supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "threads")
+      .maybeSingle();
+    
+    if (threadsConnection) {
+      newStatus['Threads'] = 'connected';
     }
 
     // Check Google Drive connection
@@ -292,6 +318,8 @@ const ClientSocialAssets = () => {
           functionName = "tiktok-auth-url";
         } else if (platform.name === "LinkedIn") {
           functionName = "linkedin-auth-url";
+        } else if (platform.name === "Threads") {
+          functionName = "threads-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
