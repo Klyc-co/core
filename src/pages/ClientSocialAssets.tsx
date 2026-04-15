@@ -324,7 +324,8 @@ const ClientSocialAssets = () => {
           functionName = "instagram-auth-url";
         }
         
-        const { data, error } = await supabase.functions.invoke(functionName);
+        const body = functionName === "threads-auth-url" ? { originUrl: window.location.origin } : {};
+        const { data, error } = await supabase.functions.invoke(functionName, { body });
         
         if (error) {
           throw new Error(error.message);
