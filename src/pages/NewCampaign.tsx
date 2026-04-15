@@ -888,7 +888,15 @@ const NewCampaign = () => {
                         </Button>
                       )}
                       {isConnected && (
-                        <span className="text-xs text-green-600">Connected</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-destructive hover:text-destructive"
+                          onClick={() => handleDisconnectPlatform(platformId)}
+                        >
+                          <Unlink className="w-3 h-3" />
+                          Disconnect
+                        </Button>
                       )}
                     </div>
                   );
