@@ -42,14 +42,16 @@ serve(async (req) => {
         global: { headers: { Authorization: authHeader } },
       });
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data, error: claimsError } = await supabase.auth.getClaims(token);
+      if (claimsError || !data?.claims?.sub) {
+        console.error("publish-post auth error:", claimsError);
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      userId = user.id;
+      userId = data.claims.sub as string;
     }
 
     const { postQueueId }: PublishRequest = await req.json();
