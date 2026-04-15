@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -108,6 +108,8 @@ const NewCampaign = () => {
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
+  const [platformConnections, setPlatformConnections] = useState<Record<string, boolean>>({});
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -118,9 +120,81 @@ const NewCampaign = () => {
       }
       setUser(user);
       fetchClients(user.id);
+      fetchPlatformConnections(user.id);
     };
     getUser();
   }, [navigate]);
+
+  // Check for OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthSuccess = params.get("oauth_success");
+    if (oauthSuccess) {
+      toast({ title: `${oauthSuccess} connected! ✅` });
+      setPlatformConnections(prev => ({ ...prev, [oauthSuccess]: true }));
+      const url = new URL(window.location.href);
+      url.searchParams.delete("oauth_success");
+      window.history.replaceState({}, "", url.toString());
+    }
+    const oauthError = params.get("oauth_error");
+    if (oauthError) {
+      toast({ title: "Connection failed", description: oauthError, variant: "destructive" });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("oauth_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
+  const fetchPlatformConnections = async (userId: string) => {
+    const { data } = await supabase
+      .from("client_platform_connections")
+      .select("platform")
+      .eq("client_id", userId)
+      .eq("status", "active");
+    if (data) {
+      const map: Record<string, boolean> = {};
+      data.forEach(r => { map[r.platform] = true; });
+      setPlatformConnections(map);
+    }
+  };
+
+  const handleConnectPlatform = async (platformId: string) => {
+    if (platformId === "linkedin") {
+      setConnectingPlatform(platformId);
+      try {
+        const { data, error } = await supabase.functions.invoke("linkedin-oauth-initiate", {
+          body: { redirect_uri: window.location.origin + window.location.pathname },
+        });
+        if (error) throw error;
+        if (data?.auth_url) {
+          window.location.href = data.auth_url;
+          return;
+        }
+        throw new Error("No auth URL returned");
+      } catch (e: any) {
+        toast({ title: "Connection failed", description: e.message, variant: "destructive" });
+      }
+      setConnectingPlatform(null);
+      return;
+    }
+    // Mock connect for other platforms
+    if (!user) return;
+    setConnectingPlatform(platformId);
+    const { error } = await supabase
+      .from("client_platform_connections")
+      .upsert({
+        client_id: user.id,
+        platform: platformId,
+        access_token: `mock_token_${platformId}_${Date.now()}`,
+        status: "active",
+        connected_at: new Date().toISOString(),
+      }, { onConflict: "client_id,platform" });
+    if (!error) {
+      setPlatformConnections(prev => ({ ...prev, [platformId]: true }));
+      toast({ title: `${platformId} connected! ✅` });
+    }
+    setConnectingPlatform(null);
+  };
 
   // Pre-fill from generated post data
   useEffect(() => {
@@ -383,6 +457,16 @@ const NewCampaign = () => {
       toast({
         title: "Select platforms",
         description: "Please select at least one platform to post to",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const unconnected = selectedPlatforms.filter(p => !platformConnections[p]);
+    if (unconnected.length > 0) {
+      toast({
+        title: "Platforms not connected",
+        description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`,
         variant: "destructive",
       });
       return;
@@ -741,6 +825,44 @@ const NewCampaign = () => {
                     </div>
                   </Card>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Platform connection status */}
+          {selectedPlatforms.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Platform Connections</Label>
+              <div className="flex flex-wrap gap-2">
+                {selectedPlatforms.map((platformId) => {
+                  const isConnected = platformConnections[platformId];
+                  const platformName = socialPlatforms.find(p => p.id === platformId)?.name || platformId;
+                  return (
+                    <div key={platformId} className="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm">
+                      <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-muted-foreground/40"}`} />
+                      <span>{platformName}</span>
+                      {!isConnected && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1 text-primary"
+                          onClick={() => handleConnectPlatform(platformId)}
+                          disabled={connectingPlatform === platformId}
+                        >
+                          {connectingPlatform === platformId ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Link2 className="w-3 h-3" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
+                      {isConnected && (
+                        <span className="text-xs text-green-600">Connected</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
