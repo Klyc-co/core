@@ -22,26 +22,26 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
   const profile = await profileRes.json();
   const personUrn = `urn:li:person:${profile.sub}`;
 
-  // Create a text post using the UGC Post API
+  // Use the newer Posts API (v2/posts) instead of deprecated UGC Post API
   const postBody = {
     author: personUrn,
+    commentary: content,
+    visibility: "PUBLIC",
+    distribution: {
+      feedDistribution: "MAIN_FEED",
+      targetEntities: [],
+      thirdPartyDistributionChannels: [],
+    },
     lifecycleState: "PUBLISHED",
-    specificContent: {
-      "com.linkedin.ugc.ShareContent": {
-        shareCommentary: { text: content },
-        shareMediaCategory: "NONE",
-      },
-    },
-    visibility: {
-      "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-    },
+    isReshareDisabledByAuthor: false,
   };
 
-  const postRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+  const postRes = await fetch("https://api.linkedin.com/rest/posts", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "LinkedIn-Version": "202401",
       "X-Restli-Protocol-Version": "2.0.0",
     },
     body: JSON.stringify(postBody),
@@ -53,15 +53,30 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
     return { success: false, error: `LinkedIn post failed (${postRes.status}): ${errText}` };
   }
 
-  const postData = await postRes.json();
-  const postId = postData.id;
+  // The Posts API returns the post URN in the x-restli-id header
+  const postUrn = postRes.headers.get("x-restli-id") || postRes.headers.get("x-linkedin-id");
+  
+  // Try to get post ID from response body as fallback
+  let postId = postUrn;
+  if (!postId) {
+    try {
+      const postData = await postRes.json();
+      postId = postData.id || postData.urn;
+    } catch {
+      // 201 with no body is normal for Posts API
+    }
+  }
 
-  const activityId = postId?.replace("urn:li:ugcPost:", "urn:li:activity:");
-  const permalink = activityId
-    ? `https://www.linkedin.com/feed/update/${activityId}/`
-    : undefined;
+  // Build permalink from the post URN
+  // Format: urn:li:share:123456 -> activity:123456
+  let permalink: string | undefined;
+  if (postId) {
+    const shareId = postId.replace("urn:li:share:", "").replace("urn:li:ugcPost:", "");
+    permalink = `https://www.linkedin.com/feed/update/urn:li:activity:${shareId}/`;
+  }
 
-  return { success: true, post_id: postId, permalink };
+  console.log("[LinkedIn] Post created successfully:", postId);
+  return { success: true, post_id: postId || undefined, permalink };
 }
 
 Deno.serve(async (req) => {
