@@ -211,6 +211,18 @@ const ClientSocialAssets = () => {
       newStatus['LinkedIn'] = 'connected';
     }
 
+    // Check Threads connection
+    const { data: threadsConnection } = await supabase
+      .from("social_connections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("platform", "threads")
+      .maybeSingle();
+    
+    if (threadsConnection) {
+      newStatus['Threads'] = 'connected';
+    }
+
     // Check Google Drive connection
     const { data: driveConn } = await supabase
       .from("google_drive_connections")
