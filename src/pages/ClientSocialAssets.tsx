@@ -135,6 +135,12 @@ const ClientSocialAssets = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
+    if (success === "threads") {
+      toast.success("Threads connected successfully!");
+      setConnectionStatus(prev => ({ ...prev, Threads: 'connected' }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     if (error) {
       toast.error(`Connection failed: ${error}`);
       window.history.replaceState({}, document.title, window.location.pathname);
