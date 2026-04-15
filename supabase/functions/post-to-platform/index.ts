@@ -41,7 +41,7 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      "LinkedIn-Version": "202401",
+      "LinkedIn-Version": "202504",
       "X-Restli-Protocol-Version": "2.0.0",
     },
     body: JSON.stringify(postBody),
