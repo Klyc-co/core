@@ -126,7 +126,19 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
       });
       if (error) throw error;
       if (data?.success) {
-        toast.success(data.message || `Posted to ${platform}!`);
+        if (data.permalink) {
+          toast.success(
+            <div>
+              <p>{data.message || `Posted to ${platform}!`}</p>
+              <a href={data.permalink} target="_blank" rel="noopener noreferrer" className="underline text-primary mt-1 block">
+                View post →
+              </a>
+            </div>,
+            { duration: 10000 }
+          );
+        } else {
+          toast.success(data.message || `Posted to ${platform}!`);
+        }
       } else {
         toast.error(data?.error || "Post failed");
       }
