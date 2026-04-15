@@ -91,21 +91,28 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
     }
   }, []);
 
-  const handleConnect = async () => {
-    // Platforms with real OAuth support
-    const oauthPlatforms = ["linkedin"];
+  const OAUTH_FUNCTION_MAP: Record<string, { functionName: string; urlKey: string }> = {
+    linkedin: { functionName: "linkedin-oauth-initiate", urlKey: "auth_url" },
+    tiktok: { functionName: "tiktok-auth-url", urlKey: "authUrl" },
+    instagram: { functionName: "instagram-auth-url", urlKey: "url" },
+    snapchat: { functionName: "snapchat-auth-url", urlKey: "authUrl" },
+  };
 
-    if (oauthPlatforms.includes(platformKey)) {
+  const handleConnect = async () => {
+    const oauthConfig = OAUTH_FUNCTION_MAP[platformKey];
+
+    if (oauthConfig) {
       setConnecting(true);
       try {
-        const { data, error } = await supabase.functions.invoke("linkedin-oauth-initiate", {
-          body: { redirect_uri: window.location.origin + window.location.pathname },
-        });
+        const body = platformKey === "linkedin"
+          ? { redirect_uri: window.location.origin + window.location.pathname }
+          : {};
+        const { data, error } = await supabase.functions.invoke(oauthConfig.functionName, { body });
         if (error) throw error;
-        if (data?.auth_url) {
-          // Navigate to LinkedIn OAuth page
-          window.location.href = data.auth_url;
-          return; // Page will redirect
+        const authUrl = data?.[oauthConfig.urlKey];
+        if (authUrl) {
+          window.location.href = authUrl;
+          return;
         }
         throw new Error("No auth URL returned");
       } catch (e: any) {
