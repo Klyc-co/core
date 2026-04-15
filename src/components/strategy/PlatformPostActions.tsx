@@ -96,6 +96,7 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
     tiktok: { functionName: "tiktok-auth-url", urlKey: "authUrl" },
     instagram: { functionName: "instagram-auth-url", urlKey: "url" },
     snapchat: { functionName: "snapchat-auth-url", urlKey: "authUrl" },
+    threads: { functionName: "threads-auth-url", urlKey: "authUrl" },
   };
 
   const handleConnect = async () => {
