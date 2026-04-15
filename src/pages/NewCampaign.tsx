@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp, Link2 } from "lucide-react";
+import { ArrowLeft, Plus, Upload, X, Rocket, CalendarIcon, Clock, Send, Loader2, FileText, FolderOpen, FlaskConical, ChevronDown, ChevronUp, Link2, Unlink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { User } from "@supabase/supabase-js";
@@ -158,16 +158,27 @@ const NewCampaign = () => {
     }
   };
 
+  const OAUTH_FUNCTION_MAP: Record<string, { functionName: string; urlKey: string }> = {
+    linkedin: { functionName: "linkedin-oauth-initiate", urlKey: "auth_url" },
+    tiktok: { functionName: "tiktok-auth-url", urlKey: "authUrl" },
+    instagram: { functionName: "instagram-auth-url", urlKey: "url" },
+    snapchat: { functionName: "snapchat-auth-url", urlKey: "authUrl" },
+    threads: { functionName: "threads-auth-url", urlKey: "authUrl" },
+  };
+
   const handleConnectPlatform = async (platformId: string) => {
-    if (platformId === "linkedin") {
+    const oauthConfig = OAUTH_FUNCTION_MAP[platformId];
+    if (oauthConfig) {
       setConnectingPlatform(platformId);
       try {
-        const { data, error } = await supabase.functions.invoke("linkedin-oauth-initiate", {
-          body: { redirect_uri: window.location.origin + window.location.pathname },
-        });
+        const body = platformId === "linkedin"
+          ? { redirect_uri: window.location.origin + window.location.pathname }
+          : {};
+        const { data, error } = await supabase.functions.invoke(oauthConfig.functionName, { body });
         if (error) throw error;
-        if (data?.auth_url) {
-          window.location.href = data.auth_url;
+        const authUrl = data?.[oauthConfig.urlKey];
+        if (authUrl) {
+          window.location.href = authUrl;
           return;
         }
         throw new Error("No auth URL returned");
@@ -194,6 +205,25 @@ const NewCampaign = () => {
       toast({ title: `${platformId} connected! ✅` });
     }
     setConnectingPlatform(null);
+  };
+
+  const handleDisconnectPlatform = async (platformId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("client_platform_connections")
+      .delete()
+      .eq("client_id", user.id)
+      .eq("platform", platformId);
+    if (!error) {
+      setPlatformConnections(prev => {
+        const next = { ...prev };
+        delete next[platformId];
+        return next;
+      });
+      toast({ title: `${platformId} disconnected` });
+    } else {
+      toast({ title: "Failed to disconnect", description: error.message, variant: "destructive" });
+    }
   };
 
   // Pre-fill from generated post data
