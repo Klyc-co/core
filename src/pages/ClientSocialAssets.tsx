@@ -318,6 +318,8 @@ const ClientSocialAssets = () => {
           functionName = "tiktok-auth-url";
         } else if (platform.name === "LinkedIn") {
           functionName = "linkedin-auth-url";
+        } else if (platform.name === "Threads") {
+          functionName = "threads-auth-url";
         } else {
           functionName = "instagram-auth-url";
         }
