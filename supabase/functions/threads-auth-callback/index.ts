@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
 
     let clientUserId: string | null = state
     let returnTo = '/campaigns/new'
+    let originUrl = ''
     if (state) {
       try {
         const parsedState = JSON.parse(state)
@@ -30,13 +31,19 @@ Deno.serve(async (req) => {
         if (parsedState?.returnTo && typeof parsedState.returnTo === 'string' && parsedState.returnTo.startsWith('/')) {
           returnTo = parsedState.returnTo
         }
+        if (parsedState?.originUrl && typeof parsedState.originUrl === 'string') {
+          originUrl = parsedState.originUrl
+        }
       } catch {
         clientUserId = state
       }
     }
 
+    // Use originUrl from state if provided, otherwise fall back to SITE_URL
+    const baseUrl = originUrl || siteUrl
+
     const buildRedirectUrl = (params: Record<string, string>) => {
-      const redirectUrl = new URL(returnTo, siteUrl)
+      const redirectUrl = new URL(returnTo, baseUrl)
       Object.entries(params).forEach(([key, value]) => redirectUrl.searchParams.set(key, value))
       return redirectUrl.toString()
     }
