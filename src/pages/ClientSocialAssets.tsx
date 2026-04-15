@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ClientHeader from "@/components/ClientHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, HardDrive, FolderOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, HardDrive, FolderOpen, ExternalLink, AtSign } from "lucide-react";
+import ThreadsIcon from "@/components/icons/ThreadsIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -80,6 +81,13 @@ const socialPlatforms: SocialPlatform[] = [
   { 
     name: "TikTok", 
     icon: Music, 
+    color: "bg-black", 
+    textColor: "text-black dark:text-white",
+    customOAuth: true,
+  },
+  { 
+    name: "Threads", 
+    icon: AtSign, 
     color: "bg-black", 
     textColor: "text-black dark:text-white",
     customOAuth: true,
