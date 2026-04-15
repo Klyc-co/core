@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 
 async function postToLinkedIn(accessToken: string, content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
-  // Step 1: Get the user's LinkedIn profile URN
+  // Get the user's LinkedIn profile URN
   const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -21,7 +22,7 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
   const profile = await profileRes.json();
   const personUrn = `urn:li:person:${profile.sub}`;
 
-  // Step 2: Create a text post using the UGC Post API
+  // Create a text post using the UGC Post API
   const postBody = {
     author: personUrn,
     lifecycleState: "PUBLISHED",
@@ -53,13 +54,11 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
   }
 
   const postData = await postRes.json();
-  const postId = postData.id; // e.g. "urn:li:ugcPost:123456"
+  const postId = postData.id;
 
-  // Extract the activity ID for a permalink
   const activityId = postId?.replace("urn:li:ugcPost:", "urn:li:activity:");
-  const numericId = postId?.split(":").pop();
-  const permalink = numericId
-    ? `https://www.linkedin.com/feed/update/${activityId || postId}/`
+  const permalink = activityId
+    ? `https://www.linkedin.com/feed/update/${activityId}/`
     : undefined;
 
   return { success: true, post_id: postId, permalink };
@@ -79,17 +78,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // User-scoped client for auth
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -124,7 +119,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use service role to read access_token (RLS blocks it from anon)
+    // Use service role to read access_token
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -145,22 +140,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const accessToken = connection.access_token;
+    // Decrypt the stored token
+    const accessToken = await decryptToken(connection.access_token);
     const platformLower = platform.toLowerCase();
 
-    // Route to platform-specific handler
     let result: { success: boolean; post_id?: string; permalink?: string; error?: string };
 
     if (platformLower === "linkedin") {
       result = await postToLinkedIn(accessToken, content);
     } else {
-      // Other platforms remain mock for now
+      // Other platforms remain mock
       console.log(`[post-to-platform] Mock post to ${platform} by user ${user.id}`);
-      result = {
-        success: true,
-        post_id: crypto.randomUUID(),
-        permalink: undefined,
-      };
+      result = { success: true, post_id: crypto.randomUUID() };
     }
 
     if (!result.success) {
