@@ -5,9 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ArrowLeft, Loader2, Download, RefreshCw,
   TrendingUp, AlertTriangle, CheckCircle, XCircle,
-  Zap, Target, ChevronRight, Brain, Clock
+  Zap, Target, ChevronRight, Brain, Clock, Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -91,10 +97,52 @@ const priorityBadge = (p: string) => {
 };
 
 const ScoreBar = ({ score }: { score: number }) => (
-  <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-    <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }} />
+  <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+    <div
+      className="bg-primary h-1.5 rounded-full transition-all"
+      style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
+    />
   </div>
 );
+
+interface MetricCardProps {
+  value: string | number;
+  label: string;
+  tooltip: string;
+  source: string;
+  colorClass?: string;
+  bgClass?: string;
+  showBar?: boolean;
+  barScore?: number;
+}
+
+function MetricCard({ value, label, tooltip, source, colorClass, bgClass, showBar, barScore }: MetricCardProps) {
+  return (
+    <Card className={bgClass ? `border ${bgClass}` : ""}>
+      <CardContent className="py-4 px-4">
+        <div className="flex items-start justify-between gap-1 mb-1">
+          <div className={`text-2xl font-bold leading-tight ${colorClass || "text-foreground"}`}>
+            {value}
+          </div>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 mt-1 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                <p className="font-medium mb-1">{label}</p>
+                <p className="text-muted-foreground">{tooltip}</p>
+                <p className="text-primary/70 mt-1 font-mono text-[10px]">Source: {source}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <p className="text-sm text-muted-foreground leading-snug">{label}</p>
+        {showBar && barScore !== undefined && <ScoreBar score={barScore} />}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function CustomerStrategyAnalysis() {
   const navigate = useNavigate();
@@ -106,13 +154,11 @@ export default function CustomerStrategyAnalysis() {
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      // Get the logged-in user — they ARE the client
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error("Not authenticated");
 
       const userId = user.id;
 
-      // Fetch all brand data in parallel — all keyed to user_id
       const [profileRes, brainRes, socialRes, postRes] = await Promise.all([
         supabase.from("client_profiles").select("*").eq("user_id", userId).maybeSingle(),
         supabase.from("client_brain").select("data, document_type").eq("user_id", userId).limit(30),
@@ -124,10 +170,8 @@ export default function CustomerStrategyAnalysis() {
       const brainData = brainRes.data || [];
       const find = (type: string) => brainData.find((d) => d.document_type === type)?.data || null;
 
-      // Set brand name from profile
       if (profile?.business_name) setBrandName(profile.business_name);
 
-      // Call strategy-analysis on the backend project directly (all AI subminds live there)
       const res = await fetch(`${BACKEND_URL}/functions/v1/strategy-analysis`, {
         method: "POST",
         headers: {
@@ -138,21 +182,18 @@ export default function CustomerStrategyAnalysis() {
         body: JSON.stringify({
           user_id: userId,
           client_name: profile?.business_name || user.email?.split("@")[0] || "Your Brand",
-          // Brand profile
           business_name: profile?.business_name,
           website: profile?.website,
           description: profile?.description,
           industry: profile?.industry,
           target_audience: profile?.target_audience,
           value_proposition: profile?.value_proposition,
-          // Brain library docs
           brand_data: find("brand"),
           website_data: find("website"),
           strategy_data: find("strategy"),
           audience_data: find("audience"),
           competitor_data: find("competitor"),
           regulatory_data: find("regulatory"),
-          // Social & activity
           social_connections: socialRes.data || [],
           post_history: postRes.data || [],
         }),
@@ -176,15 +217,35 @@ export default function CustomerStrategyAnalysis() {
     }
   };
 
-  // Auto-run on mount — the user IS the brand
-  useEffect(() => {
-    runAnalysis();
-  }, []);
+  useEffect(() => { runAnalysis(); }, []);
+
+  // Derive 3 additional metrics from the analysis result
+  const derivedMetrics = result ? [
+    {
+      value: result.page_audits.length > 0 ? `${result.page_audits.length} sections` : "—",
+      label: "Funnel Sections Audited",
+      tooltip: "Number of funnel touchpoints reviewed — Homepage, Pricing, Blog, etc. Each section is graded independently and feeds the Website tab breakdown.",
+      source: "page_audits[] · strategy-analysis submind",
+    },
+    {
+      value: result.audience_opportunities.length > 0 ? `${result.audience_opportunities.length} found` : "0 found",
+      label: "Audience Opportunities",
+      tooltip: `${result.audience_opportunities.filter(o => o.priority === "high").length} high · ${result.audience_opportunities.filter(o => o.priority === "medium").length} medium · ${result.audience_opportunities.filter(o => o.priority === "low").length} low priority. Split into proactive (things to start) and reactive (gaps to address).`,
+      source: "audience_opportunities[] · strategy-analysis submind",
+    },
+    {
+      value: `${result.roadmap.reduce((acc, p) => acc + p.items.length, 0)} actions`,
+      label: "90-Day Roadmap Actions",
+      tooltip: `${result.roadmap.map(p => `${p.phase}: ${p.items.length}`).join(" · ")}. Each action is concrete and sequenced across Days 1-30, 31-60, and 61-90.`,
+      source: "roadmap[] · strategy-analysis submind",
+    },
+  ] : [];
 
   return (
     <div className="min-h-screen bg-background">
       <style>{`@media print { .no-print { display: none !important; } }`}</style>
 
+      {/* Header */}
       <div className="border-b border-border bg-card/50 sticky top-0 z-10 no-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -192,13 +253,15 @@ export default function CustomerStrategyAnalysis() {
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
             <div className="w-px h-5 bg-border" />
-            <Brain className="w-5 h-5 text-primary" />
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Brain className="w-4 h-4 text-primary" />
+            </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">Strategy Analysis</h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Brand library · Social presence · Audience opportunities · 90-day roadmap
                 {brandName && (
-                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{brandName}</Badge>
+                  <Badge variant="outline" className="ml-2 text-xs">{brandName}</Badge>
                 )}
               </p>
             </div>
@@ -219,6 +282,8 @@ export default function CustomerStrategyAnalysis() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        {/* Loading state */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
@@ -229,26 +294,93 @@ export default function CustomerStrategyAnalysis() {
 
         {result && !loading && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+            {/* ── 8-card metric grid ── */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+              {/* Overall Grade — special card */}
               <Card className={`border ${gradeBg(result.overall_grade)}`}>
-                <CardContent className="py-4 text-center">
-                  <div className={`text-4xl font-black ${gradeColor(result.overall_grade)}`}>{result.overall_grade}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Overall Grade</div>
+                <CardContent className="py-4 px-4">
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <div className={`text-4xl font-black leading-none ${gradeColor(result.overall_grade)}`}>
+                      {result.overall_grade}
+                    </div>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground shrink-0 mt-1 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                          <p className="font-medium mb-1">Overall Grade</p>
+                          <p className="text-muted-foreground">Composite score ({result.overall_score}/100) across brand completeness, social presence, posting consistency, and funnel effectiveness. Graded A+→F.</p>
+                          <p className="text-primary/70 mt-1 font-mono text-[10px]">Source: overall_score · strategy-analysis submind</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Overall Grade</p>
                   <ScoreBar score={result.overall_score} />
                 </CardContent>
               </Card>
-              {result.key_metrics.map((m, i) => (
-                <Card key={i}><CardContent className="py-4 text-center">
-                  <div className="text-2xl font-bold text-foreground">{m.value}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{m.label}</div>
-                </CardContent></Card>
+
+              {/* AI-generated key metrics */}
+              {result.key_metrics.map((m, i) => {
+                const tooltipMap: Record<string, { tip: string; src: string }> = {
+                  "Active Social Channels": {
+                    tip: "Number of social platforms actively connected in your KLYC account. More connected platforms increases visibility coverage and gives the analysis engine more data to work with.",
+                    src: "social_connections table · user_id",
+                  },
+                  "Social Channels": {
+                    tip: "Number of social platforms actively connected in your KLYC account.",
+                    src: "social_connections table · user_id",
+                  },
+                  "Total Posts (Recent Trend)": {
+                    tip: "Posts in your queue (last 30 entries), across all statuses. Consecutive failures indicate publishing errors — check your social connection tokens.",
+                    src: "post_queue table · last 30 rows · user_id",
+                  },
+                  "Post History": {
+                    tip: "Posts in your queue (last 30 entries), across all statuses.",
+                    src: "post_queue table · last 30 rows · user_id",
+                  },
+                  "Brand Documentation": {
+                    tip: "Presence of key brain library documents: brand, website, strategy, audience, and competitor. Missing docs reduce analysis depth and campaign quality.",
+                    src: "client_brain table · document_type · user_id",
+                  },
+                  "Content Production Health": {
+                    tip: "Success rate of your 5 most recent posts. Published = success. Failed or still in draft = failure. A 0% rate means your last 5 posts never made it to any platform.",
+                    src: "post_queue table · status field · last 5 posts",
+                  },
+                };
+                const key = Object.keys(tooltipMap).find(k => m.label.includes(k.split(" ")[0])) || m.label;
+                const tip = tooltipMap[key] || {
+                  tip: `${m.label} metric derived from your brand and posting data.`,
+                  src: "strategy-analysis submind",
+                };
+                return (
+                  <MetricCard
+                    key={i}
+                    value={m.value}
+                    label={m.label}
+                    tooltip={tip.tip}
+                    source={tip.src}
+                  />
+                );
+              })}
+
+              {/* 3 derived metrics */}
+              {derivedMetrics.map((m, i) => (
+                <MetricCard key={`derived-${i}`} {...m} />
               ))}
             </div>
 
-            <Card><CardContent className="py-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
-            </CardContent></Card>
+            {/* Summary */}
+            <Card>
+              <CardContent className="py-4 px-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
+              </CardContent>
+            </Card>
 
+            {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5 no-print">
                 <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -261,11 +393,16 @@ export default function CustomerStrategyAnalysis() {
               <TabsContent value="summary" className="mt-4 space-y-4">
                 {result.conversion_killers.length > 0 && (
                   <Card className="border-red-500/20">
-                    <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-500" />Priority Issues</CardTitle></CardHeader>
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-500" />Priority Issues
+                      </CardTitle>
+                    </CardHeader>
                     <CardContent className="pt-0 space-y-2">
                       {result.conversion_killers.map((k, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 rounded bg-red-500/5 border border-red-500/10">
-                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /><span className="text-sm text-foreground">{k}</span>
+                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                          <span className="text-sm text-foreground">{k}</span>
                         </div>
                       ))}
                     </CardContent>
@@ -274,7 +411,7 @@ export default function CustomerStrategyAnalysis() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {result.page_audits.slice(0, 3).map((page, i) => (
                     <Card key={i} className={`border ${gradeBg(page.grade)}`}>
-                      <CardContent className="py-4">
+                      <CardContent className="py-4 px-4">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium text-foreground">{page.title}</span>
                           <span className={`text-lg font-black ${gradeColor(page.grade)}`}>{page.grade}</span>
@@ -282,7 +419,9 @@ export default function CustomerStrategyAnalysis() {
                         <ScoreBar score={page.score} />
                         <div className="mt-2 space-y-1">
                           {page.issues.slice(0, 2).map((issue, ii) => (
-                            <div key={ii} className="text-xs text-red-400 flex gap-1 items-start"><XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}</div>
+                            <div key={ii} className="text-xs text-red-400 flex gap-1 items-start">
+                              <XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}
+                            </div>
                           ))}
                         </div>
                       </CardContent>
@@ -293,7 +432,11 @@ export default function CustomerStrategyAnalysis() {
 
               <TabsContent value="website" className="mt-4 space-y-4">
                 <Card>
-                  <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-primary" />Funnel Analysis</CardTitle></CardHeader>
+                  <CardHeader className="py-3 px-4">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <Target className="w-4 h-4 text-primary" />Funnel Analysis
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex flex-wrap items-start gap-2">
                       {result.funnel_stages.map((stage, i) => (
@@ -342,7 +485,10 @@ export default function CustomerStrategyAnalysis() {
                             <span className={`text-xl font-black ${gradeColor(profile.grade)}`}>{profile.grade}</span>
                           </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">{profile.handle}{profile.followers && <span className="ml-2 font-medium text-foreground">{profile.followers.toLocaleString()} followers</span>}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {profile.handle}
+                          {profile.followers && <span className="ml-2 font-medium text-foreground">{profile.followers.toLocaleString()} followers</span>}
+                        </div>
                       </CardHeader>
                       <CardContent className="pt-0 space-y-1">
                         {profile.gaps.map((g, gi) => <div key={gi} className="flex gap-2 text-xs text-red-400"><XCircle className="w-3 h-3 mt-0.5 shrink-0" />{g}</div>)}
@@ -356,25 +502,39 @@ export default function CustomerStrategyAnalysis() {
               <TabsContent value="audience" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" />Proactive Opportunities</h3>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-green-500" />Proactive Opportunities
+                    </h3>
                     {result.audience_opportunities.filter((o) => o.type === "proactive").map((opp, i) => (
-                      <Card key={i} className="border-green-500/20"><CardContent className="py-3 px-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div><div className="text-sm font-medium text-foreground">{opp.title}</div><div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div></div>
-                          <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
-                        </div>
-                      </CardContent></Card>
+                      <Card key={i} className="border-green-500/20">
+                        <CardContent className="py-3 px-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-medium text-foreground">{opp.title}</div>
+                              <div className="text-sm text-muted-foreground mt-0.5">{opp.description}</div>
+                            </div>
+                            <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" />Reactive Opportunities</h3>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-500" />Reactive Opportunities
+                    </h3>
                     {result.audience_opportunities.filter((o) => o.type === "reactive").map((opp, i) => (
-                      <Card key={i} className="border-orange-500/20"><CardContent className="py-3 px-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div><div className="text-sm font-medium text-foreground">{opp.title}</div><div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div></div>
-                          <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
-                        </div>
-                      </CardContent></Card>
+                      <Card key={i} className="border-orange-500/20">
+                        <CardContent className="py-3 px-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-medium text-foreground">{opp.title}</div>
+                              <div className="text-sm text-muted-foreground mt-0.5">{opp.description}</div>
+                            </div>
+                            <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 </div>
@@ -385,12 +545,16 @@ export default function CustomerStrategyAnalysis() {
                   {result.roadmap.map((phase, i) => (
                     <Card key={i}>
                       <CardHeader className="py-3 px-4">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-primary"><Clock className="w-3.5 h-3.5" />{phase.days}</div>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                          <Clock className="w-3.5 h-3.5" />{phase.days}
+                        </div>
                         <CardTitle className="text-sm font-bold text-foreground">{phase.phase}</CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0 space-y-2">
                         {phase.items.map((item, ii) => (
-                          <div key={ii} className="flex items-start gap-2 text-sm text-muted-foreground"><CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />{item}</div>
+                          <div key={ii} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />{item}
+                          </div>
                         ))}
                       </CardContent>
                     </Card>
