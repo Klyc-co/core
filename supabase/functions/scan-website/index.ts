@@ -130,15 +130,15 @@ Deno.serve(async (req) => {
         }),
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
 
-      // Parallel task 2: Start crawl (reduced: 10 pages, depth 2)
+      // Parallel task 2: Start crawl (reduced: 5 pages, depth 1)
       fetch('https://api.firecrawl.dev/v1/crawl', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: formattedUrl,
-          limit: 10,
-          maxDepth: 2,
-          scrapeOptions: { formats: ['markdown', 'links'], onlyMainContent: false },
+          limit: 5,
+          maxDepth: 1,
+          scrapeOptions: { formats: ['markdown', 'links'], onlyMainContent: true },
         }),
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
     ]);
