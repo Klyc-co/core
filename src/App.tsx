@@ -60,7 +60,6 @@ import FacebookAnalytics from "./pages/FacebookAnalytics";
 import TwitterAnalytics from "./pages/TwitterAnalytics";
 import LinkedInAnalytics from "./pages/LinkedInAnalytics";
 import FullAnalytics from "./pages/FullAnalytics";
-
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -84,6 +83,7 @@ import OrchestratorGraph from "./pages/OrchestratorGraph";
 import Onboarding from "./pages/Onboarding";
 import SmartPromptDemo from "./pages/SmartPromptDemo";
 import StrategyDashboard from "./pages/StrategyDashboard";
+import CustomerStrategyAnalysis from "./pages/CustomerStrategyAnalysis";
 import LearningHub from "./pages/LearningHub";
 import CreativeStudioPage from "./pages/CreativeStudioPage";
 import KlycAdminLogin from "./pages/KlycAdminLogin";
@@ -109,7 +109,6 @@ import KlycAdminAudit from "./pages/KlycAdminAudit";
 import KlycAdminGuard from "./components/admin/KlycAdminGuard";
 import KlycAdminLayout from "./components/admin/KlycAdminLayout";
 
-
 const queryClient = new QueryClient();
 
 const WithSidebar = ({ children }: { children: React.ReactNode }) => (
@@ -132,19 +131,15 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/waitlist" element={<AdminWaitlist />} />
             <Route path="/waitlist" element={<Waitlist />} />
-            
-            {/* Klyc Admin */}
             <Route path="/klyc_admin" element={<KlycAdminLogin />} />
             <Route path="/klyc_admin/dashboard" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminDashboard /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/overview" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
@@ -167,8 +162,6 @@ const App = () => (
             <Route path="/klyc_admin/audit" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminAudit /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
-            
-            {/* Client Portal routes */}
             <Route path="/client/auth" element={<ClientAuth />} />
             <Route path="/client/dashboard" element={<ClientProtected><ClientDashboard /></ClientProtected>} />
             <Route path="/client/profile" element={<ClientProtected><ClientProfile /></ClientProtected>} />
@@ -181,10 +174,7 @@ const App = () => (
             <Route path="/client/strategy/trends" element={<ClientProtected><ClientTrendMonitor /></ClientProtected>} />
             <Route path="/client/strategy/competitors" element={<ClientProtected><ClientCompetitorAnalysis /></ClientProtected>} />
             <Route path="/client/messages" element={<ClientProtected><Messages portalType="client" /></ClientProtected>} />
-            
-            {/* Marketer routes with sidebar */}
             <Route path="/home" element={<WithSidebar><Home /></WithSidebar>} />
-            
             <Route path="/projects" element={<WithSidebar><Projects /></WithSidebar>} />
             <Route path="/projects/new" element={<WithSidebar><NewProject /></WithSidebar>} />
             <Route path="/projects/:id/processing" element={<WithSidebar><Processing /></WithSidebar>} />
@@ -225,10 +215,7 @@ const App = () => (
             <Route path="/profile/linkedin-analytics" element={<WithSidebar><LinkedInAnalytics /></WithSidebar>} />
             <Route path="/analytics" element={<WithSidebar><FullAnalytics /></WithSidebar>} />
             <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
-            
             <Route path="/trello-callback" element={<TrelloCallback />} />
-            
-            {/* Klyc & System routes */}
             <Route path="/orchestrator" element={<WithSidebar><OrchestratorPanel /></WithSidebar>} />
             <Route path="/orchestrator/graph" element={<WithSidebar><OrchestratorGraph /></WithSidebar>} />
             <Route path="/campaigns/queue" element={<WithSidebar><PostQueueManager /></WithSidebar>} />
@@ -241,13 +228,11 @@ const App = () => (
             <Route path="/reports" element={<WithSidebar><ReportsPage /></WithSidebar>} />
             <Route path="/reports/scheduled" element={<WithSidebar><ReportsPage /></WithSidebar>} />
             <Route path="/strategy" element={<WithSidebar><StrategyDashboard /></WithSidebar>} />
+            <Route path="/strategy/customer-analysis" element={<WithSidebar><CustomerStrategyAnalysis /></WithSidebar>} />
             <Route path="/learning" element={<WithSidebar><LearningHub /></WithSidebar>} />
             <Route path="/creative-studio" element={<WithSidebar><CreativeStudio /></WithSidebar>} />
             <Route path="/demo/smart-prompt" element={<SmartPromptDemo />} />
-            
-            {/* Client onboarding */}
             <Route path="/client/onboarding" element={<ClientProtected><ClientOnboarding /></ClientProtected>} />
-            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

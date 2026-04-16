@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket, Lock, Sparkles } from "lucide-react";
+import { Zap, Users, MessageSquare, Target, BookOpen, ChevronDown, Rocket, Lock, Sparkles, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -112,6 +112,10 @@ export default function StrategyDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate("/strategy/customer-analysis")}>
+            <Globe className="w-4 h-4 mr-1.5" />
+            Customer Analysis
+          </Button>
           <Button size="sm" variant="outline" onClick={() => navigate("/brand-strategy")}>
             <MessageSquare className="w-4 h-4 mr-1.5" />
             Strategy Tools
