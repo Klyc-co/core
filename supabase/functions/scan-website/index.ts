@@ -153,13 +153,13 @@ Deno.serve(async (req) => {
       console.log('Branding extracted:', homepageBranding ? 'Yes' : 'No');
     }
 
-    // Poll crawl with shorter timeout (45s) and faster interval (1.5s)
+    // Poll crawl with shorter timeout (25s) and faster interval (2s)
     let crawlPages: PageData[] = [];
     if (crawlResult.success && crawlResult.id) {
       const crawlId = crawlResult.id;
       console.log('Crawl started, polling ID:', crawlId);
-      const maxWaitTime = 45000;
-      const pollInterval = 1500;
+      const maxWaitTime = 25000;
+      const pollInterval = 2000;
       const startTime = Date.now();
 
       while (Date.now() - startTime < maxWaitTime) {
