@@ -187,10 +187,11 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
                     No brand assets were found. You can add them manually later.
                   </div>
                 ) : (
-                  assets.map((asset) => (
+                  assets.map((asset, index) => (
                     <div
                       key={asset.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors cursor-pointer"
+                      onClick={() => setLightboxIndex(index)}
                     >
                       {asset.asset_type === "color" ? (
                         <div
