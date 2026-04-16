@@ -219,18 +219,22 @@ Deno.serve(async (req) => {
     const limitedAssets = [...colorAssets, ...fontAssets, ...imageAssets, ...copyAssets];
 
     // ===== SPEED: Insert assets + generate AI summary IN PARALLEL =====
+    // Skip AI summary if running out of time
     const [, businessSummary] = await Promise.all([
       // Insert assets in background
       (async () => {
         if (limitedAssets.length > 0) {
           const batchSize = 50;
           for (let i = 0; i < limitedAssets.length; i += batchSize) {
+            if (!isTimeBudgetOk()) break;
             await supabase.from('brand_assets').insert(limitedAssets.slice(i, i + batchSize));
           }
         }
       })(),
-      // Generate AI summary (using faster model)
-      generateBusinessSummary(allPages, formattedUrl),
+      // Generate AI summary (skip if low on time)
+      isTimeBudgetOk()
+        ? generateBusinessSummary(allPages, formattedUrl)
+        : Promise.resolve({ businessName: "Your Business", description: "Extracted from website scan." }),
     ]);
 
     // Auto-populate client profile
