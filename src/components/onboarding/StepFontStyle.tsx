@@ -135,14 +135,21 @@ const StepFontStyle = ({ scanData, preGeneratedImage, onNext }: StepFontStylePro
           "Dark enough in areas to allow white text overlay. Aspect ratio 4:5 portrait.",
         ].filter(Boolean).join(" ");
 
-        const { data, error } = await supabase.functions.invoke("generate-image", {
-          body: { prompt: imagePrompt, model: "nano-banana" },
+        const _resp = await fetch("https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: imagePrompt }),
         });
 
         if (cancelled) return;
-        if (error) throw error;
-        if (data?.imageUrl) {
-          setImageUrl(data.imageUrl);
+        if (!_resp.ok) throw new Error(`Image generation failed: ${_resp.status}`);
+        const _data = await _resp.json();
+        const _imgUrl = typeof _data?.["σo"] === "string" ? _data["σo"] : _data?.imageUrl;
+        if (_imgUrl) {
+          setImageUrl(_imgUrl);
         } else {
           setImageError(true);
         }
