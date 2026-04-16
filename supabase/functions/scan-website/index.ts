@@ -431,12 +431,12 @@ async function generateBusinessSummary(
     if (!LOVABLE_API_KEY) return { businessName: "Your Business", description: "" };
 
     let combinedContent = "";
-    for (const page of pages.slice(0, 10)) {
+    for (const page of pages.slice(0, 5)) {
       const title = page.metadata?.title || "";
       const desc = page.metadata?.description || "";
-      const markdown = (page.markdown || "").substring(0, 2000);
+      const markdown = (page.markdown || "").substring(0, 1500);
       combinedContent += `--- Page: ${title} ---\n${desc}\n${markdown}\n\n`;
-      if (combinedContent.length > 12000) break;
+      if (combinedContent.length > 8000) break;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
