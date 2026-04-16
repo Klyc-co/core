@@ -99,6 +99,10 @@ Deno.serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
+    const functionStartTime = Date.now();
+    const MAX_FUNCTION_TIME = 110000; // 110s hard limit to stay under 150s
+    const isTimeBudgetOk = () => Date.now() - functionStartTime < MAX_FUNCTION_TIME;
+
     console.log('Starting FAST website scan:', formattedUrl);
 
     // Create brand import record
