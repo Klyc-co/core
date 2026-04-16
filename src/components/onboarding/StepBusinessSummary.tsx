@@ -40,6 +40,7 @@ const assetTypeLabel = (type: string) => {
 const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => {
   const [assets, setAssets] = useState<BrandAsset[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const [summaryHeight, setSummaryHeight] = useState<number | undefined>(undefined);
 
