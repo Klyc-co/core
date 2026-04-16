@@ -7,10 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Loader2, Download, RefreshCw,
   TrendingUp, AlertTriangle, CheckCircle, XCircle,
-  Zap, Target, ChevronRight, Brain, Users, Clock
+  Zap, Target, ChevronRight, Brain, Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useCurrentClient } from "@/hooks/use-current-client";
 import { toast } from "sonner";
 
 interface PageAudit {
@@ -95,46 +94,63 @@ const ScoreBar = ({ score }: { score: number }) => (
 
 export default function CustomerStrategyAnalysis() {
   const navigate = useNavigate();
-  const { currentClientId, currentClientName } = useCurrentClient();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState("summary");
+  const [brandName, setBrandName] = useState<string>("");
 
   const runAnalysis = async () => {
-    if (!currentClientId) {
-      toast.error("No client selected");
-      return;
-    }
     setLoading(true);
     try {
-      const [brainRes, socialRes, campaignRes] = await Promise.all([
-        supabase.from("client_brain").select("data, document_type").eq("client_id", currentClientId).limit(20),
-        supabase.from("social_media_profiles").select("*").eq("client_id", currentClientId),
-        supabase.from("campaigns").select("id, name, status, created_at").eq("client_id", currentClientId).limit(20),
+      // Get the logged-in user — they ARE the client
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error("Not authenticated");
+
+      const userId = user.id;
+
+      // Fetch all brand data in parallel — all keyed to user_id
+      const [profileRes, brainRes, socialRes, postRes] = await Promise.all([
+        supabase.from("client_profiles").select("*").eq("user_id", userId).maybeSingle(),
+        supabase.from("client_brain").select("data, document_type").eq("user_id", userId).limit(30),
+        supabase.from("social_connections").select("platform, platform_username, platform_user_id, created_at").eq("user_id", userId),
+        supabase.from("post_queue").select("id, content_type, post_text, status, scheduled_at, published_at, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
       ]);
 
+      const profile = profileRes.data;
       const brainData = brainRes.data || [];
       const find = (type: string) => brainData.find((d) => d.document_type === type)?.data || null;
 
+      // Set brand name from profile
+      if (profile?.business_name) setBrandName(profile.business_name);
+
       const { data, error } = await supabase.functions.invoke("strategy-analysis", {
         body: {
-          client_id: currentClientId,
-          client_name: currentClientName || "Client",
+          user_id: userId,
+          client_name: profile?.business_name || user.email?.split("@")[0] || "Your Brand",
+          // Brand profile
+          business_name: profile?.business_name,
+          website: profile?.website,
+          description: profile?.description,
+          industry: profile?.industry,
+          target_audience: profile?.target_audience,
+          value_proposition: profile?.value_proposition,
+          // Brain library docs
           brand_data: find("brand"),
           website_data: find("website"),
           strategy_data: find("strategy"),
           audience_data: find("audience"),
           competitor_data: find("competitor"),
           regulatory_data: find("regulatory"),
-          social_profiles: socialRes.data || [],
-          campaigns: campaignRes.data || [],
+          // Social & activity
+          social_connections: socialRes.data || [],
+          post_history: postRes.data || [],
         },
       });
 
       if (error) throw error;
       setResult(data as AnalysisResult);
       setActiveTab("summary");
-      toast.success("Analysis complete");
+      toast.success("Strategy analysis complete");
     } catch (err: any) {
       toast.error(err?.message || "Analysis failed");
     } finally {
@@ -142,9 +158,10 @@ export default function CustomerStrategyAnalysis() {
     }
   };
 
+  // Auto-run on mount — the user IS the brand
   useEffect(() => {
-    if (currentClientId) runAnalysis();
-  }, [currentClientId]);
+    runAnalysis();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,11 +176,11 @@ export default function CustomerStrategyAnalysis() {
             <div className="w-px h-5 bg-border" />
             <Brain className="w-5 h-5 text-primary" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">Customer Strategy Analysis</h1>
+              <h1 className="text-lg font-bold text-foreground">Strategy Analysis</h1>
               <p className="text-xs text-muted-foreground">
-                Brand library & posting history · Audience opportunities · 90-day roadmap
-                {currentClientName && (
-                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>
+                Brand library · Social presence · Audience opportunities · 90-day roadmap
+                {brandName && (
+                  <Badge variant="outline" className="ml-2 text-[10px] h-4">{brandName}</Badge>
                 )}
               </p>
             </div>
@@ -187,18 +204,8 @@ export default function CustomerStrategyAnalysis() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-            <h2 className="text-lg font-semibold text-foreground mb-1">Analyzing client data…</h2>
-            <p className="text-sm text-muted-foreground">Reading brand library, social profiles, and posting history</p>
-          </div>
-        )}
-
-        {!loading && !result && (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">No client selected</h2>
-            <p className="text-sm text-muted-foreground max-w-md">Select a client to run their strategy analysis from brand library and posting history.</p>
+            <h2 className="text-lg font-semibold text-foreground mb-1">Reading your brand data…</h2>
+            <p className="text-sm text-muted-foreground">Analyzing brand library, social connections, and posting history</p>
           </div>
         )}
 
@@ -374,7 +381,9 @@ export default function CustomerStrategyAnalysis() {
               </TabsContent>
             </Tabs>
 
-            <p className="text-xs text-muted-foreground text-right no-print">Analyzed: {new Date(result.analyzed_at).toLocaleString()} · {result.client_name}</p>
+            <p className="text-xs text-muted-foreground text-right no-print">
+              Analyzed: {new Date(result.analyzed_at).toLocaleString()} · {result.client_name}
+            </p>
           </div>
         )}
       </div>
