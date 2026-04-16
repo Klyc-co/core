@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft, Globe, Search, Loader2, Download, Camera,
+  ArrowLeft, Globe, Search, Loader2, Download,
   TrendingUp, AlertTriangle, CheckCircle, XCircle,
-  Zap, Target, ChevronRight
+  Zap, Target, ChevronRight, Brain
 } from "lucide-react";
-import CustomerDNACard from "@/components/strategy-intelligence/CustomerDNACard";
-import NarrativeSimulationArena from "@/components/strategy-intelligence/NarrativeSimulationArena";
-import PlatformBattleView from "@/components/strategy-intelligence/PlatformBattleView";
-import StrategyReasoningPanel from "@/components/strategy-intelligence/StrategyReasoningPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -96,13 +92,12 @@ const priorityBadge = (p: string) => {
 
 const ScoreBar = ({ score }: { score: number }) => (
   <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-    <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${score}%` }} />
+    <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.min(score, 100)}%` }} />
   </div>
 );
 
 export default function CustomerStrategyAnalysis() {
   const navigate = useNavigate();
-  const dashboardRef = useRef<HTMLDivElement>(null);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -126,13 +121,8 @@ export default function CustomerStrategyAnalysis() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Print styles */}
       <style>{`@media print { .no-print { display: none !important; } }`}</style>
 
       {/* Header */}
@@ -152,7 +142,7 @@ export default function CustomerStrategyAnalysis() {
             </div>
           </div>
           {result && (
-            <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Download className="w-3.5 h-3.5 mr-1.5" /> Print / Save PDF
             </Button>
           )}
@@ -160,8 +150,9 @@ export default function CustomerStrategyAnalysis() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
         {/* URL Input */}
-        <Card className="no-print">
+        <Card>
           <CardContent className="py-4">
             <div className="flex gap-3">
               <div className="relative flex-1">
@@ -176,16 +167,31 @@ export default function CustomerStrategyAnalysis() {
               </div>
               <Button onClick={runAnalysis} disabled={loading || !url.trim()}>
                 {loading
-                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Analyzing…</>
-                  : <><Search className="w-4 h-4 mr-2" /> Run Analysis</>}
+                  ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Analyzing…</>
+                  : <><Search className="w-4 h-4 mr-2" />Run Analysis</>}
               </Button>
             </div>
           </CardContent>
         </Card>
 
+        {/* Empty state */}
+        {!result && !loading && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <Brain className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Enter a customer website to begin</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              The AI will crawl the site, discover pages, map the funnel, audit social presence,
+              and generate a custom strategy report with audience opportunities and a 90-day roadmap.
+            </p>
+          </div>
+        )}
+
         {/* Results */}
         {result && (
-          <div ref={dashboardRef} className="space-y-6">
+          <div className="space-y-6">
+
             {/* KPI strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card className={`border ${gradeBg(result.overall_grade)}`}>
@@ -207,14 +213,14 @@ export default function CustomerStrategyAnalysis() {
               ))}
             </div>
 
-            {/* Summary */}
+            {/* Summary blurb */}
             <Card>
               <CardContent className="py-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
               </CardContent>
             </Card>
 
-            {/* Tabs */}
+            {/* Main tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5 no-print">
                 <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -225,13 +231,7 @@ export default function CustomerStrategyAnalysis() {
               </TabsList>
 
               {/* SUMMARY */}
-              <TabsContent value="summary" className="mt-4 space-y-5">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  <CustomerDNACard />
-                  <PlatformBattleView />
-                  <StrategyReasoningPanel />
-                </div>
-                <NarrativeSimulationArena />
+              <TabsContent value="summary" className="mt-4 space-y-4">
                 {result.conversion_killers.length > 0 && (
                   <Card className="border-red-500/20">
                     <CardHeader className="py-3 px-4">
@@ -249,6 +249,26 @@ export default function CustomerStrategyAnalysis() {
                     </CardContent>
                   </Card>
                 )}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {result.pages.slice(0, 3).map((page, i) => (
+                    <Card key={i} className={`border ${gradeBg(page.grade)}`}>
+                      <CardContent className="py-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-foreground">{page.title}</span>
+                          <span className={`text-lg font-black ${gradeColor(page.grade)}`}>{page.grade}</span>
+                        </div>
+                        <ScoreBar score={page.score} />
+                        <div className="mt-2 space-y-1">
+                          {page.issues.slice(0, 2).map((issue, ii) => (
+                            <div key={ii} className="text-xs text-red-400 flex gap-1">
+                              <XCircle className="w-3 h-3 mt-0.5 shrink-0" /> {issue}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </TabsContent>
 
               {/* WEBSITE */}
@@ -263,7 +283,7 @@ export default function CustomerStrategyAnalysis() {
                     <div className="flex flex-wrap items-center gap-2">
                       {result.funnel_stages.map((stage, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <div className="px-3 py-2 rounded-lg bg-muted text-center min-w-[100px]">
+                          <div className="px-3 py-2 rounded-lg bg-muted text-center min-w-[110px]">
                             <div className="text-xs font-semibold text-foreground">{stage.name}</div>
                             <div className="text-xs text-muted-foreground mt-0.5">
                               {stage.pages.length} page{stage.pages.length !== 1 ? "s" : ""}
@@ -271,8 +291,8 @@ export default function CustomerStrategyAnalysis() {
                             <div className="text-xs text-primary mt-0.5">
                               {stage.conversion_points} conversion{stage.conversion_points !== 1 ? "s" : ""}
                             </div>
-                            {stage.blockers.length > 0 && (
-                              <div className="mt-1 text-xs text-red-400">{stage.blockers[0]}</div>
+                            {stage.blockers[0] && (
+                              <div className="mt-1 text-xs text-red-400 leading-tight">{stage.blockers[0]}</div>
                             )}
                           </div>
                           {i < result.funnel_stages.length - 1 && (
@@ -283,15 +303,16 @@ export default function CustomerStrategyAnalysis() {
                     </div>
                   </CardContent>
                 </Card>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {result.pages.map((page, i) => (
                     <Card key={i} className={`border ${gradeBg(page.grade)}`}>
                       <CardHeader className="py-3 px-4">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-semibold text-foreground">
-                            {page.title}
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">{page.path}</span>
-                          </CardTitle>
+                          <div>
+                            <span className="text-sm font-semibold text-foreground">{page.title}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{page.path}</span>
+                          </div>
                           <span className={`text-xl font-black ${gradeColor(page.grade)}`}>{page.grade}</span>
                         </div>
                         <ScoreBar score={page.score} />
@@ -299,17 +320,17 @@ export default function CustomerStrategyAnalysis() {
                       <CardContent className="pt-0 space-y-1">
                         {page.strengths.map((s, si) => (
                           <div key={si} className="flex gap-2 text-xs text-green-400">
-                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" /> {s}
+                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />{s}
                           </div>
                         ))}
                         {page.issues.map((issue, ii) => (
                           <div key={ii} className="flex gap-2 text-xs text-red-400">
-                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" /> {issue}
+                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}
                           </div>
                         ))}
                         {page.opportunities.map((o, oi) => (
                           <div key={oi} className="flex gap-2 text-xs text-yellow-400">
-                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" /> {o}
+                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}
                           </div>
                         ))}
                       </CardContent>
@@ -345,12 +366,12 @@ export default function CustomerStrategyAnalysis() {
                       <CardContent className="pt-0 space-y-1">
                         {profile.gaps.map((g, gi) => (
                           <div key={gi} className="flex gap-2 text-xs text-red-400">
-                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" /> {g}
+                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" />{g}
                           </div>
                         ))}
                         {profile.opportunities.map((o, oi) => (
                           <div key={oi} className="flex gap-2 text-xs text-green-400">
-                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" /> {o}
+                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}
                           </div>
                         ))}
                       </CardContent>
@@ -421,8 +442,7 @@ export default function CustomerStrategyAnalysis() {
                       <CardContent className="pt-0 space-y-2">
                         {phase.items.map((item, ii) => (
                           <div key={ii} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                            {item}
+                            <CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />{item}
                           </div>
                         ))}
                       </CardContent>
