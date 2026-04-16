@@ -7,8 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Loader2, Download, RefreshCw,
   TrendingUp, AlertTriangle, CheckCircle, XCircle,
-  Zap, Target, ChevronRight, Brain, Users, Globe,
-  BarChart2, Lightbulb, Clock
+  Zap, Target, ChevronRight, Brain, Users, Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentClient } from "@/hooks/use-current-client";
@@ -68,17 +67,17 @@ interface AnalysisResult {
   analyzed_at: string;
 }
 
-const gradeColor = (grade: string) => {
-  if (grade.startsWith("A")) return "text-green-500";
-  if (grade.startsWith("B")) return "text-blue-500";
-  if (grade.startsWith("C")) return "text-yellow-500";
+const gradeColor = (g: string) => {
+  if (g.startsWith("A")) return "text-green-500";
+  if (g.startsWith("B")) return "text-blue-500";
+  if (g.startsWith("C")) return "text-yellow-500";
   return "text-red-500";
 };
 
-const gradeBg = (grade: string) => {
-  if (grade.startsWith("A")) return "bg-green-500/10 border-green-500/20";
-  if (grade.startsWith("B")) return "bg-blue-500/10 border-blue-500/20";
-  if (grade.startsWith("C")) return "bg-yellow-500/10 border-yellow-500/20";
+const gradeBg = (g: string) => {
+  if (g.startsWith("A")) return "bg-green-500/10 border-green-500/20";
+  if (g.startsWith("B")) return "bg-blue-500/10 border-blue-500/20";
+  if (g.startsWith("C")) return "bg-yellow-500/10 border-yellow-500/20";
   return "bg-red-500/10 border-red-500/20";
 };
 
@@ -90,10 +89,7 @@ const priorityBadge = (p: string) => {
 
 const ScoreBar = ({ score }: { score: number }) => (
   <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-    <div
-      className="bg-primary h-1.5 rounded-full transition-all"
-      style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }}
-    />
+    <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.min(Math.max(score, 0), 100)}%` }} />
   </div>
 );
 
@@ -106,57 +102,32 @@ export default function CustomerStrategyAnalysis() {
 
   const runAnalysis = async () => {
     if (!currentClientId) {
-      toast.error("No client selected — pick a client first");
+      toast.error("No client selected");
       return;
     }
     setLoading(true);
     try {
-      // Load all client data from KLYC
       const [brainRes, socialRes, campaignRes] = await Promise.all([
-        supabase
-          .from("client_brain")
-          .select("data, document_type")
-          .eq("client_id", currentClientId)
-          .limit(20),
-        supabase
-          .from("social_media_profiles")
-          .select("*")
-          .eq("client_id", currentClientId),
-        supabase
-          .from("campaigns")
-          .select("id, name, status, created_at")
-          .eq("client_id", currentClientId)
-          .limit(10),
+        supabase.from("client_brain").select("data, document_type").eq("client_id", currentClientId).limit(20),
+        supabase.from("social_media_profiles").select("*").eq("client_id", currentClientId),
+        supabase.from("campaigns").select("id, name, status, created_at").eq("client_id", currentClientId).limit(20),
       ]);
 
       const brainData = brainRes.data || [];
-      const socialData = socialRes.data || [];
-      const campaignData = campaignRes.data || [];
+      const find = (type: string) => brainData.find((d) => d.document_type === type)?.data || null;
 
-      // Build context from stored data
-      const findBrain = (type: string) =>
-        brainData.find((d) => d.document_type === type)?.data || null;
-
-      const brand = findBrain("brand");
-      const website = findBrain("website");
-      const strategy = findBrain("strategy");
-      const audience = findBrain("audience");
-      const competitor = findBrain("competitor");
-      const regulatory = findBrain("regulatory");
-
-      // Run analysis via edge function with all client context
       const { data, error } = await supabase.functions.invoke("strategy-analysis", {
         body: {
           client_id: currentClientId,
           client_name: currentClientName || "Client",
-          brand_data: brand,
-          website_data: website,
-          strategy_data: strategy,
-          audience_data: audience,
-          competitor_data: competitor,
-          regulatory_data: regulatory,
-          social_profiles: socialData,
-          campaigns: campaignData,
+          brand_data: find("brand"),
+          website_data: find("website"),
+          strategy_data: find("strategy"),
+          audience_data: find("audience"),
+          competitor_data: find("competitor"),
+          regulatory_data: find("regulatory"),
+          social_profiles: socialRes.data || [],
+          campaigns: campaignRes.data || [],
         },
       });
 
@@ -171,18 +142,14 @@ export default function CustomerStrategyAnalysis() {
     }
   };
 
-  // Auto-run when client is available
   useEffect(() => {
-    if (currentClientId && !result) {
-      runAnalysis();
-    }
+    if (currentClientId) runAnalysis();
   }, [currentClientId]);
 
   return (
     <div className="min-h-screen bg-background">
       <style>{`@media print { .no-print { display: none !important; } }`}</style>
 
-      {/* Header */}
       <div className="border-b border-border bg-card/50 sticky top-0 z-10 no-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -194,7 +161,7 @@ export default function CustomerStrategyAnalysis() {
             <div>
               <h1 className="text-lg font-bold text-foreground">Customer Strategy Analysis</h1>
               <p className="text-xs text-muted-foreground">
-                Website & social audit · Audience opportunities · 90-day roadmap
+                Brand library & posting history · Audience opportunities · 90-day roadmap
                 {currentClientName && (
                   <Badge variant="outline" className="ml-2 text-[10px] h-4">{currentClientName}</Badge>
                 )}
@@ -217,64 +184,46 @@ export default function CustomerStrategyAnalysis() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-        {/* Loading state */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
             <h2 className="text-lg font-semibold text-foreground mb-1">Analyzing client data…</h2>
-            <p className="text-sm text-muted-foreground">
-              Reading brand library, social profiles, campaigns, and audience data
-            </p>
+            <p className="text-sm text-muted-foreground">Reading brand library, social profiles, and posting history</p>
           </div>
         )}
 
-        {/* No client selected */}
-        {!loading && !result && !currentClientId && (
+        {!loading && !result && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Users className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">No client selected</h2>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Select a client from the client picker to run their strategy analysis.
-            </p>
+            <p className="text-sm text-muted-foreground max-w-md">Select a client to run their strategy analysis from brand library and posting history.</p>
           </div>
         )}
 
-        {/* Results */}
         {result && !loading && (
           <div className="space-y-6">
-
-            {/* KPI strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card className={`border ${gradeBg(result.overall_grade)}`}>
                 <CardContent className="py-4 text-center">
-                  <div className={`text-4xl font-black ${gradeColor(result.overall_grade)}`}>
-                    {result.overall_grade}
-                  </div>
+                  <div className={`text-4xl font-black ${gradeColor(result.overall_grade)}`}>{result.overall_grade}</div>
                   <div className="text-xs text-muted-foreground mt-1">Overall Grade</div>
                   <ScoreBar score={result.overall_score} />
                 </CardContent>
               </Card>
               {result.key_metrics.map((m, i) => (
-                <Card key={i}>
-                  <CardContent className="py-4 text-center">
-                    <div className="text-2xl font-bold text-foreground">{m.value}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{m.label}</div>
-                  </CardContent>
-                </Card>
+                <Card key={i}><CardContent className="py-4 text-center">
+                  <div className="text-2xl font-bold text-foreground">{m.value}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{m.label}</div>
+                </CardContent></Card>
               ))}
             </div>
 
-            {/* Summary */}
-            <Card>
-              <CardContent className="py-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="py-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
+            </CardContent></Card>
 
-            {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5 no-print">
                 <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -284,20 +233,14 @@ export default function CustomerStrategyAnalysis() {
                 <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
               </TabsList>
 
-              {/* SUMMARY */}
               <TabsContent value="summary" className="mt-4 space-y-4">
                 {result.conversion_killers.length > 0 && (
                   <Card className="border-red-500/20">
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-500" /> Priority Issues
-                      </CardTitle>
-                    </CardHeader>
+                    <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-red-500" />Priority Issues</CardTitle></CardHeader>
                     <CardContent className="pt-0 space-y-2">
                       {result.conversion_killers.map((k, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 rounded bg-red-500/5 border border-red-500/10">
-                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                          <span className="text-sm text-foreground">{k}</span>
+                          <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /><span className="text-sm text-foreground">{k}</span>
                         </div>
                       ))}
                     </CardContent>
@@ -314,9 +257,7 @@ export default function CustomerStrategyAnalysis() {
                         <ScoreBar score={page.score} />
                         <div className="mt-2 space-y-1">
                           {page.issues.slice(0, 2).map((issue, ii) => (
-                            <div key={ii} className="text-xs text-red-400 flex gap-1 items-start">
-                              <XCircle className="w-3 h-3 mt-0.5 shrink-0" /> {issue}
-                            </div>
+                            <div key={ii} className="text-xs text-red-400 flex gap-1 items-start"><XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}</div>
                           ))}
                         </div>
                       </CardContent>
@@ -325,14 +266,9 @@ export default function CustomerStrategyAnalysis() {
                 </div>
               </TabsContent>
 
-              {/* WEBSITE */}
               <TabsContent value="website" className="mt-4 space-y-4">
                 <Card>
-                  <CardHeader className="py-3 px-4">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" /> Funnel Analysis
-                    </CardTitle>
-                  </CardHeader>
+                  <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-primary" />Funnel Analysis</CardTitle></CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex flex-wrap items-start gap-2">
                       {result.funnel_stages.map((stage, i) => (
@@ -340,22 +276,15 @@ export default function CustomerStrategyAnalysis() {
                           <div className="px-3 py-2 rounded-lg bg-muted text-center min-w-[110px]">
                             <div className="text-xs font-semibold text-foreground">{stage.name}</div>
                             <div className="text-xs text-muted-foreground mt-0.5">{stage.description}</div>
-                            <div className="text-xs text-primary mt-0.5">
-                              {stage.conversion_points} conversion{stage.conversion_points !== 1 ? "s" : ""}
-                            </div>
-                            {stage.blockers[0] && (
-                              <div className="mt-1 text-xs text-red-400 leading-tight">{stage.blockers[0]}</div>
-                            )}
+                            <div className="text-xs text-primary mt-0.5">{stage.conversion_points} point{stage.conversion_points !== 1 ? "s" : ""}</div>
+                            {stage.blockers[0] && <div className="mt-1 text-xs text-red-400 leading-tight">{stage.blockers[0]}</div>}
                           </div>
-                          {i < result.funnel_stages.length - 1 && (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-3" />
-                          )}
+                          {i < result.funnel_stages.length - 1 && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-3" />}
                         </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {result.page_audits.map((page, i) => (
                     <Card key={i} className={`border ${gradeBg(page.grade)}`}>
@@ -367,28 +296,15 @@ export default function CustomerStrategyAnalysis() {
                         <ScoreBar score={page.score} />
                       </CardHeader>
                       <CardContent className="pt-0 space-y-1">
-                        {page.strengths.map((s, si) => (
-                          <div key={si} className="flex gap-2 text-xs text-green-400">
-                            <CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />{s}
-                          </div>
-                        ))}
-                        {page.issues.map((issue, ii) => (
-                          <div key={ii} className="flex gap-2 text-xs text-red-400">
-                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}
-                          </div>
-                        ))}
-                        {page.opportunities.map((o, oi) => (
-                          <div key={oi} className="flex gap-2 text-xs text-yellow-400">
-                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}
-                          </div>
-                        ))}
+                        {page.strengths.map((s, si) => <div key={si} className="flex gap-2 text-xs text-green-400"><CheckCircle className="w-3 h-3 mt-0.5 shrink-0" />{s}</div>)}
+                        {page.issues.map((issue, ii) => <div key={ii} className="flex gap-2 text-xs text-red-400"><XCircle className="w-3 h-3 mt-0.5 shrink-0" />{issue}</div>)}
+                        {page.opportunities.map((o, oi) => <div key={oi} className="flex gap-2 text-xs text-yellow-400"><TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}</div>)}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </TabsContent>
 
-              {/* SOCIAL */}
               <TabsContent value="social" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {result.social_profiles.map((profile, i) => (
@@ -397,104 +313,59 @@ export default function CustomerStrategyAnalysis() {
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-semibold text-foreground">{profile.platform}</CardTitle>
                           <div className="flex items-center gap-2">
-                            {!profile.active && (
-                              <Badge variant="outline" className="text-xs text-red-400 border-red-500/30">Inactive</Badge>
-                            )}
+                            {!profile.active && <Badge variant="outline" className="text-xs text-red-400 border-red-500/30">Inactive</Badge>}
                             <span className={`text-xl font-black ${gradeColor(profile.grade)}`}>{profile.grade}</span>
                           </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {profile.handle}
-                          {profile.followers && (
-                            <span className="ml-2 font-medium text-foreground">
-                              {profile.followers.toLocaleString()} followers
-                            </span>
-                          )}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{profile.handle}{profile.followers && <span className="ml-2 font-medium text-foreground">{profile.followers.toLocaleString()} followers</span>}</div>
                       </CardHeader>
                       <CardContent className="pt-0 space-y-1">
-                        {profile.gaps.map((g, gi) => (
-                          <div key={gi} className="flex gap-2 text-xs text-red-400">
-                            <XCircle className="w-3 h-3 mt-0.5 shrink-0" />{g}
-                          </div>
-                        ))}
-                        {profile.opportunities.map((o, oi) => (
-                          <div key={oi} className="flex gap-2 text-xs text-green-400">
-                            <TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}
-                          </div>
-                        ))}
+                        {profile.gaps.map((g, gi) => <div key={gi} className="flex gap-2 text-xs text-red-400"><XCircle className="w-3 h-3 mt-0.5 shrink-0" />{g}</div>)}
+                        {profile.opportunities.map((o, oi) => <div key={oi} className="flex gap-2 text-xs text-green-400"><TrendingUp className="w-3 h-3 mt-0.5 shrink-0" />{o}</div>)}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               </TabsContent>
 
-              {/* AUDIENCE */}
               <TabsContent value="audience" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-green-500" /> Proactive Opportunities
-                    </h3>
-                    {result.audience_opportunities
-                      .filter((o) => o.type === "proactive")
-                      .map((opp, i) => (
-                        <Card key={i} className="border-green-500/20">
-                          <CardContent className="py-3 px-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="text-sm font-medium text-foreground">{opp.title}</div>
-                                <div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div>
-                              </div>
-                              <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>
-                                {opp.priority}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" />Proactive Opportunities</h3>
+                    {result.audience_opportunities.filter((o) => o.type === "proactive").map((opp, i) => (
+                      <Card key={i} className="border-green-500/20"><CardContent className="py-3 px-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div><div className="text-sm font-medium text-foreground">{opp.title}</div><div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div></div>
+                          <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
+                        </div>
+                      </CardContent></Card>
+                    ))}
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-500" /> Reactive Opportunities
-                    </h3>
-                    {result.audience_opportunities
-                      .filter((o) => o.type === "reactive")
-                      .map((opp, i) => (
-                        <Card key={i} className="border-orange-500/20">
-                          <CardContent className="py-3 px-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="text-sm font-medium text-foreground">{opp.title}</div>
-                                <div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div>
-                              </div>
-                              <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>
-                                {opp.priority}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" />Reactive Opportunities</h3>
+                    {result.audience_opportunities.filter((o) => o.type === "reactive").map((opp, i) => (
+                      <Card key={i} className="border-orange-500/20"><CardContent className="py-3 px-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div><div className="text-sm font-medium text-foreground">{opp.title}</div><div className="text-xs text-muted-foreground mt-0.5">{opp.description}</div></div>
+                          <Badge variant="outline" className={`text-xs shrink-0 ${priorityBadge(opp.priority)}`}>{opp.priority}</Badge>
+                        </div>
+                      </CardContent></Card>
+                    ))}
                   </div>
                 </div>
               </TabsContent>
 
-              {/* ROADMAP */}
               <TabsContent value="roadmap" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {result.roadmap.map((phase, i) => (
                     <Card key={i}>
                       <CardHeader className="py-3 px-4">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                          <Clock className="w-3.5 h-3.5" />{phase.days}
-                        </div>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-primary"><Clock className="w-3.5 h-3.5" />{phase.days}</div>
                         <CardTitle className="text-sm font-bold text-foreground">{phase.phase}</CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0 space-y-2">
                         {phase.items.map((item, ii) => (
-                          <div key={ii} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />{item}
-                          </div>
+                          <div key={ii} className="flex items-start gap-2 text-sm text-muted-foreground"><CheckCircle className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />{item}</div>
                         ))}
                       </CardContent>
                     </Card>
@@ -503,9 +374,7 @@ export default function CustomerStrategyAnalysis() {
               </TabsContent>
             </Tabs>
 
-            <p className="text-xs text-muted-foreground text-right no-print">
-              Analyzed: {new Date(result.analyzed_at).toLocaleString()} · {result.client_name}
-            </p>
+            <p className="text-xs text-muted-foreground text-right no-print">Analyzed: {new Date(result.analyzed_at).toLocaleString()} · {result.client_name}</p>
           </div>
         )}
       </div>
