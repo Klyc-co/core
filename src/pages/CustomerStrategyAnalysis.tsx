@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import PlatformBattleView, { type PlatformBattle } from "@/components/strategy-intelligence/PlatformBattleView";
+import CustomerDNACard, { type CustomerDNA } from "@/components/strategy-intelligence/CustomerDNACard";
+import StrategyReasoningPanel, { type StrategyReasoning } from "@/components/strategy-intelligence/StrategyReasoningPanel";
 
 // Backend project — all AI subminds live here
 const BACKEND_URL = "https://wkqiielsazzbxziqmgdb.supabase.co";
@@ -43,6 +46,7 @@ interface SocialProfile {
   handle: string;
   followers?: number;
   grade: string;
+  score: number;
   active: boolean;
   gaps: string[];
   opportunities: string[];
@@ -74,6 +78,11 @@ interface AnalysisResult {
   audience_opportunities: AudienceOpportunity[];
   roadmap: RoadmapItem[];
   analyzed_at: string;
+}
+
+interface BrainDoc {
+  data: any;
+  document_type: string;
 }
 
 const gradeColor = (g: string) => {
@@ -144,10 +153,133 @@ function MetricCard({ value, label, tooltip, source, colorClass, bgClass, showBa
   );
 }
 
+// ---------------------------------------------------------------------------
+// Helpers: derive Intelligence panel data from analysis result + brain docs
+// ---------------------------------------------------------------------------
+
+function buildPlatformBattle(profiles: SocialProfile[]): PlatformBattle {
+  const sorted = [...profiles].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return {
+    scores: Object.fromEntries(profiles.map(p => [p.platform, p.score ?? gradeToScore(p.grade)])),
+    bestFirst: sorted[0]?.platform || "",
+    customerRequested: profiles.filter(p => p.active).map(p => p.platform),
+    systemRecommended: sorted.slice(0, 3).map(p => p.platform),
+  };
+}
+
+function gradeToScore(grade: string): number {
+  if (grade.startsWith("A+")) return 97;
+  if (grade.startsWith("A")) return 90;
+  if (grade.startsWith("B+")) return 87;
+  if (grade.startsWith("B")) return 78;
+  if (grade.startsWith("C+")) return 67;
+  if (grade.startsWith("C")) return 60;
+  if (grade.startsWith("D")) return 45;
+  return 30;
+}
+
+function safeArr(v: any, limit = 6): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, limit).map(item =>
+    typeof item === "string" ? item : (item?.name ?? JSON.stringify(item).slice(0, 80))
+  );
+}
+
+function safeStr(v: any, fallback = ""): string {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object") return JSON.stringify(v).slice(0, 300);
+  return fallback;
+}
+
+function buildCustomerDNA(brainDocs: BrainDoc[], result: AnalysisResult): CustomerDNA {
+  const brandDoc  = brainDocs.find(d => d.document_type === "brand")?.data;
+  const audDoc    = brainDocs.find(d => d.document_type === "audience")?.data;
+  const compDoc   = brainDocs.find(d => d.document_type === "competitor")?.data;
+  const regDoc    = brainDocs.find(d => d.document_type === "regulatory")?.data;
+
+  const brandVoice =
+    safeStr(brandDoc?.brandVoice || brandDoc?.brand_voice || brandDoc?.voice || brandDoc?.tone) ||
+    result.summary.slice(0, 280);
+
+  const audienceSegments = safeArr(
+    audDoc?.segments || audDoc?.audienceSegments || audDoc?.audience_segments || audDoc?.audiences
+  );
+
+  const painPoints = safeArr(
+    audDoc?.painPoints || audDoc?.pain_points || brandDoc?.painPoints || brandDoc?.pain_points
+  );
+
+  const proofPoints = safeArr(
+    brandDoc?.proofPoints || brandDoc?.proof_points || brandDoc?.results || brandDoc?.outcomes
+  );
+
+  const regulations = safeArr(
+    regDoc?.regulations || regDoc?.rules || regDoc?.requirements || regDoc?.compliance
+  );
+
+  const rawCompetitors =
+    compDoc?.competitors ?? (Array.isArray(compDoc) ? compDoc : []);
+  const competitors = safeArr(rawCompetitors);
+
+  const semanticThemes = safeArr(
+    brandDoc?.themes || brandDoc?.semanticThemes || brandDoc?.keywords || brandDoc?.topics
+  );
+
+  const trustSignals = safeArr(
+    brandDoc?.trustSignals || brandDoc?.trust_signals || brandDoc?.credentials
+  );
+
+  return {
+    brandVoice,
+    audienceSegments,
+    painPoints,
+    proofPoints,
+    regulations,
+    competitors,
+    semanticThemes,
+    trustSignals,
+    compressedSourceCount: brainDocs.length,
+  };
+}
+
+function buildStrategyReasoning(result: AnalysisResult): StrategyReasoning {
+  const sorted = [...result.social_profiles].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const active = result.social_profiles.filter(p => p.active).map(p => p.platform);
+
+  const reactive = result.audience_opportunities
+    .filter(o => o.type === "reactive")
+    .map(o => `${o.title}: ${o.description}`);
+
+  const proactive = result.audience_opportunities
+    .filter(o => o.type === "proactive")
+    .map(o => `${o.title}: ${o.description}`);
+
+  const topThree = sorted.slice(0, 3).map(p => `${p.platform} (${p.grade})`);
+
+  return {
+    whyThisApproach: result.summary,
+    customerRequested: active.length
+      ? `Active connections: ${active.join(", ")}. Strategy focused on existing platform footprint.`
+      : "No active social connections detected — strategy is foundational setup focused.",
+    systemRecommendation: topThree.length
+      ? `Prioritize ${topThree.join(", ")} based on scoring. ${sorted[0]?.opportunities?.[0] ?? ""}`
+      : "Connect social platforms to generate channel recommendations.",
+    reactiveOpportunities: reactive.length ? reactive : result.conversion_killers.slice(0, 3),
+    proactiveOpportunities: proactive,
+    qrRoutingNotes: result.page_audits
+      .filter(p => p.opportunities.length > 0)
+      .slice(0, 3)
+      .map(p => `${p.title}: ${p.opportunities[0]}`),
+  };
+}
+
+// ---------------------------------------------------------------------------
+
 export default function CustomerStrategyAnalysis() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [brainDocs, setBrainDocs] = useState<BrainDoc[]>([]);
   const [activeTab, setActiveTab] = useState("summary");
   const [brandName, setBrandName] = useState<string>("");
 
@@ -167,8 +299,10 @@ export default function CustomerStrategyAnalysis() {
       ]);
 
       const profile = profileRes.data;
-      const brainData = brainRes.data || [];
-      const find = (type: string) => brainData.find((d) => d.document_type === type)?.data || null;
+      const brain = brainRes.data || [];
+      setBrainDocs(brain);
+
+      const find = (type: string) => brain.find((d) => d.document_type === type)?.data || null;
 
       if (profile?.business_name) setBrandName(profile.business_name);
 
@@ -240,6 +374,11 @@ export default function CustomerStrategyAnalysis() {
       source: "roadmap[] · strategy-analysis submind",
     },
   ] : [];
+
+  // Derive intelligence panel data
+  const platformBattle  = result ? buildPlatformBattle(result.social_profiles) : undefined;
+  const customerDNA     = result ? buildCustomerDNA(brainDocs, result) : undefined;
+  const strategyRsn     = result ? buildStrategyReasoning(result) : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -382,12 +521,13 @@ export default function CustomerStrategyAnalysis() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5 no-print">
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 no-print">
                 <TabsTrigger value="summary">Summary</TabsTrigger>
                 <TabsTrigger value="website">Website</TabsTrigger>
                 <TabsTrigger value="social">Social</TabsTrigger>
                 <TabsTrigger value="audience">Audience</TabsTrigger>
                 <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
+                <TabsTrigger value="intelligence">Intelligence</TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="mt-4 space-y-4">
@@ -473,7 +613,12 @@ export default function CustomerStrategyAnalysis() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="social" className="mt-4">
+              <TabsContent value="social" className="mt-4 space-y-5">
+                {/* Platform Battle View — driven by analysis scores */}
+                {platformBattle && (
+                  <PlatformBattleView data={platformBattle} />
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {result.social_profiles.map((profile, i) => (
                     <Card key={i} className={`border ${gradeBg(profile.grade)}`}>
@@ -559,6 +704,14 @@ export default function CustomerStrategyAnalysis() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </TabsContent>
+
+              {/* ── Intelligence tab ── */}
+              <TabsContent value="intelligence" className="mt-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <CustomerDNACard data={customerDNA} />
+                  <StrategyReasoningPanel data={strategyRsn} />
                 </div>
               </TabsContent>
             </Tabs>
