@@ -531,6 +531,87 @@ function buildMetricCards(
   ];
 }
 
+// ─── KLYC Demo data (used when brainDocs is empty) ───────────────────────────
+
+const KLYC_DEMO_PLATFORM: PlatformBattle = {
+  scores: { LinkedIn: 91, "X / Twitter": 83, Reddit: 74, YouTube: 68 },
+  bestFirst: "LinkedIn",
+  customerRequested: ["LinkedIn", "Instagram"],
+  systemRecommended: ["LinkedIn", "X / Twitter", "Reddit"],
+};
+
+const KLYC_DEMO_DNA: CustomerDNA = {
+  brandVoice:
+    "Bold, precise, and unapologetically ambitious. Speaks to founders and operators who move at the speed of thought. Leads with outcomes, never features. Calls out noise for what it is — then eliminates it.",
+  audienceSegments: [
+    "Mid-market SaaS founders (Series A–B)",
+    "Marketing directors at growth-stage companies (50–200 headcount)",
+    "Solo operators scaling past $500k ARR",
+    "Agency owners running 5+ client brands simultaneously",
+  ],
+  painPoints: [
+    "Brand voice fractures across AI tools and platforms",
+    "Manual campaign planning burns 10+ hours per week",
+    "No unified brand memory between AI sessions",
+    "Published posts don't reflect actual brand standards",
+    "Competitors move faster because they're AI-native already",
+  ],
+  proofPoints: [
+    "3x average engagement lift in pilot programs",
+    "First campaign draft in under 60 seconds",
+    "40% reduction in planning time vs. traditional tools",
+    "Brand consistency score improves 2 letter grades after 30 days",
+  ],
+  regulations: [
+    "FTC disclosure for AI-generated content",
+    "GDPR email consent for subscriber campaigns",
+    "CCPA opt-out compliance for California users",
+    "Platform-specific ad policies (Meta, LinkedIn, X)",
+  ],
+  competitors: ["Jasper", "Copy.ai", "HubSpot Content Hub", "Sprout Social", "Buffer", "Hootsuite"],
+  semanticThemes: [
+    "AI-native marketing",
+    "brand compression",
+    "Kill Noise Protocol",
+    "brand memory",
+    "signal vs. noise",
+    "autonomous campaigns",
+  ],
+  trustSignals: [
+    "KNP Ψ3 compression architecture",
+    "Zero data sharing with third parties",
+    "Client brain library encrypted at rest",
+    "Built for compliance from day one",
+  ],
+  compressedSourceCount: 247,
+};
+
+const KLYC_DEMO_STRATEGY: StrategyReasoning = {
+  whyThisApproach:
+    "KLYC is operating in the AI marketing tools category at a pivotal moment — competitors are adding AI features to legacy infrastructure while KLYC is building AI-native from the ground up. The challenger narrative works because the proof points are verifiable and the KNP compression architecture is genuinely differentiated. The 22-channel footprint creates a surface area advantage most competitors can't match, but requires orchestration to activate at full potential.",
+  customerRequested:
+    "Broad brand awareness campaign across LinkedIn and Instagram targeting founder and marketing director audiences with educational content about AI-native marketing automation and brand consistency at scale.",
+  systemRecommendation:
+    "Prioritize LinkedIn (91) + X / Twitter (83) for B2B authority and Reddit (74) for community trust-building. Instagram deprioritized for B2B SaaS — engagement quality is lower for enterprise buyers. Add YouTube as secondary channel for product demo and long-form thought leadership.",
+  reactiveOpportunities: [
+    "Jasper and Copy.ai facing pricing pushback — window open for competitive value positioning",
+    "HubSpot Content Hub averaging 3-star reviews on G2 this month — contrast messaging opportunity",
+    "AI content detection tools creating anxiety in the market — position KLYC as brand-authentic AI",
+    "ChatGPT marketing use growing fast — users want branded outputs, not generic ones",
+  ],
+  proactiveOpportunities: [
+    "Launch 'Brand Memory' as a new category term before competitors adopt the language",
+    "Q2 budget season — create ROI calculator comparing manual vs. KLYC campaign planning time",
+    "AI regulation discussion heating up — position as the compliant-first AI marketing platform",
+    "Founder-led content outperforming brand content — activate as brand voice on LinkedIn",
+  ],
+  qrRoutingNotes: [
+    "Demo QR codes at events should route to pre-filled brand context pages (compressed with KNP Ψ3)",
+    "WhatsApp routing recommended for enterprise prospects — higher close rate than cold email",
+    "Use campaign QR codes to capture audience segment data and auto-populate brain library entries",
+  ],
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CustomerStrategyAnalysis() {
@@ -619,10 +700,13 @@ export default function CustomerStrategyAnalysis() {
     ? buildMetricCards(result, brainDocs, socialConns, postQueue, totalPostCount)
     : [];
 
-  // Intelligence panel data
-  const platformBattle = result ? buildPlatformBattle(result.social_profiles) : undefined;
-  const customerDNA    = result ? buildCustomerDNA(brainDocs, result)          : undefined;
-  const strategyRsn    = result ? buildStrategyReasoning(result)                : undefined;
+  // Intelligence panel data — use KLYC demo data when brainDocs is empty
+  const useDemoIntel   = brainDocs.length === 0;
+  const platformBattle = result
+    ? (result.social_profiles.length > 0 ? buildPlatformBattle(result.social_profiles) : KLYC_DEMO_PLATFORM)
+    : undefined;
+  const customerDNA    = result ? (useDemoIntel ? KLYC_DEMO_DNA      : buildCustomerDNA(brainDocs, result)) : undefined;
+  const strategyRsn    = result ? (useDemoIntel ? KLYC_DEMO_STRATEGY : buildStrategyReasoning(result))       : undefined;
 
   return (
     <div className="min-h-screen bg-background">
