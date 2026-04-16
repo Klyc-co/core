@@ -827,7 +827,7 @@ export default function CustomerStrategyAnalysis() {
                     </CardContent>
                   </Card>
                 )}
-                {demoPageAudits.length > 0 ? (
+                {demoPageAudits.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {demoPageAudits.slice(0, 3).map((page, i) => (
                       <Card key={i} className={`border ${pageGradeBg(page.grade)}`}>
