@@ -243,6 +243,125 @@ const StepBusinessSummary = ({ scanData, onNext }: StepBusinessSummaryProps) => 
           </Button>
         </div>
       </div>
+
+      {/* Lightbox overlay */}
+      {lightboxIndex !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+          onClick={() => setLightboxIndex(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Previous */}
+          {assets.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((lightboxIndex - 1 + assets.length) % assets.length);
+              }}
+              className="absolute left-4 sm:left-8 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Content */}
+          <div
+            className="max-w-2xl max-h-[80vh] w-full mx-16 flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const asset = assets[lightboxIndex];
+              if (!asset) return null;
+
+              if (asset.asset_type === "color") {
+                return (
+                  <div className="flex flex-col items-center gap-4">
+                    <div
+                      className="w-48 h-48 rounded-2xl border-2 border-white/20 shadow-2xl"
+                      style={{ backgroundColor: asset.value }}
+                    />
+                    <p className="text-white text-lg font-mono">{asset.value}</p>
+                  </div>
+                );
+              }
+
+              if ((asset.asset_type === "logo" || asset.asset_type === "image") && isImageUrl(asset.value)) {
+                return (
+                  <img
+                    src={asset.value}
+                    alt={asset.name || "asset"}
+                    className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-2xl"
+                  />
+                );
+              }
+
+              if (asset.asset_type === "font") {
+                return (
+                  <div className="text-center">
+                    <p className="text-white text-4xl mb-2" style={{ fontFamily: asset.value }}>
+                      {asset.value}
+                    </p>
+                    <p className="text-white/60 text-sm">Font</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="bg-card rounded-xl p-8 text-center max-w-md">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                    {assetTypeIcon(asset.asset_type)}
+                  </div>
+                  <p className="text-foreground font-medium break-all">{asset.name || asset.value}</p>
+                  <p className="text-muted-foreground text-sm mt-1">{assetTypeLabel(asset.asset_type)}</p>
+                </div>
+              );
+            })()}
+
+            {/* Asset name & counter */}
+            <div className="text-center">
+              <p className="text-white/90 text-sm font-medium">
+                {assets[lightboxIndex]?.name || assets[lightboxIndex]?.value}
+              </p>
+              <p className="text-white/50 text-xs mt-1">
+                {lightboxIndex + 1} of {assets.length}
+              </p>
+            </div>
+
+            {/* This Looks Good button */}
+            <Button
+              onClick={() => {
+                setLightboxIndex(null);
+                onNext();
+              }}
+              size="lg"
+              className="mt-4 h-12 px-8 text-base font-semibold"
+            >
+              This Looks Good
+              <CheckCircle2 className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+
+          {/* Next */}
+          {assets.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((lightboxIndex + 1) % assets.length);
+              }}
+              className="absolute right-4 sm:right-8 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
