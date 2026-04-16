@@ -99,6 +99,10 @@ Deno.serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
+    const functionStartTime = Date.now();
+    const MAX_FUNCTION_TIME = 110000; // 110s hard limit to stay under 150s
+    const isTimeBudgetOk = () => Date.now() - functionStartTime < MAX_FUNCTION_TIME;
+
     console.log('Starting FAST website scan:', formattedUrl);
 
     // Create brand import record
@@ -130,15 +134,15 @@ Deno.serve(async (req) => {
         }),
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
 
-      // Parallel task 2: Start crawl (reduced: 10 pages, depth 2)
+      // Parallel task 2: Start crawl (reduced: 5 pages, depth 1)
       fetch('https://api.firecrawl.dev/v1/crawl', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: formattedUrl,
-          limit: 10,
-          maxDepth: 2,
-          scrapeOptions: { formats: ['markdown', 'links'], onlyMainContent: false },
+          limit: 5,
+          maxDepth: 1,
+          scrapeOptions: { formats: ['markdown', 'links'], onlyMainContent: true },
         }),
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
     ]);
@@ -153,13 +157,13 @@ Deno.serve(async (req) => {
       console.log('Branding extracted:', homepageBranding ? 'Yes' : 'No');
     }
 
-    // Poll crawl with shorter timeout (45s) and faster interval (1.5s)
+    // Poll crawl with shorter timeout (25s) and faster interval (2s)
     let crawlPages: PageData[] = [];
     if (crawlResult.success && crawlResult.id) {
       const crawlId = crawlResult.id;
       console.log('Crawl started, polling ID:', crawlId);
-      const maxWaitTime = 45000;
-      const pollInterval = 1500;
+      const maxWaitTime = 25000;
+      const pollInterval = 2000;
       const startTime = Date.now();
 
       while (Date.now() - startTime < maxWaitTime) {
@@ -215,18 +219,22 @@ Deno.serve(async (req) => {
     const limitedAssets = [...colorAssets, ...fontAssets, ...imageAssets, ...copyAssets];
 
     // ===== SPEED: Insert assets + generate AI summary IN PARALLEL =====
+    // Skip AI summary if running out of time
     const [, businessSummary] = await Promise.all([
       // Insert assets in background
       (async () => {
         if (limitedAssets.length > 0) {
           const batchSize = 50;
           for (let i = 0; i < limitedAssets.length; i += batchSize) {
+            if (!isTimeBudgetOk()) break;
             await supabase.from('brand_assets').insert(limitedAssets.slice(i, i + batchSize));
           }
         }
       })(),
-      // Generate AI summary (using faster model)
-      generateBusinessSummary(allPages, formattedUrl),
+      // Generate AI summary (skip if low on time)
+      isTimeBudgetOk()
+        ? generateBusinessSummary(allPages, formattedUrl)
+        : Promise.resolve({ businessName: "Your Business", description: "Extracted from website scan." }),
     ]);
 
     // Auto-populate client profile
@@ -423,12 +431,12 @@ async function generateBusinessSummary(
     if (!LOVABLE_API_KEY) return { businessName: "Your Business", description: "" };
 
     let combinedContent = "";
-    for (const page of pages.slice(0, 10)) {
+    for (const page of pages.slice(0, 5)) {
       const title = page.metadata?.title || "";
       const desc = page.metadata?.description || "";
-      const markdown = (page.markdown || "").substring(0, 2000);
+      const markdown = (page.markdown || "").substring(0, 1500);
       combinedContent += `--- Page: ${title} ---\n${desc}\n${markdown}\n\n`;
-      if (combinedContent.length > 12000) break;
+      if (combinedContent.length > 8000) break;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
