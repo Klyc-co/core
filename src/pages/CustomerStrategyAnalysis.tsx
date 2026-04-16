@@ -12,6 +12,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Backend project — all AI subminds live here
+const BACKEND_URL = "https://wkqiielsazzbxziqmgdb.supabase.co";
+const BACKEND_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU";
+
 interface PageAudit {
   title: string;
   grade: string;
@@ -123,8 +127,15 @@ export default function CustomerStrategyAnalysis() {
       // Set brand name from profile
       if (profile?.business_name) setBrandName(profile.business_name);
 
-      const { data, error } = await supabase.functions.invoke("strategy-analysis", {
-        body: {
+      // Call strategy-analysis on the backend project directly (all AI subminds live there)
+      const res = await fetch(`${BACKEND_URL}/functions/v1/strategy-analysis`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${BACKEND_ANON}`,
+          "apikey": BACKEND_ANON,
+        },
+        body: JSON.stringify({
           user_id: userId,
           client_name: profile?.business_name || user.email?.split("@")[0] || "Your Brand",
           // Brand profile
@@ -144,10 +155,17 @@ export default function CustomerStrategyAnalysis() {
           // Social & activity
           social_connections: socialRes.data || [],
           post_history: postRes.data || [],
-        },
+        }),
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errBody = await res.text();
+        throw new Error(errBody || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
       setResult(data as AnalysisResult);
       setActiveTab("summary");
       toast.success("Strategy analysis complete");
