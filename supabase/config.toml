@@ -335,3 +335,5 @@ verify_jwt = false
 [functions.orchestrator]
 verify_jwt = false
 
+[functions.strategy-analysis]
+verify_jwt = false
