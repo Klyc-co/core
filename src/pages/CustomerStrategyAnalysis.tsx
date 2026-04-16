@@ -531,7 +531,40 @@ function buildMetricCards(
   ];
 }
 
-// ─── KLYC Demo data (used when brainDocs is empty) ───────────────────────────
+// ─── KLYC Demo data (used when result has no AI-generated content) ───────────
+
+const KLYC_DEMO_CONVERSION_KILLERS = [
+  "No clear primary CTA above the fold — visitors don't know what action to take",
+  "Brand voice inconsistency across LinkedIn, Instagram, and website copy",
+  "Zero social proof visible on homepage — no testimonials, logos, or case studies",
+];
+
+const KLYC_DEMO_PAGE_AUDITS: PageAudit[] = [
+  {
+    title: "Homepage",
+    grade: "C",
+    score: 62,
+    strengths: ["Clean layout with strong visual hierarchy", "Brand colors applied consistently"],
+    issues: ["No social proof or testimonials above the fold", "CTA text is generic ('Learn More') — not outcome-driven"],
+    opportunities: ["Add '3x engagement in 30 days' proof point near hero", "Replace hero CTA with 'See a Campaign Built in 60 Seconds'"],
+  },
+  {
+    title: "Features Page",
+    grade: "B",
+    score: 74,
+    strengths: ["Feature names are concrete and benefit-led", "Section structure guides the eye naturally"],
+    issues: ["No comparison to legacy tools (Jasper, HubSpot)", "Missing pricing signal — creates friction at evaluation stage"],
+    opportunities: ["Add a 'vs. traditional tools' comparison row", "Link each feature to a real customer outcome"],
+  },
+  {
+    title: "Pricing Page",
+    grade: "D",
+    score: 43,
+    strengths: ["Tier names are distinct and memorable"],
+    issues: ["No ROI framing — buyers can't justify cost to stakeholders", "Trial CTA buried below the fold on mobile"],
+    opportunities: ["Add 'Save 10hrs/week' framing above pricing tiers", "Surface a calculator: 'How much time are you losing today?'"],
+  },
+];
 
 const KLYC_DEMO_PLATFORM: PlatformBattle = {
   scores: { LinkedIn: 91, "X / Twitter": 83, Reddit: 74, YouTube: 68 },
@@ -700,8 +733,11 @@ export default function CustomerStrategyAnalysis() {
     ? buildMetricCards(result, brainDocs, socialConns, postQueue, totalPostCount)
     : [];
 
-  // Intelligence panel data — use KLYC demo data when brainDocs is empty
-  const useDemoIntel   = brainDocs.length === 0;
+  // Demo flags — activate when AI returns no content
+  const useDemoIntel    = brainDocs.length === 0;
+  const useDemoPageData = result ? result.page_audits.length === 0 : false;
+  const demoKillers     = useDemoPageData ? KLYC_DEMO_CONVERSION_KILLERS : (result?.conversion_killers ?? []);
+  const demoPageAudits  = useDemoPageData ? KLYC_DEMO_PAGE_AUDITS        : (result?.page_audits ?? []);
   const platformBattle = result
     ? (result.social_profiles.length > 0 ? buildPlatformBattle(result.social_profiles) : KLYC_DEMO_PLATFORM)
     : undefined;
@@ -762,13 +798,6 @@ export default function CustomerStrategyAnalysis() {
               {metricCards.map(card => <MetricCard key={card.id} data={card} />)}
             </div>
 
-            {/* Summary sentence */}
-            <Card>
-              <CardContent className="py-4 px-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
-              </CardContent>
-            </Card>
-
             {/* ── 5-tab analysis section ──────────────────────────────────────── */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5 no-print">
@@ -781,7 +810,7 @@ export default function CustomerStrategyAnalysis() {
 
               {/* Summary */}
               <TabsContent value="summary" className="mt-4 space-y-4">
-                {result.conversion_killers.length > 0 && (
+                {demoKillers.length > 0 && (
                   <Card className="border-red-500/20">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -789,7 +818,7 @@ export default function CustomerStrategyAnalysis() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0 space-y-2">
-                      {result.conversion_killers.map((k, i) => (
+                      {demoKillers.map((k, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 rounded bg-red-500/5 border border-red-500/10">
                           <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                           <span className="text-sm text-foreground">{k}</span>
@@ -798,9 +827,9 @@ export default function CustomerStrategyAnalysis() {
                     </CardContent>
                   </Card>
                 )}
-                {result.page_audits.length > 0 ? (
+                {demoPageAudits.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {result.page_audits.slice(0, 3).map((page, i) => (
+                    {demoPageAudits.slice(0, 3).map((page, i) => (
                       <Card key={i} className={`border ${pageGradeBg(page.grade)}`}>
                         <CardContent className="py-4 px-4">
                           <div className="flex items-center justify-between mb-1">
@@ -821,12 +850,6 @@ export default function CustomerStrategyAnalysis() {
                       </Card>
                     ))}
                   </div>
-                ) : (
-                  <Card className="border-dashed border-border/60">
-                    <CardContent className="py-6">
-                      <EmptyState icon={<Target className="w-8 h-8" />} message="No funnel audit data this run" sub="Add a website URL to your brand profile and re-analyze to get page-level grades." />
-                    </CardContent>
-                  </Card>
                 )}
               </TabsContent>
 
