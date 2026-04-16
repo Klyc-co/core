@@ -91,10 +91,17 @@ const Onboarding = () => {
       "Dark enough in areas to allow white text overlay. Aspect ratio 4:5 portrait.",
     ].filter(Boolean).join(" ");
 
-    supabase.functions.invoke("generate-image", {
-      body: { prompt: fontImagePrompt, model: "nano-banana" },
-    }).then(({ data: imgData }) => {
-      if (imgData?.imageUrl) setPreGeneratedFontImage(imgData.imageUrl);
+    fetch("https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt: fontImagePrompt }),
+    }).then(async (r) => {
+      const imgData = await r.json();
+      const url = typeof imgData?.["σo"] === "string" ? imgData["σo"] : imgData?.imageUrl;
+      if (url) setPreGeneratedFontImage(url);
     }).catch((err) => console.error("Background font image generation failed:", err));
   }, []);
 
