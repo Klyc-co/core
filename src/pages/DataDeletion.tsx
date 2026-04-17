@@ -1,18 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Shield, Clock } from "lucide-react";
-import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
 
 export default function DataDeletion() {
+  useEffect(() => {
+    document.title = "Data Deletion Request | Klyc";
+    const meta = document.querySelector('meta[name="description"]') || (() => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "description");
+      document.head.appendChild(m);
+      return m;
+    })();
+    meta.setAttribute(
+      "content",
+      "Request deletion of your Klyc account and associated data from connected platforms like Meta, Threads, and Instagram."
+    );
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Data Deletion Request | Klyc</title>
-        <meta
-          name="description"
-          content="Request deletion of your Klyc account and associated data, including data from connected platforms like Meta, Threads, and Instagram."
-        />
-        <link rel="canonical" href="https://klyc.ai/data-deletion" />
-      </Helmet>
 
       <main className="max-w-3xl mx-auto px-6 py-16">
         <header className="mb-10">
