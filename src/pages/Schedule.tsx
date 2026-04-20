@@ -154,6 +154,23 @@ const Schedule = () => {
 
       setPosts((postsRes.data as ScheduledPost[]) || []);
       setCampaigns((campaignsRes.data as ScheduledCampaign[]) || []);
+
+      const postIds = (postsRes.data || []).map((p: any) => p.id);
+      if (postIds.length > 0) {
+        const { data: targets } = await supabase
+          .from("post_platform_targets")
+          .select("post_queue_id, platform, platform_post_id, status")
+          .in("post_queue_id", postIds);
+        const map: Record<string, { platform: string; platform_post_id: string | null; status: string }[]> = {};
+        for (const t of targets || []) {
+          if (!map[t.post_queue_id]) map[t.post_queue_id] = [];
+          map[t.post_queue_id].push({ platform: t.platform, platform_post_id: t.platform_post_id, status: t.status });
+        }
+        setTargetsByPostId(map);
+      } else {
+        setTargetsByPostId({});
+      }
+
       setLoading(false);
     };
     fetchAll();
@@ -163,18 +180,25 @@ const Schedule = () => {
   const itemsForDay = (day: Date): CalendarItem[] => {
     const postItems: CalendarItem[] = posts
       .filter((p) => p.scheduled_at && isSameDay(new Date(p.scheduled_at), day))
-      .map((p) => ({
-        id: p.id,
-        type: "post" as const,
-        title: p.post_text?.slice(0, 120) || p.content_type,
-        time: p.scheduled_at ? format(new Date(p.scheduled_at), "h:mma").toLowerCase() : "",
-        imageUrl: p.image_url,
-        videoUrl: p.video_url,
-        contentType: p.content_type,
-        platform: detectPlatform(p.content_type),
-        status: p.status,
-        raw: p,
-      }));
+      .map((p) => {
+        const platform = detectPlatform(p.content_type);
+        const targets = targetsByPostId[p.id] || [];
+        const matched = targets.find((t) => t.platform.toLowerCase().includes(platform)) || targets[0];
+        const postUrl = matched ? buildPlatformPostUrl(matched.platform, matched.platform_post_id) : null;
+        return {
+          id: p.id,
+          type: "post" as const,
+          title: p.post_text?.slice(0, 120) || p.content_type,
+          time: p.scheduled_at ? format(new Date(p.scheduled_at), "h:mma").toLowerCase() : "",
+          imageUrl: p.image_url,
+          videoUrl: p.video_url,
+          contentType: p.content_type,
+          platform,
+          status: p.status,
+          postUrl,
+          raw: p,
+        };
+      });
 
     const campaignItems: CalendarItem[] = campaigns
       .filter((c) => isSameDay(new Date(c.scheduled_date + "T00:00:00"), day))
