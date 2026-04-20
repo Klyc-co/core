@@ -346,23 +346,28 @@ Deno.serve(async (req) => {
     // Other platforms use `client_platform_connections`.
     let accessToken: string | null = null;
     let igUserId: string | null = null;
+    let fbPageId: string | null = null;
 
-    if (platformLower === "instagram") {
+    if (platformLower === "instagram" || platformLower === "facebook") {
       const { data: socialConn } = await serviceClient
         .from("social_connections")
         .select("access_token, platform_user_id")
         .eq("user_id", userId)
-        .eq("platform", "instagram")
+        .eq("platform", platformLower)
         .maybeSingle();
 
       if (!socialConn) {
+        const friendly = platformLower === "instagram"
+          ? "No active Instagram connection. Please connect your Instagram Business account first."
+          : "No active Facebook Page connection. Please reconnect Instagram/Facebook to grant page publishing permission.";
         return new Response(
-          JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
+          JSON.stringify({ error: friendly }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       accessToken = await decryptToken(socialConn.access_token);
-      igUserId = socialConn.platform_user_id;
+      if (platformLower === "instagram") igUserId = socialConn.platform_user_id;
+      else fbPageId = socialConn.platform_user_id;
     } else {
       const { data: connection } = await serviceClient
         .from("client_platform_connections")
@@ -392,6 +397,12 @@ Deno.serve(async (req) => {
         result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
       } else {
         result = await postToInstagram(accessToken!, igUserId, content, image_url, video_url);
+      }
+    } else if (platformLower === "facebook") {
+      if (!fbPageId) {
+        result = { success: false, error: "Facebook Page ID missing. Please reconnect Instagram/Facebook." };
+      } else {
+        result = await postToFacebook(accessToken!, fbPageId, content, image_url, video_url);
       }
     } else {
       // Other platforms remain mock
