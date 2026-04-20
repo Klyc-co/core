@@ -317,6 +317,14 @@ Deno.serve(async (req) => {
       result = await postToLinkedIn(accessToken, content);
     } else if (platformLower === "threads") {
       result = await postToThreads(accessToken, content);
+    } else if (platformLower === "instagram") {
+      // For Instagram, refresh_token holds the IG Business Account ID (set in instagram-oauth-callback)
+      const igUserId = connection.refresh_token;
+      if (!igUserId) {
+        result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
+      } else {
+        result = await postToInstagram(accessToken, igUserId, content, image_url, video_url);
+      }
     } else {
       // Other platforms remain mock
       console.log(`[post-to-platform] Mock post to ${platform} by user ${userId}`);
