@@ -24,7 +24,7 @@ serve(async (req) => {
   if (error) {
     console.error("Instagram OAuth error:", error, errorDescription);
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(errorDescription || error)}`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(errorDescription || error)}`,
       302
     );
   }
@@ -32,7 +32,7 @@ serve(async (req) => {
   if (!code || !state) {
     console.error("Missing code or state parameter");
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=Missing+authorization+code`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=Missing+authorization+code`,
       302
     );
   }
@@ -232,13 +232,13 @@ serve(async (req) => {
     console.log("Instagram Graph API connection saved successfully for user:", userId);
 
     return Response.redirect(
-      `${FRONTEND_URL}/campaigns/new?success=instagram`,
+      `${FRONTEND_URL}/campaigns/new?oauth_success=instagram`,
       302
     );
   } catch (err) {
     console.error("Instagram OAuth callback error:", err);
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
       302
     );
   }
