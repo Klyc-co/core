@@ -513,6 +513,16 @@ const NewCampaign = () => {
       return;
     }
 
+    // Instagram requires media — text-only posts will fail at the Graph API
+    if (selectedPlatforms.includes("instagram") && libraryAssets.length === 0) {
+      toast({
+        title: "Image required for Instagram",
+        description: "Instagram posts must include an image or video. Please upload media before scheduling.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!scheduledTime) {
       toast({
         title: "Select time",
@@ -818,6 +828,42 @@ const NewCampaign = () => {
                             <span className="text-sm text-muted-foreground">No content preview available</span>
                           </div>
                         )}
+                        {platformId === "instagram" && !previewImage && (
+                          <div className="rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+                            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                              ⚠️ Instagram requires an image or video
+                            </p>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                              Text-only posts can't be published to Instagram. Upload media to continue.
+                            </p>
+                            <label htmlFor="ig-media-upload" className="block">
+                              <input
+                                id="ig-media-upload"
+                                type="file"
+                                accept="image/*,video/*"
+                                multiple
+                                className="hidden"
+                                onChange={handleFileUpload}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isUploading}
+                                className="w-full gap-2 border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                                asChild
+                              >
+                                <span className="cursor-pointer">
+                                  {isUploading ? (
+                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                                  ) : (
+                                    <><Upload className="h-3.5 w-3.5" /> Upload image or video</>
+                                  )}
+                                </span>
+                              </Button>
+                            </label>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   );
@@ -1024,7 +1070,7 @@ const NewCampaign = () => {
               size="lg"
               className="w-full"
               onClick={handleLaunchCampaign}
-              disabled={isLaunching}
+              disabled={isLaunching || (selectedPlatforms.includes("instagram") && libraryAssets.length === 0)}
             >
               {isLaunching ? (
                 <>Scheduling Post...</>
@@ -1036,6 +1082,11 @@ const NewCampaign = () => {
               )}
             </Button>
           </div>
+          {selectedPlatforms.includes("instagram") && libraryAssets.length === 0 && (
+            <div className="mt-3 rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+              ⚠️ Instagram requires an image or video. Upload media in the Instagram preview above to enable scheduling.
+            </div>
+          )}
         </div>
 
         {/* Draft Picker */}
