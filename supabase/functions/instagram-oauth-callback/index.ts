@@ -168,6 +168,8 @@ serve(async (req) => {
     let instagramAccountId = null;
     let instagramUsername = null;
     let pageAccessToken = null;
+    let facebookPageId: string | null = null;
+    let facebookPageName: string | null = null;
 
     for (const page of pagesData.data) {
       const igResponse = await fetch(
@@ -179,6 +181,8 @@ serve(async (req) => {
         if (igData.instagram_business_account) {
           instagramAccountId = igData.instagram_business_account.id;
           pageAccessToken = page.access_token;
+          facebookPageId = page.id;
+          facebookPageName = page.name || null;
           
           // Get Instagram username
           const usernameResponse = await fetch(
@@ -190,9 +194,17 @@ serve(async (req) => {
           }
           
           console.log("Found Instagram Business Account:", instagramAccountId, instagramUsername);
+          console.log("Linked Facebook Page:", facebookPageId, facebookPageName);
           break;
         }
       }
+    }
+
+    // Fallback: if no IG link, still grab the first page so Facebook publishing works on its own
+    if (!facebookPageId && pagesData.data.length > 0) {
+      facebookPageId = pagesData.data[0].id;
+      facebookPageName = pagesData.data[0].name || null;
+      pageAccessToken = pagesData.data[0].access_token;
     }
 
     if (!instagramAccountId) {
