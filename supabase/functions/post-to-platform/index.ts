@@ -356,18 +356,47 @@ Deno.serve(async (req) => {
         .eq("platform", platformLower)
         .maybeSingle();
 
-      if (!socialConn) {
-        const friendly = platformLower === "instagram"
-          ? "No active Instagram connection. Please connect your Instagram Business account first."
-          : "No active Facebook Page connection. Please reconnect Instagram/Facebook to grant page publishing permission.";
+      if (socialConn) {
+        accessToken = await decryptToken(socialConn.access_token);
+        if (platformLower === "instagram") igUserId = socialConn.platform_user_id;
+        else fbPageId = socialConn.platform_user_id;
+      } else if (platformLower === "facebook") {
+        // Fallback: reuse the Instagram-linked page token to discover the FB Page ID.
+        const { data: igConn } = await serviceClient
+          .from("social_connections")
+          .select("access_token")
+          .eq("user_id", userId)
+          .eq("platform", "instagram")
+          .maybeSingle();
+
+        if (!igConn) {
+          return new Response(
+            JSON.stringify({ error: "No active Facebook Page connection. Please reconnect Instagram/Facebook in Settings to grant page publishing permission." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const pageToken = await decryptToken(igConn.access_token);
+        // The token stored for IG is already a Page Access Token. Resolve the page id via /me.
+        const meRes = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${pageToken}`);
+        if (!meRes.ok) {
+          const t = await meRes.text();
+          console.error("[Facebook] /me lookup failed:", meRes.status, t);
+          return new Response(
+            JSON.stringify({ error: "Couldn't resolve your Facebook Page from the saved Instagram token. Please reconnect Instagram/Facebook in Settings." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const me = await meRes.json();
+        accessToken = pageToken;
+        fbPageId = me.id;
+        console.log("[Facebook] Resolved page id from IG token:", fbPageId);
+      } else {
         return new Response(
-          JSON.stringify({ error: friendly }),
+          JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      accessToken = await decryptToken(socialConn.access_token);
-      if (platformLower === "instagram") igUserId = socialConn.platform_user_id;
-      else fbPageId = socialConn.platform_user_id;
     } else {
       const { data: connection } = await serviceClient
         .from("client_platform_connections")
