@@ -50,9 +50,22 @@ serve(async (req) => {
     // The frontend page at /oauth/instagram/callback forwards code+state to the edge function.
     const redirectUri = "https://klyc.ai/oauth/instagram/callback";
     
-    // Create state parameter with user ID
+    // Capture the originating page so we can return the user there after OAuth
+    let returnPath = "/campaigns/new";
+    try {
+      const body = await req.json().catch(() => ({}));
+      if (body?.returnPath && typeof body.returnPath === "string" && body.returnPath.startsWith("/")) {
+        returnPath = body.returnPath;
+      } else if (body?.originUrl && typeof body.originUrl === "string") {
+        const u = new URL(body.originUrl);
+        if (u.pathname) returnPath = u.pathname + (u.search || "") + (u.hash || "");
+      }
+    } catch (_) { /* no body */ }
+
+    // Create state parameter with user ID + return path
     const state = JSON.stringify({
       user_id: user.id,
+      return_path: returnPath,
       timestamp: Date.now(),
     });
     const encodedState = btoa(state);
