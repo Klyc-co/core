@@ -86,7 +86,14 @@ const buildPlatformPostUrl = (platform: string, platformPostId: string | null): 
     const id = platformPostId.replace(/^urn:li:(share|activity|ugcPost):/i, "");
     return `https://www.linkedin.com/feed/update/urn:li:activity:${id}/`;
   }
-  if (p.includes("instagram")) return `https://www.instagram.com/p/${platformPostId}/`;
+  if (p.includes("instagram")) {
+    // If it looks like a shortcode (alphanumeric, ~11 chars), use /p/ URL.
+    // Otherwise it's a numeric media ID — use the media_id redirect endpoint.
+    if (/^[A-Za-z0-9_-]{8,15}$/.test(platformPostId) && /[A-Za-z_-]/.test(platformPostId)) {
+      return `https://www.instagram.com/p/${platformPostId}/`;
+    }
+    return `https://www.instagram.com/?media_id=${platformPostId}`;
+  }
   if (p.includes("facebook")) return `https://www.facebook.com/${platformPostId}`;
   if (p.includes("youtube")) return `https://www.youtube.com/watch?v=${platformPostId}`;
   if (p.includes("twitter") || p.includes("x")) return `https://x.com/i/web/status/${platformPostId}`;
