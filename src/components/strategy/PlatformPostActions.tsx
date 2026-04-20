@@ -105,9 +105,10 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
     if (oauthConfig) {
       setConnecting(true);
       try {
+        const returnPath = window.location.pathname + window.location.search + window.location.hash;
         const body = platformKey === "linkedin"
-          ? { redirect_uri: window.location.origin + window.location.pathname }
-          : { originUrl: window.location.origin };
+          ? { redirect_uri: window.location.origin + window.location.pathname, returnPath }
+          : { originUrl: window.location.origin + returnPath, returnPath };
         const { data, error } = await supabase.functions.invoke(oauthConfig.functionName, { body });
         if (error) throw error;
         const authUrl = data?.[oauthConfig.urlKey];
