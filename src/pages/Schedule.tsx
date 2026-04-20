@@ -22,6 +22,7 @@ import {
   Pencil,
   Loader2,
   CalendarDays,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -74,6 +75,23 @@ const platformMeta: Record<string, { icon: React.ReactNode; label: string; color
   youtube: { icon: <Youtube className="w-3.5 h-3.5" />, label: "Video", color: "text-[#FF0000]" },
   blog: { icon: <Globe className="w-3.5 h-3.5" />, label: "Blog", color: "text-muted-foreground" },
   email: { icon: <Mail className="w-3.5 h-3.5" />, label: "Email", color: "text-muted-foreground" },
+};
+
+const buildPlatformPostUrl = (platform: string, platformPostId: string | null): string | null => {
+  if (!platformPostId) return null;
+  const p = platform.toLowerCase();
+  if (p.includes("linkedin")) {
+    // platformPostId is typically the URN like urn:li:share:1234 or activity id
+    const id = platformPostId.replace(/^urn:li:(share|activity|ugcPost):/i, "");
+    return `https://www.linkedin.com/feed/update/urn:li:activity:${id}/`;
+  }
+  if (p.includes("instagram")) return `https://www.instagram.com/p/${platformPostId}/`;
+  if (p.includes("facebook")) return `https://www.facebook.com/${platformPostId}`;
+  if (p.includes("youtube")) return `https://www.youtube.com/watch?v=${platformPostId}`;
+  if (p.includes("twitter") || p.includes("x")) return `https://x.com/i/web/status/${platformPostId}`;
+  if (p.includes("tiktok")) return `https://www.tiktok.com/video/${platformPostId}`;
+  if (p.includes("threads")) return `https://www.threads.net/post/${platformPostId}`;
+  return null;
 };
 
 const detectPlatform = (contentType: string): string => {
