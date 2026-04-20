@@ -65,6 +65,7 @@ type CalendarItem = {
   contentType: string;
   platform: string;
   status: string;
+  postUrl: string | null;
   raw: ScheduledPost | ScheduledCampaign;
 };
 
@@ -113,6 +114,7 @@ const Schedule = () => {
   const [loading, setLoading] = useState(true);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [targetsByPostId, setTargetsByPostId] = useState<Record<string, { platform: string; platform_post_id: string | null; status: string }[]>>({});
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
