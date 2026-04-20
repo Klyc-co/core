@@ -232,7 +232,7 @@ serve(async (req) => {
     console.log("Instagram Graph API connection saved successfully for user:", userId);
 
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?success=instagram`,
+      `${FRONTEND_URL}/campaigns/new?success=instagram`,
       302
     );
   } catch (err) {
