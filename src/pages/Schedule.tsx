@@ -102,6 +102,19 @@ const buildPlatformPostUrl = (platform: string, platformPostId: string | null): 
   return null;
 };
 
+// Fallback platform home URLs when we don't have a specific post URL
+const platformHomeUrl = (platform: string): string => {
+  const p = platform.toLowerCase();
+  if (p.includes("linkedin")) return "https://www.linkedin.com/feed/";
+  if (p.includes("instagram")) return "https://www.instagram.com/";
+  if (p.includes("facebook")) return "https://www.facebook.com/";
+  if (p.includes("youtube")) return "https://www.youtube.com/";
+  if (p.includes("twitter") || p.includes("x")) return "https://x.com/";
+  if (p.includes("tiktok")) return "https://www.tiktok.com/";
+  if (p.includes("threads")) return "https://www.threads.net/";
+  return "#";
+};
+
 const detectPlatform = (contentType: string): string => {
   const t = contentType.toLowerCase();
   if (t.includes("linkedin")) return "linkedin";
@@ -418,17 +431,21 @@ const Schedule = () => {
                               </p>
 
                               {/* Show post button */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full mb-3 h-8 text-xs gap-1.5"
-                                disabled={!item.postUrl}
-                                onClick={() => item.postUrl && window.open(item.postUrl, "_blank", "noopener,noreferrer")}
-                                title={item.postUrl ? "Open post on platform" : "Post URL not available yet"}
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                Show post
-                              </Button>
+                              {isPublished && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full mb-3 h-8 text-xs gap-1.5"
+                                  onClick={() => {
+                                    const url = item.postUrl || platformHomeUrl(item.platform);
+                                    window.open(url, "_blank", "noopener,noreferrer");
+                                  }}
+                                  title={item.postUrl ? "Open post on platform" : `Open ${item.platform}`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  Show post
+                                </Button>
+                              )}
 
                               {/* Status + actions */}
                               <div className="flex items-center justify-between">
