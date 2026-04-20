@@ -60,7 +60,9 @@ serve(async (req) => {
       throw new Error("Instagram credentials not configured");
     }
 
-    const redirectUri = `${supabaseUrl}/functions/v1/instagram-oauth-callback`;
+    // Must match the redirect_uri used in instagram-auth-url exactly,
+    // otherwise Facebook rejects the token exchange.
+    const redirectUri = "https://klyc.ai/oauth/instagram/callback";
 
     // Exchange code for Facebook access token
     const tokenResponse = await fetch(

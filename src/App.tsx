@@ -70,6 +70,7 @@ import AdminWaitlist from "./pages/AdminWaitlist";
 import Waitlist from "./pages/Waitlist";
 import Team from "./pages/Team";
 import TrelloCallback from "./pages/TrelloCallback";
+import InstagramOAuthCallback from "./pages/InstagramOAuthCallback";
 import OrchestratorPanel from "./pages/OrchestratorPanel";
 import PostQueueManager from "./pages/PostQueueManager";
 import PublishStatusDashboard from "./pages/PublishStatusDashboard";
@@ -218,6 +219,7 @@ const App = () => (
             <Route path="/analytics" element={<WithSidebar><FullAnalytics /></WithSidebar>} />
             <Route path="/messages" element={<WithSidebar><Messages portalType="marketer" /></WithSidebar>} />
             <Route path="/trello-callback" element={<TrelloCallback />} />
+            <Route path="/oauth/instagram/callback" element={<InstagramOAuthCallback />} />
             <Route path="/orchestrator" element={<WithSidebar><OrchestratorPanel /></WithSidebar>} />
             <Route path="/orchestrator/graph" element={<WithSidebar><OrchestratorGraph /></WithSidebar>} />
             <Route path="/campaigns/queue" element={<WithSidebar><PostQueueManager /></WithSidebar>} />
