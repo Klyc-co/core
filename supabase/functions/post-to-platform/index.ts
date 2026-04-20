@@ -227,6 +227,51 @@ async function postToThreads(accessToken: string, content: string): Promise<{ su
   }
 }
 
+async function postToFacebook(
+  pageAccessToken: string,
+  pageId: string,
+  content: string,
+  imageUrl?: string,
+  videoUrl?: string,
+): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  try {
+    let endpoint: string;
+    const params = new URLSearchParams({ access_token: pageAccessToken });
+
+    if (videoUrl) {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/videos`;
+      params.set("file_url", videoUrl);
+      if (content) params.set("description", content);
+    } else if (imageUrl) {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/photos`;
+      params.set("url", imageUrl);
+      if (content) params.set("caption", content);
+    } else {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`;
+      params.set("message", content);
+    }
+
+    const res = await fetch(endpoint, { method: "POST", body: params });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[Facebook] Post failed:", res.status, errText);
+      return { success: false, error: `Facebook post failed (${res.status}): ${errText}` };
+    }
+
+    const data = await res.json();
+    // photos returns { id, post_id }; feed returns { id }; videos returns { id }
+    const rawId = data.post_id || data.id;
+    const postId = typeof rawId === "string" ? rawId : String(rawId);
+    const permalink = postId ? `https://www.facebook.com/${postId}` : undefined;
+
+    console.log("[Facebook] Post created successfully:", postId);
+    return { success: true, post_id: postId, permalink };
+  } catch (err) {
+    console.error("[Facebook] Unexpected error:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown Facebook error" };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
