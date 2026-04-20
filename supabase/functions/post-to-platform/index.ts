@@ -376,21 +376,33 @@ Deno.serve(async (req) => {
           );
         }
 
-        const pageToken = await decryptToken(igConn.access_token);
-        // The token stored for IG is already a Page Access Token. Resolve the page id via /me.
-        const meRes = await fetch(`https://graph.facebook.com/v18.0/me?access_token=${pageToken}`);
-        if (!meRes.ok) {
-          const t = await meRes.text();
-          console.error("[Facebook] /me lookup failed:", meRes.status, t);
+        const savedToken = await decryptToken(igConn.access_token);
+
+        // The token saved during IG OAuth may be a User Access Token. To post to a Page,
+        // we need to exchange it for a Page Access Token via /me/accounts.
+        const accountsRes = await fetch(
+          `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${savedToken}`
+        );
+        if (!accountsRes.ok) {
+          const t = await accountsRes.text();
+          console.error("[Facebook] /me/accounts lookup failed:", accountsRes.status, t);
           return new Response(
-            JSON.stringify({ error: "Couldn't resolve your Facebook Page from the saved Instagram token. Please reconnect Instagram/Facebook in Settings." }),
+            JSON.stringify({ error: "Couldn't list your Facebook Pages. Please reconnect Instagram/Facebook in Settings and grant pages_manage_posts + pages_read_engagement." }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        const me = await meRes.json();
-        accessToken = pageToken;
-        fbPageId = me.id;
-        console.log("[Facebook] Resolved page id from IG token:", fbPageId);
+        const accountsData = await accountsRes.json();
+        const firstPage = accountsData?.data?.[0];
+        if (!firstPage?.id || !firstPage?.access_token) {
+          console.error("[Facebook] No managed pages found:", JSON.stringify(accountsData));
+          return new Response(
+            JSON.stringify({ error: "No Facebook Pages found on your account. Make sure your account manages a Page and reconnect to grant page publishing permissions." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        accessToken = firstPage.access_token;
+        fbPageId = firstPage.id;
+        console.log("[Facebook] Resolved page from /me/accounts:", fbPageId, firstPage.name);
       } else {
         return new Response(
           JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
