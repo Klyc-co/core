@@ -49,11 +49,62 @@ const visualStyles = [
   },
 ];
 
+// ── Google Gemini Direct API ──────────────────────────────────────────────────
+async function generateImageDirect(
+  apiKey: string,
+  businessContext: string,
+  stylePrompt: string,
+): Promise<string | null> {
+  const fullPrompt = `Generate one photographic image. Vertical 9:16 aspect ratio. Subject: a premium visual representing a ${businessContext}. Photographic style: ${stylePrompt}. No text overlays, no watermarks, no logos, no borders. Photorealistic only.`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+          }),
+        },
+      );
+
+      if (response.status === 429) {
+        const wait = 2000 * (attempt + 1);
+        console.warn(`Rate limited attempt ${attempt + 1}, waiting ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+
+      if (!response.ok) {
+        console.error(`Image gen failed: ${response.status}`);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+
+      const data = await response.json();
+      const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inline_data);
+      if (imagePart?.inline_data) {
+        return `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
+      }
+
+      console.warn(`Attempt ${attempt + 1}: no image in response, retrying`);
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (e) {
+      console.error(`Attempt ${attempt + 1} error:`, e);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  return null;
+}
+
+// ── Lovable AI Gateway ────────────────────────────────────────────────────────
 function extractImageUrl(data: any): string | null {
   const msg = data?.choices?.[0]?.message;
   if (!msg) return null;
 
-  // Path 1: images array (standard Lovable gateway response)
   if (Array.isArray(msg.images)) {
     for (const img of msg.images) {
       const url = img?.image_url?.url || img?.url;
@@ -61,7 +112,6 @@ function extractImageUrl(data: any): string | null {
     }
   }
 
-  // Path 2: content array with image parts
   if (Array.isArray(msg.content)) {
     for (const part of msg.content) {
       if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
@@ -75,10 +125,10 @@ function extractImageUrl(data: any): string | null {
   return null;
 }
 
-async function generateImage(
+async function generateImageGateway(
   apiKey: string,
   businessContext: string,
-  stylePrompt: string
+  stylePrompt: string,
 ): Promise<string | null> {
   const fullPrompt = `Generate one photographic image. Vertical 9:16 aspect ratio. Subject: a premium visual representing a ${businessContext}. Photographic style: ${stylePrompt}. No text overlays, no watermarks, no logos, no borders. Photorealistic only.`;
 
@@ -97,7 +147,7 @@ async function generateImage(
             messages: [{ role: "user", content: fullPrompt }],
             modalities: ["image", "text"],
           }),
-        }
+        },
       );
 
       if (response.status === 429) {
@@ -127,6 +177,18 @@ async function generateImage(
   return null;
 }
 
+// ── Unified caller — auto-detects key type ────────────────────────────────────
+async function generateImage(
+  apiKey: string,
+  businessContext: string,
+  stylePrompt: string,
+): Promise<string | null> {
+  if (apiKey.startsWith("AIzaSy")) {
+    return generateImageDirect(apiKey, businessContext, stylePrompt);
+  }
+  return generateImageGateway(apiKey, businessContext, stylePrompt);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -134,8 +196,9 @@ serve(async (req) => {
 
   try {
     const { businessContext } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // Prefer GEMINI_API_KEY (Google direct), fall back to LOVABLE_API_KEY
+    const API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+    if (!API_KEY) throw new Error("GEMINI_API_KEY or LOVABLE_API_KEY not configured");
     if (!businessContext) throw new Error("businessContext is required");
 
     // Generate in 2 batches of 4 with stagger to avoid rate limits
@@ -145,9 +208,9 @@ serve(async (req) => {
     const results1 = await Promise.all(
       batch1.map(async (style, idx) => {
         if (idx > 0) await new Promise((r) => setTimeout(r, idx * 600));
-        const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
+        const imageUrl = await generateImage(API_KEY, businessContext, style.prompt);
         return { id: style.id, imageUrl };
-      })
+      }),
     );
 
     await new Promise((r) => setTimeout(r, 1500));
@@ -155,9 +218,9 @@ serve(async (req) => {
     const results2 = await Promise.all(
       batch2.map(async (style, idx) => {
         if (idx > 0) await new Promise((r) => setTimeout(r, idx * 600));
-        const imageUrl = await generateImage(LOVABLE_API_KEY, businessContext, style.prompt);
+        const imageUrl = await generateImage(API_KEY, businessContext, style.prompt);
         return { id: style.id, imageUrl };
-      })
+      }),
     );
 
     return new Response(JSON.stringify({ success: true, styles: [...results1, ...results2] }), {
@@ -167,7 +230,7 @@ serve(async (req) => {
     console.error("generate-style-previews error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
