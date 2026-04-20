@@ -168,6 +168,8 @@ serve(async (req) => {
     let instagramAccountId = null;
     let instagramUsername = null;
     let pageAccessToken = null;
+    let facebookPageId: string | null = null;
+    let facebookPageName: string | null = null;
 
     for (const page of pagesData.data) {
       const igResponse = await fetch(
@@ -179,6 +181,8 @@ serve(async (req) => {
         if (igData.instagram_business_account) {
           instagramAccountId = igData.instagram_business_account.id;
           pageAccessToken = page.access_token;
+          facebookPageId = page.id;
+          facebookPageName = page.name || null;
           
           // Get Instagram username
           const usernameResponse = await fetch(
@@ -190,9 +194,17 @@ serve(async (req) => {
           }
           
           console.log("Found Instagram Business Account:", instagramAccountId, instagramUsername);
+          console.log("Linked Facebook Page:", facebookPageId, facebookPageName);
           break;
         }
       }
+    }
+
+    // Fallback: if no IG link, still grab the first page so Facebook publishing works on its own
+    if (!facebookPageId && pagesData.data.length > 0) {
+      facebookPageId = pagesData.data[0].id;
+      facebookPageName = pagesData.data[0].name || null;
+      pageAccessToken = pagesData.data[0].access_token;
     }
 
     if (!instagramAccountId) {
@@ -251,6 +263,48 @@ serve(async (req) => {
       );
     if (cpcError) {
       console.error("client_platform_connections upsert error:", cpcError);
+    }
+
+    // Also save Facebook page connection so we can publish to the linked FB Page
+    if (facebookPageId && pageAccessToken) {
+      const encryptedPageToken = await encryptToken(pageAccessToken);
+
+      const { error: fbSocialErr } = await supabase
+        .from("social_connections")
+        .upsert(
+          {
+            user_id: userId,
+            platform: "facebook",
+            access_token: encryptedPageToken,
+            refresh_token: facebookPageId,
+            token_expires_at: tokenExpiresAt,
+            platform_user_id: facebookPageId,
+            platform_username: facebookPageName,
+            scopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts"],
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,platform" }
+        );
+      if (fbSocialErr) console.error("Facebook social_connections upsert error:", fbSocialErr);
+
+      const { error: fbCpcErr } = await supabase
+        .from("client_platform_connections")
+        .upsert(
+          {
+            client_id: userId,
+            platform: "facebook",
+            access_token: encryptedPageToken,
+            refresh_token: facebookPageId,
+            token_expires_at: tokenExpiresAt,
+            status: "active",
+            connected_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "client_id,platform" }
+        );
+      if (fbCpcErr) console.error("Facebook client_platform_connections upsert error:", fbCpcErr);
+
+      console.log("Facebook Page connection saved:", facebookPageId, facebookPageName);
     }
 
     console.log("Instagram Graph API connection saved successfully for user:", userId);
