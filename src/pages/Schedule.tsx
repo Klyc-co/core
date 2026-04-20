@@ -224,6 +224,7 @@ const Schedule = () => {
           contentType: platform,
           platform,
           status: c.status,
+          postUrl: null,
           raw: c,
         };
       });
