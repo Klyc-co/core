@@ -79,7 +79,7 @@ serve(async (req) => {
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     // Request business_management for New Pages Experience / Business Suite managed pages
-    authUrl.searchParams.set("scope", "pages_show_list,pages_read_engagement,instagram_basic,instagram_content_publish,business_management");
+    authUrl.searchParams.set("scope", "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,business_management");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", encodedState);
     authUrl.searchParams.set("display", "page");
