@@ -292,38 +292,58 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: connection } = await serviceClient
-      .from("client_platform_connections")
-      .select("id, status, access_token, refresh_token, token_expires_at")
-      .eq("client_id", userId)
-      .eq("platform", platform.toLowerCase())
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (!connection) {
-      return new Response(
-        JSON.stringify({ error: `No active connection for ${platform}. Please connect your account first.` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Decrypt the stored token
-    const accessToken = await decryptToken(connection.access_token);
     const platformLower = platform.toLowerCase();
+
+    // Instagram tokens live in `social_connections` (Meta OAuth flow stores them there).
+    // Other platforms use `client_platform_connections`.
+    let accessToken: string | null = null;
+    let igUserId: string | null = null;
+
+    if (platformLower === "instagram") {
+      const { data: socialConn } = await serviceClient
+        .from("social_connections")
+        .select("access_token, platform_user_id")
+        .eq("user_id", userId)
+        .eq("platform", "instagram")
+        .maybeSingle();
+
+      if (!socialConn) {
+        return new Response(
+          JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      accessToken = await decryptToken(socialConn.access_token);
+      igUserId = socialConn.platform_user_id;
+    } else {
+      const { data: connection } = await serviceClient
+        .from("client_platform_connections")
+        .select("id, status, access_token, refresh_token, token_expires_at")
+        .eq("client_id", userId)
+        .eq("platform", platformLower)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!connection) {
+        return new Response(
+          JSON.stringify({ error: `No active connection for ${platform}. Please connect your account first.` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      accessToken = await decryptToken(connection.access_token);
+    }
 
     let result: { success: boolean; post_id?: string; permalink?: string; error?: string };
 
     if (platformLower === "linkedin") {
-      result = await postToLinkedIn(accessToken, content);
+      result = await postToLinkedIn(accessToken!, content);
     } else if (platformLower === "threads") {
-      result = await postToThreads(accessToken, content);
+      result = await postToThreads(accessToken!, content);
     } else if (platformLower === "instagram") {
-      // For Instagram, refresh_token holds the IG Business Account ID (set in instagram-oauth-callback)
-      const igUserId = connection.refresh_token;
       if (!igUserId) {
         result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
       } else {
-        result = await postToInstagram(accessToken, igUserId, content, image_url, video_url);
+        result = await postToInstagram(accessToken!, igUserId, content, image_url, video_url);
       }
     } else {
       // Other platforms remain mock
