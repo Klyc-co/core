@@ -69,10 +69,11 @@ async function generateImageNB(
       }
 
       const data = await response.json();
-      const imageUrl = data.data?.outputImageUrls?.[0];
+      // Nano Banana sync response: { success, imageUrls: [...], creditsUsed, ... }
+      const imageUrl = data.imageUrls?.[0] || data.data?.outputImageUrls?.[0] || data.data?.imageUrls?.[0];
       if (imageUrl) return imageUrl;
 
-      console.warn(`Attempt ${attempt + 1}: no image URL in response`);
+      console.warn(`Attempt ${attempt + 1}: no image URL in response`, JSON.stringify(data).slice(0, 200));
       await new Promise((r) => setTimeout(r, 1500));
     } catch (e) {
       console.error(`Attempt ${attempt + 1} error:`, e);
