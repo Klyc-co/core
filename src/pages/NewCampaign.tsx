@@ -475,75 +475,56 @@ const NewCampaign = () => {
     }
   };
 
-  const handleLaunchCampaign = async () => {
+  const validateBasics = (requireSchedule: boolean) => {
     if (!campaignName.trim()) {
-      toast({
-        title: "Post name required",
-        description: "Please enter a post name",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Post name required", description: "Please enter a post name", variant: "destructive" });
+      return false;
     }
-
     if (selectedPlatforms.length === 0) {
-      toast({
-        title: "Select platforms",
-        description: "Please select at least one platform to post to",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Select platforms", description: "Please select at least one platform to post to", variant: "destructive" });
+      return false;
     }
-
     const unconnected = selectedPlatforms.filter(p => !platformConnections[p]);
     if (unconnected.length > 0) {
-      toast({
-        title: "Platforms not connected",
-        description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`,
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Platforms not connected", description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`, variant: "destructive" });
+      return false;
     }
-
-    if (!scheduledDate) {
-      toast({
-        title: "Select date",
-        description: "Please select a date for your post",
-        variant: "destructive",
-      });
-      return;
+    if (requireSchedule && !scheduledDate) {
+      toast({ title: "Select date", description: "Please select a date for your post", variant: "destructive" });
+      return false;
     }
-
-    // Instagram requires media — text-only posts will fail at the Graph API
+    if (requireSchedule && !scheduledTime) {
+      toast({ title: "Select time", description: "Please select a time for your post", variant: "destructive" });
+      return false;
+    }
     if (selectedPlatforms.includes("instagram") && libraryAssets.length === 0) {
       toast({
         title: "Image required for Instagram",
-        description: "Instagram posts must include an image or video. Please upload media before scheduling.",
+        description: "Instagram posts must include an image or video. Please upload media before posting.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
+    return true;
+  };
 
-    if (!scheduledTime) {
-      toast({
-        title: "Select time",
-        description: "Please select a time for your post",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user) return;
-
-    setIsLaunching(true);
-    
-    // Separate video and image URLs from library assets
+  const splitMedia = () => {
     const videoAsset = libraryAssets.find(a => {
       const ext = a.url.split('.').pop()?.toLowerCase() || '';
       return ['mp4', 'mov', 'webm', 'avi'].includes(ext) || a.name.match(/\.(mp4|mov|webm|avi)$/i);
     });
     const imageAssets = libraryAssets.filter(a => a !== videoAsset);
+    return { videoAsset, imageAssets };
+  };
 
+  const handleSchedulePost = async () => {
+    if (!validateBasics(true)) return;
+    if (!user) return;
+
+    setIsLaunching(true);
+    const { videoAsset, imageAssets } = splitMedia();
     const effectiveClientId = getEffectiveUserId();
+
     const { error } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       client_id: effectiveClientId || user.id,
@@ -552,7 +533,7 @@ const NewCampaign = () => {
       links: links,
       tags: tags,
       platforms: selectedPlatforms,
-      scheduled_date: format(scheduledDate, "yyyy-MM-dd"),
+      scheduled_date: format(scheduledDate!, "yyyy-MM-dd"),
       scheduled_time: scheduledTime,
       status: "scheduled",
       video_url: videoAsset?.url || null,
@@ -561,24 +542,56 @@ const NewCampaign = () => {
       post_caption: postCaption || campaignName.trim(),
     });
 
+    setIsLaunching(false);
+
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to schedule post. Please try again.",
-        variant: "destructive",
-      });
-      setIsLaunching(false);
+      toast({ title: "Error", description: "Failed to schedule post. Please try again.", variant: "destructive" });
       return;
     }
-    
-    // Post to connected platforms immediately
-    const contentToPost = postCaption || campaignName.trim();
-    const postResults: { platform: string; success: boolean; permalink?: string; error?: string }[] = [];
 
+    toast({
+      title: "Post Scheduled! 🗓️",
+      description: `"${campaignName}" will publish on ${format(scheduledDate!, "PPP")} at ${scheduledTime}`,
+    });
+    navigate("/campaigns/schedule");
+  };
+
+  const handlePostNow = async () => {
+    if (!validateBasics(false)) return;
+    if (!user) return;
+
+    setIsLaunching(true);
+    const { videoAsset, imageAssets } = splitMedia();
+    const effectiveClientId = getEffectiveUserId();
+    const contentToPost = postCaption || campaignName.trim();
+
+    const { data: campaignRow } = await supabase.from("scheduled_campaigns").insert({
+      user_id: user.id,
+      client_id: effectiveClientId || user.id,
+      campaign_name: campaignName.trim(),
+      product: selectedProduct || null,
+      links: links,
+      tags: tags,
+      platforms: selectedPlatforms,
+      scheduled_date: format(new Date(), "yyyy-MM-dd"),
+      scheduled_time: format(new Date(), "HH:mm:ss"),
+      status: "publishing",
+      video_url: videoAsset?.url || null,
+      image_url: imageAssets[0]?.url || null,
+      media_urls: libraryAssets.map(a => a.url),
+      post_caption: contentToPost,
+    }).select().single();
+
+    const postResults: { platform: string; success: boolean; permalink?: string; error?: string }[] = [];
     for (const platformId of selectedPlatforms) {
       try {
         const { data, error: fnError } = await supabase.functions.invoke("post-to-platform", {
-          body: { platform: platformId, content: contentToPost },
+          body: {
+            platform: platformId,
+            content: contentToPost,
+            imageUrl: imageAssets[0]?.url || null,
+            videoUrl: videoAsset?.url || null,
+          },
         });
         if (fnError) {
           postResults.push({ platform: platformId, success: false, error: fnError.message });
@@ -595,10 +608,17 @@ const NewCampaign = () => {
     const succeeded = postResults.filter(r => r.success);
     const failed = postResults.filter(r => !r.success);
 
+    if (campaignRow?.id) {
+      await supabase
+        .from("scheduled_campaigns")
+        .update({ status: failed.length === 0 ? "published" : succeeded.length > 0 ? "partial" : "failed" })
+        .eq("id", campaignRow.id);
+    }
+
     if (succeeded.length > 0) {
       const linkedinResult = succeeded.find(r => r.platform === "linkedin");
       toast({
-        title: "Post Launched! 🚀",
+        title: "Posted! 🚀",
         description: (
           <div className="space-y-1">
             <p>Posted to {succeeded.map(r => r.platform).join(", ")}!</p>
@@ -611,7 +631,6 @@ const NewCampaign = () => {
         ),
       });
     }
-
     if (failed.length > 0) {
       toast({
         title: "Some platforms failed",
@@ -620,15 +639,8 @@ const NewCampaign = () => {
       });
     }
 
-    if (succeeded.length === 0 && failed.length === 0) {
-      toast({
-        title: "Post Scheduled! 🚀",
-        description: `Your post "${campaignName}" has been scheduled for ${format(scheduledDate, "PPP")} at ${scheduledTime}`,
-      });
-    }
-    
     setIsLaunching(false);
-    navigate("/campaigns/schedule");
+    if (succeeded.length > 0) navigate("/campaigns/schedule");
   };
 
   return (
