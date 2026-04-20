@@ -8,23 +8,26 @@ const corsHeaders = {
 
 // ── Lane Lock ─────────────────────────────────────────────────────────────────
 const AGENT_ID = "image";
-const AGENT_VERSION = "v21";
+const AGENT_VERSION = "v22";
 const PERMITTED_LANES = new Set(["image"]);
-const GEMINI_IMAGE_MODEL = "google/gemini-2.5-flash-image";
 const STORAGE_BUCKET = "generated-images";
+
+// Lovable AI Gateway (used when key is a Lovable AQ. token)
 const LOVABLE_AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LOVABLE_IMAGE_MODEL = "google/gemini-2.5-flash-image";
+
+// Google Gemini Direct API (used when key starts with AIzaSy)
+const GOOGLE_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const GOOGLE_IMAGE_MODEL = "gemini-2.0-flash-exp";
 
 // ── KNP σo envelope builder ───────────────────────────────────────────────────
-// All returns from this submind MUST be wrapped in a KNP σo envelope.
-// The caller (klyc-orchestrator / normalizer) is responsible for unpacking σo
-// back to full JSON for the C-lane client.
 function knpEnvelope(sigmaO: unknown, elapsedMs: number, confidence = 0.95): Record<string, unknown> {
   return {
-    "σo": sigmaO,           // Compressed output — image URL(s) only
-    "δi": AGENT_ID,         // Identity stamp
-    "κw": confidence,       // Confidence weight
-    "τt": new Date().toISOString(), // Timestamp
-    "ρs": `generate-image∷${AGENT_VERSION}`, // Source
+    "σo": sigmaO,
+    "δi": AGENT_ID,
+    "κw": confidence,
+    "τt": new Date().toISOString(),
+    "ρs": `generate-image∷${AGENT_VERSION}`,
     "knp": "Ψ3",
     "elapsed_ms": elapsedMs,
   };
@@ -57,12 +60,10 @@ async function uploadToStorage(
   const bytes = base64ToUint8Array(base64Data);
   const ext = mimeType.split("/")[1] || "png";
   const fileName = `campaign-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
   const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, bytes, {
     contentType: mimeType, upsert: true,
   });
   if (error) throw new Error(`Storage upload failed: ${(error as Error).message}`);
-
   const { data: urlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
   return urlData.publicUrl;
 }
@@ -73,32 +74,60 @@ async function shortenUrl(longUrl: string): Promise<string> {
     if (!resp.ok) return longUrl;
     const short = await resp.text();
     return short.startsWith("https://") ? short : longUrl;
-  } catch {
-    return longUrl;
-  }
+  } catch { return longUrl; }
 }
 
-async function callGemini(
+// ── Google Gemini Direct API ──────────────────────────────────────────────────
+async function callGeminiDirect(
+  apiKey: string, prompt: string, referenceImages: string[] = [],
+): Promise<{ base64: string; mimeType: string }> {
+  const parts: any[] = [];
+  for (const img of referenceImages) {
+    const match = img.match(/^data:([^;]+);base64,(.+)$/);
+    if (match) {
+      parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+    }
+  }
+  parts.push({ text: prompt });
+
+  const response = await fetch(
+    `${GOOGLE_GEMINI_BASE}/${GOOGLE_IMAGE_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "unknown");
+    throw new Error(`Gemini API ${response.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inline_data);
+  if (!imagePart?.inline_data) throw new Error("No image returned from Gemini API");
+  return { base64: imagePart.inline_data.data, mimeType: imagePart.inline_data.mime_type };
+}
+
+// ── Lovable AI Gateway ────────────────────────────────────────────────────────
+async function callLovableGateway(
   apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
   const contentParts: any[] = [];
-
-  // Add reference images as image_url parts
   for (const img of referenceImages) {
     contentParts.push({ type: "image_url", image_url: { url: img } });
   }
-
-  // Add text prompt
   contentParts.push({ type: "text", text: prompt });
 
   const response = await fetch(LOVABLE_AI_GATEWAY, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: GEMINI_IMAGE_MODEL,
+      model: LOVABLE_IMAGE_MODEL,
       messages: [{ role: "user", content: contentParts }],
       modalities: ["image", "text"],
     }),
@@ -112,11 +141,19 @@ async function callGemini(
   const data = await response.json();
   const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   if (!imageResult) throw new Error("No image returned from AI gateway");
-
-  // Extract base64 data from data URL
   const match = imageResult.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error("Unexpected image format from AI gateway");
   return { base64: match[2], mimeType: match[1] };
+}
+
+// ── Unified caller — auto-detects key type ────────────────────────────────────
+async function generateImage(
+  apiKey: string, prompt: string, referenceImages: string[] = [],
+): Promise<{ base64: string; mimeType: string }> {
+  if (apiKey.startsWith("AIzaSy")) {
+    return callGeminiDirect(apiKey, prompt, referenceImages);
+  }
+  return callLovableGateway(apiKey, prompt, referenceImages);
 }
 
 async function normalizeReferenceImage(imageUrl: string): Promise<string | null> {
@@ -147,11 +184,11 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    // ── Health ────────────────────────────────────────────────────────────────
     if (body.action === "health") {
       return new Response(JSON.stringify({
         status: "ok", agent: AGENT_ID, version: AGENT_VERSION,
-        "δi": AGENT_ID, lane: "image", model: GEMINI_IMAGE_MODEL,
+        "δi": AGENT_ID, lane: "image",
+        models: { google_direct: GOOGLE_IMAGE_MODEL, lovable_gateway: LOVABLE_IMAGE_MODEL },
         permitted_lanes: [...PERMITTED_LANES],
         platforms: Object.keys(PLATFORM_SIZES),
         knp_envelope: "σo wrapped — all returns compressed",
@@ -159,15 +196,16 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── List models (simplified — gateway doesn't expose model listing) ──────
     if (body.action === "list-models") {
       return new Response(JSON.stringify({
-        image_models: [{ name: GEMINI_IMAGE_MODEL, via: "Lovable AI Gateway" }],
-        total: 1,
+        image_models: [
+          { name: GOOGLE_IMAGE_MODEL, via: "Google Gemini Direct (AIzaSy key)" },
+          { name: LOVABLE_IMAGE_MODEL, via: "Lovable AI Gateway (AQ. key)" },
+        ],
+        total: 2,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Lane lock ─────────────────────────────────────────────────────────────
     const requestedLane = body.lane as string | undefined;
     if (requestedLane && !PERMITTED_LANES.has(requestedLane)) {
       return new Response(JSON.stringify({
@@ -176,16 +214,15 @@ serve(async (req) => {
       }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    // Prefer GEMINI_API_KEY (Google direct), fall back to LOVABLE_API_KEY
+    const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("GEMINI_API_KEY or LOVABLE_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // ── Resolve prompt ────────────────────────────────────────────────────────
-    // Accepts KNP envelope (ξb = brief, θc = context, μp = platform)
     const briefRaw = body["ξb"] || body.prompt || "";
     const prompt = String(briefRaw).trim();
     const clientContext = String(body["θc"] || "").trim();
@@ -197,14 +234,12 @@ serve(async (req) => {
       ), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Reference images
     const rawRefs: string[] = body.referenceImages || [];
     const inspirationRaw: string = body.inspirationImageUrl || "";
     const normalizedRefs = (await Promise.all(rawRefs.map(u => normalizeReferenceImage(u)))).filter(Boolean) as string[];
     const inspirationNorm = await normalizeReferenceImage(inspirationRaw);
     if (inspirationNorm && !normalizedRefs.includes(inspirationNorm)) normalizedRefs.unshift(inspirationNorm);
 
-    // ── Single image mode (KNP lane dispatch OR directWidth/Height) ───────────
     const directWidth = body.width as number | undefined;
     const directHeight = body.height as number | undefined;
     const isKnpDispatch = requestedLane === "image";
@@ -215,19 +250,15 @@ serve(async (req) => {
         ? `Generate a high-quality marketing image with a ${directWidth}x${directHeight} aspect ratio.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`
         : `Generate a high-quality marketing campaign image for ${platform}.${contextStr} ${normalizedRefs.length ? "Use the attached reference images to incorporate the product/subject. " : ""}${prompt}`;
 
-      const { base64, mimeType } = await callGemini(apiKey, aspectPrompt, normalizedRefs);
+      const { base64, mimeType } = await generateImage(apiKey, aspectPrompt, normalizedRefs);
       const publicUrl = await uploadToStorage(supabase, base64, mimeType);
       const imageUrl = await shortenUrl(publicUrl);
 
-      // ── KNP σo compressed return ──────────────────────────────────────────
-      // σo contains only the essential output: the image URL.
-      // Caller (orchestrator/normalizer) unpacks σo and expands to full client JSON.
       return new Response(JSON.stringify(
         knpEnvelope(imageUrl, Date.now() - start)
       ), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── Multi-platform mode ───────────────────────────────────────────────────
     const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
     const sigmaOImages: Record<string, string> = {};
     let totalImages = 0;
@@ -238,18 +269,16 @@ serve(async (req) => {
       if (!size) { errors.push(`Unknown platform: ${plt}`); continue; }
       try {
         const platformPrompt = `Generate a high-quality ${size.label} marketing image (${size.width}x${size.height} aspect ratio). ${normalizedRefs.length ? "Use the attached reference images. " : ""}${prompt}`;
-        const { base64, mimeType } = await callGemini(apiKey, platformPrompt, normalizedRefs);
+        const { base64, mimeType } = await generateImage(apiKey, platformPrompt, normalizedRefs);
         const publicUrl = await uploadToStorage(supabase, base64, mimeType);
         const imageUrl = await shortenUrl(publicUrl);
         totalImages++;
-        sigmaOImages[plt] = imageUrl; // σo: platform → URL only
+        sigmaOImages[plt] = imageUrl;
       } catch (err: any) {
         errors.push(`${plt}: ${err.message}`);
       }
     }
 
-    // ── KNP σo compressed return (multi-platform) ─────────────────────────────
-    // σo = { platform: imageUrl } — minimal. Caller expands with size/label/model metadata.
     return new Response(JSON.stringify(
       { ...knpEnvelope(sigmaOImages, Date.now() - start), totalImages, ...(errors.length ? { errors } : {}) }
     ), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
