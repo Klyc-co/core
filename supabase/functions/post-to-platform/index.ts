@@ -259,7 +259,10 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { platform, content, image_url, video_url } = await req.json();
+    const body = await req.json();
+    const { platform, content } = body;
+    const image_url = body.image_url ?? body.imageUrl ?? null;
+    const video_url = body.video_url ?? body.videoUrl ?? null;
 
     if (!platform || typeof platform !== "string") {
       return new Response(
