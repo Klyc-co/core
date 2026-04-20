@@ -410,6 +410,19 @@ const Schedule = () => {
                                 {item.title}
                               </p>
 
+                              {/* Show post button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mb-3 h-8 text-xs gap-1.5"
+                                disabled={!item.postUrl}
+                                onClick={() => item.postUrl && window.open(item.postUrl, "_blank", "noopener,noreferrer")}
+                                title={item.postUrl ? "Open post on platform" : "Post URL not available yet"}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Show post
+                              </Button>
+
                               {/* Status + actions */}
                               <div className="flex items-center justify-between">
                                 <Badge
