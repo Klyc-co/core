@@ -884,11 +884,11 @@ const NewCampaign = () => {
             </div>
           )}
 
-          {/* Platform selection fallback if none passed */}
-          {selectedPlatforms.length === 0 && (
+          {/* Platform selection — always available so users can switch/add platforms */}
+          {(
             <div className="space-y-4">
               <Label>Select Platforms to Post</Label>
-              <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post</p>
+              <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post. Click to toggle.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {socialPlatforms.map((platform) => (
                   <Card
