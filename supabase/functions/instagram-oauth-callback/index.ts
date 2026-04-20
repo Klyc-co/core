@@ -219,7 +219,7 @@ serve(async (req) => {
           token_expires_at: tokenExpiresAt,
           platform_user_id: instagramAccountId,
           platform_username: instagramUsername,
-          scopes: ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+          scopes: ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
           updated_at: new Date().toISOString(),
         },
         {
