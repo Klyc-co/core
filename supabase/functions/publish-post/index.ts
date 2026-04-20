@@ -131,18 +131,26 @@ serve(async (req) => {
     // Process each platform target
     for (const target of targets) {
       const platform = target.platform.toLowerCase();
-      const connection = connectionMap.get(platform);
+      const connection = connectionMap.get(platform)
+        ?? (platform === "facebook" ? connectionMap.get("instagram") : undefined);
 
       if (!connection) {
         results.push({
           platform: target.platform,
           success: false,
-          error: "No connection found for this platform",
+            error: platform === "facebook"
+              ? "No Facebook or Instagram connection found for this platform"
+              : "No connection found for this platform",
         });
         
         await supabaseAdmin
           .from("post_platform_targets")
-          .update({ status: "failed", error_message: "No connection found" })
+            .update({
+              status: "failed",
+              error_message: platform === "facebook"
+                ? "No Facebook or Instagram connection found"
+                : "No connection found",
+            })
           .eq("id", target.id);
         
         continue;
