@@ -232,16 +232,40 @@ serve(async (req) => {
       throw new Error(`Failed to save connection: ${upsertError.message}`);
     }
 
+    // Also write to client_platform_connections so the in-app PlatformPostActions UI
+    // recognizes the platform as "Connected" without a schema migration.
+    const { error: cpcError } = await supabase
+      .from("client_platform_connections")
+      .upsert(
+        {
+          client_id: userId,
+          platform: "instagram",
+          access_token: encryptedAccessToken,
+          refresh_token: instagramAccountId,
+          token_expires_at: tokenExpiresAt,
+          status: "active",
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "client_id,platform" }
+      );
+    if (cpcError) {
+      console.error("client_platform_connections upsert error:", cpcError);
+    }
+
     console.log("Instagram Graph API connection saved successfully for user:", userId);
 
+    // Build redirect URL preserving any existing query string in returnPath
+    const sep = returnPath.includes("?") ? "&" : "?";
     return Response.redirect(
-      `${FRONTEND_URL}/campaigns/new?oauth_success=instagram`,
+      `${FRONTEND_URL}${returnPath}${sep}oauth_success=instagram`,
       302
     );
   } catch (err) {
     console.error("Instagram OAuth callback error:", err);
+    const sep = (typeof (globalThis as any).returnPath === "string") ? "?" : "?";
     return Response.redirect(
-      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
+      `${FRONTEND_URL}/campaigns/new${sep}oauth_error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
       302
     );
   }
