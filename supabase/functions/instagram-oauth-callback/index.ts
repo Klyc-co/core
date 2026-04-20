@@ -232,13 +232,13 @@ serve(async (req) => {
     console.log("Instagram Graph API connection saved successfully for user:", userId);
 
     return Response.redirect(
-      `${FRONTEND_URL}/campaigns/new?success=instagram`,
+      `${FRONTEND_URL}/campaigns/new?oauth_success=instagram`,
       302
     );
   } catch (err) {
     console.error("Instagram OAuth callback error:", err);
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
       302
     );
   }
