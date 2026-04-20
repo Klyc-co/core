@@ -317,19 +317,122 @@ async function publishToTwitter(post: any, _connection: any): Promise<{ success:
 }
 
 async function publishToFacebook(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
-  // Facebook Graph API posting
   console.log("Publishing to Facebook:", post.post_text?.substring(0, 50));
-  
-  // TODO: Implement Facebook Graph API call
-  return { success: false, error: "Facebook posting not yet implemented - copy content manually" };
+
+  try {
+    const accessToken = await decryptToken(connection.access_token);
+    const pageId = connection.refresh_token || connection.platform_user_id;
+    const content = post.post_text || post.campaign_idea || "";
+
+    if (!pageId) {
+      return { success: false, error: "Facebook Page ID missing. Please reconnect Facebook." };
+    }
+
+    let endpoint: string;
+    const params = new URLSearchParams({ access_token: accessToken });
+
+    if (post.video_url) {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/videos`;
+      params.set("file_url", post.video_url);
+      if (content) params.set("description", content);
+    } else if (post.image_url) {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/photos`;
+      params.set("url", post.image_url);
+      if (content) params.set("caption", content);
+    } else {
+      endpoint = `https://graph.facebook.com/v18.0/${pageId}/feed`;
+      params.set("message", content);
+    }
+
+    const res = await fetch(endpoint, { method: "POST", body: params });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[Facebook] Post failed:", res.status, errText);
+      return { success: false, error: `Facebook post failed (${res.status}): ${errText}` };
+    }
+
+    const data = await res.json();
+    return { success: true, postId: data.post_id || data.id };
+  } catch (error: unknown) {
+    console.error("Facebook publish error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown Facebook error" };
+  }
 }
 
 async function publishToInstagram(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
-  // Instagram Graph API (requires business account)
   console.log("Publishing to Instagram:", post.post_text?.substring(0, 50));
-  
-  // TODO: Implement Instagram API call (requires media container creation)
-  return { success: false, error: "Instagram posting not yet implemented - copy content manually" };
+
+  try {
+    const accessToken = await decryptToken(connection.access_token);
+    const igUserId = connection.refresh_token || connection.platform_user_id;
+    const content = post.post_text || post.campaign_idea || "";
+
+    if (!igUserId) {
+      return { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
+    }
+
+    if (!post.image_url && !post.video_url) {
+      return { success: false, error: "Instagram requires an image or video." };
+    }
+
+    const params = new URLSearchParams({
+      caption: content,
+      access_token: accessToken,
+    });
+
+    if (post.video_url) {
+      params.set("media_type", "REELS");
+      params.set("video_url", post.video_url);
+    } else {
+      params.set("image_url", post.image_url);
+    }
+
+    const createRes = await fetch(`https://graph.facebook.com/v18.0/${igUserId}/media`, {
+      method: "POST",
+      body: params,
+    });
+
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      console.error("[Instagram] Container creation failed:", createRes.status, errText);
+      return { success: false, error: `Instagram container failed (${createRes.status}): ${errText}` };
+    }
+
+    const createData = await createRes.json();
+    const containerId = createData.id;
+    if (!containerId) return { success: false, error: "Instagram: No container ID returned" };
+
+    if (post.video_url) {
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const statusRes = await fetch(`https://graph.facebook.com/v18.0/${containerId}?fields=status_code&access_token=${accessToken}`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.status_code === "FINISHED") break;
+          if (statusData.status_code === "ERROR") {
+            return { success: false, error: "Instagram video processing failed" };
+          }
+        }
+      }
+    }
+
+    const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igUserId}/media_publish`, {
+      method: "POST",
+      body: new URLSearchParams({ creation_id: containerId, access_token: accessToken }),
+    });
+
+    if (!publishRes.ok) {
+      const errText = await publishRes.text();
+      console.error("[Instagram] Publish failed:", publishRes.status, errText);
+      return { success: false, error: `Instagram publish failed (${publishRes.status}): ${errText}` };
+    }
+
+    const publishData = await publishRes.json();
+    return { success: true, postId: publishData.id };
+  } catch (error: unknown) {
+    console.error("Instagram publish error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown Instagram error" };
+  }
 }
 
 async function publishToLinkedIn(post: any, connection: any): Promise<{ success: boolean; postId?: string; error?: string }> {
