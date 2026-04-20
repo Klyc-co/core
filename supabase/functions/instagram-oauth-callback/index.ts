@@ -24,7 +24,7 @@ serve(async (req) => {
   if (error) {
     console.error("Instagram OAuth error:", error, errorDescription);
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(errorDescription || error)}`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(errorDescription || error)}`,
       302
     );
   }
@@ -32,7 +32,7 @@ serve(async (req) => {
   if (!code || !state) {
     console.error("Missing code or state parameter");
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=Missing+authorization+code`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=Missing+authorization+code`,
       302
     );
   }
