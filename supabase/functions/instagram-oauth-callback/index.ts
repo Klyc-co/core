@@ -265,6 +265,48 @@ serve(async (req) => {
       console.error("client_platform_connections upsert error:", cpcError);
     }
 
+    // Also save Facebook page connection so we can publish to the linked FB Page
+    if (facebookPageId && pageAccessToken) {
+      const encryptedPageToken = await encryptToken(pageAccessToken);
+
+      const { error: fbSocialErr } = await supabase
+        .from("social_connections")
+        .upsert(
+          {
+            user_id: userId,
+            platform: "facebook",
+            access_token: encryptedPageToken,
+            refresh_token: facebookPageId,
+            token_expires_at: tokenExpiresAt,
+            platform_user_id: facebookPageId,
+            platform_username: facebookPageName,
+            scopes: ["pages_show_list", "pages_read_engagement", "pages_manage_posts"],
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,platform" }
+        );
+      if (fbSocialErr) console.error("Facebook social_connections upsert error:", fbSocialErr);
+
+      const { error: fbCpcErr } = await supabase
+        .from("client_platform_connections")
+        .upsert(
+          {
+            client_id: userId,
+            platform: "facebook",
+            access_token: encryptedPageToken,
+            refresh_token: facebookPageId,
+            token_expires_at: tokenExpiresAt,
+            status: "active",
+            connected_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "client_id,platform" }
+        );
+      if (fbCpcErr) console.error("Facebook client_platform_connections upsert error:", fbCpcErr);
+
+      console.log("Facebook Page connection saved:", facebookPageId, facebookPageName);
+    }
+
     console.log("Instagram Graph API connection saved successfully for user:", userId);
 
     // Build redirect URL preserving any existing query string in returnPath
