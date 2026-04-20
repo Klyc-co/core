@@ -6,21 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ── Lane Lock ─────────────────────────────────────────────────────────────────
 const AGENT_ID = "image";
-const AGENT_VERSION = "v22";
+const AGENT_VERSION = "v28";
 const PERMITTED_LANES = new Set(["image"]);
 const STORAGE_BUCKET = "generated-images";
 
-// Lovable AI Gateway (used when key is a Lovable AQ. token)
-const LOVABLE_AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const LOVABLE_IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const NB_API_BASE = "https://www.nananobanana.com/api/v1";
+const NB_MODEL = "nano-banana";
+const FALLBACK_NB_KEY = "nb_a938d5cdc362fe2363a0031634e0eef1e1ad4776c1da0433e63d126e37948ba3";
 
-// Google Gemini Direct API (used when key starts with AIzaSy)
-const GOOGLE_GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const GOOGLE_IMAGE_MODEL = "gemini-2.0-flash-exp";
-
-// ── KNP σo envelope builder ───────────────────────────────────────────────────
 function knpEnvelope(sigmaO: unknown, elapsedMs: number, confidence = 0.95): Record<string, unknown> {
   return {
     "σo": sigmaO,
@@ -33,7 +27,24 @@ function knpEnvelope(sigmaO: unknown, elapsedMs: number, confidence = 0.95): Rec
   };
 }
 
-// ── Platform sizes ────────────────────────────────────────────────────────────
+function sanitizeKey(raw: string | undefined): string {
+  if (!raw) return "";
+  return raw.replace(/[^\x20-\x7E]/g, "").trim();
+}
+
+function resolveApiKey(): string {
+  const fromEnv = sanitizeKey(
+    Deno.env.get("NB_API_KEY") ||
+    Deno.env.get("NANO_BANANA_KEY") ||
+    Deno.env.get("GEMINI_API_KEY") ||
+    Deno.env.get("LOVABLE_API_KEY")
+  );
+  if (fromEnv.startsWith("nb_"))    return fromEnv;
+  if (fromEnv.startsWith("AIzaSy")) return fromEnv;
+  if (fromEnv.startsWith("AQ."))    return fromEnv;
+  return FALLBACK_NB_KEY;
+}
+
 const PLATFORM_SIZES: Record<string, { width: number; height: number; label: string }> = {
   linkedin:  { width: 1200, height: 627,  label: "LinkedIn Feed" },
   twitter:   { width: 1200, height: 675,  label: "X/Twitter Post" },
@@ -44,7 +55,6 @@ const PLATFORM_SIZES: Record<string, { width: number; height: number; label: str
   story:     { width: 1080, height: 1920, label: "Story (IG/FB)" },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function base64ToUint8Array(base64: string): Uint8Array {
   const binaryStr = atob(base64);
   const bytes = new Uint8Array(binaryStr.length);
@@ -58,7 +68,7 @@ async function uploadToStorage(
   mimeType: string,
 ): Promise<string> {
   const bytes = base64ToUint8Array(base64Data);
-  const ext = mimeType.split("/")[1] || "png";
+  const ext = mimeType.split("/")[1]?.split("+")[0] || "jpg";
   const fileName = `campaign-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, bytes, {
     contentType: mimeType, upsert: true,
@@ -77,67 +87,102 @@ async function shortenUrl(longUrl: string): Promise<string> {
   } catch { return longUrl; }
 }
 
-// ── Google Gemini Direct API ──────────────────────────────────────────────────
+// ── Nano Banana API ──────────────────────────────────────────────────────────
+async function callNanoBanana(
+  apiKey: string,
+  prompt: string,
+  referenceImageUrls: string[] = [],
+): Promise<{ base64: string; mimeType: string }> {
+  const body: Record<string, unknown> = {
+    prompt,
+    selectedModel: NB_MODEL,
+    mode: "sync",
+  };
+  const webRefs = referenceImageUrls.filter(u => /^https?:\/\//i.test(u));
+  if (webRefs.length > 0) body.referenceImageUrls = webRefs;
+
+  const response = await fetch(`${NB_API_BASE}/generate`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "unknown");
+    throw new Error(`NanoBanana API ${response.status}: ${errText.slice(0, 400)}`);
+  }
+
+  const data = await response.json();
+  // Sync response: { success, generationId, imageUrls: [...], creditsUsed, remainingCredits }
+  // Async poll response: { data: { outputImageUrls: [...] } }
+  const imageUrl = data.imageUrls?.[0] || data.data?.outputImageUrls?.[0] || data.data?.imageUrls?.[0];
+  if (!imageUrl) throw new Error(`NanoBanana returned no image URL. Response: ${JSON.stringify(data).slice(0, 200)}`);
+
+  // Fetch image from Cloudflare R2 and convert to base64 for Supabase storage
+  const imgResp = await fetch(imageUrl);
+  if (!imgResp.ok) throw new Error(`Failed to fetch generated image: ${imgResp.status}`);
+  const imgBuf = await imgResp.arrayBuffer();
+  const imgBytes = new Uint8Array(imgBuf);
+  let binary = "";
+  for (let i = 0; i < imgBytes.length; i += 0x8000)
+    binary += String.fromCharCode(...imgBytes.subarray(i, i + 0x8000));
+  const base64 = btoa(binary);
+  const mimeType = (imgResp.headers.get("content-type") || "image/png").split(";")[0];
+  return { base64, mimeType };
+}
+
+// ── Google Gemini Direct ─────────────────────────────────────────────────────
 async function callGeminiDirect(
   apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
   const parts: any[] = [];
   for (const img of referenceImages) {
     const match = img.match(/^data:([^;]+);base64,(.+)$/);
-    if (match) {
-      parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
-    }
+    if (match) parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
   }
   parts.push({ text: prompt });
-
-  const response = await fetch(
-    `${GOOGLE_GEMINI_BASE}/${GOOGLE_IMAGE_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
-      }),
-    },
-  );
-
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts }],
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+    }),
+  });
   if (!response.ok) {
     const errText = await response.text().catch(() => "unknown");
-    throw new Error(`Gemini API ${response.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`Gemini API ${response.status}: ${errText.slice(0, 400)}`);
   }
-
   const data = await response.json();
   const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inline_data);
   if (!imagePart?.inline_data) throw new Error("No image returned from Gemini API");
   return { base64: imagePart.inline_data.data, mimeType: imagePart.inline_data.mime_type };
 }
 
-// ── Lovable AI Gateway ────────────────────────────────────────────────────────
+// ── Lovable Gateway ──────────────────────────────────────────────────────────
 async function callLovableGateway(
   apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
   const contentParts: any[] = [];
-  for (const img of referenceImages) {
-    contentParts.push({ type: "image_url", image_url: { url: img } });
-  }
+  for (const img of referenceImages) contentParts.push({ type: "image_url", image_url: { url: img } });
   contentParts.push({ type: "text", text: prompt });
-
-  const response = await fetch(LOVABLE_AI_GATEWAY, {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: LOVABLE_IMAGE_MODEL,
+      model: "google/gemini-2.5-flash-image",
       messages: [{ role: "user", content: contentParts }],
       modalities: ["image", "text"],
     }),
   });
-
   if (!response.ok) {
     const errText = await response.text().catch(() => "unknown");
-    throw new Error(`AI Gateway ${response.status}: ${errText.slice(0, 300)}`);
+    throw new Error(`AI Gateway ${response.status}: ${errText.slice(0, 400)}`);
   }
-
   const data = await response.json();
   const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   if (!imageResult) throw new Error("No image returned from AI gateway");
@@ -146,13 +191,12 @@ async function callLovableGateway(
   return { base64: match[2], mimeType: match[1] };
 }
 
-// ── Unified caller — auto-detects key type ────────────────────────────────────
+// ── Unified caller ──────────────────────────────────────────────────────────
 async function generateImage(
   apiKey: string, prompt: string, referenceImages: string[] = [],
 ): Promise<{ base64: string; mimeType: string }> {
-  if (apiKey.startsWith("AIzaSy")) {
-    return callGeminiDirect(apiKey, prompt, referenceImages);
-  }
+  if (apiKey.startsWith("nb_"))    return callNanoBanana(apiKey, prompt, referenceImages);
+  if (apiKey.startsWith("AIzaSy")) return callGeminiDirect(apiKey, prompt, referenceImages);
   return callLovableGateway(apiKey, prompt, referenceImages);
 }
 
@@ -185,24 +229,13 @@ serve(async (req) => {
     const body = await req.json();
 
     if (body.action === "health") {
+      const apiKey = resolveApiKey();
       return new Response(JSON.stringify({
         status: "ok", agent: AGENT_ID, version: AGENT_VERSION,
-        "δi": AGENT_ID, lane: "image",
-        models: { google_direct: GOOGLE_IMAGE_MODEL, lovable_gateway: LOVABLE_IMAGE_MODEL },
-        permitted_lanes: [...PERMITTED_LANES],
-        platforms: Object.keys(PLATFORM_SIZES),
-        knp_envelope: "σo wrapped — all returns compressed",
+        key_source: apiKey === FALLBACK_NB_KEY ? "hardcoded_fallback" : "env_var",
+        key_type: apiKey.startsWith("nb_") ? "nano_banana" : apiKey.startsWith("AIzaSy") ? "google_direct" : "lovable_gateway",
+        model: NB_MODEL,
         timestamp: new Date().toISOString(),
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    if (body.action === "list-models") {
-      return new Response(JSON.stringify({
-        image_models: [
-          { name: GOOGLE_IMAGE_MODEL, via: "Google Gemini Direct (AIzaSy key)" },
-          { name: LOVABLE_IMAGE_MODEL, via: "Lovable AI Gateway (AQ. key)" },
-        ],
-        total: 2,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -210,14 +243,10 @@ serve(async (req) => {
     if (requestedLane && !PERMITTED_LANES.has(requestedLane)) {
       return new Response(JSON.stringify({
         error: `Lane violation: [${AGENT_ID}] only serves [${[...PERMITTED_LANES].join(", ")}]. Requested: ${requestedLane}`,
-        "δi": AGENT_ID, lane_requested: requestedLane, permitted_lanes: [...PERMITTED_LANES],
       }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Prefer GEMINI_API_KEY (Google direct), fall back to LOVABLE_API_KEY
-    const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("GEMINI_API_KEY or LOVABLE_API_KEY not configured");
-
+    const apiKey = resolveApiKey();
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -230,7 +259,7 @@ serve(async (req) => {
 
     if (!prompt) {
       return new Response(JSON.stringify(
-        knpEnvelope({ error: "Image prompt required (ξb or prompt field)" }, Date.now() - start, 0)
+        knpEnvelope({ error: "Image prompt required" }, Date.now() - start, 0)
       ), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -253,10 +282,8 @@ serve(async (req) => {
       const { base64, mimeType } = await generateImage(apiKey, aspectPrompt, normalizedRefs);
       const publicUrl = await uploadToStorage(supabase, base64, mimeType);
       const imageUrl = await shortenUrl(publicUrl);
-
-      return new Response(JSON.stringify(
-        knpEnvelope(imageUrl, Date.now() - start)
-      ), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(knpEnvelope(imageUrl, Date.now() - start)),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const platforms: string[] = body.platforms || Object.keys(PLATFORM_SIZES);
