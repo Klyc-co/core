@@ -1080,17 +1080,27 @@ const NewCampaign = () => {
             </Button>
             <Button
               size="lg"
+              variant="outline"
               className="w-full"
-              onClick={handleLaunchCampaign}
+              onClick={handlePostNow}
               disabled={isLaunching || (selectedPlatforms.includes("instagram") && libraryAssets.length === 0)}
             >
               {isLaunching ? (
-                <>Scheduling Post...</>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Posting...</>
               ) : (
-                <>
-                  <Rocket className="mr-2 h-5 w-5" />
-                  Launch Post
-                </>
+                <><Send className="mr-2 h-5 w-5" /> Post Now</>
+              )}
+            </Button>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleSchedulePost}
+              disabled={isLaunching || (selectedPlatforms.includes("instagram") && libraryAssets.length === 0)}
+            >
+              {isLaunching ? (
+                <>Scheduling...</>
+              ) : (
+                <><CalendarIcon className="mr-2 h-5 w-5" /> Schedule for Later</>
               )}
             </Button>
           </div>
