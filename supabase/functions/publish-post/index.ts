@@ -328,9 +328,42 @@ async function publishToFacebook(post: any, connection: any): Promise<{ success:
   console.log("Publishing to Facebook:", post.post_text?.substring(0, 50));
 
   try {
-    const accessToken = await decryptToken(connection.access_token);
-    const pageId = connection.refresh_token || connection.platform_user_id;
+    let accessToken = await decryptToken(connection.access_token);
+    let pageId = connection.platform === "facebook"
+      ? (connection.refresh_token || connection.platform_user_id)
+      : null;
     const content = post.post_text || post.campaign_idea || "";
+
+    if (!pageId) {
+      const accountsRes = await fetch(
+        `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${accessToken}`
+      );
+
+      if (accountsRes.ok) {
+        const accountsData = await accountsRes.json();
+        const firstPage = accountsData?.data?.[0];
+
+        if (firstPage?.id && firstPage?.access_token) {
+          pageId = firstPage.id;
+          accessToken = firstPage.access_token;
+        }
+      } else {
+        const accountsError = await accountsRes.text();
+        console.error("[Facebook] /me/accounts lookup failed:", accountsRes.status, accountsError);
+
+        const meRes = await fetch(
+          `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`
+        );
+
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          pageId = meData?.id || null;
+        } else {
+          const meError = await meRes.text();
+          console.error("[Facebook] /me lookup failed:", meRes.status, meError);
+        }
+      }
+    }
 
     if (!pageId) {
       return { success: false, error: "Facebook Page ID missing. Please reconnect Facebook." };
