@@ -109,12 +109,27 @@ serve(async (req) => {
       .select("*")
       .eq("user_id", post.user_id);
 
+    const { data: clientConnections, error: clientConnError } = await fetchClient
+      .from("client_platform_connections")
+      .select("*")
+      .eq("client_id", post.user_id)
+      .in("platform", ["facebook", "instagram"])
+      .eq("status", "active");
+
     if (connError) {
       console.error("Error fetching connections:", connError);
     }
 
+    if (clientConnError) {
+      console.error("Error fetching client platform connections:", clientConnError);
+    }
+
     const connectionMap = new Map(
       (connections || []).map((c: { platform: string }) => [c.platform.toLowerCase(), c])
+    );
+
+    const clientConnectionMap = new Map(
+      (clientConnections || []).map((c: { platform: string }) => [c.platform.toLowerCase(), c])
     );
 
     // Use service role for updates
@@ -132,7 +147,10 @@ serve(async (req) => {
     for (const target of targets) {
       const platform = target.platform.toLowerCase();
       const connection = connectionMap.get(platform)
-        ?? (platform === "facebook" ? connectionMap.get("instagram") : undefined);
+        ?? clientConnectionMap.get(platform)
+        ?? (platform === "facebook"
+          ? connectionMap.get("instagram") ?? clientConnectionMap.get("instagram")
+          : undefined);
 
       if (!connection) {
         results.push({
