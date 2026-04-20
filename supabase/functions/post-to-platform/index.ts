@@ -72,6 +72,98 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
   return { success: true, post_id: postId || undefined, permalink };
 }
 
+async function postToInstagram(
+  pageAccessToken: string,
+  igUserId: string,
+  content: string,
+  imageUrl?: string,
+  videoUrl?: string,
+): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  try {
+    if (!imageUrl && !videoUrl) {
+      return { success: false, error: "Instagram requires an image_url or video_url (text-only posts are not supported by the Instagram Graph API)." };
+    }
+
+    // Step 1: Create media container
+    const params = new URLSearchParams({
+      caption: content,
+      access_token: pageAccessToken,
+    });
+    if (videoUrl) {
+      params.set("media_type", "REELS");
+      params.set("video_url", videoUrl);
+    } else if (imageUrl) {
+      params.set("image_url", imageUrl);
+    }
+
+    const createRes = await fetch(
+      `https://graph.facebook.com/v18.0/${igUserId}/media`,
+      { method: "POST", body: params }
+    );
+
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      console.error("[Instagram] Container creation failed:", createRes.status, errText);
+      return { success: false, error: `Instagram container failed (${createRes.status}): ${errText}` };
+    }
+
+    const createData = await createRes.json();
+    const containerId = createData.id;
+    if (!containerId) return { success: false, error: "Instagram: No container ID returned" };
+
+    // Step 2: For videos/reels, poll status until FINISHED
+    if (videoUrl) {
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const statusRes = await fetch(
+          `https://graph.facebook.com/v18.0/${containerId}?fields=status_code&access_token=${pageAccessToken}`
+        );
+        if (statusRes.ok) {
+          const s = await statusRes.json();
+          if (s.status_code === "FINISHED") break;
+          if (s.status_code === "ERROR") return { success: false, error: "Instagram video processing failed" };
+        }
+      }
+    }
+
+    // Step 3: Publish container
+    const publishRes = await fetch(
+      `https://graph.facebook.com/v18.0/${igUserId}/media_publish`,
+      {
+        method: "POST",
+        body: new URLSearchParams({ creation_id: containerId, access_token: pageAccessToken }),
+      }
+    );
+
+    if (!publishRes.ok) {
+      const errText = await publishRes.text();
+      console.error("[Instagram] Publish failed:", publishRes.status, errText);
+      return { success: false, error: `Instagram publish failed (${publishRes.status}): ${errText}` };
+    }
+
+    const publishData = await publishRes.json();
+    const postId = publishData.id;
+
+    // Fetch permalink
+    let permalink: string | undefined;
+    if (postId) {
+      const linkRes = await fetch(
+        `https://graph.facebook.com/v18.0/${postId}?fields=permalink&access_token=${pageAccessToken}`
+      );
+      if (linkRes.ok) {
+        const linkData = await linkRes.json();
+        permalink = linkData.permalink;
+      }
+    }
+
+    console.log("[Instagram] Post created successfully:", postId);
+    return { success: true, post_id: postId, permalink };
+  } catch (err) {
+    console.error("[Instagram] Unexpected error:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown Instagram error" };
+  }
+}
+
 async function postToThreads(accessToken: string, content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
   try {
     // Step 1: Create a media container
@@ -167,7 +259,7 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { platform, content } = await req.json();
+    const { platform, content, image_url, video_url } = await req.json();
 
     if (!platform || typeof platform !== "string") {
       return new Response(
@@ -225,6 +317,14 @@ Deno.serve(async (req) => {
       result = await postToLinkedIn(accessToken, content);
     } else if (platformLower === "threads") {
       result = await postToThreads(accessToken, content);
+    } else if (platformLower === "instagram") {
+      // For Instagram, refresh_token holds the IG Business Account ID (set in instagram-oauth-callback)
+      const igUserId = connection.refresh_token;
+      if (!igUserId) {
+        result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
+      } else {
+        result = await postToInstagram(accessToken, igUserId, content, image_url, video_url);
+      }
     } else {
       // Other platforms remain mock
       console.log(`[post-to-platform] Mock post to ${platform} by user ${userId}`);
