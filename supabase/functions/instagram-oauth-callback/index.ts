@@ -38,9 +38,12 @@ serve(async (req) => {
   }
 
   try {
-    // Decode the state to get user_id
+    // Decode the state to get user_id and return path
     const decodedState = JSON.parse(atob(state));
     const userId = decodedState.user_id;
+    const returnPath: string = (typeof decodedState.return_path === "string" && decodedState.return_path.startsWith("/"))
+      ? decodedState.return_path
+      : "/campaigns/new";
 
     if (!userId) {
       throw new Error("Invalid state: missing user_id");
