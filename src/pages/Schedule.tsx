@@ -22,6 +22,7 @@ import {
   Pencil,
   Loader2,
   CalendarDays,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -64,6 +65,7 @@ type CalendarItem = {
   contentType: string;
   platform: string;
   status: string;
+  postUrl: string | null;
   raw: ScheduledPost | ScheduledCampaign;
 };
 
@@ -74,6 +76,23 @@ const platformMeta: Record<string, { icon: React.ReactNode; label: string; color
   youtube: { icon: <Youtube className="w-3.5 h-3.5" />, label: "Video", color: "text-[#FF0000]" },
   blog: { icon: <Globe className="w-3.5 h-3.5" />, label: "Blog", color: "text-muted-foreground" },
   email: { icon: <Mail className="w-3.5 h-3.5" />, label: "Email", color: "text-muted-foreground" },
+};
+
+const buildPlatformPostUrl = (platform: string, platformPostId: string | null): string | null => {
+  if (!platformPostId) return null;
+  const p = platform.toLowerCase();
+  if (p.includes("linkedin")) {
+    // platformPostId is typically the URN like urn:li:share:1234 or activity id
+    const id = platformPostId.replace(/^urn:li:(share|activity|ugcPost):/i, "");
+    return `https://www.linkedin.com/feed/update/urn:li:activity:${id}/`;
+  }
+  if (p.includes("instagram")) return `https://www.instagram.com/p/${platformPostId}/`;
+  if (p.includes("facebook")) return `https://www.facebook.com/${platformPostId}`;
+  if (p.includes("youtube")) return `https://www.youtube.com/watch?v=${platformPostId}`;
+  if (p.includes("twitter") || p.includes("x")) return `https://x.com/i/web/status/${platformPostId}`;
+  if (p.includes("tiktok")) return `https://www.tiktok.com/video/${platformPostId}`;
+  if (p.includes("threads")) return `https://www.threads.net/post/${platformPostId}`;
+  return null;
 };
 
 const detectPlatform = (contentType: string): string => {
@@ -95,6 +114,7 @@ const Schedule = () => {
   const [loading, setLoading] = useState(true);
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [targetsByPostId, setTargetsByPostId] = useState<Record<string, { platform: string; platform_post_id: string | null; status: string }[]>>({});
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
@@ -134,6 +154,23 @@ const Schedule = () => {
 
       setPosts((postsRes.data as ScheduledPost[]) || []);
       setCampaigns((campaignsRes.data as ScheduledCampaign[]) || []);
+
+      const postIds = (postsRes.data || []).map((p: any) => p.id);
+      if (postIds.length > 0) {
+        const { data: targets } = await supabase
+          .from("post_platform_targets")
+          .select("post_queue_id, platform, platform_post_id, status")
+          .in("post_queue_id", postIds);
+        const map: Record<string, { platform: string; platform_post_id: string | null; status: string }[]> = {};
+        for (const t of targets || []) {
+          if (!map[t.post_queue_id]) map[t.post_queue_id] = [];
+          map[t.post_queue_id].push({ platform: t.platform, platform_post_id: t.platform_post_id, status: t.status });
+        }
+        setTargetsByPostId(map);
+      } else {
+        setTargetsByPostId({});
+      }
+
       setLoading(false);
     };
     fetchAll();
@@ -143,18 +180,25 @@ const Schedule = () => {
   const itemsForDay = (day: Date): CalendarItem[] => {
     const postItems: CalendarItem[] = posts
       .filter((p) => p.scheduled_at && isSameDay(new Date(p.scheduled_at), day))
-      .map((p) => ({
-        id: p.id,
-        type: "post" as const,
-        title: p.post_text?.slice(0, 120) || p.content_type,
-        time: p.scheduled_at ? format(new Date(p.scheduled_at), "h:mma").toLowerCase() : "",
-        imageUrl: p.image_url,
-        videoUrl: p.video_url,
-        contentType: p.content_type,
-        platform: detectPlatform(p.content_type),
-        status: p.status,
-        raw: p,
-      }));
+      .map((p) => {
+        const platform = detectPlatform(p.content_type);
+        const targets = targetsByPostId[p.id] || [];
+        const matched = targets.find((t) => t.platform.toLowerCase().includes(platform)) || targets[0];
+        const postUrl = matched ? buildPlatformPostUrl(matched.platform, matched.platform_post_id) : null;
+        return {
+          id: p.id,
+          type: "post" as const,
+          title: p.post_text?.slice(0, 120) || p.content_type,
+          time: p.scheduled_at ? format(new Date(p.scheduled_at), "h:mma").toLowerCase() : "",
+          imageUrl: p.image_url,
+          videoUrl: p.video_url,
+          contentType: p.content_type,
+          platform,
+          status: p.status,
+          postUrl,
+          raw: p,
+        };
+      });
 
     const campaignItems: CalendarItem[] = campaigns
       .filter((c) => isSameDay(new Date(c.scheduled_date + "T00:00:00"), day))
@@ -180,6 +224,7 @@ const Schedule = () => {
           contentType: platform,
           platform,
           status: c.status,
+          postUrl: null,
           raw: c,
         };
       });
@@ -364,6 +409,19 @@ const Schedule = () => {
                               <p className="text-sm text-foreground leading-relaxed line-clamp-4 mb-3">
                                 {item.title}
                               </p>
+
+                              {/* Show post button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mb-3 h-8 text-xs gap-1.5"
+                                disabled={!item.postUrl}
+                                onClick={() => item.postUrl && window.open(item.postUrl, "_blank", "noopener,noreferrer")}
+                                title={item.postUrl ? "Open post on platform" : "Post URL not available yet"}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Show post
+                              </Button>
 
                               {/* Status + actions */}
                               <div className="flex items-center justify-between">
