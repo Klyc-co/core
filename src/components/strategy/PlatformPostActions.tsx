@@ -105,7 +105,11 @@ export default function PlatformPostActions({ platform, generatedContent }: Plat
     if (oauthConfig) {
       setConnecting(true);
       try {
-        const returnPath = window.location.pathname + window.location.search + window.location.hash;
+        const currentPath = window.location.pathname + window.location.search + window.location.hash;
+        // Avoid bouncing back to generic landing pages after OAuth — prefer the campaigns page
+        const returnPath = (window.location.pathname === "/" || window.location.pathname === "/home")
+          ? "/campaigns/new"
+          : currentPath;
         const body = platformKey === "linkedin"
           ? { redirect_uri: window.location.origin + window.location.pathname, returnPath }
           : { originUrl: window.location.origin + returnPath, returnPath };
