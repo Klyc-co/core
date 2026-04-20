@@ -46,7 +46,9 @@ serve(async (req) => {
       );
     }
 
-    const redirectUri = `${supabaseUrl}/functions/v1/instagram-oauth-callback`;
+    // Use the public frontend domain so Meta can validate the redirect against App Domains.
+    // The frontend page at /oauth/instagram/callback forwards code+state to the edge function.
+    const redirectUri = "https://klyc.ai/oauth/instagram/callback";
     
     // Create state parameter with user ID
     const state = JSON.stringify({
