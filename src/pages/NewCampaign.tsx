@@ -516,11 +516,12 @@ const NewCampaign = () => {
     setIsLaunching(true);
     const { videoAsset, imageAssets } = splitMedia();
     const effectiveClientId = getEffectiveUserId();
+    const effectiveName = campaignName.trim() || `Post ${format(new Date(), "PPp")}`;
 
     const { error } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       client_id: effectiveClientId || user.id,
-      campaign_name: campaignName.trim(),
+      campaign_name: effectiveName,
       product: selectedProduct || null,
       links: links,
       tags: tags,
@@ -531,7 +532,7 @@ const NewCampaign = () => {
       video_url: videoAsset?.url || null,
       image_url: imageAssets[0]?.url || null,
       media_urls: libraryAssets.map(a => a.url),
-      post_caption: postCaption || campaignName.trim(),
+      post_caption: postCaption || effectiveName,
     });
 
     setIsLaunching(false);
@@ -543,7 +544,7 @@ const NewCampaign = () => {
 
     toast({
       title: "Post Scheduled! 🗓️",
-      description: `"${campaignName}" will publish on ${format(scheduledDate!, "PPP")} at ${scheduledTime}`,
+      description: `"${effectiveName}" will publish on ${format(scheduledDate!, "PPP")} at ${scheduledTime}`,
     });
     navigate("/campaigns/schedule");
   };
