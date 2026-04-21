@@ -63,6 +63,31 @@ interface BrandAssetImage {
   value: string;
 }
 
+// Build a comprehensive signature string from a supabase.functions.invoke result.
+// Handles all supabase-js v2 error shapes:
+//   - Old style: error.message contains the full body string
+//   - New style (v2.4.4+): error.context is a Response object — must read body
+//   - Parsed style: error.context is already a plain object
+async function buildInvokeSig(e: any, d: any): Promise<string> {
+  let sig = "";
+  if (d) sig += JSON.stringify(d);
+  if (e) {
+    sig += String(e.message ?? "");
+    const ctx = e.context;
+    if (ctx) {
+      if (typeof ctx === "object" && typeof ctx.text === "function") {
+        // context is a Response — read the raw body text
+        try { sig += await ctx.text(); } catch { /* ignore read errors */ }
+      } else {
+        sig += JSON.stringify(ctx);
+      }
+    }
+  }
+  return sig;
+}
+
+const GHOST_SIGS = ["Bucket not found", "Storage upload failed", "v28", "generate-image\u2237v28"];
+
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
@@ -206,15 +231,19 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           body.referenceImages = base64Images;
         }
 
-        // Retry up to 4x to bypass stale v28 ghost instances (Storage upload / Bucket not found)
+        // Retry up to 6x to bypass stale v28 ghost instances.
+        // Root cause: Supabase Deno warm instances can run old code (AGENT_VERSION=28) with
+        // storage upload logic that no longer exists. We detect ghost responses and retry.
+        // Note: supabase-js v2.4.4+ stores error body in e.context (Response), NOT e.message —
+        // buildInvokeSig() reads the Response body text to handle all supabase-js shapes.
         let imageData: any = null;
         let imageError: any = null;
-        for (let attempt = 1; attempt <= 4; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
           const { data: d, error: e } = await supabase.functions.invoke("generate-image", { body });
-          const sig = JSON.stringify(e ?? d ?? "");
-          if (sig.includes("Bucket not found") || sig.includes("v28") || sig.includes("Storage upload failed")) {
-            console.warn(`generate-image: stale ghost detected (attempt ${attempt}), retrying...`);
-            if (attempt < 4) await new Promise(r => setTimeout(r, 1500));
+          const sig = await buildInvokeSig(e, d);
+          if (GHOST_SIGS.some(s => sig.includes(s))) {
+            console.warn(`generate-image: v28 ghost detected (attempt ${attempt}/6), retrying...`);
+            if (attempt < 6) await new Promise(r => setTimeout(r, 300));
             continue;
           }
           imageData = d;
