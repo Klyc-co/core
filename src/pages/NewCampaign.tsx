@@ -844,42 +844,66 @@ const NewCampaign = () => {
                             <span className="text-sm text-muted-foreground">No content preview available</span>
                           </div>
                         )}
-                        {platformId === "instagram" && !previewImage && (
-                          <div className="rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
-                            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
-                              ⚠️ Instagram requires an image or video
-                            </p>
-                            <p className="text-[11px] text-amber-700 dark:text-amber-300">
-                              Text-only posts can't be published to Instagram. Upload media to continue.
-                            </p>
-                            <label htmlFor="ig-media-upload" className="block">
-                              <input
-                                id="ig-media-upload"
-                                type="file"
-                                accept="image/*,video/*"
-                                multiple
-                                className="hidden"
-                                onChange={handleFileUpload}
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={isUploading}
-                                className="w-full gap-2 border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                                asChild
-                              >
-                                <span className="cursor-pointer">
-                                  {isUploading ? (
-                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
-                                  ) : (
-                                    <><Upload className="h-3.5 w-3.5" /> Upload image or video</>
-                                  )}
-                                </span>
-                              </Button>
-                            </label>
-                          </div>
-                        )}
+                        {/* Per-platform upload control */}
+                        {(() => {
+                          const requiresMedia = ["instagram", "tiktok", "snapchat", "youtube"].includes(platformId);
+                          const missingRequired = requiresMedia && !previewImage;
+                          const inputId = `media-upload-${platformId}`;
+                          return (
+                            <div
+                              className={`rounded-lg border-2 border-dashed p-3 space-y-2 ${
+                                missingRequired
+                                  ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
+                                  : "border-border bg-muted/30"
+                              }`}
+                            >
+                              {missingRequired ? (
+                                <>
+                                  <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                                    ⚠️ {platform.name} requires an image or video
+                                  </p>
+                                  <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                                    Text-only posts can't be published to {platform.name}. Upload media to continue.
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-[11px] text-muted-foreground">
+                                  {previewImage ? `Add or replace media for ${platform.name}` : `Upload an image or video for ${platform.name}`}
+                                </p>
+                              )}
+                              <label htmlFor={inputId} className="block">
+                                <input
+                                  id={inputId}
+                                  type="file"
+                                  accept="image/*,video/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={handleFileUpload}
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isUploading}
+                                  className={`w-full gap-2 ${
+                                    missingRequired
+                                      ? "border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                                      : ""
+                                  }`}
+                                  asChild
+                                >
+                                  <span className="cursor-pointer">
+                                    {isUploading ? (
+                                      <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
+                                    ) : (
+                                      <><Upload className="h-3.5 w-3.5" /> {previewImage ? "Replace media" : "Upload image or video"}</>
+                                    )}
+                                  </span>
+                                </Button>
+                              </label>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </Card>
                   );
