@@ -165,7 +165,7 @@ const Schedule = () => {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("scheduled_campaigns")
-          .select("id, campaign_name, platforms, scheduled_date, scheduled_time, status, image_url, video_url, post_caption")
+          .select("id, campaign_name, platforms, scheduled_date, scheduled_time, status, image_url, video_url, post_caption, permalink")
           .eq("user_id", user.id)
           .gte("scheduled_date", fromDate)
           .lt("scheduled_date", toDate)
@@ -244,7 +244,7 @@ const Schedule = () => {
           contentType: platform,
           platform,
           status: c.status,
-          postUrl: null,
+          postUrl: (c as any).permalink || null,
           raw: c,
         };
       });
