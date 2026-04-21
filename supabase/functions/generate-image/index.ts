@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const AGENT_VERSION = 31;
-const DEPLOY_VERSION = 76;
+const DEPLOY_VERSION = 79;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -101,7 +101,8 @@ function extractBrief(body: Record<string, unknown>): string {
     if (typeof v === "string" && v.length > 10) {
       const kl = k.toLowerCase();
       if (!kl.startsWith("platform") && kl !== "count" && kl !== "lane"
-          && !kl.startsWith("raw") && !kl.startsWith("test") && kl !== "nb_key") {
+          && !kl.startsWith("raw") && !kl.startsWith("test") && kl !== "nb_key"
+          && kl !== "model") {
         return v;
       }
     }
@@ -129,7 +130,6 @@ Deno.serve(async (req: Request) => {
   catch (e) { return json({ error: `API key: ${e instanceof Error ? e.message : e}` }, 401); }
 
   const count = Number(body["count"] ?? 1);
-  // Accept both 'platforms' (v18x runImageTest) and 'πf' (legacy runTestRaw/Individual/Composite)
   const platforms = (body["platforms"] as string[] | undefined)
     ?? (body["\u03c0f"] as string[] | undefined)  // πf
     ?? [];
@@ -137,11 +137,6 @@ Deno.serve(async (req: Request) => {
   const isComposite = !!body["composite"];
   const isRaw = body["raw_vs_compressed"] === true;
 
-  // ─────────────────────────────────────────────
-  // COMPOSITE / BATCH path:
-  //   composite:true  OR  count>1 with raw_vs_compressed:false
-  //   Routes to generate-image-composite (10x compression: 1 NB call → N images)
-  // ─────────────────────────────────────────────
   if (isComposite || (!isRaw && effectiveCount > 1)) {
     console.log(`composite path: count=${effectiveCount}, platforms=${platforms.length}`);
     const finalPlatforms = platforms.length >= effectiveCount
@@ -161,14 +156,13 @@ Deno.serve(async (req: Request) => {
         return json({ error: "Composite generation failed", details: compositeData, deployVersion: DEPLOY_VERSION }, 500);
       }
 
-      // Build σo and batch_detail from grid strips
-      const σo: Record<string, string> = {};
+      const sigmaO: Record<string, string> = {};
       const batch_detail: Array<Record<string, unknown>> = [];
       let idx = 0;
       for (const grid of grids) {
         if (grid.success && grid.gridUrl) {
           for (const platform of grid.platforms) {
-            σo[platform] = grid.gridUrl;
+            sigmaO[platform] = grid.gridUrl;
             batch_detail.push({ platform, url: grid.gridUrl, index: idx++ });
           }
         }
@@ -180,7 +174,7 @@ Deno.serve(async (req: Request) => {
 
       return json({
         success: true,
-        σo,
+        sigmaO,
         batch_detail,
         totalImages: batch_detail.length,
         tokens: {
@@ -201,11 +195,6 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // PARALLEL BATCH path:
-  //   count>1 with raw_vs_compressed:true
-  //   Fires N parallel NB calls (demonstrates per-call cost baseline)
-  // ─────────────────────────────────────────────
   if (isRaw && effectiveCount > 1) {
     console.log(`parallel path: count=${effectiveCount}`);
     const finalPlatforms = platforms.length >= effectiveCount
@@ -213,18 +202,16 @@ Deno.serve(async (req: Request) => {
       : Array.from({ length: effectiveCount }, (_, i) => `platform@${i}`);
 
     try {
-      // Fire all NB POST calls in parallel
       const gids = await Promise.all(
         finalPlatforms.map(p => nbPost(apiKey, `${brief} - platform: ${p}`))
       );
-      // Poll all in parallel
       const results = await Promise.all(gids.map(gid => nbPoll(apiKey, gid)));
 
-      const σo: Record<string, string> = {};
+      const sigmaO: Record<string, string> = {};
       const batch_detail: Array<Record<string, unknown>> = [];
       results.forEach((result, i) => {
         if (result.status === "completed" && result.imageUrl) {
-          σo[finalPlatforms[i]] = result.imageUrl;
+          sigmaO[finalPlatforms[i]] = result.imageUrl;
           batch_detail.push({
             platform: finalPlatforms[i],
             url: result.imageUrl,
@@ -236,27 +223,19 @@ Deno.serve(async (req: Request) => {
 
       return json({
         success: true,
-        σo,
+        sigmaO,
         batch_detail,
         totalImages: batch_detail.length,
-        tokens: {
-          tokens_per_image: 1,
-          total: batch_detail.length,
-        },
+        tokens: { tokens_per_image: 1, total: batch_detail.length },
         agentVersion: AGENT_VERSION,
         deployVersion: DEPLOY_VERSION,
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error("parallel batch failed:", msg);
       return json({ error: msg, deployVersion: DEPLOY_VERSION }, 500);
     }
   }
 
-  // ─────────────────────────────────────────────
-  // SINGLE IMAGE path (count=1 or default)
-  //   One NB call, returns both imageUrl (compat) and σo (KNP format)
-  // ─────────────────────────────────────────────
   const platform = platforms[0] ?? String(body["platform"] ?? "generic");
   const prompt = body["test_prompt"]
     ? String(body["test_prompt"])
@@ -271,7 +250,6 @@ Deno.serve(async (req: Request) => {
       return json({
         success: true,
         imageUrl: result.imageUrl,
-        σo: result.imageUrl,        // KNP single-image format (string)
         generationId: gid,
         platform,
         tokens: { tokens_per_image: 1, total: 1 },
