@@ -1,0 +1,1 @@
+ALTER TABLE public.scheduled_campaigns ADD COLUMN IF NOT EXISTS permalink text;

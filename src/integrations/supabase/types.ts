@@ -3637,6 +3637,7 @@ export type Database = {
           image_url: string | null
           links: string[] | null
           media_urls: string[] | null
+          permalink: string | null
           platforms: string[]
           post_caption: string | null
           product: string | null
@@ -3656,6 +3657,7 @@ export type Database = {
           image_url?: string | null
           links?: string[] | null
           media_urls?: string[] | null
+          permalink?: string | null
           platforms?: string[]
           post_caption?: string | null
           product?: string | null
@@ -3675,6 +3677,7 @@ export type Database = {
           image_url?: string | null
           links?: string[] | null
           media_urls?: string[] | null
+          permalink?: string | null
           platforms?: string[]
           post_caption?: string | null
           product?: string | null
