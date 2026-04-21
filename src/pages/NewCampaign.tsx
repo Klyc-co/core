@@ -556,12 +556,13 @@ const NewCampaign = () => {
     setIsLaunching(true);
     const { videoAsset, imageAssets } = splitMedia();
     const effectiveClientId = getEffectiveUserId();
-    const contentToPost = postCaption || campaignName.trim();
+    const fallbackName = campaignName.trim() || `Post ${format(new Date(), "PPp")}`;
+    const contentToPost = postCaption || campaignName.trim() || "";
 
     const { data: campaignRow } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       client_id: effectiveClientId || user.id,
-      campaign_name: campaignName.trim(),
+      campaign_name: fallbackName,
       product: selectedProduct || null,
       links: links,
       tags: tags,
@@ -661,10 +662,12 @@ const NewCampaign = () => {
         <div className="space-y-8">
           {/* Post Name */}
           <div className="space-y-2">
-            <Label htmlFor="campaignName">Post Name</Label>
+            <Label htmlFor="campaignName">
+              Post Name <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
             <Input
               id="campaignName"
-              placeholder="Enter post name"
+              placeholder="Enter post name (optional)"
               value={campaignName}
               onChange={(e) => setCampaignName(e.target.value)}
             />
