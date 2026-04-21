@@ -254,14 +254,6 @@ const NewCampaign = () => {
   };
 
   const handleSendForApproval = async () => {
-    if (!campaignName.trim()) {
-      toast({
-        title: "Post name required",
-        description: "Please enter a post name",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (selectedPlatforms.length === 0) {
       toast({
@@ -524,11 +516,12 @@ const NewCampaign = () => {
     setIsLaunching(true);
     const { videoAsset, imageAssets } = splitMedia();
     const effectiveClientId = getEffectiveUserId();
+    const effectiveName = campaignName.trim() || `Post ${format(new Date(), "PPp")}`;
 
     const { error } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       client_id: effectiveClientId || user.id,
-      campaign_name: campaignName.trim(),
+      campaign_name: effectiveName,
       product: selectedProduct || null,
       links: links,
       tags: tags,
@@ -539,7 +532,7 @@ const NewCampaign = () => {
       video_url: videoAsset?.url || null,
       image_url: imageAssets[0]?.url || null,
       media_urls: libraryAssets.map(a => a.url),
-      post_caption: postCaption || campaignName.trim(),
+      post_caption: postCaption || effectiveName,
     });
 
     setIsLaunching(false);
@@ -551,7 +544,7 @@ const NewCampaign = () => {
 
     toast({
       title: "Post Scheduled! 🗓️",
-      description: `"${campaignName}" will publish on ${format(scheduledDate!, "PPP")} at ${scheduledTime}`,
+      description: `"${effectiveName}" will publish on ${format(scheduledDate!, "PPP")} at ${scheduledTime}`,
     });
     navigate("/campaigns/schedule");
   };
@@ -563,12 +556,13 @@ const NewCampaign = () => {
     setIsLaunching(true);
     const { videoAsset, imageAssets } = splitMedia();
     const effectiveClientId = getEffectiveUserId();
-    const contentToPost = postCaption || campaignName.trim();
+    const fallbackName = campaignName.trim() || `Post ${format(new Date(), "PPp")}`;
+    const contentToPost = postCaption || campaignName.trim() || "";
 
     const { data: campaignRow } = await supabase.from("scheduled_campaigns").insert({
       user_id: user.id,
       client_id: effectiveClientId || user.id,
-      campaign_name: campaignName.trim(),
+      campaign_name: fallbackName,
       product: selectedProduct || null,
       links: links,
       tags: tags,
@@ -668,10 +662,12 @@ const NewCampaign = () => {
         <div className="space-y-8">
           {/* Post Name */}
           <div className="space-y-2">
-            <Label htmlFor="campaignName">Post Name</Label>
+            <Label htmlFor="campaignName">
+              Post Name <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
             <Input
               id="campaignName"
-              placeholder="Enter post name"
+              placeholder="Enter post name (optional)"
               value={campaignName}
               onChange={(e) => setCampaignName(e.target.value)}
             />
