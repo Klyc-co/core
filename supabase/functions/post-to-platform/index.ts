@@ -378,31 +378,55 @@ Deno.serve(async (req) => {
 
         const savedToken = await decryptToken(igConn.access_token);
 
-        // The token saved during IG OAuth may be a User Access Token. To post to a Page,
-        // we need to exchange it for a Page Access Token via /me/accounts.
         const accountsRes = await fetch(
           `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token&access_token=${savedToken}`
         );
-        if (!accountsRes.ok) {
-          const t = await accountsRes.text();
-          console.error("[Facebook] /me/accounts lookup failed:", accountsRes.status, t);
-          return new Response(
-            JSON.stringify({ error: "Couldn't list your Facebook Pages. Please reconnect Instagram/Facebook in Settings and grant pages_manage_posts + pages_read_engagement." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+
+        if (accountsRes.ok) {
+          const accountsData = await accountsRes.json();
+          const firstPage = accountsData?.data?.[0];
+
+          if (!firstPage?.id || !firstPage?.access_token) {
+            console.error("[Facebook] No managed pages found:", JSON.stringify(accountsData));
+            return new Response(
+              JSON.stringify({ error: "No Facebook Pages found on your account. Make sure your account manages a Page and reconnect to grant page publishing permissions." }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          accessToken = firstPage.access_token;
+          fbPageId = firstPage.id;
+          console.log("[Facebook] Resolved page from /me/accounts:", fbPageId, firstPage.name);
+        } else {
+          const accountsError = await accountsRes.text();
+          console.error("[Facebook] /me/accounts lookup failed:", accountsRes.status, accountsError);
+
+          const meRes = await fetch(
+            `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${savedToken}`
           );
+
+          if (!meRes.ok) {
+            const meError = await meRes.text();
+            console.error("[Facebook] /me lookup failed:", meRes.status, meError);
+            return new Response(
+              JSON.stringify({ error: "Couldn't resolve your Facebook Page. Please reconnect Instagram/Facebook in Settings and grant page publishing permissions." }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          const meData = await meRes.json();
+          if (!meData?.id) {
+            console.error("[Facebook] Missing page id from /me response:", JSON.stringify(meData));
+            return new Response(
+              JSON.stringify({ error: "Couldn't determine which Facebook Page to publish to. Please reconnect Instagram/Facebook." }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          accessToken = savedToken;
+          fbPageId = meData.id;
+          console.log("[Facebook] Resolved page directly from /me using stored page token:", fbPageId, meData.name);
         }
-        const accountsData = await accountsRes.json();
-        const firstPage = accountsData?.data?.[0];
-        if (!firstPage?.id || !firstPage?.access_token) {
-          console.error("[Facebook] No managed pages found:", JSON.stringify(accountsData));
-          return new Response(
-            JSON.stringify({ error: "No Facebook Pages found on your account. Make sure your account manages a Page and reconnect to grant page publishing permissions." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        accessToken = firstPage.access_token;
-        fbPageId = firstPage.id;
-        console.log("[Facebook] Resolved page from /me/accounts:", fbPageId, firstPage.name);
       } else {
         return new Response(
           JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
