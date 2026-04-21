@@ -540,13 +540,13 @@ Deno.serve(async (req) => {
 
     const platformLower = platform.toLowerCase();
 
-    // Instagram tokens live in `social_connections` (Meta OAuth flow stores them there).
+    // Instagram, Facebook, and TikTok tokens live in `social_connections` (OAuth callbacks store them there).
     // Other platforms use `client_platform_connections`.
     let accessToken: string | null = null;
     let igUserId: string | null = null;
     let fbPageId: string | null = null;
 
-    if (platformLower === "instagram" || platformLower === "facebook") {
+    if (platformLower === "instagram" || platformLower === "facebook" || platformLower === "tiktok") {
       const { data: socialConn } = await serviceClient
         .from("social_connections")
         .select("access_token, platform_user_id")
@@ -557,7 +557,7 @@ Deno.serve(async (req) => {
       if (socialConn) {
         accessToken = await decryptToken(socialConn.access_token);
         if (platformLower === "instagram") igUserId = socialConn.platform_user_id;
-        else fbPageId = socialConn.platform_user_id;
+        else if (platformLower === "facebook") fbPageId = socialConn.platform_user_id;
       } else if (platformLower === "facebook") {
         // Fallback: reuse the Instagram-linked page token to discover the FB Page ID.
         const { data: igConn } = await serviceClient
@@ -625,6 +625,11 @@ Deno.serve(async (req) => {
           fbPageId = meData.id;
           console.log("[Facebook] Resolved page directly from /me using stored page token:", fbPageId, meData.name);
         }
+      } else if (platformLower === "tiktok") {
+        return new Response(
+          JSON.stringify({ error: "No active TikTok connection. Please connect your TikTok account first." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       } else {
         return new Response(
           JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
