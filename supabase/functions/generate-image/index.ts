@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const AGENT_VERSION = 29;
-const DEPLOY_VERSION = 73;
+const AGENT_VERSION = 31;
+const DEPLOY_VERSION = 76;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +12,10 @@ const CORS = {
 const NB_BASE = "https://www.nananobanana.com/api/v1";
 const NB_MODEL = "nano-banana";
 const POLL_INTERVAL_MS = 4_000;
-const POLL_MAX_ATTEMPTS = 30; // 120s — increased from 80s to handle slower NB generations
+const POLL_MAX_ATTEMPTS = 30; // 120s
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "https://wkqiielsazzbxziqmgdb.supabase.co";
+const COMPOSITE_FN_URL = `${SUPABASE_URL}/functions/v1/generate-image-composite`;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -60,7 +63,6 @@ async function nbPost(apiKey: string, prompt: string): Promise<string> {
   const data = JSON.parse(text) as Record<string, unknown>;
   const gid = String(data["generationId"] ?? "");
   if (!gid) throw new Error(`NB POST missing generationId: ${text.slice(0, 300)}`);
-  console.log(`generationId: ${gid}`);
   return gid;
 }
 
@@ -71,12 +73,11 @@ async function nbPoll(apiKey: string, gid: string): Promise<{ status: string; im
       headers: { "Authorization": `Bearer ${apiKey}` },
     });
     const text = await res.text();
-    console.log(`poll ${i} http=${res.status}:`, text.slice(0, 400));
     if (!res.ok) throw new Error(`NB poll HTTP ${res.status}: ${text.slice(0, 200)}`);
     const d = JSON.parse(text) as Record<string, unknown>;
     const inner = (d["data"] ?? d) as Record<string, unknown>;
     const status = String(inner["processingStatus"] ?? "");
-    console.log(`processingStatus: ${status} (poll ${i}/${POLL_MAX_ATTEMPTS})`);
+    console.log(`poll ${i} status=${status} gid=${gid}`);
     if (status === "completed") {
       const urls = inner["outputImageUrls"] as string[] | undefined;
       return { status, imageUrl: urls?.[0] };
@@ -85,16 +86,16 @@ async function nbPoll(apiKey: string, gid: string): Promise<{ status: string; im
       return { status, errorMessage: String(inner["errorMessage"] ?? "NB generation failed") };
     }
   }
-  return { status: "processing" }; // still running after 120s
+  return { status: "processing" };
 }
 
 function extractBrief(body: Record<string, unknown>): string {
   if (body["test_prompt"]) return String(body["test_prompt"]);
   if (body["brief"])    return String(body["brief"]);
   if (body["sigmab"])   return String(body["sigmab"]);
-  if (body["\u03c3b"]) return String(body["\u03c3b"]);
-  if (body["\u03beb"]) return String(body["\u03beb"]);
-  if (body["\u039eb"]) return String(body["\u039eb"]);
+  if (body["\u03c3b"]) return String(body["\u03c3b"]);  // σb
+  if (body["\u03beb"]) return String(body["\u03beb"]);  // ξb
+  if (body["\u039eb"]) return String(body["\u039eb"]);  // Ξb
   if (body["prompt"])  return String(body["prompt"]);
   for (const [k, v] of Object.entries(body)) {
     if (typeof v === "string" && v.length > 10) {
@@ -127,16 +128,156 @@ Deno.serve(async (req: Request) => {
   try { apiKey = resolveApiKey(req, body); }
   catch (e) { return json({ error: `API key: ${e instanceof Error ? e.message : e}` }, 401); }
 
-  const platform = String(body["platform"] ?? body["platforms"] ?? "generic");
-  const prompt = body["test_prompt"] ? String(body["test_prompt"]) : `${brief} - platform: ${platform}`;
-  console.log("prompt:", prompt.slice(0, 150));
+  const count = Number(body["count"] ?? 1);
+  // Accept both 'platforms' (v18x runImageTest) and 'πf' (legacy runTestRaw/Individual/Composite)
+  const platforms = (body["platforms"] as string[] | undefined)
+    ?? (body["\u03c0f"] as string[] | undefined)  // πf
+    ?? [];
+  const effectiveCount = Math.max(count, platforms.length > 0 ? platforms.length : 1);
+  const isComposite = !!body["composite"];
+  const isRaw = body["raw_vs_compressed"] === true;
+
+  // ─────────────────────────────────────────────
+  // COMPOSITE / BATCH path:
+  //   composite:true  OR  count>1 with raw_vs_compressed:false
+  //   Routes to generate-image-composite (10x compression: 1 NB call → N images)
+  // ─────────────────────────────────────────────
+  if (isComposite || (!isRaw && effectiveCount > 1)) {
+    console.log(`composite path: count=${effectiveCount}, platforms=${platforms.length}`);
+    const finalPlatforms = platforms.length >= effectiveCount
+      ? platforms.slice(0, effectiveCount)
+      : Array.from({ length: effectiveCount }, (_, i) => `platform@${i}`);
+
+    try {
+      const res = await fetch(COMPOSITE_FN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief, count: effectiveCount, platforms: finalPlatforms }),
+      });
+      const compositeData = await res.json() as Record<string, unknown>;
+      const grids = compositeData["grids"] as Array<{ platforms: string[]; gridUrl: string; success: boolean }> | undefined;
+
+      if (!grids?.length) {
+        return json({ error: "Composite generation failed", details: compositeData, deployVersion: DEPLOY_VERSION }, 500);
+      }
+
+      // Build σo and batch_detail from grid strips
+      const σo: Record<string, string> = {};
+      const batch_detail: Array<Record<string, unknown>> = [];
+      let idx = 0;
+      for (const grid of grids) {
+        if (grid.success && grid.gridUrl) {
+          for (const platform of grid.platforms) {
+            σo[platform] = grid.gridUrl;
+            batch_detail.push({ platform, url: grid.gridUrl, index: idx++ });
+          }
+        }
+      }
+
+      const tokensData = compositeData["tokens"] as Record<string, unknown> | undefined;
+      const totalTok = Number(tokensData?.["total"] ?? grids.filter(g => g.success).length * 50);
+      const perImgTok = batch_detail.length > 0 ? Math.ceil(totalTok / batch_detail.length) : 50;
+
+      return json({
+        success: true,
+        σo,
+        batch_detail,
+        totalImages: batch_detail.length,
+        tokens: {
+          tokens_per_image: perImgTok,
+          total: totalTok,
+          tokens_in: tokensData?.["tokens_in"] ?? 0,
+          tokens_out: tokensData?.["tokens_out"] ?? totalTok,
+        },
+        composite: true,
+        api_calls: compositeData["api_calls"] ?? grids.length,
+        agentVersion: AGENT_VERSION,
+        deployVersion: DEPLOY_VERSION,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("composite route failed:", msg);
+      return json({ error: `Composite failed: ${msg}`, deployVersion: DEPLOY_VERSION }, 500);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // PARALLEL BATCH path:
+  //   count>1 with raw_vs_compressed:true
+  //   Fires N parallel NB calls (demonstrates per-call cost baseline)
+  // ─────────────────────────────────────────────
+  if (isRaw && effectiveCount > 1) {
+    console.log(`parallel path: count=${effectiveCount}`);
+    const finalPlatforms = platforms.length >= effectiveCount
+      ? platforms.slice(0, effectiveCount)
+      : Array.from({ length: effectiveCount }, (_, i) => `platform@${i}`);
+
+    try {
+      // Fire all NB POST calls in parallel
+      const gids = await Promise.all(
+        finalPlatforms.map(p => nbPost(apiKey, `${brief} - platform: ${p}`))
+      );
+      // Poll all in parallel
+      const results = await Promise.all(gids.map(gid => nbPoll(apiKey, gid)));
+
+      const σo: Record<string, string> = {};
+      const batch_detail: Array<Record<string, unknown>> = [];
+      results.forEach((result, i) => {
+        if (result.status === "completed" && result.imageUrl) {
+          σo[finalPlatforms[i]] = result.imageUrl;
+          batch_detail.push({
+            platform: finalPlatforms[i],
+            url: result.imageUrl,
+            index: i,
+            generationId: gids[i],
+          });
+        }
+      });
+
+      return json({
+        success: true,
+        σo,
+        batch_detail,
+        totalImages: batch_detail.length,
+        tokens: {
+          tokens_per_image: 1,
+          total: batch_detail.length,
+        },
+        agentVersion: AGENT_VERSION,
+        deployVersion: DEPLOY_VERSION,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("parallel batch failed:", msg);
+      return json({ error: msg, deployVersion: DEPLOY_VERSION }, 500);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // SINGLE IMAGE path (count=1 or default)
+  //   One NB call, returns both imageUrl (compat) and σo (KNP format)
+  // ─────────────────────────────────────────────
+  const platform = platforms[0] ?? String(body["platform"] ?? "generic");
+  const prompt = body["test_prompt"]
+    ? String(body["test_prompt"])
+    : `${brief} - platform: ${platform}`;
+  console.log("single path, prompt:", prompt.slice(0, 150));
 
   try {
     const gid = await nbPost(apiKey, prompt);
     const result = await nbPoll(apiKey, gid);
 
     if (result.status === "completed" && result.imageUrl) {
-      return json({ success: true, imageUrl: result.imageUrl, generationId: gid, platform, deployVersion: DEPLOY_VERSION });
+      return json({
+        success: true,
+        imageUrl: result.imageUrl,
+        σo: result.imageUrl,        // KNP single-image format (string)
+        generationId: gid,
+        platform,
+        tokens: { tokens_per_image: 1, total: 1 },
+        agentVersion: AGENT_VERSION,
+        deployVersion: DEPLOY_VERSION,
+      });
     }
 
     if (result.status === "failed") {
@@ -152,7 +293,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("failed:", msg);
+    console.error("single image failed:", msg);
     return json({ error: msg, deployVersion: DEPLOY_VERSION }, 500);
   }
 });
