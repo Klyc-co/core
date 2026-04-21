@@ -346,6 +346,8 @@ async function postToFacebook(
     console.error("[Facebook] Unexpected error:", err);
     return { success: false, error: err instanceof Error ? err.message : "Unknown Facebook error" };
   }
+}
+
 async function postToTikTok(
   accessToken: string,
   content: string,
