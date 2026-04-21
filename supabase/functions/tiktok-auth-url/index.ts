@@ -51,8 +51,8 @@ serve(async (req) => {
     // Create state with user_id
     const state = btoa(JSON.stringify({ user_id: userId, timestamp: Date.now() }));
     
-    // TikTok OAuth scopes
-    const scopes = "user.info.profile,user.info.stats,video.list";
+    // TikTok OAuth scopes — include publishing scopes (TikTok only grants what your app is approved for)
+    const scopes = "user.info.profile,user.info.stats,video.list,video.upload,video.publish";
     
     // Build TikTok OAuth URL
     const tiktokAuthUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
