@@ -206,11 +206,25 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           body.referenceImages = base64Images;
         }
 
-        const { data, error } = await supabase.functions.invoke("generate-image", { body });
-        if (error) throw error;
-        if (!data?.imageUrl) throw new Error("No image returned");
+        // Retry up to 4x to bypass stale v28 ghost instances (Storage upload / Bucket not found)
+        let imageData: any = null;
+        let imageError: any = null;
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          const { data: d, error: e } = await supabase.functions.invoke("generate-image", { body });
+          const sig = JSON.stringify(e ?? d ?? "");
+          if (sig.includes("Bucket not found") || sig.includes("v28") || sig.includes("Storage upload failed")) {
+            console.warn(`generate-image: stale ghost detected (attempt ${attempt}), retrying...`);
+            if (attempt < 4) await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          imageData = d;
+          imageError = e;
+          break;
+        }
+        if (imageError) throw imageError;
+        if (!imageData?.imageUrl) throw new Error("No image returned");
 
-        setResultUrl(data.imageUrl);
+        setResultUrl(imageData.imageUrl);
         toast.success("Image generated!");
         return;
       }
