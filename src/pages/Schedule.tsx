@@ -244,7 +244,7 @@ const Schedule = () => {
           contentType: platform,
           platform,
           status: c.status,
-          postUrl: null,
+          postUrl: (c as any).permalink || null,
           raw: c,
         };
       });
