@@ -227,6 +227,82 @@ async function postToThreads(accessToken: string, content: string): Promise<{ su
   }
 }
 
+async function postToTwitter(content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  const { createHmac } = await import("node:crypto");
+
+  const API_KEY = Deno.env.get("TWITTER_CONSUMER_KEY")?.trim();
+  const API_SECRET = Deno.env.get("TWITTER_CONSUMER_SECRET")?.trim();
+  const ACCESS_TOKEN = Deno.env.get("TWITTER_ACCESS_TOKEN")?.trim();
+  const ACCESS_TOKEN_SECRET = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")?.trim();
+
+  if (!API_KEY || !API_SECRET || !ACCESS_TOKEN || !ACCESS_TOKEN_SECRET) {
+    return { success: false, error: "Twitter API credentials not configured. Add TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET to secrets." };
+  }
+
+  if (!content?.trim()) {
+    return { success: false, error: "No text content to tweet" };
+  }
+
+  // X has 280 char limit
+  const tweetText = content.length > 280 ? content.substring(0, 277) + "..." : content;
+
+  const url = "https://api.x.com/2/tweets";
+  const method = "POST";
+
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: API_KEY,
+    oauth_nonce: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: ACCESS_TOKEN,
+    oauth_version: "1.0",
+  };
+
+  // CRITICAL: Do NOT include POST body params in signature for Twitter API v2 JSON requests
+  const paramString = Object.entries(oauthParams)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+
+  const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+  const signingKey = `${encodeURIComponent(API_SECRET)}&${encodeURIComponent(ACCESS_TOKEN_SECRET)}`;
+  const signature = createHmac("sha1", signingKey).update(signatureBaseString).digest("base64");
+
+  const authHeader = "OAuth " + Object.entries({ ...oauthParams, oauth_signature: signature })
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}="${encodeURIComponent(v)}"`)
+    .join(", ");
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: tweetText }),
+    });
+
+    const data = await res.json();
+    console.log("[Twitter] Response:", res.status, JSON.stringify(data));
+
+    if (!res.ok) {
+      const errMsg = data?.detail || data?.title || JSON.stringify(data);
+      return { success: false, error: `Twitter API error (${res.status}): ${errMsg}` };
+    }
+
+    const postId = data?.data?.id;
+    return {
+      success: true,
+      post_id: postId,
+      permalink: postId ? `https://x.com/i/status/${postId}` : undefined,
+    };
+  } catch (error: unknown) {
+    console.error("[Twitter] Publish error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown Twitter error" };
+  }
+}
+
 async function postToFacebook(
   pageAccessToken: string,
   pageId: string,
