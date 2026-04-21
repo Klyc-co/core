@@ -254,14 +254,6 @@ const NewCampaign = () => {
   };
 
   const handleSendForApproval = async () => {
-    if (!campaignName.trim()) {
-      toast({
-        title: "Post name required",
-        description: "Please enter a post name",
-        variant: "destructive",
-      });
-      return;
-    }
 
     if (selectedPlatforms.length === 0) {
       toast({
