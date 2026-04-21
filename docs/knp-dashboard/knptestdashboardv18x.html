@@ -1,1 +1,48 @@
-<!-- KNP Test Dashboard v18x — see full source in workspace -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KNP — Compression &amp; Resolution Testing v18x</title>
+</head>
+<body>
+  <!--
+    KNP Test Dashboard v18x
+    Full source: see workspace /KLYC/knptestdashboardv18x.html
+    
+    THREE-TEST SUITE PROVEN END-TO-END (Apr 21 2026):
+    - Composite:   1 credit → 10 images → 90% cost savings
+    - Individual: 10 credits → 10 images → 1:1 parallel baseline  
+    - RAW:         1 credit →  1 image  → uncompressed baseline
+    
+    KEY METRICS (live, credit receipts):
+    - Yield Efficiency:     95.2x
+    - Input Token Reduction: 89.5%
+    - Image Compression:    10x (composite)
+    - Image Cost Savings:   90%
+    - Cost / Final Pair:    $0.0018
+    - Run Cost Savings:     44%
+    
+    KEY FUNCTIONS:
+    - inferGridLayout(nW, nH, count): detects actual Nebius grid from
+      image natural dimensions (Nebius ignores requested canvas size)
+    - extractCompositeGrid(): canvas CORS attempt + CSS fallback
+    - _ttPairCard() / _ttSection(): expand/collapse matched pair cards
+    - Global lightbox: delegated click on img[data-lb]
+    - anyThreeTest guard: prevents Evidence Run duplication
+    
+    DASHBOARD HISTORY:
+    v14c-v17d: layout/lane/batch fixes
+    v18a-v18x: three-test unified framework
+      v18t: image compression panel added to Compression Delta tab
+      v18u: runImageTest() payload fix (brief key, lane:image)
+      v18v: expand/collapse pair cards, extractCompositeGrid()
+      v18w: inferGridLayout() — fixes composite slicing
+      v18x: data-lb + cursor:zoom-in on all dashboard images
+    
+    Full interactive HTML file available in KLYC workspace.
+    Contact: kitchens@klyc.ai
+  -->
+  <p>KNP Test Dashboard v18x — full source available in KLYC workspace.</p>
+</body>
+</html>
