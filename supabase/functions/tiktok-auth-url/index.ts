@@ -51,8 +51,12 @@ serve(async (req) => {
     // Create state with user_id
     const state = btoa(JSON.stringify({ user_id: userId, timestamp: Date.now() }));
     
-    // TikTok OAuth scopes — include publishing scopes (TikTok only grants what your app is approved for)
-    const scopes = "user.info.profile,user.info.stats,video.list,video.upload,video.publish";
+    // TikTok OAuth scopes — TikTok rejects the request entirely if you ask for a scope your app
+    // isn't approved for. Configure via TIKTOK_SCOPES secret. Default to the safest set that works
+    // with the basic "Login Kit" + "Content Posting API (sandbox/upload)" approval.
+    // Once your app is approved for direct publishing, set TIKTOK_SCOPES to include video.publish.
+    const scopes = Deno.env.get("TIKTOK_SCOPES") 
+      || "user.info.basic,video.upload";
     
     // Build TikTok OAuth URL
     const tiktokAuthUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
