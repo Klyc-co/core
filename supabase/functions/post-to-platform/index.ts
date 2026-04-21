@@ -536,6 +536,8 @@ Deno.serve(async (req) => {
       result = await postToLinkedIn(accessToken!, content);
     } else if (platformLower === "threads") {
       result = await postToThreads(accessToken!, content);
+    } else if (platformLower === "twitter") {
+      result = await postToTwitter(content);
     } else if (platformLower === "instagram") {
       if (!igUserId) {
         result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
