@@ -346,6 +346,128 @@ async function postToFacebook(
     console.error("[Facebook] Unexpected error:", err);
     return { success: false, error: err instanceof Error ? err.message : "Unknown Facebook error" };
   }
+async function postToTikTok(
+  accessToken: string,
+  content: string,
+  videoUrl?: string,
+): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  try {
+    if (!videoUrl) {
+      return { success: false, error: "TikTok requires a public video URL. Image- and text-only posts are not supported." };
+    }
+
+    // Try DIRECT POST first (requires video.publish scope, app must be approved).
+    // Falls back to INBOX (drafts) which only needs video.upload.
+    const caption = (content || "").slice(0, 2200);
+
+    const directInitRes = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json; charset=UTF-8",
+      },
+      body: JSON.stringify({
+        post_info: {
+          title: caption,
+          privacy_level: "SELF_ONLY", // safest default; users can change in TikTok app. PUBLIC_TO_EVERYONE requires audited app.
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false,
+        },
+        source_info: {
+          source: "PULL_FROM_URL",
+          video_url: videoUrl,
+        },
+      }),
+    });
+
+    let publishId: string | undefined;
+    let usedDirect = false;
+
+    if (directInitRes.ok) {
+      const directData = await directInitRes.json();
+      publishId = directData?.data?.publish_id;
+      usedDirect = true;
+      console.log("[TikTok] Direct publish init OK, publish_id:", publishId);
+    } else {
+      const directErr = await directInitRes.text();
+      console.warn("[TikTok] Direct publish init failed, falling back to inbox:", directInitRes.status, directErr);
+
+      // Fallback: upload to user's inbox as a draft.
+      const inboxRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({
+          source_info: {
+            source: "PULL_FROM_URL",
+            video_url: videoUrl,
+          },
+        }),
+      });
+
+      if (!inboxRes.ok) {
+        const inboxErr = await inboxRes.text();
+        console.error("[TikTok] Inbox init failed:", inboxRes.status, inboxErr);
+        return {
+          success: false,
+          error: `TikTok upload failed (${inboxRes.status}): ${inboxErr}. Make sure your TikTok app has 'video.upload' or 'video.publish' approved and the video URL is publicly accessible.`,
+        };
+      }
+
+      const inboxData = await inboxRes.json();
+      publishId = inboxData?.data?.publish_id;
+      console.log("[TikTok] Inbox upload init OK, publish_id:", publishId);
+    }
+
+    if (!publishId) {
+      return { success: false, error: "TikTok did not return a publish_id" };
+    }
+
+    // Poll status (up to ~60s). TikTok pulls the video asynchronously.
+    let finalStatus = "PROCESSING";
+    let lastError: string | undefined;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const statusRes = await fetch("https://open.tiktokapis.com/v2/post/publish/status/fetch/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({ publish_id: publishId }),
+      });
+      if (!statusRes.ok) continue;
+      const statusData = await statusRes.json();
+      const s = statusData?.data?.status;
+      lastError = statusData?.data?.fail_reason || statusData?.error?.message;
+      if (s === "PUBLISH_COMPLETE" || s === "SEND_TO_USER_INBOX") {
+        finalStatus = s;
+        break;
+      }
+      if (s === "FAILED") {
+        return { success: false, error: `TikTok publish failed: ${lastError || "unknown reason"}` };
+      }
+    }
+
+    const note = usedDirect && finalStatus === "PUBLISH_COMPLETE"
+      ? "Published to TikTok."
+      : finalStatus === "SEND_TO_USER_INBOX"
+      ? "Sent to your TikTok drafts inbox — open the TikTok app to review and publish."
+      : "TikTok is still processing the video. It will appear once processing completes.";
+
+    console.log("[TikTok] Final status:", finalStatus, "-", note);
+    return {
+      success: true,
+      post_id: publishId,
+      permalink: undefined, // TikTok doesn't return a permalink until the user finalizes/publishes
+    };
+  } catch (err) {
+    console.error("[TikTok] Unexpected error:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown TikTok error" };
+  }
 }
 
 Deno.serve(async (req) => {
