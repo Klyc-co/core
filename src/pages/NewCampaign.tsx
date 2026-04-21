@@ -609,9 +609,13 @@ const NewCampaign = () => {
     const failed = postResults.filter(r => !r.success);
 
     if (campaignRow?.id) {
+      const firstPermalink = succeeded.find(r => r.permalink)?.permalink || null;
       await supabase
         .from("scheduled_campaigns")
-        .update({ status: failed.length === 0 ? "published" : succeeded.length > 0 ? "partial" : "failed" })
+        .update({
+          status: failed.length === 0 ? "published" : succeeded.length > 0 ? "partial" : "failed",
+          permalink: firstPermalink,
+        })
         .eq("id", campaignRow.id);
     }
 
