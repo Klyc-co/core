@@ -509,6 +509,9 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    } else if (platformLower === "twitter") {
+      // Twitter uses app-level credentials (TWITTER_* env vars), no per-user connection lookup needed
+      // accessToken stays null
     } else {
       const { data: connection } = await serviceClient
         .from("client_platform_connections")
