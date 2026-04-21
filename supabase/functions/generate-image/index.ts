@@ -36,15 +36,17 @@ function sanitizePrompt(s: string): string {
 }
 
 function resolveApiKey(req: Request, body: Record<string, unknown>): string {
+  // Prefer env secret first; only fall back to header/body if explicitly an NB key (nb_...)
+  const envKey = Deno.env.get("NB_API_KEY") ?? "";
+  if (envKey.length > 10) return sanitizeKey(envKey);
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ")) {
     const token = sanitizeKey(authHeader.slice(7));
-    if (token.length > 10) return token;
+    // Only use as NB key if it looks like one (NB keys start with "nb_")
+    if (token.startsWith("nb_") && token.length > 10) return token;
   }
-  const envKey = Deno.env.get("NB_API_KEY") ?? "";
-  if (envKey.length > 10) return sanitizeKey(envKey);
-  const bodyKey = String(body["nb_key"] ?? body["api_key"] ?? "");
-  if (bodyKey.length > 10) return sanitizeKey(bodyKey);
+  const bodyKey = sanitizeKey(String(body["nb_key"] ?? body["api_key"] ?? ""));
+  if (bodyKey.startsWith("nb_") && bodyKey.length > 10) return bodyKey;
   throw new Error("No NB API key");
 }
 
