@@ -64,10 +64,6 @@ interface BrandAssetImage {
 }
 
 // Build a comprehensive signature string from a supabase.functions.invoke result.
-// Handles all supabase-js v2 error shapes:
-//   - Old style: error.message contains the full body string
-//   - New style (v2.4.4+): error.context is a Response object — must read body
-//   - Parsed style: error.context is already a plain object
 async function buildInvokeSig(e: any, d: any): Promise<string> {
   let sig = "";
   if (d) sig += JSON.stringify(d);
@@ -76,7 +72,6 @@ async function buildInvokeSig(e: any, d: any): Promise<string> {
     const ctx = e.context;
     if (ctx) {
       if (typeof ctx === "object" && typeof ctx.text === "function") {
-        // context is a Response — read the raw body text
         try { sig += await ctx.text(); } catch { /* ignore read errors */ }
       } else {
         sig += JSON.stringify(ctx);
@@ -87,6 +82,35 @@ async function buildInvokeSig(e: any, d: any): Promise<string> {
 }
 
 const GHOST_SIGS = ["Bucket not found", "Storage upload failed", "v28", "generate-image\u2237v28"];
+
+/**
+ * Extract the best image URL from any generate-image response shape:
+ *   - Single: { imageUrl: "..." }
+ *   - Composite: { batch_detail: [{ url: "..." }], σo: { platform: "..." } }
+ *   - Parallel: { batch_detail: [{ url: "..." }] }
+ *   - Legacy: { url: "..." } or { image: "..." }
+ */
+function extractImageUrl(data: any): string | null {
+  if (!data) return null;
+  // Single image path
+  if (data.imageUrl) return data.imageUrl;
+  // Composite/batch path — take first successful result
+  if (data.batch_detail && Array.isArray(data.batch_detail) && data.batch_detail.length > 0) {
+    const first = data.batch_detail.find((d: any) => d.url);
+    if (first?.url) return first.url;
+  }
+  // σo map — take first value
+  const sigmaO = data["\u03c3o"];
+  if (sigmaO && typeof sigmaO === "object") {
+    const urls = Object.values(sigmaO);
+    if (urls.length > 0 && typeof urls[0] === "string") return urls[0] as string;
+  }
+  // Legacy fallbacks
+  if (data.url) return data.url;
+  if (data.image) return data.image;
+  if (data.image_url) return data.image_url;
+  return null;
+}
 
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
@@ -219,7 +243,15 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     try {
       if (mode === "image") {
         const sizeConfig = OUTPUT_SIZE_OPTIONS.find((o) => o.value === outputSize) || OUTPUT_SIZE_OPTIONS[0];
-        const body: Record<string, any> = { prompt, model: imageModel, width: sizeConfig.width, height: sizeConfig.height };
+        // Send BOTH "prompt" and "brief" so the edge function's extractBrief()
+        // always finds the content regardless of which field it checks first.
+        const body: Record<string, any> = {
+          prompt,
+          brief: prompt,
+          model: imageModel,
+          width: sizeConfig.width,
+          height: sizeConfig.height,
+        };
 
         // Convert inspiration images to base64 so the edge function can use them
         if (inspirationUrls.length > 0) {
@@ -232,10 +264,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         }
 
         // Retry up to 6x to bypass stale v28 ghost instances.
-        // Root cause: Supabase Deno warm instances can run old code (AGENT_VERSION=28) with
-        // storage upload logic that no longer exists. We detect ghost responses and retry.
-        // Note: supabase-js v2.4.4+ stores error body in e.context (Response), NOT e.message —
-        // buildInvokeSig() reads the Response body text to handle all supabase-js shapes.
         let imageData: any = null;
         let imageError: any = null;
         for (let attempt = 1; attempt <= 6; attempt++) {
@@ -251,9 +279,15 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           break;
         }
         if (imageError) throw imageError;
-        if (!imageData?.imageUrl) throw new Error("No image returned");
 
-        setResultUrl(imageData.imageUrl);
+        // Handle ALL response shapes: single, composite, batch, legacy
+        const url = extractImageUrl(imageData);
+        if (!url) {
+          console.error("generate-image response (no URL found):", imageData);
+          throw new Error("No image returned — check console for response details");
+        }
+
+        setResultUrl(url);
         toast.success("Image generated!");
         return;
       }
