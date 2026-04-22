@@ -14,6 +14,7 @@ import StrategyMessagingTool from "@/components/strategy/StrategyMessagingTool";
 import PlatformContentTool from "@/components/strategy/PlatformContentTool";
 import EmailMarketingTool from "@/components/strategy/EmailMarketingTool";
 import SocialPerformanceTool from "@/components/strategy/SocialPerformanceTool";
+import CaptionGeneratorTool from "@/components/strategy/CaptionGeneratorTool";
 
 import type { User } from "@supabase/supabase-js";
 
@@ -21,6 +22,7 @@ const toolTitles: Record<StrategyTool, string> = {
   research: "Research & Insights",
   messaging: "Strategy & Messaging",
   content: "Platform Content",
+  captions: "Caption Generator",
   email: "Email Marketing",
   performance: "Social Performance",
 };
@@ -56,6 +58,7 @@ const BrandStrategy = () => {
       case "research": return <ResearchInsightsTool />;
       case "messaging": return <StrategyMessagingTool />;
       case "content": return <PlatformContentTool />;
+      case "captions": return <CaptionGeneratorTool />;
       case "email": return <EmailMarketingTool />;
       case "performance": return <SocialPerformanceTool />;
     }
