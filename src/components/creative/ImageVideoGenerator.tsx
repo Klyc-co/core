@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
+import { generateImageViaOrchestrator, extractImageUrl } from "./ImageGeneratorOrchestrated";
 import {
   ArrowLeft,
   Image,
@@ -63,55 +64,6 @@ interface BrandAssetImage {
   value: string;
 }
 
-// Build a comprehensive signature string from a supabase.functions.invoke result.
-async function buildInvokeSig(e: any, d: any): Promise<string> {
-  let sig = "";
-  if (d) sig += JSON.stringify(d);
-  if (e) {
-    sig += String(e.message ?? "");
-    const ctx = e.context;
-    if (ctx) {
-      if (typeof ctx === "object" && typeof ctx.text === "function") {
-        try { sig += await ctx.text(); } catch { /* ignore read errors */ }
-      } else {
-        sig += JSON.stringify(ctx);
-      }
-    }
-  }
-  return sig;
-}
-
-const GHOST_SIGS = ["Bucket not found", "Storage upload failed", "v28", "generate-image\u2237v28"];
-
-/**
- * Extract the best image URL from any generate-image response shape:
- *   - Single: { imageUrl: "..." }
- *   - Composite: { batch_detail: [{ url: "..." }], σo: { platform: "..." } }
- *   - Parallel: { batch_detail: [{ url: "..." }] }
- *   - Legacy: { url: "..." } or { image: "..." }
- */
-function extractImageUrl(data: any): string | null {
-  if (!data) return null;
-  // Single image path
-  if (data.imageUrl) return data.imageUrl;
-  // Composite/batch path — take first successful result
-  if (data.batch_detail && Array.isArray(data.batch_detail) && data.batch_detail.length > 0) {
-    const first = data.batch_detail.find((d: any) => d.url);
-    if (first?.url) return first.url;
-  }
-  // σo map — take first value
-  const sigmaO = data["\u03c3o"];
-  if (sigmaO && typeof sigmaO === "object") {
-    const urls = Object.values(sigmaO);
-    if (urls.length > 0 && typeof urls[0] === "string") return urls[0] as string;
-  }
-  // Legacy fallbacks
-  if (data.url) return data.url;
-  if (data.image) return data.image;
-  if (data.image_url) return data.image_url;
-  return null;
-}
-
 const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
@@ -141,14 +93,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     if (!showLibrary) return;
     const fetchLibrary = async () => {
       setLoadingLibrary(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoadingLibrary(false);
-        return;
-      }
-
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoadingLibrary(false); return; }
       const { data } = await supabase
         .from("brand_assets")
         .select("id, name, value")
@@ -156,22 +102,17 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         .eq("asset_type", "image")
         .order("created_at", { ascending: false })
         .limit(50);
-
       setLibraryImages(data || []);
       setLoadingLibrary(false);
     };
     fetchLibrary();
   }, [showLibrary]);
 
-  // Fetch B-Roll projects when mode switches to broll
   useEffect(() => {
     if (mode !== "broll" || !brollUnlocked) return;
     const fetchBroll = async () => {
       setBrollLoading(true);
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
       setBrollProjects(data || []);
       setBrollLoading(false);
     };
@@ -181,27 +122,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-    if (inspirationUrls.length >= 5) {
-      toast.error("Maximum 5 reference images allowed");
-      return;
-    }
-
+    if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+    if (inspirationUrls.length >= 5) { toast.error("Maximum 5 reference images allowed"); return; }
     setUploadingFile(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
-      const { publicUrl } = await uploadBrandAssetImage({
-        userId: user.id,
-        file,
-        folder: "inspiration",
-      });
+      const { publicUrl } = await uploadBrandAssetImage({ userId: user.id, file, folder: "inspiration" });
       setInspirationUrls((prev) => [...prev, publicUrl]);
       toast.success("Image uploaded as inspiration");
     } catch (err: any) {
@@ -213,28 +140,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     }
   };
 
-  const imageUrlToBase64 = async (url: string): Promise<string> => {
-    if (url.startsWith("data:")) return url;
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return url;
-    }
-  };
-
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
-      toast.error("Please enter a description");
-      return;
-    }
+    if (!prompt.trim()) { toast.error("Please enter a description"); return; }
 
     setGenerating(true);
     setResultUrl(null);
@@ -242,62 +149,39 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        const sizeConfig = OUTPUT_SIZE_OPTIONS.find((o) => o.value === outputSize) || OUTPUT_SIZE_OPTIONS[0];
-        // Send BOTH "prompt" and "brief" so the edge function's extractBrief()
-        // always finds the content regardless of which field it checks first.
-        const body: Record<string, any> = {
-          prompt,
-          brief: prompt,
-          model: imageModel,
-          width: sizeConfig.width,
-          height: sizeConfig.height,
-        };
+        // === ROUTE THROUGH AI ORCHESTRATOR PIPELINE ===
+        // This calls klyc-orchestrator which runs:
+        //   research → strategy → copy → image → performance
+        // The image submind (Nano Banana) is called as part of the full AI pipeline.
+        console.log("[Creative Studio] Routing through AI orchestrator pipeline...");
 
-        // Convert inspiration images to base64 so the edge function can use them
-        if (inspirationUrls.length > 0) {
-          const base64Images: string[] = [];
-          for (const url of inspirationUrls) {
-            const b64 = await imageUrlToBase64(url);
-            base64Images.push(b64);
-          }
-          body.referenceImages = base64Images;
+        const result = await generateImageViaOrchestrator(prompt, outputSize, imageModel);
+
+        if (result.pipelineRan) {
+          console.log("[Creative Studio] Pipeline completed. Lanes:", result.lanesCompleted.join(", "));
         }
 
-        // Retry up to 6x to bypass stale v28 ghost instances.
-        let imageData: any = null;
-        let imageError: any = null;
-        for (let attempt = 1; attempt <= 6; attempt++) {
-          const { data: d, error: e } = await supabase.functions.invoke("generate-image", { body });
-          const sig = await buildInvokeSig(e, d);
-          if (GHOST_SIGS.some(s => sig.includes(s))) {
-            console.warn(`generate-image: v28 ghost detected (attempt ${attempt}/6), retrying...`);
-            if (attempt < 6) await new Promise(r => setTimeout(r, 300));
-            continue;
-          }
-          imageData = d;
-          imageError = e;
-          break;
-        }
-        if (imageError) throw imageError;
-
-        // Handle ALL response shapes: single, composite, batch, legacy
-        const url = extractImageUrl(imageData);
-        if (!url) {
-          console.error("generate-image response (no URL found):", imageData);
-          throw new Error("No image returned — check console for response details");
+        if (result.error && !result.imageUrl) {
+          console.error("[Creative Studio] Orchestrator error:", result.error, result.fullResponse);
+          throw new Error(result.error);
         }
 
-        setResultUrl(url);
-        toast.success("Image generated!");
+        if (!result.imageUrl) {
+          console.error("[Creative Studio] No image URL in orchestrator response:", result.fullResponse);
+          throw new Error("No image returned from AI pipeline — check console for details");
+        }
+
+        setResultUrl(result.imageUrl);
+        toast.success(`Image generated via AI pipeline! (${result.lanesCompleted.length} subminds ran)`);
         return;
       }
 
+      // Video generation (unchanged — still direct)
       const { data, error } = await supabase.functions.invoke("generate-broll", {
         body: { prompt, standalone: true, model: videoModel },
       });
       if (error) throw error;
       if (!data?.videoUrl) throw new Error("No video returned");
-
       setResultUrl(data.videoUrl);
       toast.success("Video generated!");
     } catch (err: any) {
@@ -310,51 +194,24 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   const handleSaveToLibrary = async () => {
     if (!resultUrl || mode !== "image") return;
-
     setSavingToLibrary(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please sign in first");
-        return;
-      }
-
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Please sign in first"); return; }
       let durableUrl = resultUrl;
-
       if (resultUrl.startsWith("data:")) {
         const response = await fetch(resultUrl);
         const blob = await response.blob();
-        const file = new File([blob], `creative-studio-${Date.now()}.png`, {
-          type: blob.type || "image/png",
-        });
-
-        const { publicUrl } = await uploadBrandAssetImage({
-          userId: user.id,
-          file,
-          folder: "creative-studio",
-        });
-
+        const file = new File([blob], `creative-studio-${Date.now()}.png`, { type: blob.type || "image/png" });
+        const { publicUrl } = await uploadBrandAssetImage({ userId: user.id, file, folder: "creative-studio" });
         durableUrl = publicUrl;
       }
-
       const imageName = `Creative Studio - ${new Date().toLocaleDateString()}`;
       const { error } = await supabase.from("brand_assets").insert({
-        user_id: user.id,
-        asset_type: "image",
-        name: imageName,
-        value: durableUrl,
-        metadata: {
-          source: "creative-studio",
-          model: imageModel,
-          prompt,
-          generated_at: new Date().toISOString(),
-        },
+        user_id: user.id, asset_type: "image", name: imageName, value: durableUrl,
+        metadata: { source: "creative-studio", model: imageModel, prompt, generated_at: new Date().toISOString() },
       });
-
       if (error) throw error;
-
       setSavedToLibrary(true);
       toast.success("Saved to Brand Library");
     } catch (error) {
@@ -377,7 +234,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {onBack && (
@@ -389,32 +245,21 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </div>
       </div>
 
-      {/* Mode Tabs + Model selector */}
       <Tabs
         value={mode}
         onValueChange={(v) => {
           const val = v as "image" | "video" | "broll";
           setMode(val);
-          if (val !== "broll") {
-            setResultUrl(null);
-            setSavedToLibrary(false);
-          }
+          if (val !== "broll") { setResultUrl(null); setSavedToLibrary(false); }
         }}
       >
         <TabsList className="grid w-full max-w-sm grid-cols-3">
-          <TabsTrigger value="image" className="gap-2">
-            <Image className="w-4 h-4" /> Image
-          </TabsTrigger>
-          <TabsTrigger value="video" className="gap-2">
-            <Video className="w-4 h-4" /> Video
-          </TabsTrigger>
-          <TabsTrigger value="broll" className="gap-2">
-            <Film className="w-4 h-4" /> B-Roll
-          </TabsTrigger>
+          <TabsTrigger value="image" className="gap-2"><Image className="w-4 h-4" /> Image</TabsTrigger>
+          <TabsTrigger value="video" className="gap-2"><Video className="w-4 h-4" /> Video</TabsTrigger>
+          <TabsTrigger value="broll" className="gap-2"><Film className="w-4 h-4" /> B-Roll</TabsTrigger>
         </TabsList>
 
         <TabsContent value="image" className="mt-4 space-y-4">
-          {/* Output Size Selector */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Monitor className="w-4 h-4 text-muted-foreground" />
@@ -429,16 +274,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     key={opt.value}
                     onClick={() => setOutputSize(opt.value)}
                     className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border bg-card hover:border-primary/40"
+                      isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
                     }`}
                   >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2">
-                        <Check className="w-4 h-4 text-primary" />
-                      </div>
-                    )}
+                    {isSelected && (<div className="absolute top-2 right-2"><Check className="w-4 h-4 text-primary" /></div>)}
                     <Icon className={`w-6 h-6 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
                     <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
                     <span className="text-xs text-muted-foreground">{opt.dimensions}</span>
@@ -448,14 +287,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               })}
             </div>
           </div>
-
-          {/* Model selector */}
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {IMAGE_MODELS.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
@@ -473,9 +308,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           <div className="flex items-center gap-3">
             <Label className="text-sm text-muted-foreground shrink-0">Model</Label>
             <Select value={videoModel} onValueChange={(v) => setVideoModel(v as VideoModel)}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {VIDEO_MODELS.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
@@ -492,7 +325,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         <TabsContent value="broll" className="mt-3" />
       </Tabs>
 
-      {/* B-Roll inline content */}
       {mode === "broll" && !brollUnlocked && (
         <Card className="flex flex-col items-center justify-center py-20 border-dashed">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -502,30 +334,15 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           <p className="text-sm text-muted-foreground mb-6">Beta access only</p>
           <div className="flex items-center gap-2 max-w-xs w-full">
             <Input
-              type="password"
-              placeholder="Enter passcode"
-              value={brollPasscode}
+              type="password" placeholder="Enter passcode" value={brollPasscode}
               onChange={(e) => setBrollPasscode(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && brollPasscode === "37") {
-                  setBrollUnlocked(true);
-                  toast.success("Access granted!");
-                } else if (e.key === "Enter") {
-                  toast.error("Invalid passcode");
-                }
+                if (e.key === "Enter" && brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); }
+                else if (e.key === "Enter") { toast.error("Invalid passcode"); }
               }}
               className="text-center"
             />
-            <Button
-              onClick={() => {
-                if (brollPasscode === "37") {
-                  setBrollUnlocked(true);
-                  toast.success("Access granted!");
-                } else {
-                  toast.error("Invalid passcode");
-                }
-              }}
-            >
+            <Button onClick={() => { if (brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>
               Enter
             </Button>
           </div>
@@ -536,45 +353,25 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Create and manage your B-roll videos</p>
-            <Button onClick={() => navigate("/projects/new")} className="gap-2">
-              <Plus className="w-4 h-4" /> New Project
-            </Button>
+            <Button onClick={() => navigate("/projects/new")} className="gap-2"><Plus className="w-4 h-4" /> New Project</Button>
           </div>
-
           {brollLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
           ) : brollProjects.length === 0 ? (
             <Card className="flex flex-col items-center justify-center py-16 border-dashed">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Video className="w-8 h-8 text-primary" />
-              </div>
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"><Video className="w-8 h-8 text-primary" /></div>
               <h3 className="text-lg font-semibold text-foreground mb-2">No projects yet</h3>
               <p className="text-sm text-muted-foreground mb-4">Upload your first video clip to get started</p>
-              <Button onClick={() => navigate("/projects/new")} className="gap-2">
-                <Plus className="w-4 h-4" /> Create your first project
-              </Button>
+              <Button onClick={() => navigate("/projects/new")} className="gap-2"><Plus className="w-4 h-4" /> Create your first project</Button>
             </Card>
           ) : (
             <div className="grid gap-3">
               {brollProjects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => {
-                    if (project.status === "processing") {
-                      navigate(`/projects/${project.id}/processing`);
-                    } else {
-                      navigate(`/projects/${project.id}/edit`);
-                    }
-                  }}
-                >
+                <Card key={project.id} className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => { project.status === "processing" ? navigate(`/projects/${project.id}/processing`) : navigate(`/projects/${project.id}/edit`); }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                        <Video className="w-5 h-5 text-muted-foreground" />
-                      </div>
+                      <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center"><Video className="w-5 h-5 text-muted-foreground" /></div>
                       <div>
                         <h3 className="font-medium text-foreground text-sm">{project.title}</h3>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -595,7 +392,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       )}
 
       {mode !== "broll" && (<>
-      {/* Result preview - full width on top */}
       <div className="w-full">
         {resultUrl ? (
           <Card className="overflow-hidden relative group">
@@ -606,144 +402,72 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             )}
             <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               {mode === "image" && (
-                <Button
-                  variant="secondary"
-                  onClick={handleSaveToLibrary}
-                  disabled={savingToLibrary || savedToLibrary}
-                  title={savedToLibrary ? "Saved to Brand Library" : "Save to Brand Library"}
-                  className="gap-2"
-                >
-                  {savingToLibrary ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : savedToLibrary ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
+                <Button variant="secondary" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary}
+                  title={savedToLibrary ? "Saved to Brand Library" : "Save to Brand Library"} className="gap-2">
+                  {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                   <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
                 </Button>
               )}
-              <Button size="icon" variant="secondary" onClick={handleDownload} title="Download">
-                <Download className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate">
-                <RefreshCw className="w-4 h-4" />
-              </Button>
+              <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
+              <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
             </div>
           </Card>
         ) : (
           <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
             <div className="text-center text-muted-foreground">
-              {mode === "image" ? (
-                <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              ) : (
-                <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              )}
+              {mode === "image" ? <Image className="w-12 h-12 mx-auto mb-3 opacity-30" /> : <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />}
               <p className="text-sm">Your generated {mode} will appear here</p>
             </div>
           </Card>
         )}
       </div>
 
-      {/* Prompt + Generate */}
       <div className="space-y-3">
         <Textarea
-          placeholder={
-            mode === "image"
-              ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
-              : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"
-          }
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          className="resize-none"
+          placeholder={mode === "image"
+            ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
+            : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
+          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="resize-none"
         />
-        <Button
-          onClick={handleGenerate}
-          disabled={generating || !prompt.trim()}
-          className="w-full sm:w-auto gap-2"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Generating…
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}
-            </>
-          )}
+        <Button onClick={handleGenerate} disabled={generating || !prompt.trim()} className="w-full sm:w-auto gap-2">
+          {generating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>) : (<><Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}</>)}
         </Button>
       </div>
 
-      {/* Upload + Brand Library */}
       {mode === "image" && (
         <div className="space-y-3">
-          {/* Selected inspiration thumbnails */}
           {inspirationUrls.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {inspirationUrls.map((url, idx) => (
                 <div key={idx} className="relative inline-block">
-                  <img
-                    src={url}
-                    alt={`Inspiration ${idx + 1}`}
-                    className="w-16 h-16 rounded-lg object-cover border border-border"
-                  />
-                  <button
-                    onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
-                  >
+                  <img src={url} alt={`Inspiration ${idx + 1}`} className="w-16 h-16 rounded-lg object-cover border border-border" />
+                  <button onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
             </div>
           )}
-
           {inspirationUrls.length < 5 && (
             <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={uploadingFile}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload Image
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+              <Button variant="outline" size="sm" className="gap-2" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
+                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setShowLibrary(!showLibrary)}
-              >
-                <Library className="w-4 h-4" />
-                Brand Library
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLibrary(!showLibrary)}>
+                <Library className="w-4 h-4" /> Brand Library
               </Button>
             </div>
           )}
-
-          {/* Library picker - full width, scrollable */}
           {showLibrary && inspirationUrls.length < 5 && (
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-foreground">Select from Library</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}>
-                  <X className="w-3.5 h-3.5" />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}><X className="w-3.5 h-3.5" /></Button>
               </div>
               {loadingLibrary ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
+                <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
               ) : libraryImages.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
               ) : (
@@ -752,22 +476,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     {libraryImages.map((img) => {
                       const isSelected = inspirationUrls.includes(img.value);
                       return (
-                        <button
-                          key={img.id}
-                          disabled={isSelected}
-                          onClick={() => {
-                            setInspirationUrls((prev) => [...prev, img.value]);
-                            if (inspirationUrls.length + 1 >= 5) setShowLibrary(false);
-                          }}
-                          className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${
-                            isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"
-                          }`}
-                        >
-                          <img
-                            src={img.value}
-                            alt={img.name || "Library image"}
-                            className="w-full h-full object-cover"
-                          />
+                        <button key={img.id} disabled={isSelected}
+                          onClick={() => { setInspirationUrls((prev) => [...prev, img.value]); if (inspirationUrls.length + 1 >= 5) setShowLibrary(false); }}
+                          className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"}`}>
+                          <img src={img.value} alt={img.name || "Library image"} className="w-full h-full object-cover" />
                         </button>
                       );
                     })}
