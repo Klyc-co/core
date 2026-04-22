@@ -28,6 +28,7 @@ import BrandColorsTool from "@/components/strategy/BrandColorsTool";
 import CharactersTool from "@/components/strategy/CharactersTool";
 import SceneSettingTool from "@/components/strategy/SceneSettingTool";
 import PlatformPostActions from "@/components/strategy/PlatformPostActions";
+import StrategyImageGenerator from "@/components/strategy/StrategyImageGenerator";
 
 function useAIGenerate() {
   const [loading, setLoading] = useState(false);
@@ -348,6 +349,9 @@ Focus on recent, trending content patterns on ${platform}. Include specific cont
 
       {/* Post to Platform actions */}
       <PlatformPostActions platform={platform} generatedContent={result} />
+
+      {/* Image generation + Save to Brand Assets / Push to Campaign */}
+      <StrategyImageGenerator platform={platform} context={result} />
     </div>
   );
 }
