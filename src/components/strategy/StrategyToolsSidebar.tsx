@@ -1,11 +1,10 @@
 import { cn } from "@/lib/utils";
-import { Search, MessageSquare, FileEdit, Mail, BarChart3, Captions } from "lucide-react";
+import { Search, MessageSquare, FileEdit, Mail, BarChart3 } from "lucide-react";
 
 export type StrategyTool = 
   | "research" 
   | "messaging" 
   | "content" 
-  | "captions"
   | "email" 
   | "performance";
 
@@ -13,7 +12,6 @@ const tools: { id: StrategyTool; label: string; description: string; icon: typeo
   { id: "research", label: "Research & Insights", description: "Reports, competitors, trends", icon: Search },
   { id: "messaging", label: "Strategy & Messaging", description: "Positioning, hooks, CTAs", icon: MessageSquare },
   { id: "content", label: "Platform Content", description: "Native posts by platform", icon: FileEdit },
-  { id: "captions", label: "Caption Generator", description: "Platform-native captions & hashtags", icon: Captions },
   { id: "email", label: "Email Marketing", description: "Campaigns, sequences, optimization", icon: Mail },
   { id: "performance", label: "Social Performance", description: "Metrics & optimization", icon: BarChart3 },
 ];

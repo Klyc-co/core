@@ -97,8 +97,50 @@ function PlatformTab({ platform, formats }: { platform: string; formats: string 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
+  const [captionLoading, setCaptionLoading] = useState(false);
+  const [captionData, setCaptionData] = useState<{ caption: string; hashtags: string[] } | null>(null);
+  const [captionCopied, setCaptionCopied] = useState(false);
   const { toast } = useToast();
   const { loading: viralLoading, result: viralResult, generate: generateViral, copyResult: copyViral, copied: viralCopied } = useAIGenerate();
+
+  // Map display platform name to caption API key
+  const captionPlatformKey = ((): "tiktok" | "instagram" | "linkedin" | "twitter" => {
+    const p = platform.toLowerCase();
+    if (p.includes("tiktok")) return "tiktok";
+    if (p.includes("instagram")) return "instagram";
+    if (p.includes("linkedin")) return "linkedin";
+    return "twitter";
+  })();
+
+  const handleGenerateCaption = async () => {
+    setCaptionLoading(true);
+    setCaptionData(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-captions", {
+        body: {
+          campaignIdea: `${topic}${tone ? ` (Tone: ${tone})` : ""}${visualVibe ? ` (Visual vibe: ${visualVibe})` : ""}`,
+          targetAudience: audience,
+          contentType: `${platform} post`,
+          tags: [],
+        },
+      });
+      if (error) throw error;
+      const c = data?.captions?.[captionPlatformKey];
+      if (!c) throw new Error("No caption returned");
+      setCaptionData({ caption: c.caption || "", hashtags: c.hashtags || [] });
+    } catch (e: any) {
+      toast({ title: "Caption generation failed", description: e?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setCaptionLoading(false);
+    }
+  };
+
+  const copyCaption = () => {
+    if (!captionData) return;
+    navigator.clipboard.writeText(captionData.caption);
+    setCaptionCopied(true);
+    setTimeout(() => setCaptionCopied(false), 2000);
+  };
 
   const toggleColor = (value: string) => {
     setSelectedColors((prev) =>
@@ -311,6 +353,41 @@ Focus on recent, trending content patterns on ${platform}.`);
             Generate {platform} Image
           </Button>
           <StrategyImageInline platform={platform} imageUrl={imageUrl} prompt={imagePrompt} />
+
+          <div className="border-t border-border pt-3 mt-1 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Captions className="w-3.5 h-3.5 text-primary" />
+              <span className="text-sm font-semibold text-foreground">Caption Generator</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Generate a {platform}-native caption with hashtags from your topic & audience.
+            </p>
+            <Button variant="outline" onClick={handleGenerateCaption} disabled={captionLoading || !inputsFilled} className="w-full">
+              {captionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Captions className="w-4 h-4 mr-2" />}
+              Generate {platform} Caption
+            </Button>
+            {captionData && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{captionData.caption.length} characters</span>
+                  <Button variant="ghost" size="sm" onClick={copyCaption}>
+                    {captionCopied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                    {captionCopied ? "Copied" : "Copy"}
+                  </Button>
+                </div>
+                <div className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-3">
+                  {captionData.caption}
+                </div>
+                {captionData.hashtags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {captionData.hashtags.map((h, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{h}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       {(viralResult || viralLoading) && (
