@@ -9,8 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SidebarChat from "@/components/SidebarChat";
 import {
   LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
-  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X, FolderOpen,
-  Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Briefcase, Trash2, User, Menu, X,
+  Shield, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,14 +31,6 @@ interface Client {
   client_email: string | null;
 }
 
-const subNavItems = [
-  { label: "Posts", path: "/campaigns", icon: Megaphone },
-  { label: "Creative", path: "/creative-studio", icon: Palette },
-  { label: "Analytics", path: "/analytics", icon: BarChart3 },
-  { label: "Strategy", path: "/strategy", icon: Zap },
-  { label: "Library", path: "/profile/library", icon: FolderOpen },
-  { label: "Learning", path: "/learning", icon: Lightbulb },
-];
 
 const LeftNavSidebar = () => {
   const navigate = useNavigate();
@@ -59,7 +51,6 @@ const LeftNavSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Collapsible states
-  const [navExpanded, setNavExpanded] = useState(false);
   const [utilExpanded, setUtilExpanded] = useState(false);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
