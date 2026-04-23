@@ -35,7 +35,6 @@ const contentTypes = [
   { id: "social-video", label: "Social Video", icon: Music },
   { id: "visual-post", label: "Image Post", icon: Image },
   { id: "written", label: "Written", icon: FileText },
-  { id: "paid-ads", label: "Paid Ads", icon: DollarSign },
 ];
 
 interface SocialPlatform {
@@ -1384,10 +1383,6 @@ const GenerateCampaignIdeas = () => {
             </div>
           )}
 
-          {/* Paid Ads Dashboard (inline) */}
-          {selectedContentType === "paid-ads" && (
-            <PaidAdsDashboard />
-          )}
         </div>
       </main>
     </div>
