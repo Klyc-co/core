@@ -402,18 +402,12 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         <Button
           onClick={handleGenerate}
           disabled={generating || !prompt.trim()}
-          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex flex-col items-center justify-center gap-1 leading-tight text-sm font-bold text-center bg-gradient-to-br from-primary to-pink-500 text-primary-foreground hover:opacity-90"
+          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex items-center justify-center text-2xl font-extrabold tracking-wide text-center bg-gradient-to-br from-primary to-pink-500 text-primary-foreground hover:opacity-90"
         >
           {generating ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Generating…</span>
-            </>
+            <Loader2 className="w-6 h-6 animate-spin" />
           ) : (
-            <>
-              <span>Generate</span>
-              <span>{mode === "image" ? "Image" : "Video"}</span>
-            </>
+            <span>GO!</span>
           )}
         </Button>
       </div>
