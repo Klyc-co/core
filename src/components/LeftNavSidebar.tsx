@@ -141,6 +141,17 @@ const LeftNavSidebar = () => {
       </div>
 
       {/* ===== BOTTOM SECTION ===== */}
+      {/* Expand/collapse arrow */}
+      <div className="px-3 shrink-0">
+        <button
+          onClick={() => setUtilExpanded((v) => !v)}
+          className="w-full flex items-center justify-center py-1 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
+          aria-label={utilExpanded ? "Collapse menu" : "Expand menu"}
+        >
+          {utilExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
       {/* Collapsible utility items */}
       {utilExpanded && (
         <div className="px-3 space-y-0.5 shrink-0 pb-1">
@@ -186,16 +197,6 @@ const LeftNavSidebar = () => {
           </DropdownMenu>
 
           <button
-            onClick={() => { navigate("/profile"); closeMobile(); }}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
-              location.pathname.startsWith("/profile") && "bg-primary/10 text-primary"
-            )}
-          >
-            <User className="w-4 h-4 shrink-0" />Profile
-          </button>
-
-          <button
             onClick={() => { navigate("/messages"); closeMobile(); }}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
@@ -224,18 +225,23 @@ const LeftNavSidebar = () => {
         </div>
       )}
 
-      {/* Profile toggle — always visible */}
+      {/* Profile — always visible. Click expands when collapsed; navigates when expanded. */}
       <div className="px-3 pb-0 shrink-0">
         <button
-          onClick={() => setUtilExpanded((v) => !v)}
+          onClick={() => {
+            if (utilExpanded) {
+              navigate("/profile");
+              closeMobile();
+            } else {
+              setUtilExpanded(true);
+            }
+          }}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm border border-transparent text-foreground hover:bg-muted/50 transition-colors",
-            utilExpanded || location.pathname.startsWith("/profile") ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30"
+            location.pathname.startsWith("/profile") ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30"
           )}
         >
-          <User className="w-4 h-4 shrink-0" />
-          <span>Profile</span>
-          {utilExpanded ? <ChevronDown className="w-3.5 h-3.5 ml-auto" /> : <ChevronUp className="w-3.5 h-3.5 ml-auto" />}
+          <User className="w-4 h-4 shrink-0" /><span>Profile</span>
         </button>
       </div>
 
