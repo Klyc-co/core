@@ -141,16 +141,6 @@ const LeftNavSidebar = () => {
       </div>
 
       {/* ===== BOTTOM SECTION ===== */}
-      {/* Expand/collapse for utility nav */}
-      <div className="px-3 shrink-0">
-        <button
-          onClick={() => setUtilExpanded((v) => !v)}
-          className="w-full flex items-center justify-center py-1 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
-        >
-          {utilExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-
       {/* Collapsible utility items */}
       {utilExpanded && (
         <div className="px-3 space-y-0.5 shrink-0 pb-1">
@@ -196,6 +186,16 @@ const LeftNavSidebar = () => {
           </DropdownMenu>
 
           <button
+            onClick={() => { navigate("/profile"); closeMobile(); }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
+              location.pathname.startsWith("/profile") && "bg-primary/10 text-primary"
+            )}
+          >
+            <User className="w-4 h-4 shrink-0" />Profile
+          </button>
+
+          <button
             onClick={() => { navigate("/messages"); closeMobile(); }}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
@@ -224,16 +224,18 @@ const LeftNavSidebar = () => {
         </div>
       )}
 
-      {/* Profile — always visible */}
+      {/* Profile toggle — always visible */}
       <div className="px-3 pb-0 shrink-0">
         <button
-          onClick={() => { navigate("/profile"); closeMobile(); }}
+          onClick={() => setUtilExpanded((v) => !v)}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm border border-transparent text-foreground hover:bg-muted/50 transition-colors",
-            location.pathname.startsWith("/profile") ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30"
+            utilExpanded || location.pathname.startsWith("/profile") ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30"
           )}
         >
-          <User className="w-4 h-4 shrink-0" /><span>Profile</span>
+          <User className="w-4 h-4 shrink-0" />
+          <span>Profile</span>
+          {utilExpanded ? <ChevronDown className="w-3.5 h-3.5 ml-auto" /> : <ChevronUp className="w-3.5 h-3.5 ml-auto" />}
         </button>
       </div>
 
