@@ -237,16 +237,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          )}
-          <h2 className="text-xl font-bold text-foreground">Image & Video Generator</h2>
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
         </div>
-      </div>
+      )}
 
       <Tabs
         value={mode}

@@ -47,7 +47,7 @@ const CreativeStudio = () => {
       <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Creative Studio</h1>
-          <p className="text-sm text-muted-foreground">Create visual content, images, thumbnails, and media assets.</p>
+          
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
