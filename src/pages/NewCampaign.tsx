@@ -871,6 +871,9 @@ const NewCampaign = () => {
                       </div>
                       {/* Preview body */}
                       <div className="p-4 space-y-3">
+                        {postCaption && (
+                          <p className="text-sm text-foreground whitespace-pre-wrap">{postCaption}</p>
+                        )}
                         {previewImage && (
                           <div className={`${spec.aspect} rounded-lg overflow-hidden bg-muted ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
                             {previewIsVideo ? (
@@ -879,9 +882,6 @@ const NewCampaign = () => {
                               <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
                             )}
                           </div>
-                        )}
-                        {postCaption && (
-                          <p className="text-sm text-foreground line-clamp-4">{postCaption}</p>
                         )}
                         {tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
