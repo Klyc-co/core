@@ -170,8 +170,15 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         if (error) throw new Error(error.message || "Image generation failed");
 
-        const tiles: string[] = data?.images ?? [];
-        if (tiles.length === 0) throw new Error("No images returned — check edge function");
+        // Edge function returns grids: [{ gridUrl, success }]; each gridUrl is a 2x2 composite.
+        // Prefer pre-sliced `images` if present; otherwise slice the first grid client-side.
+        let tiles: string[] = data?.images ?? [];
+        if (tiles.length === 0) {
+          const gridUrl: string | undefined = data?.grids?.find((g: any) => g.success)?.gridUrl;
+          if (!gridUrl) throw new Error("No images returned — check edge function");
+          tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
+        }
+        if (tiles.length === 0) throw new Error("Failed to slice composite image");
 
         setImageTiles(tiles);
         setSelectedTile(tiles[0]);
