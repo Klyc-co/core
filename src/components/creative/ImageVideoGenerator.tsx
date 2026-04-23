@@ -45,6 +45,53 @@ const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] 
   { value: "kling",  label: "Kling",  description: "Official Kling text-to-video clips" },
 ];
 
+/**
+ * Slice a 2x2 composite image into 4 individual tiles.
+ * Each tile is cropped to the requested aspect ratio (centered crop).
+ * Returns 4 data URLs.
+ */
+async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise<string[]> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new window.Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load composite image"));
+    i.src = gridUrl;
+  });
+
+  const halfW = img.width / 2;
+  const halfH = img.height / 2;
+  const [arW, arH] = aspectRatio.split(":").map(Number);
+  const targetRatio = arW / arH;
+
+  // Centered crop within each quadrant to match aspect ratio
+  let cropW = halfW;
+  let cropH = halfH;
+  if (halfW / halfH > targetRatio) {
+    cropW = halfH * targetRatio;
+  } else {
+    cropH = halfW / targetRatio;
+  }
+
+  const quadrants = [
+    { sx: 0, sy: 0 },
+    { sx: halfW, sy: 0 },
+    { sx: 0, sy: halfH },
+    { sx: halfW, sy: halfH },
+  ];
+
+  return quadrants.map(({ sx, sy }) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = cropW;
+    canvas.height = cropH;
+    const ctx = canvas.getContext("2d")!;
+    const offsetX = sx + (halfW - cropW) / 2;
+    const offsetY = sy + (halfH - cropH) / 2;
+    ctx.drawImage(img, offsetX, offsetY, cropW, cropH, 0, 0, cropW, cropH);
+    return canvas.toDataURL("image/png");
+  });
+}
+
 interface ImageVideoGeneratorProps {
   onBack?: () => void;
 }
