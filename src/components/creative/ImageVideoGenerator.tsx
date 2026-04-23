@@ -121,6 +121,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [savedToLibrary, setSavedToLibrary] = useState(false);
 
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
+  const [accentColor, setAccentColor] = useState<string>("");
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
@@ -205,9 +206,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         console.log(`[Creative Studio] Composite image call — ar=${aspectRatio} refs=${inspirationUrls.length}`);
 
+        const colorInstruction = accentColor
+          ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
+          : "";
+
         const { data, error } = await supabase.functions.invoke("generate-image-composite", {
           body: {
-            brief: prompt,
+            brief: `${prompt}${colorInstruction}`,
             platforms: ["img@0", "img@1", "img@2", "img@3"],
             mode: "composite",
             aspectRatio,
