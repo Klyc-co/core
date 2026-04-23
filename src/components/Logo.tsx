@@ -14,7 +14,7 @@ const Logo = ({ className = "", size = "md", to = "/home" }: LogoProps) => {
   
   const sizes = {
     sm: "h-14",
-    md: "h-16",
+    md: "h-32",
     lg: "h-28",
   };
 
