@@ -121,6 +121,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [savedToLibrary, setSavedToLibrary] = useState(false);
 
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
+  const [accentColor, setAccentColor] = useState<string>("");
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
@@ -205,9 +206,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         console.log(`[Creative Studio] Composite image call — ar=${aspectRatio} refs=${inspirationUrls.length}`);
 
+        const colorInstruction = accentColor
+          ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
+          : "";
+
         const { data, error } = await supabase.functions.invoke("generate-image-composite", {
           body: {
-            brief: prompt,
+            brief: `${prompt}${colorInstruction}`,
             platforms: ["img@0", "img@1", "img@2", "img@3"],
             mode: "composite",
             aspectRatio,
@@ -539,6 +544,38 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
       {mode === "image" && (
         <div className="space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Label htmlFor="accent-color" className="text-sm font-medium text-foreground">
+              Accent color
+            </Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="accent-color"
+                type="color"
+                value={accentColor || "#000000"}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="h-9 w-12 rounded-md border border-border cursor-pointer bg-background"
+                aria-label="Pick accent color"
+              />
+              <Input
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                placeholder="#RRGGBB"
+                className="h-9 w-28 font-mono text-sm"
+                maxLength={7}
+              />
+              {accentColor && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-muted-foreground"
+                  onClick={() => setAccentColor("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
           {inspirationUrls.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {inspirationUrls.map((url, idx) => (
