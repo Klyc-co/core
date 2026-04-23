@@ -385,7 +385,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </div>
       )}
 
-      {mode !== "broll" && (<>
+      {mode !== "broll" && !(mode === "video" && !videoUnlocked) && (<>
       <div className="w-full">
         {resultUrl ? (
           <Card className="overflow-hidden relative group">
