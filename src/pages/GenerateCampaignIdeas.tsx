@@ -1005,7 +1005,7 @@ const GenerateCampaignIdeas = () => {
 
                 {uploadedMedia.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {uploadedMedia.map((m) => {
+                    {uploadedMedia.map((m, index) => {
                       const isVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(m.url);
                       return (
                         <div key={m.id} className="relative group rounded-lg overflow-hidden border border-border bg-muted">
@@ -1016,7 +1016,7 @@ const GenerateCampaignIdeas = () => {
                           )}
                           <button
                             type="button"
-                            onClick={() => removeUploadedMedia(m.id)}
+                            onClick={() => removeUploadedMedia(index)}
                             className="absolute top-1 right-1 w-6 h-6 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label="Remove"
                           >
@@ -1031,17 +1031,22 @@ const GenerateCampaignIdeas = () => {
 
                 {uploadedMedia.length > 0 && (
                   <Button
-                    variant="outline"
+                    variant="default"
                     className="w-full gap-2"
-                    onClick={() => navigate("/campaigns/new", {
-                      state: {
-                        contentType: selectedContentType,
-                        uploadedMediaUrls: uploadedMedia,
-                        selectedPlatforms,
-                      },
-                    })}
+                    onClick={handleConfirmUploadOwnContent}
+                    disabled={isUploadingMedia || pendingUploadFiles.length === 0}
                   >
-                    Continue with Uploaded Content →
+                    {isUploadingMedia ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Upload & Continue
+                      </>
+                    )}
                   </Button>
                 )}
               </CardContent>
