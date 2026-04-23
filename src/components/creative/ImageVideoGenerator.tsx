@@ -265,7 +265,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               <Monitor className="w-4 h-4 text-muted-foreground" />
               <Label className="text-sm font-medium">Output Size</Label>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 max-w-xl">
               {OUTPUT_SIZE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const isSelected = outputSize === opt.value;
@@ -273,15 +273,16 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   <button
                     key={opt.value}
                     onClick={() => setOutputSize(opt.value)}
-                    className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
                       isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
                     }`}
                   >
-                    {isSelected && (<div className="absolute top-2 right-2"><Check className="w-4 h-4 text-primary" /></div>)}
-                    <Icon className={`w-6 h-6 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
-                    <span className="text-xs text-muted-foreground">{opt.dimensions}</span>
-                    <span className="text-[11px] text-muted-foreground/70">{opt.description}</span>
+                    {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
+                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="flex flex-col leading-tight min-w-0">
+                      <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
+                    </div>
                   </button>
                 );
               })}
