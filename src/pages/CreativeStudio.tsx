@@ -52,7 +52,7 @@ const CreativeStudio = () => {
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <Tabs defaultValue="image-video">
-          <TabsList className="mb-6">
+          <TabsList className="mb-2">
             <TabsTrigger value="image-video">Image & Video</TabsTrigger>
             <TabsTrigger value="flyer">Templates</TabsTrigger>
             <TabsTrigger value="hire">Hire</TabsTrigger>
