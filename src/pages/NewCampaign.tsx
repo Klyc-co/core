@@ -101,6 +101,8 @@ const NewCampaign = () => {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [showDraftPicker, setShowDraftPicker] = useState(false);
   const [postCaption, setPostCaption] = useState("");
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [isEditingCaption, setIsEditingCaption] = useState(true);
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
