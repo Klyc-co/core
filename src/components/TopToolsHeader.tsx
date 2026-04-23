@@ -21,7 +21,8 @@ const TopToolsHeader = () => {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isActive = (path: string) =>
+    path === "/home" ? location.pathname === "/home" : location.pathname.startsWith(path);
 
   return (
     <header className="sticky top-0 z-30 h-11 bg-card/80 backdrop-blur-sm border-b border-border flex items-center justify-between px-3 shrink-0">
