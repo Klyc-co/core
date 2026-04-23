@@ -6,11 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
-import { generateImageViaOrchestrator, extractImageUrl } from "./ImageGeneratorOrchestrated";
 import {
   ArrowLeft,
   Image,
@@ -33,25 +31,18 @@ import { toast } from "sonner";
 
 import { Monitor, Smartphone, Square } from "lucide-react";
 
-type ImageModel = "nano-banana" | "runway" | "fooocus";
 type VideoModel = "runway" | "kling";
 type OutputSize = "portrait" | "square" | "landscape";
 
-const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; icon: typeof Smartphone }[] = [
-  { value: "portrait", label: "Vertical", description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920", width: 1080, height: 1920, icon: Smartphone },
-  { value: "square", label: "Square", description: "Best for Feed posts", dimensions: "1080×1080", width: 1080, height: 1080, icon: Square },
-  { value: "landscape", label: "Horizontal", description: "Best for YouTube, LinkedIn", dimensions: "1920×1080", width: 1920, height: 1080, icon: Monitor },
-];
-
-const IMAGE_MODELS: { value: ImageModel; label: string; description: string }[] = [
-  { value: "nano-banana", label: "Nano Banana", description: "Fast AI generation (default)" },
-  { value: "runway", label: "Runway", description: "High-quality cinematic visuals" },
-  { value: "fooocus", label: "Fooocus", description: "Fine-tuned artistic styles" },
+const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; aspectRatio: string; icon: typeof Smartphone }[] = [
+  { value: "portrait",  label: "Vertical",    description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920", width: 1080, height: 1920, aspectRatio: "9:16", icon: Smartphone },
+  { value: "square",    label: "Square",      description: "Best for Feed posts",             dimensions: "1080×1080", width: 1080, height: 1080, aspectRatio: "1:1",  icon: Square },
+  { value: "landscape", label: "Horizontal",  description: "Best for YouTube, LinkedIn",      dimensions: "1920×1080", width: 1920, height: 1080, aspectRatio: "16:9", icon: Monitor },
 ];
 
 const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
   { value: "runway", label: "Runway", description: "Cinematic text-to-video generation" },
-  { value: "kling", label: "Kling", description: "Official Kling text-to-video clips" },
+  { value: "kling",  label: "Kling",  description: "Official Kling text-to-video clips" },
 ];
 
 interface ImageVideoGeneratorProps {
@@ -69,10 +60,16 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
   const [outputSize, setOutputSize] = useState<OutputSize>("portrait");
-  const [imageModel, setImageModel] = useState<ImageModel>("nano-banana");
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
+
+  // Image tiles — 4 from one composite call
+  const [imageTiles, setImageTiles] = useState<string[]>([]);
+  const [selectedTile, setSelectedTile] = useState<string | null>(null);
+
+  // Video (unchanged)
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+
   const [savingToLibrary, setSavingToLibrary] = useState(false);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
 
@@ -147,39 +144,42 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     if (!prompt.trim()) { toast.error("Please enter a description"); return; }
 
     setGenerating(true);
+    setImageTiles([]);
+    setSelectedTile(null);
     setResultUrl(null);
     setSavedToLibrary(false);
 
     try {
       if (mode === "image") {
-        // === ROUTE THROUGH AI ORCHESTRATOR PIPELINE ===
-        // This calls klyc-orchestrator which runs:
-        //   research → strategy → copy → image → performance
-        // The image submind (Nano Banana) is called as part of the full AI pipeline.
-        console.log("[Creative Studio] Routing through AI orchestrator pipeline...");
+        // === COMPOSITE IMAGE PIPELINE ===
+        // 1 API call → 2×2 grid → 4 sliced tiles at selected aspect ratio
+        const sizeOpt = OUTPUT_SIZE_OPTIONS.find(o => o.value === outputSize)!;
+        const aspectRatio = sizeOpt.aspectRatio;
 
-        const result = await generateImageViaOrchestrator(prompt, outputSize, imageModel);
+        console.log(`[Creative Studio] Composite image call — ar=${aspectRatio} refs=${inspirationUrls.length}`);
 
-        if (result.pipelineRan) {
-          console.log("[Creative Studio] Pipeline completed. Lanes:", result.lanesCompleted.join(", "));
-        }
+        const { data, error } = await supabase.functions.invoke("generate-image-composite", {
+          body: {
+            brief: prompt,
+            platforms: ["img@0", "img@1", "img@2", "img@3"],
+            mode: "composite",
+            aspectRatio,
+            referenceImages: inspirationUrls.length > 0 ? inspirationUrls.slice(0, 3) : undefined,
+          },
+        });
 
-        if (result.error && !result.imageUrl) {
-          console.error("[Creative Studio] Orchestrator error:", result.error, result.fullResponse);
-          throw new Error(result.error);
-        }
+        if (error) throw new Error(error.message || "Image generation failed");
 
-        if (!result.imageUrl) {
-          console.error("[Creative Studio] No image URL in orchestrator response:", result.fullResponse);
-          throw new Error("No image returned from AI pipeline — check console for details");
-        }
+        const tiles: string[] = data?.images ?? [];
+        if (tiles.length === 0) throw new Error("No images returned — check edge function");
 
-        setResultUrl(result.imageUrl);
-        toast.success(`Image generated via AI pipeline! (${result.lanesCompleted.length} subminds ran)`);
+        setImageTiles(tiles);
+        setSelectedTile(tiles[0]);
+        toast.success(`4 images ready — pick your favourite!`);
         return;
       }
 
-      // Video generation (unchanged — still direct)
+      // Video generation (unchanged)
       const { data, error } = await supabase.functions.invoke("generate-broll", {
         body: { prompt, standalone: true, model: videoModel },
       });
@@ -196,14 +196,15 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   };
 
   const handleSaveToLibrary = async () => {
-    if (!resultUrl || mode !== "image") return;
+    const url = selectedTile || resultUrl;
+    if (!url || mode !== "image") return;
     setSavingToLibrary(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Please sign in first"); return; }
-      let durableUrl = resultUrl;
-      if (resultUrl.startsWith("data:")) {
-        const response = await fetch(resultUrl);
+      let durableUrl = url;
+      if (url.startsWith("data:")) {
+        const response = await fetch(url);
         const blob = await response.blob();
         const file = new File([blob], `creative-studio-${Date.now()}.png`, { type: blob.type || "image/png" });
         const { publicUrl } = await uploadBrandAssetImage({ userId: user.id, file, folder: "creative-studio" });
@@ -212,7 +213,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       const imageName = `Creative Studio - ${new Date().toLocaleDateString()}`;
       const { error } = await supabase.from("brand_assets").insert({
         user_id: user.id, asset_type: "image", name: imageName, value: durableUrl,
-        metadata: { source: "creative-studio", model: imageModel, prompt, generated_at: new Date().toISOString() },
+        metadata: { source: "creative-studio", model: "imagen-4", prompt, generated_at: new Date().toISOString() },
       });
       if (error) throw error;
       setSavedToLibrary(true);
@@ -226,9 +227,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   };
 
   const handleDownload = () => {
-    if (!resultUrl) return;
+    const url = selectedTile || resultUrl;
+    if (!url) return;
     const link = document.createElement("a");
-    link.href = resultUrl;
+    link.href = url;
     link.download = `generated-${mode}-${Date.now()}.${mode === "image" ? "png" : "mp4"}`;
     document.body.appendChild(link);
     link.click();
@@ -250,7 +252,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         onValueChange={(v) => {
           const val = v as "image" | "video" | "broll";
           setMode(val);
-          if (val !== "broll") { setResultUrl(null); setSavedToLibrary(false); }
+          if (val !== "broll") { setImageTiles([]); setSelectedTile(null); setResultUrl(null); setSavedToLibrary(false); }
         }}
       >
         <TabsList className="grid w-full max-w-sm grid-cols-3">
@@ -417,32 +419,73 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       </div>
 
       <div className="w-full">
-        {resultUrl ? (
-          <Card className="overflow-hidden relative group">
-            {mode === "image" ? (
-              <img src={resultUrl} alt="Generated" className="w-full rounded-lg max-h-[500px] object-contain" />
-            ) : (
-              <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
-            )}
-            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              {mode === "image" && (
-                <Button variant="secondary" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary}
-                  title={savedToLibrary ? "Saved to Brand Library" : "Save to Brand Library"} className="gap-2">
-                  {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
-                </Button>
-              )}
-              <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
-              <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
+        {mode === "image" ? (
+          imageTiles.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Pick your favourite · tap to select</p>
+                <div className="flex gap-2">
+                  {selectedTile && (
+                    <Button variant="secondary" size="sm" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary} className="gap-2">
+                      {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                      <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
+                    </Button>
+                  )}
+                  {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
+                  <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
+                </div>
+              </div>
+              {/* 2×2 tile grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {imageTiles.map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedTile(url)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedTile === url
+                        ? "border-primary shadow-lg ring-2 ring-primary/30"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-auto block" />
+                    {selectedTile === url && (
+                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] font-semibold">
+                      {idx + 1}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </Card>
+          ) : (
+            <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
+              <div className="text-center text-muted-foreground">
+                <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">4 image variations will appear here</p>
+                <p className="text-xs opacity-60 mt-1">1 API call · 4 tiles · pick your favourite</p>
+              </div>
+            </Card>
+          )
         ) : (
-          <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
-            <div className="text-center text-muted-foreground">
-              {mode === "image" ? <Image className="w-12 h-12 mx-auto mb-3 opacity-30" /> : <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />}
-              <p className="text-sm">Your generated {mode} will appear here</p>
-            </div>
-          </Card>
+          resultUrl ? (
+            <Card className="overflow-hidden relative group">
+              <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
+              <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
+                <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
+              </div>
+            </Card>
+          ) : (
+            <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
+              <div className="text-center text-muted-foreground">
+                <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Your generated video will appear here</p>
+              </div>
+            </Card>
+          )
         )}
       </div>
 
