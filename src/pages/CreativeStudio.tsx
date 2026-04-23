@@ -44,13 +44,12 @@ const CreativeStudio = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
-      <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+      <div className="bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-1">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Creative Studio</h1>
-          
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2 pb-6">
         <Tabs defaultValue="image-video">
           <TabsList className="mb-2">
             <TabsTrigger value="image-video">Image & Video</TabsTrigger>
