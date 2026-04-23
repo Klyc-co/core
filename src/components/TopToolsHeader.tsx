@@ -37,7 +37,7 @@ const TopToolsHeader = () => {
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
                 active
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-brand-gradient text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
