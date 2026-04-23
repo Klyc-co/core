@@ -87,6 +87,9 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [brollLoading, setBrollLoading] = useState(false);
   const [brollUnlocked, setBrollUnlocked] = useState(false);
   const [brollPasscode, setBrollPasscode] = useState("");
+  // Video gate state
+  const [videoUnlocked, setVideoUnlocked] = useState(false);
+  const [videoPasscode, setVideoPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -310,6 +313,30 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               className="text-center"
             />
             <Button onClick={() => { if (brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>
+              Enter
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {mode === "video" && !videoUnlocked && (
+        <Card className="flex flex-col items-center justify-center py-20 border-dashed">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+            <Video className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">Coming Soon</h3>
+          <p className="text-sm text-muted-foreground mb-6">Beta access only</p>
+          <div className="flex items-center gap-2 max-w-xs w-full">
+            <Input
+              type="password" placeholder="Enter passcode" value={videoPasscode}
+              onChange={(e) => setVideoPasscode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); }
+                else if (e.key === "Enter") { toast.error("Invalid passcode"); }
+              }}
+              className="text-center"
+            />
+            <Button onClick={() => { if (videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>
               Enter
             </Button>
           </div>
