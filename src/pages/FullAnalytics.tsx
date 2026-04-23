@@ -30,14 +30,6 @@ const FullAnalytics = () => {
       <AppHeader user={user} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <button 
-          onClick={() => navigate("/home")}
-          className="flex items-center gap-2 text-primary hover:underline mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </button>
-
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Full Analytics</h1>
           <p className="text-muted-foreground">Comprehensive view of all your website and social media performance</p>
