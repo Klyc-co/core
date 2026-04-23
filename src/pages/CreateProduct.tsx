@@ -156,8 +156,21 @@ const CreateProduct = () => {
     }
 
     setSaving(false);
-    toast.success("Product created successfully!");
-    navigate("/profile/library");
+    toast.success("Product created successfully!", {
+      description: "You can create another product below.",
+    });
+
+    // Reset form so the user can quickly create another product
+    setProductType("");
+    setProductName("");
+    setShortDescription("");
+    setValuePropositions("");
+    setTargetAudience("");
+    setProductLineId("");
+    setSelectedAssets([]);
+
+    // Scroll back to the top of the form
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
