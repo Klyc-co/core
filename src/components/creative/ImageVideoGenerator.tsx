@@ -378,6 +378,34 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       )}
 
       {mode !== "broll" && !(mode === "video" && !videoUnlocked) && (<>
+      <div className="flex flex-col sm:flex-row items-stretch gap-2">
+        {mode === "image" && inspirationUrls.length < 5 && (
+          <div className="flex sm:flex-col gap-2 shrink-0">
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+            <Button variant="outline" size="sm" className="gap-2 justify-start" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
+              {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2 justify-start" onClick={() => setShowLibrary(!showLibrary)}>
+              <Library className="w-4 h-4" /> Brand Library
+            </Button>
+          </div>
+        )}
+        <Textarea
+          placeholder={mode === "image"
+            ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
+            : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
+          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
+          className="resize-none flex-1 min-h-[80px]"
+        />
+        <Button
+          onClick={handleGenerate}
+          disabled={generating || !prompt.trim()}
+          className="gap-2 shrink-0 sm:self-stretch sm:h-auto"
+        >
+          {generating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>) : (<><Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}</>)}
+        </Button>
+      </div>
+
       <div className="w-full">
         {resultUrl ? (
           <Card className="overflow-hidden relative group">
@@ -406,31 +434,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             </div>
           </Card>
         )}
-      </div>
-
-      <div className="space-y-3">
-        <Textarea
-          placeholder={mode === "image"
-            ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
-            : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
-          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="resize-none"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleGenerate} disabled={generating || !prompt.trim()} className="gap-2">
-            {generating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>) : (<><Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}</>)}
-          </Button>
-          {mode === "image" && inspirationUrls.length < 5 && (
-            <>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
-              <Button variant="outline" size="sm" className="gap-2" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
-                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLibrary(!showLibrary)}>
-                <Library className="w-4 h-4" /> Brand Library
-              </Button>
-            </>
-          )}
-        </div>
       </div>
 
       {mode === "image" && (
