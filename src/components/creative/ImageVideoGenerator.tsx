@@ -394,13 +394,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           placeholder={mode === "image"
             ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
             : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
-          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
-          className="resize-none flex-1 min-h-[80px]"
+          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2}
+          className="resize-none flex-1 min-h-0 sm:h-auto sm:self-stretch"
         />
         <Button
           onClick={handleGenerate}
           disabled={generating || !prompt.trim()}
-          className="shrink-0 h-auto sm:self-stretch aspect-square w-24 p-2 flex flex-col items-center justify-center gap-1 leading-tight text-xs font-bold text-center bg-gradient-to-br from-primary to-pink-500 text-primary-foreground hover:opacity-90"
+          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex flex-col items-center justify-center gap-1 leading-tight text-xs font-bold text-center bg-gradient-to-br from-primary to-pink-500 text-primary-foreground hover:opacity-90"
         >
           {generating ? (
             <>
