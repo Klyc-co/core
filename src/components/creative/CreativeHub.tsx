@@ -15,7 +15,7 @@ const tools = [
   },
   {
     id: "flyer" as const,
-    title: "Flyer Generator",
+    title: "Templates",
     description: "Design branded social posts, flyers, and visual content using customizable templates with your brand colors and fonts.",
     icon: FileText,
     color: "#6b8de3",

@@ -54,7 +54,7 @@ const CreativeStudio = () => {
         <Tabs defaultValue="image-video">
           <TabsList className="mb-6">
             <TabsTrigger value="image-video">Image & Video</TabsTrigger>
-            <TabsTrigger value="flyer">Flyer Generator</TabsTrigger>
+            <TabsTrigger value="flyer">Templates</TabsTrigger>
             <TabsTrigger value="hire">Hire</TabsTrigger>
           </TabsList>
 
