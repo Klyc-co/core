@@ -80,6 +80,7 @@ const NewCampaign = () => {
     contentType?: string;
     generatedImageUrl?: string;
     selectedPlatforms?: string[];
+    uploadedMediaUrls?: { id: string; name: string; url: string }[];
   } | null;
   const { getEffectiveUserId } = useClientContext();
   const [user, setUser] = useState<User | null>(null);
@@ -235,7 +236,9 @@ const NewCampaign = () => {
       if (generatedData.postCaption) setPostCaption(generatedData.postCaption);
       if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
       if (generatedData.selectedPlatforms && generatedData.selectedPlatforms.length > 0) setSelectedPlatforms(generatedData.selectedPlatforms);
-      if (generatedData.generatedImageUrl) {
+      if (generatedData.uploadedMediaUrls && generatedData.uploadedMediaUrls.length > 0) {
+        setLibraryAssets(generatedData.uploadedMediaUrls);
+      } else if (generatedData.generatedImageUrl) {
         setLibraryAssets([{ id: "generated-image", name: "Generated Image", url: generatedData.generatedImageUrl }]);
       }
     }
