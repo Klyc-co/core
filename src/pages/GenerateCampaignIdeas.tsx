@@ -911,16 +911,88 @@ const GenerateCampaignIdeas = () => {
           )}
 
           {selectedContentType && selectedContentType !== "paid-ads" && (
-            <Button
-              variant="outline"
-              className="w-full gap-2 py-6 text-lg border-dashed border-2"
-              onClick={() => navigate("/campaigns/new", {
-                state: { contentType: selectedContentType },
-              })}
-            >
-              <Upload className="w-5 h-5" />
-              Upload My Own Content
-            </Button>
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Upload Your Own Content (optional)</h2>
+                  <p className="text-sm text-muted-foreground">Add images or videos from your computer to use in this post.</p>
+                </div>
+
+                <label
+                  htmlFor="own-content-upload"
+                  className={`flex flex-col items-center justify-center w-full py-8 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                    isUploadingMedia ? "opacity-60 cursor-wait" : "hover:border-primary/60 hover:bg-muted/40"
+                  } border-border`}
+                >
+                  {isUploadingMedia ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mb-2 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Uploading…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mb-2 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">Click to upload images or videos</span>
+                      <span className="text-xs text-muted-foreground mt-1">PNG, JPG, MP4 — up to 50MB each</span>
+                    </>
+                  )}
+                  <input
+                    id="own-content-upload"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    className="hidden"
+                    disabled={isUploadingMedia}
+                    onChange={(e) => {
+                      handleUploadOwnContent(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+
+                {uploadedMedia.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {uploadedMedia.map((m) => {
+                      const isVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(m.url);
+                      return (
+                        <div key={m.id} className="relative group rounded-lg overflow-hidden border border-border bg-muted">
+                          {isVideo ? (
+                            <video src={m.url} className="w-full h-24 object-cover" muted />
+                          ) : (
+                            <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeUploadedMedia(m.id)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <p className="text-[10px] text-muted-foreground truncate px-2 py-1">{m.name}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {uploadedMedia.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => navigate("/campaigns/new", {
+                      state: {
+                        contentType: selectedContentType,
+                        uploadedMediaUrls: uploadedMedia,
+                        selectedPlatforms,
+                      },
+                    })}
+                  >
+                    Continue with Uploaded Content →
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* Generate Button */}
