@@ -402,7 +402,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         <Button
           onClick={handleGenerate}
           disabled={generating || !prompt.trim()}
-          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex items-center justify-center text-2xl font-extrabold tracking-wide text-center bg-gradient-to-br from-primary to-pink-500 text-primary-foreground hover:opacity-90"
+          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex items-center justify-center text-2xl font-extrabold tracking-wide text-center bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90"
         >
           {generating ? (
             <Loader2 className="w-6 h-6 animate-spin" />
