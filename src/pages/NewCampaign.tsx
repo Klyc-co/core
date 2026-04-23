@@ -101,6 +101,8 @@ const NewCampaign = () => {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [showDraftPicker, setShowDraftPicker] = useState(false);
   const [postCaption, setPostCaption] = useState("");
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [isEditingCaption, setIsEditingCaption] = useState(true);
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
@@ -233,7 +235,11 @@ const NewCampaign = () => {
   useEffect(() => {
     if (generatedData) {
       if (generatedData.campaignName) setCampaignName(generatedData.campaignName);
-      if (generatedData.postCaption) setPostCaption(generatedData.postCaption);
+      if (generatedData.postCaption) {
+        setPostCaption(generatedData.postCaption);
+        setCaptionDraft(generatedData.postCaption);
+        setIsEditingCaption(false);
+      }
       if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
       if (generatedData.selectedPlatforms && generatedData.selectedPlatforms.length > 0) setSelectedPlatforms(generatedData.selectedPlatforms);
       if (generatedData.uploadedMediaUrls && generatedData.uploadedMediaUrls.length > 0) {
@@ -715,14 +721,62 @@ const NewCampaign = () => {
 
           {/* Post Caption */}
           <div className="space-y-2">
-            <Label htmlFor="postCaption">Post Caption (Text Above Image)</Label>
-            <Textarea
-              id="postCaption"
-              placeholder="Write your post caption here..."
-              value={postCaption}
-              onChange={(e) => setPostCaption(e.target.value)}
-              rows={4}
-            />
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="postCaption">Post Caption (Text Above Image)</Label>
+              {!isEditingCaption && postCaption && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCaptionDraft(postCaption);
+                    setIsEditingCaption(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+            {isEditingCaption ? (
+              <>
+                <Textarea
+                  id="postCaption"
+                  placeholder="Write your post caption here..."
+                  value={captionDraft}
+                  onChange={(e) => setCaptionDraft(e.target.value)}
+                  rows={4}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setPostCaption(captionDraft.trim());
+                      setIsEditingCaption(false);
+                      toast({ title: postCaption ? "Caption updated" : "Caption added", description: "Shown in the platform preview below." });
+                    }}
+                    disabled={!captionDraft.trim()}
+                  >
+                    {postCaption ? "Save" : "Add"} Caption
+                  </Button>
+                  {postCaption && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setCaptionDraft(postCaption);
+                        setIsEditingCaption(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+                {postCaption}
+              </div>
+            )}
           </div>
 
 
