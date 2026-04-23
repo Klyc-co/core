@@ -343,6 +343,39 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               );
             })}
           </div>
+
+          <div className="flex items-center gap-3 flex-wrap pt-1">
+            <Label htmlFor="accent-color" className="text-sm font-medium text-foreground">
+              Accent color
+            </Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="accent-color"
+                type="color"
+                value={accentColor || "#000000"}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="h-9 w-12 rounded-md border border-border cursor-pointer bg-background"
+                aria-label="Pick accent color"
+              />
+              <Input
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                placeholder="#RRGGBB"
+                className="h-9 w-28 font-mono text-sm"
+                maxLength={7}
+              />
+              {accentColor && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-muted-foreground"
+                  onClick={() => setAccentColor("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
         </TabsContent>
         <TabsContent value="video" className="mt-3" />
         <TabsContent value="broll" className="mt-3" />
@@ -544,38 +577,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
       {mode === "image" && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <Label htmlFor="accent-color" className="text-sm font-medium text-foreground">
-              Accent color
-            </Label>
-            <div className="flex items-center gap-2">
-              <input
-                id="accent-color"
-                type="color"
-                value={accentColor || "#000000"}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="h-9 w-12 rounded-md border border-border cursor-pointer bg-background"
-                aria-label="Pick accent color"
-              />
-              <Input
-                value={accentColor}
-                onChange={(e) => setAccentColor(e.target.value)}
-                placeholder="#RRGGBB"
-                className="h-9 w-28 font-mono text-sm"
-                maxLength={7}
-              />
-              {accentColor && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-2 text-xs text-muted-foreground"
-                  onClick={() => setAccentColor("")}
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
           {inspirationUrls.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {inspirationUrls.map((url, idx) => (
