@@ -318,9 +318,18 @@ const GenerateCampaignIdeas = () => {
 
         newAssets.push({ id: assetRow?.id || path, name: file.name, url: publicUrl });
       }
-      setUploadedMedia((prev) => [...prev, ...newAssets].slice(0, 10));
+      const merged = [...uploadedMedia, ...newAssets].slice(0, 10);
+      setUploadedMedia(merged);
       if (newAssets.length > 0) {
-        toast({ title: "Uploaded ✨", description: `${newAssets.length} file(s) ready.` });
+        toast({ title: "Uploaded ✨", description: `Taking you to Prepare for Launch…` });
+        // Auto-navigate to Prepare for Launch with the uploaded media + selected platforms
+        navigate("/campaigns/new", {
+          state: {
+            contentType: selectedContentType,
+            uploadedMediaUrls: merged,
+            selectedPlatforms,
+          },
+        });
       }
     } catch (e: any) {
       console.error("Upload failed:", e);
