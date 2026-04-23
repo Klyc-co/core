@@ -770,46 +770,6 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
-          {/* Product (optional) */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Attach a Product (optional)</h2>
-              <Select value={selectedProduct || "none"} onValueChange={(val) => setSelectedProduct(val === "none" ? null : val)}>
-                <SelectTrigger className="w-full" disabled={loadingProducts}>
-                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {products.length === 0 && !loadingProducts && (
-                    <SelectItem value="_empty" disabled>No products saved yet</SelectItem>
-                  )}
-                  {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
-          {/* Post Idea / Prompt */}
-          {selectedContentType && selectedContentType !== "paid-ads" && (
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
-                <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
-                <Textarea
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder="e.g. A promotional post for our summer sale featuring our new product line..."
-                  rows={4}
-                  className="resize-none"
-                />
-              </CardContent>
-            </Card>
-          )}
-
           {/* Platform Selection */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
@@ -846,6 +806,46 @@ const GenerateCampaignIdeas = () => {
                     {selectedPlatforms.length} platform{selectedPlatforms.length > 1 ? "s" : ""} selected
                   </p>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Product (optional) */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Attach a Product (optional)</h2>
+              <Select value={selectedProduct || "none"} onValueChange={(val) => setSelectedProduct(val === "none" ? null : val)}>
+                <SelectTrigger className="w-full" disabled={loadingProducts}>
+                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {products.length === 0 && !loadingProducts && (
+                    <SelectItem value="_empty" disabled>No products saved yet</SelectItem>
+                  )}
+                  {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          {/* Post Idea / Prompt */}
+          {selectedContentType && selectedContentType !== "paid-ads" && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
+                <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
+                <Textarea
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="e.g. A promotional post for our summer sale featuring our new product line..."
+                  rows={4}
+                  className="resize-none"
+                />
               </CardContent>
             </Card>
           )}
