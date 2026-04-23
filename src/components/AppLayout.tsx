@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import LeftNavSidebar from "./LeftNavSidebar";
+import TopToolsHeader from "./TopToolsHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SidebarWidthProvider, useSidebarWidth } from "@/contexts/SidebarWidthContext";
 
@@ -20,10 +21,11 @@ const AppLayoutInner = ({ children, showSidebar = true }: AppLayoutProps) => {
     <div className="h-screen w-full overflow-hidden">
       <LeftNavSidebar />
       <div
-        className={`h-screen overflow-y-auto ${isMobile ? "ml-0 pt-14" : ""}`}
+        className={`h-screen flex flex-col ${isMobile ? "ml-0 pt-14" : ""}`}
         style={isMobile ? undefined : { marginLeft: `${width}px` }}
       >
-        {children}
+        <TopToolsHeader />
+        <div className="flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
