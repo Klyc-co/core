@@ -275,7 +275,6 @@ const GenerateCampaignIdeas = () => {
   const [voiceoverAudioUrl, setVoiceoverAudioUrl] = useState<string | null>(null);
   const [isPlayingVoiceover, setIsPlayingVoiceover] = useState(false);
   const [voiceoverAudioRef] = useState<{ current: HTMLAudioElement | null }>({ current: null });
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -431,7 +430,7 @@ const GenerateCampaignIdeas = () => {
       } else if (selectedContentType === "visual-post") {
         setPostCaption(data.postCaption || "");
         setImagePrompt(data.imagePrompt || "");
-        setGeneratedImageUrl(null); // Reset image when generating new idea
+        setSelectedGeneratedImage(null); // Reset image when generating new idea
       } else if (selectedContentType === "written") {
         setArticleOutline(data.articleOutline || "");
       }
@@ -510,11 +509,16 @@ const GenerateCampaignIdeas = () => {
     setSelectedGeneratedImage(null);
     try {
       // Call generate-image-composite in composite mode → 1 API call → 2×2 grid → 4 sliced tiles
+      // aspectRatio: post content defaults to portrait (9:16) for TikTok/Instagram
       const { data, error } = await supabase.functions.invoke('generate-image-composite', {
         body: {
           brief: imagePrompt,
           platforms: ["tiktok@0", "tiktok@1", "tiktok@2", "tiktok@3"],
           mode: "composite",
+          aspectRatio: "9:16",
+          ...(referenceImages.length > 0 && {
+            referenceImages: referenceImages.map((img: { url: string }) => img.url).slice(0, 3),
+          }),
         },
       });
 
@@ -610,7 +614,7 @@ const GenerateCampaignIdeas = () => {
         targetAudienceDescription: targetAudienceDescription || "",
         campaignObjective: campaignObjective || "",
         contentType: selectedContentType || "",
-        generatedImageUrl: generatedImageUrl || "",
+        generatedImageUrl: selectedGeneratedImage || "",
         selectedPlatforms: selectedPlatforms || [],
       },
     });
@@ -1163,7 +1167,7 @@ const GenerateCampaignIdeas = () => {
                   </div>
 
                   <p className="text-sm text-muted-foreground mb-3">
-                    Edit the prompt below, select an AI model, and click "Generate Image":
+                    Edit the prompt below and click Generate Image — you'll get 4 variations to pick from:
                   </p>
                   <div className="relative">
                     <Textarea
@@ -1197,7 +1201,7 @@ const GenerateCampaignIdeas = () => {
                     {isGeneratingImage ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Generating 4 images…
+                        Generating 4 images...
                       </>
                     ) : (
                       <>
