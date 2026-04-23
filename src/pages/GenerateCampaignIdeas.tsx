@@ -273,6 +273,66 @@ const GenerateCampaignIdeas = () => {
   const [voiceoverAudioUrl, setVoiceoverAudioUrl] = useState<string | null>(null);
   const [isPlayingVoiceover, setIsPlayingVoiceover] = useState(false);
   const [voiceoverAudioRef] = useState<{ current: HTMLAudioElement | null }>({ current: null });
+  const [uploadedMedia, setUploadedMedia] = useState<{ id: string; name: string; url: string }[]>([]);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  const handleUploadOwnContent = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const { data: userResp } = await supabase.auth.getUser();
+    const currentUser = userResp?.user;
+    if (!currentUser) {
+      toast({ title: "Sign in required", description: "Please sign in to upload media.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    const newAssets: { id: string; name: string; url: string }[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 50 * 1024 * 1024) {
+          toast({ title: "File too large", description: `${file.name} exceeds 50MB.`, variant: "destructive" });
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `uploads/${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("brand-assets").upload(path, file, {
+          contentType: file.type || undefined,
+          upsert: false,
+        });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("brand-assets").getPublicUrl(path);
+        const publicUrl = pub.publicUrl;
+
+        // Save to brand library so it's reusable
+        const { data: assetRow } = await supabase
+          .from("brand_assets")
+          .insert({
+            user_id: currentUser.id,
+            asset_type: file.type.startsWith("video") ? "video" : "image",
+            value: publicUrl,
+            name: file.name,
+            metadata: { source: "generate-post-ideas-upload" },
+          })
+          .select("id")
+          .single();
+
+        newAssets.push({ id: assetRow?.id || path, name: file.name, url: publicUrl });
+      }
+      setUploadedMedia((prev) => [...prev, ...newAssets].slice(0, 10));
+      if (newAssets.length > 0) {
+        toast({ title: "Uploaded ✨", description: `${newAssets.length} file(s) ready.` });
+      }
+    } catch (e: any) {
+      console.error("Upload failed:", e);
+      toast({ title: "Upload failed", description: e?.message || "Could not upload file.", variant: "destructive" });
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
+  const removeUploadedMedia = (id: string) => {
+    setUploadedMedia((prev) => prev.filter((m) => m.id !== id));
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
