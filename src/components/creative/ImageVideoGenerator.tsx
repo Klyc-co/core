@@ -259,34 +259,28 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           <TabsTrigger value="broll" className="gap-2"><Film className="w-4 h-4" /> B-Roll</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" className="mt-4 space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Monitor className="w-4 h-4 text-muted-foreground" />
-              <Label className="text-sm font-medium">Output Size</Label>
-            </div>
-            <div className="grid grid-cols-3 gap-2 max-w-xl">
-              {OUTPUT_SIZE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const isSelected = outputSize === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setOutputSize(opt.value)}
-                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
-                      isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
-                    }`}
-                  >
-                    {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
-                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                    <div className="flex flex-col leading-tight min-w-0">
-                      <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
-                      <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        <TabsContent value="image" className="mt-2 space-y-4">
+          <div className="grid grid-cols-3 gap-2 max-w-xl">
+            {OUTPUT_SIZE_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const isSelected = outputSize === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setOutputSize(opt.value)}
+                  className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
+                    isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
+                  <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col leading-tight min-w-0">
+                    <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </TabsContent>
         <TabsContent value="video" className="mt-3" />
