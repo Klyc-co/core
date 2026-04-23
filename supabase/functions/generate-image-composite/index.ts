@@ -44,13 +44,13 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json() as Record<string, unknown>;
     const brief     = extractBrief(body);
-    const count     = body.count as number | undefined;
+    const count     = (body.count as number | undefined) ?? 1;
     const platforms = body.platforms as string[] | undefined;
 
-    if (!brief || !count || !platforms?.length) {
+    if (!brief || !platforms?.length) {
       return json({
-        error: "Missing required fields: brief, count, platforms",
-        received: { brief: !!brief, count: !!count, platforms: !!(platforms?.length) },
+        error: "Missing required fields: brief, platforms",
+        received: { brief: !!brief, platforms: !!(platforms?.length) },
         keys_seen: Object.keys(body),
       }, 400);
     }
