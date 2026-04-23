@@ -119,8 +119,8 @@ const LeftNavSidebar = () => {
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo = Home button */}
-      <div className="px-3 pt-2 pb-0 shrink-0">
-        <button onClick={() => { navigate("/home"); closeMobile(); }} className="hover:opacity-80 transition-opacity">
+      <div className="px-3 pt-1 pb-0 -mb-2 shrink-0">
+        <button onClick={() => { navigate("/home"); closeMobile(); }} className="hover:opacity-80 transition-opacity -my-2 block">
           <Logo size="md" />
         </button>
       </div>
@@ -136,7 +136,7 @@ const LeftNavSidebar = () => {
       {/* Tools moved to top header on the right-side content area */}
 
       {/* ===== CHAT fills the middle ===== */}
-      <div className="flex-1 min-h-0 flex flex-col mx-2 my-2 border border-border rounded-lg overflow-hidden bg-background/50">
+      <div className="flex-1 min-h-0 flex flex-col mx-2 mt-1 mb-2 border border-border rounded-lg overflow-hidden bg-background/50">
         <SidebarChat />
       </div>
 
