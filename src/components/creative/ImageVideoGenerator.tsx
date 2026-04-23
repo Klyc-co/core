@@ -421,9 +421,22 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
           value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className="resize-none"
         />
-        <Button onClick={handleGenerate} disabled={generating || !prompt.trim()} className="w-full sm:w-auto gap-2">
-          {generating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>) : (<><Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}</>)}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleGenerate} disabled={generating || !prompt.trim()} className="gap-2">
+            {generating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>) : (<><Sparkles className="w-4 h-4" /> Generate {mode === "image" ? "Image" : "Video"}</>)}
+          </Button>
+          {mode === "image" && inspirationUrls.length < 5 && (
+            <>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+              <Button variant="outline" size="sm" className="gap-2" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
+                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLibrary(!showLibrary)}>
+                <Library className="w-4 h-4" /> Brand Library
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {mode === "image" && (
@@ -439,17 +452,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-          {inspirationUrls.length < 5 && (
-            <div className="flex gap-2">
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
-              <Button variant="outline" size="sm" className="gap-2" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
-                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLibrary(!showLibrary)}>
-                <Library className="w-4 h-4" /> Brand Library
-              </Button>
             </div>
           )}
           {showLibrary && inspirationUrls.length < 5 && (
