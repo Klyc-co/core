@@ -512,6 +512,11 @@ const NewCampaign = () => {
     return { videoAsset, imageAssets };
   };
 
+  const isVideoAsset = (asset: { name: string; url: string }) => {
+    const ext = asset.url.split('.').pop()?.toLowerCase() || '';
+    return ['mp4', 'mov', 'webm', 'avi', 'm4v'].includes(ext) || /\.(mp4|mov|webm|avi|m4v)$/i.test(asset.name);
+  };
+
   const handleSchedulePost = async () => {
     if (!validateBasics(true)) return;
     if (!user) return;
@@ -790,7 +795,9 @@ const NewCampaign = () => {
                 {selectedPlatforms.map((platformId) => {
                   const platform = socialPlatforms.find(p => p.id === platformId);
                   if (!platform) return null;
-                  const previewImage = libraryAssets[0]?.url || generatedData?.generatedImageUrl;
+                  const previewAsset = libraryAssets[0];
+                  const previewImage = previewAsset?.url || generatedData?.generatedImageUrl;
+                  const previewIsVideo = previewAsset ? isVideoAsset(previewAsset) : false;
 
                   // Platform-specific aspect ratios and dimensions
                   const platformSpecs: Record<string, { aspect: string; dimensions: string }> = {
@@ -825,7 +832,11 @@ const NewCampaign = () => {
                       <div className="p-4 space-y-3">
                         {previewImage && (
                           <div className={`${spec.aspect} rounded-lg overflow-hidden bg-muted ${["tiktok", "snapchat"].includes(platformId) ? "max-h-[300px]" : ""}`}>
-                            <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
+                            {previewIsVideo ? (
+                              <video src={previewImage} className="w-full h-full object-cover" controls muted playsInline />
+                            ) : (
+                              <img src={previewImage} alt="Post preview" className="w-full h-full object-cover" />
+                            )}
                           </div>
                         )}
                         {postCaption && (
