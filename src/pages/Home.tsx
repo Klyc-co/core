@@ -8,8 +8,6 @@ import { WebsiteAnalyticsSummary } from "@/components/WebsiteAnalyticsSummary";
 import { SocialMediaAnalyticsSummary } from "@/components/SocialMediaAnalyticsSummary";
 import { LiveCampaignsFeed } from "@/components/LiveCampaignsFeed";
 import WeeklyContentCalendar from "@/components/dashboard/WeeklyContentCalendar";
-import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, BarChart3, ShieldCheck, Lightbulb } from "lucide-react";
 
 const Home = () => {
   const [user, setUser] = useState<User | null>(null);
