@@ -946,12 +946,14 @@ const GenerateCampaignIdeas = () => {
             </CardContent>
           </Card>
 
-          {/* Post Idea / Prompt */}
+          {/* Post Idea / Prompt — Option A: AI generation */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
-                <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
+                  <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
+                </div>
                 <Textarea
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
@@ -959,15 +961,44 @@ const GenerateCampaignIdeas = () => {
                   rows={4}
                   className="resize-none"
                 />
+                <Button
+                  className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
+                  onClick={handleGenerate}
+                  disabled={!selectedContentType || isLoading || !customPrompt.trim()}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      {selectedContentType
+                        ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
+                        : "Generate Post Ideas"}
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
           )}
 
+          {/* OR divider */}
+          {selectedContentType && selectedContentType !== "paid-ads" && (
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          )}
+
+          {/* Option B: Upload your own */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground mb-1">Upload Your Own Content (optional)</h2>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Upload Your Own Content</h2>
                   <p className="text-sm text-muted-foreground">Add images or videos from your computer to use in this post.</p>
                 </div>
 
@@ -1044,36 +1075,13 @@ const GenerateCampaignIdeas = () => {
                     ) : (
                       <>
                         <Upload className="w-4 h-4" />
-                        Upload & Continue
+                        Upload & Continue to Prepare for Launch
                       </>
                     )}
                   </Button>
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Generate Button */}
-          {selectedContentType !== "paid-ads" && (
-            <Button 
-              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
-              onClick={handleGenerate}
-              disabled={!selectedContentType || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  {selectedContentType 
-                    ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
-                    : "Generate Post Ideas"}
-                </>
-              )}
-            </Button>
           )}
 
           {/* Social Video Results */}
