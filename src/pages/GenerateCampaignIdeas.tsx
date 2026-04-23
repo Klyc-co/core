@@ -274,10 +274,45 @@ const GenerateCampaignIdeas = () => {
   const [isPlayingVoiceover, setIsPlayingVoiceover] = useState(false);
   const [voiceoverAudioRef] = useState<{ current: HTMLAudioElement | null }>({ current: null });
   const [uploadedMedia, setUploadedMedia] = useState<{ id: string; name: string; url: string }[]>([]);
+  const [pendingUploadFiles, setPendingUploadFiles] = useState<File[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
-  const handleUploadOwnContent = async (files: FileList | null) => {
+  const handleUploadOwnContent = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+
+    const validFiles: File[] = [];
+    const previewAssets: { id: string; name: string; url: string }[] = [];
+
+    Array.from(files).forEach((file, index) => {
+      if (file.size > 50 * 1024 * 1024) {
+        toast({ title: "File too large", description: `${file.name} exceeds 50MB.`, variant: "destructive" });
+        return;
+      }
+
+      validFiles.push(file);
+      previewAssets.push({
+        id: `${file.name}-${file.lastModified}-${index}-${crypto.randomUUID()}`,
+        name: file.name,
+        url: URL.createObjectURL(file),
+      });
+    });
+
+    if (validFiles.length === 0) return;
+
+    setPendingUploadFiles((prev) => [...prev, ...validFiles].slice(0, 10));
+    setUploadedMedia((prev) => [...prev, ...previewAssets].slice(0, 10));
+    toast({
+      title: "Ready to upload",
+      description: `${validFiles.length} file${validFiles.length === 1 ? "" : "s"} selected. Press Upload & Continue when you're ready.`,
+    });
+  };
+
+  const handleConfirmUploadOwnContent = async () => {
+    if (pendingUploadFiles.length === 0) {
+      toast({ title: "Choose media first", description: "Select an image or video before continuing.", variant: "destructive" });
+      return;
+    }
+
     const { data: userResp } = await supabase.auth.getUser();
     const currentUser = userResp?.user;
     if (!currentUser) {
@@ -288,11 +323,7 @@ const GenerateCampaignIdeas = () => {
     setIsUploadingMedia(true);
     const newAssets: { id: string; name: string; url: string }[] = [];
     try {
-      for (const file of Array.from(files)) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast({ title: "File too large", description: `${file.name} exceeds 50MB.`, variant: "destructive" });
-          continue;
-        }
+      for (const file of pendingUploadFiles) {
         const ext = file.name.split(".").pop() || "bin";
         const path = `uploads/${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage.from("brand-assets").upload(path, file, {
@@ -318,15 +349,20 @@ const GenerateCampaignIdeas = () => {
 
         newAssets.push({ id: assetRow?.id || path, name: file.name, url: publicUrl });
       }
-      const merged = [...uploadedMedia, ...newAssets].slice(0, 10);
-      setUploadedMedia(merged);
+
       if (newAssets.length > 0) {
+        uploadedMedia.forEach((asset) => {
+          if (asset.url.startsWith("blob:")) {
+            URL.revokeObjectURL(asset.url);
+          }
+        });
+        setPendingUploadFiles([]);
+        setUploadedMedia([]);
         toast({ title: "Uploaded ✨", description: `Taking you to Prepare for Launch…` });
-        // Auto-navigate to Prepare for Launch with the uploaded media + selected platforms
         navigate("/campaigns/new", {
           state: {
             contentType: selectedContentType,
-            uploadedMediaUrls: merged,
+            uploadedMediaUrls: newAssets,
             selectedPlatforms,
           },
         });
@@ -339,8 +375,16 @@ const GenerateCampaignIdeas = () => {
     }
   };
 
-  const removeUploadedMedia = (id: string) => {
-    setUploadedMedia((prev) => prev.filter((m) => m.id !== id));
+  const removeUploadedMedia = (indexToRemove: number) => {
+    setUploadedMedia((prev) => {
+      const target = prev[indexToRemove];
+      if (target?.url.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url);
+      }
+
+      return prev.filter((_, index) => index !== indexToRemove);
+    });
+    setPendingUploadFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   useEffect(() => {
