@@ -325,7 +325,7 @@ const GenerateCampaignIdeas = () => {
     try {
       for (const file of pendingUploadFiles) {
         const ext = file.name.split(".").pop() || "bin";
-        const path = `uploads/${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const path = `${currentUser.id}/uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage.from("brand-assets").upload(path, file, {
           contentType: file.type || undefined,
           upsert: false,
