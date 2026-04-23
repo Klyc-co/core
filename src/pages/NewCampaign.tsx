@@ -721,8 +721,6 @@ const NewCampaign = () => {
 
           {/* Post Caption */}
           <div className="space-y-2">
-          {/* Post Caption */}
-          <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="postCaption">Post Caption (Text Above Image)</Label>
               {!isEditingCaption && postCaption && (
