@@ -745,7 +745,7 @@ const GenerateCampaignIdeas = () => {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold text-foreground mb-4">Select Content Type</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {contentTypes.map((type) => {
                   const Icon = type.icon;
                   return (
@@ -755,14 +755,14 @@ const GenerateCampaignIdeas = () => {
                         setSelectedContentType(type.id);
                         setShowResults(false);
                       }}
-                      className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
+                      className={`w-full flex items-center justify-center gap-3 px-6 py-5 rounded-lg border-2 transition-all ${
                         selectedContentType === type.id
                           ? "border-primary bg-primary/10"
                           : "border-border hover:border-primary/50 hover:bg-muted/50"
                       }`}
                     >
-                      <Icon className="w-7 h-7 mb-3 text-foreground" />
-                      <span className="text-sm font-medium text-foreground">{type.label}</span>
+                      <Icon className="w-6 h-6 text-foreground shrink-0" />
+                      <span className="text-base font-medium text-foreground">{type.label}</span>
                     </button>
                   );
                 })}
