@@ -9,8 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SidebarChat from "@/components/SidebarChat";
 import {
   LogOut, Settings, MessageSquare, UserCog, Users, Plus, Check,
-  Briefcase, Trash2, User, Megaphone, Lightbulb, Palette, Menu, X, FolderOpen,
-  Shield, FileText, Zap, BarChart3, House, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Briefcase, Trash2, User, Menu, X,
+  Shield, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,14 +31,6 @@ interface Client {
   client_email: string | null;
 }
 
-const subNavItems = [
-  { label: "Posts", path: "/campaigns", icon: Megaphone },
-  { label: "Creative", path: "/creative-studio", icon: Palette },
-  { label: "Analytics", path: "/analytics", icon: BarChart3 },
-  { label: "Strategy", path: "/strategy", icon: Zap },
-  { label: "Library", path: "/profile/library", icon: FolderOpen },
-  { label: "Learning", path: "/learning", icon: Lightbulb },
-];
 
 const LeftNavSidebar = () => {
   const navigate = useNavigate();
@@ -59,7 +51,6 @@ const LeftNavSidebar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Collapsible states
-  const [navExpanded, setNavExpanded] = useState(false);
   const [utilExpanded, setUtilExpanded] = useState(false);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -142,39 +133,7 @@ const LeftNavSidebar = () => {
         </div>
       )}
 
-      {/* Collapse toggle for sub-nav */}
-      <div className="px-3 shrink-0">
-        <button
-          onClick={() => setNavExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
-        >
-          <span className="font-medium">Tools</span>
-          {navExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        </button>
-      </div>
-
-      {/* Collapsible sub-nav items */}
-      {navExpanded && (
-        <nav className="px-3 space-y-0.5 shrink-0">
-          {subNavItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setNavExpanded(false); closeMobile(); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-      )}
+      {/* Tools moved to top header on the right-side content area */}
 
       {/* ===== CHAT fills the middle ===== */}
       <div className="flex-1 min-h-0 flex flex-col mx-2 my-2 border border-border rounded-lg overflow-hidden bg-background/50">
