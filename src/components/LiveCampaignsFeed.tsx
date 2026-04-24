@@ -166,7 +166,7 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
           <div className="text-center text-muted-foreground py-6">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
           <div className="text-center text-muted-foreground py-6 text-sm">
-            No live campaigns yet. Create a campaign to see it here.
+            No live posts yet. Create a post to see it here.
           </div>
         ) : (
           campaigns.map((campaign) => {
