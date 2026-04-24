@@ -991,8 +991,41 @@ const GenerateCampaignIdeas = () => {
             </div>
           )}
 
-          {/* Option B: Upload your own */}
-          {selectedContentType && selectedContentType !== "paid-ads" && (
+          {/* Option C: Write it yourself (Written content type only) — shown ABOVE upload, and upload is hidden for written */}
+          {selectedContentType === "written" && (
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Write It Yourself</h2>
+                  <p className="text-sm text-muted-foreground">Type out your own article, blog post, or written content below.</p>
+                </div>
+                <Textarea
+                  value={articleOutline}
+                  onChange={(e) => setArticleOutline(e.target.value)}
+                  placeholder="Start writing your article or post here..."
+                  rows={10}
+                  className="resize-none"
+                />
+                <Button
+                  className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
+                  onClick={() => {
+                    if (!campaignIdea.trim()) {
+                      const firstLine = articleOutline.trim().split("\n")[0]?.slice(0, 120) || "Written Post";
+                      setCampaignIdea(firstLine);
+                    }
+                    setShowResults(true);
+                  }}
+                  disabled={!articleOutline.trim()}
+                >
+                  <FileText className="w-5 h-5" />
+                  Use This Content
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Option B: Upload your own (hidden for written content type) */}
+          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "written" && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
@@ -1080,47 +1113,6 @@ const GenerateCampaignIdeas = () => {
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Option C: Write it yourself (Written content type only) */}
-          {selectedContentType === "written" && (
-            <>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              <Card>
-                <CardContent className="p-6 space-y-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-foreground mb-1">Write It Yourself</h2>
-                    <p className="text-sm text-muted-foreground">Type out your own article, blog post, or written content below.</p>
-                  </div>
-                  <Textarea
-                    value={articleOutline}
-                    onChange={(e) => setArticleOutline(e.target.value)}
-                    placeholder="Start writing your article or post here..."
-                    rows={10}
-                    className="resize-none"
-                  />
-                  <Button
-                    className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 py-6 text-lg text-primary-foreground disabled:opacity-50"
-                    onClick={() => {
-                      if (!campaignIdea.trim()) {
-                        const firstLine = articleOutline.trim().split("\n")[0]?.slice(0, 120) || "Written Post";
-                        setCampaignIdea(firstLine);
-                      }
-                      setShowResults(true);
-                    }}
-                    disabled={!articleOutline.trim()}
-                  >
-                    <FileText className="w-5 h-5" />
-                    Use This Content
-                  </Button>
-                </CardContent>
-              </Card>
-            </>
           )}
 
           {/* Social Video Results */}
