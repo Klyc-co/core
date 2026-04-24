@@ -851,12 +851,12 @@ const GenerateCampaignIdeas = () => {
           <p className="text-foreground font-bold">Post Center</p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Select Content Type */}
           <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Select Content Type</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="p-4">
+              <h2 className="text-lg font-semibold text-foreground mb-3">Select Content Type</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {contentTypes.map((type) => {
                   const Icon = type.icon;
                   return (
@@ -866,14 +866,14 @@ const GenerateCampaignIdeas = () => {
                         setSelectedContentType(type.id);
                         setShowResults(false);
                       }}
-                      className={`w-full flex items-center justify-center gap-3 px-6 py-5 rounded-lg border-2 transition-all ${
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
                         selectedContentType === type.id
                           ? "border-primary bg-primary/10"
                           : "border-border hover:border-primary/50 hover:bg-muted/50"
                       }`}
                     >
-                      <Icon className="w-6 h-6 text-foreground shrink-0" />
-                      <span className="text-base font-medium text-foreground">{type.label}</span>
+                      <Icon className="w-5 h-5 text-foreground shrink-0" />
+                      <span className="text-sm font-medium text-foreground">{type.label}</span>
                     </button>
                   );
                 })}
@@ -884,8 +884,8 @@ const GenerateCampaignIdeas = () => {
           {/* Platform Selection */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-4">Select Platforms</h2>
+              <CardContent className="p-4">
+                <h2 className="text-lg font-semibold text-foreground mb-3">Select Platforms</h2>
                 <div className="grid grid-cols-6 gap-2">
                   {socialPlatforms.map((platform) => (
                     <button
