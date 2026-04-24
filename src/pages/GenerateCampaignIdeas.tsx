@@ -1130,8 +1130,8 @@ const GenerateCampaignIdeas = () => {
             </Card>
           )}
 
-          {/* Option B: Upload your own (hidden for written content type) */}
-          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "written" && (
+          {/* Option B: Upload your own (hidden for written and social-video — social-video shows it above the idea card) */}
+          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "written" && selectedContentType !== "social-video" && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
