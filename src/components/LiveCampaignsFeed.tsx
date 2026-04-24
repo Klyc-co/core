@@ -152,12 +152,12 @@ export function LiveCampaignsFeed({ showFullButton = false, limit }: LiveCampaig
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          Live Campaigns
+          Live Posts
         </CardTitle>
         {showFullButton && (
           <Button variant="outline" size="sm" onClick={() => navigate("/campaigns")} className="gap-1.5">
             <ExternalLink className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">All Campaigns</span>
+            <span className="hidden sm:inline">All Posts</span>
           </Button>
         )}
       </CardHeader>
