@@ -857,7 +857,7 @@ const GenerateCampaignIdeas = () => {
               onClick={() => navigate("/campaigns/command")}
             >
               <Zap className="w-4 h-4" />
-              Command Center
+              Build Campaign
             </Button>
             <Button 
               variant="outline"
