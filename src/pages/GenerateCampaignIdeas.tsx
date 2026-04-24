@@ -1125,7 +1125,7 @@ const GenerateCampaignIdeas = () => {
 
           {/* Social Video Results */}
           {showResults && selectedContentType === "social-video" && (
-            <div className="space-y-6 mt-8">
+            <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
@@ -1338,7 +1338,7 @@ const GenerateCampaignIdeas = () => {
 
           {/* Visual Post Results */}
           {showResults && selectedContentType === "visual-post" && (
-            <div className="space-y-6 mt-8">
+            <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
@@ -1549,7 +1549,7 @@ const GenerateCampaignIdeas = () => {
 
           {/* Written Results */}
           {showResults && selectedContentType === "written" && (
-            <div className="space-y-6 mt-8">
+            <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
                 <CardContent className="p-6">
