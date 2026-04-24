@@ -1130,8 +1130,8 @@ const GenerateCampaignIdeas = () => {
             </Card>
           )}
 
-          {/* OR divider — for non-social-video, non-written types that still show the upload card below */}
-          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "social-video" && selectedContentType !== "written" && (
+          {/* OR divider — for types that still show the upload card below */}
+          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "social-video" && selectedContentType !== "written" && selectedContentType !== "image-post" && (
             <div className="flex items-center gap-4">
               <div className="flex-1 h-px bg-border" />
               <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
@@ -1140,8 +1140,8 @@ const GenerateCampaignIdeas = () => {
           )}
 
 
-          {/* Option B: Upload your own (hidden for written and social-video — social-video shows it above the idea card) */}
-          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "written" && selectedContentType !== "social-video" && (
+          {/* Option B: Upload your own (hidden for written, social-video, image-post — those show it above the idea card) */}
+          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "written" && selectedContentType !== "social-video" && selectedContentType !== "image-post" && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
