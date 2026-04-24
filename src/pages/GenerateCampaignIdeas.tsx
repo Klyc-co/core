@@ -1035,8 +1035,8 @@ const GenerateCampaignIdeas = () => {
             </Card>
           )}
 
-          {/* OR divider — for social-video, sits between Upload (above) and Video Inspiration Ideas (below) */}
-          {selectedContentType === "social-video" && (
+          {/* OR divider — for social-video and image-post, sits between Upload (above) and idea card (below) */}
+          {(selectedContentType === "social-video" || selectedContentType === "image-post") && (
             <div className="flex items-center gap-4">
               <div className="flex-1 h-px bg-border" />
               <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
