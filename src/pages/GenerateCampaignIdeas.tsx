@@ -944,8 +944,8 @@ const GenerateCampaignIdeas = () => {
           )}
 
 
-          {/* For social-video: Upload Your Own Content appears ABOVE the idea card */}
-          {selectedContentType === "social-video" && (
+          {/* For social-video and image-post: Upload Your Own Content appears ABOVE the idea card */}
+          {(selectedContentType === "social-video" || selectedContentType === "image-post") && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
