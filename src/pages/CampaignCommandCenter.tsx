@@ -63,6 +63,8 @@ const CampaignCommandCenter = () => {
   const [compression, setCompression] = useState<CompressionState>(DEFAULT_COMPRESSION);
   const [envelope, setEnvelope] = useState<WorkflowReportEnvelope | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [betaUnlocked, setBetaUnlocked] = useState(false);
+  const [betaPasscode, setBetaPasscode] = useState("");
 
   const { execute, isRunning, state: workflowState, history } = useRunCampaign();
 
