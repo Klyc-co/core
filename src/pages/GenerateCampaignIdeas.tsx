@@ -885,8 +885,7 @@ const GenerateCampaignIdeas = () => {
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
               <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-foreground mb-2">Select Platforms</h2>
-                <p className="text-sm text-muted-foreground mb-4">Choose where you want to post this content</p>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Select Platforms</h2>
                 <div className="grid grid-cols-6 gap-2">
                   {socialPlatforms.map((platform) => (
                     <button
