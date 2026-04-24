@@ -251,6 +251,7 @@ const GenerateCampaignIdeas = () => {
   const [targetAudience, setTargetAudience] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
@@ -568,6 +569,10 @@ const GenerateCampaignIdeas = () => {
       }
       
       setShowResults(true);
+      // Auto-scroll to the results section so "Post Idea" sits at the top
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (error) {
       console.error("Error generating post idea:", error);
       alert(error instanceof Error ? error.message : "Failed to generate post idea");
