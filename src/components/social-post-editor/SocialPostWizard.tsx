@@ -132,8 +132,25 @@ export default function SocialPostWizard({
     { num: 4, label: "Result" },
   ];
 
+  const canProceedFromTemplate = Boolean(
+    wizardState.selectedTemplate && wizardState.templateImageUrl
+  );
+
   return (
     <div className="space-y-6">
+      {/* Step 1 action button — sits on the same row as the outer tabs (Image & Video / Templates / Hire) */}
+      {wizardState.step === 1 && (
+        <div className="-mt-12 flex justify-end relative z-10 pointer-events-none">
+          <button
+            onClick={() => goToStep(2)}
+            disabled={!canProceedFromTemplate}
+            className="pointer-events-auto inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+          >
+            Continue to Assets
+          </button>
+        </div>
+      )}
+
       {/* Progress Steps */}
       <div className="flex items-center justify-center gap-2">
         {steps.map((s, i) => (
