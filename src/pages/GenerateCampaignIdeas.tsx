@@ -1128,14 +1128,13 @@ const GenerateCampaignIdeas = () => {
             <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
-                  <Textarea
+                <CardContent className="p-3 flex items-center gap-3">
+                  <h3 className="text-sm font-medium text-muted-foreground shrink-0">Post Idea</h3>
+                  <Input
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated post idea will appear here..."
-                    rows={2}
-                    className="resize-none bg-muted/50"
+                    className="bg-muted/50 h-9"
                   />
                 </CardContent>
               </Card>
@@ -1341,14 +1340,13 @@ const GenerateCampaignIdeas = () => {
             <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
-                  <Textarea
+                <CardContent className="p-3 flex items-center gap-3">
+                  <h3 className="text-sm font-medium text-muted-foreground shrink-0">Post Idea</h3>
+                  <Input
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated post idea will appear here..."
-                    rows={2}
-                    className="resize-none bg-muted/50"
+                    className="bg-muted/50 h-9"
                   />
                 </CardContent>
               </Card>
@@ -1552,14 +1550,13 @@ const GenerateCampaignIdeas = () => {
             <div ref={resultsRef} className="space-y-6 mt-8 scroll-mt-4">
               {/* Post Idea */}
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Post Idea</h3>
-                  <Textarea
+                <CardContent className="p-3 flex items-center gap-3">
+                  <h3 className="text-sm font-medium text-muted-foreground shrink-0">Post Idea</h3>
+                  <Input
                     value={campaignIdea}
                     onChange={(e) => setCampaignIdea(e.target.value)}
                     placeholder="Your AI-generated post idea will appear here..."
-                    rows={2}
-                    className="resize-none bg-muted/50"
+                    className="bg-muted/50 h-9"
                   />
                 </CardContent>
               </Card>
