@@ -842,13 +842,13 @@ const GenerateCampaignIdeas = () => {
           </div>
         </div>
         
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">
             {selectedContentType 
               ? `Generate ${contentTypes.find(t => t.id === selectedContentType)?.label} Ideas`
               : "Generate Post Ideas"}
           </h1>
-          <p className="text-muted-foreground">Use the chat on the left to describe your post &amp; audience, then pick your content type here</p>
+          <p className="text-foreground font-bold">Post Center</p>
         </div>
 
         <div className="space-y-6">
