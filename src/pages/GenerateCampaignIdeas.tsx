@@ -53,6 +53,33 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
 ];
 
+// Collapsible section wrapper with title + chevron (collapsed by default)
+const CollapsibleSection = ({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-muted/40 transition-colors rounded-lg"
+          >
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-2 pb-2">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+};
+
 // Campaign Strategy Component (shared between content types)
 const CampaignStrategy = ({ 
   tags, 
