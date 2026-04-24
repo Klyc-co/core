@@ -920,28 +920,6 @@ const GenerateCampaignIdeas = () => {
             </Card>
           )}
 
-          {/* Product (optional) */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Attach a Product (optional)</h2>
-              <Select value={selectedProduct || "none"} onValueChange={(val) => setSelectedProduct(val === "none" ? null : val)}>
-                <SelectTrigger className="w-full" disabled={loadingProducts}>
-                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {products.length === 0 && !loadingProducts && (
-                    <SelectItem value="_empty" disabled>No products saved yet</SelectItem>
-                  )}
-                  {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
 
           {/* Post Idea / Prompt — Option A: AI generation */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
