@@ -328,6 +328,10 @@ const Library = () => {
               <FolderOpen className="w-4 h-4" />
               Assets
             </TabsTrigger>
+            <TabsTrigger value="generated" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Generated
+            </TabsTrigger>
             <TabsTrigger value="social" className="gap-2">
               <Share2 className="w-4 h-4" />
               Social
