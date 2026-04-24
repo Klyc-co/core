@@ -452,6 +452,68 @@ const Library = () => {
             </Tabs>
           </TabsContent>
 
+          {/* Generated Tab — AI-generated images & videos from Klyc tools */}
+          <TabsContent value="generated">
+            {loading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : generatedAssets.length === 0 ? (
+              <Card className="p-6">
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground mb-2">No generated content yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mb-4">
+                    Images and videos created with Klyc tools (Creative Studio, Strategy, Social Posts, Flyers) will be saved here automatically. They also remain available under Assets.
+                  </p>
+                  <Button onClick={() => navigate("/tools/image-video")}>Open Creative Studio</Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6 sm:space-y-8">
+                {generatedImages.length > 0 && (
+                  <div>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Image className="w-4 h-4 sm:w-5 sm:h-5" /> Generated Images
+                      <span className="text-sm font-normal text-muted-foreground">({generatedImages.length})</span>
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                      {generatedImages.map(asset => <SelectableImageCard key={asset.id} asset={asset} />)}
+                    </div>
+                  </div>
+                )}
+                {generatedVideos.length > 0 && (
+                  <div>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5" /> Generated Videos
+                      <span className="text-sm font-normal text-muted-foreground">({generatedVideos.length})</span>
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                      {generatedVideos.map(asset => (
+                        <div key={asset.id} className="rounded-lg border border-border bg-card overflow-hidden group relative">
+                          <div className="absolute top-2 left-2 z-10">
+                            <Checkbox
+                              checked={selectedIds.has(asset.id)}
+                              onCheckedChange={() => handleToggleSelect(asset.id)}
+                              className="bg-background/90 border-border"
+                            />
+                          </div>
+                          <video src={asset.value} className="w-full aspect-video object-cover bg-muted" controls />
+                          <div className="p-2 flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium text-foreground truncate flex-1">{asset.name || "Generated video"}</p>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => handleDeleteAsset(asset.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
           {/* Social Tab */}
           <TabsContent value="social">
             <SocialMediaContent />
