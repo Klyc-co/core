@@ -554,25 +554,9 @@ export default function TemplateSelectionStep({
 
   return (
     <div className="space-y-6">
-      {/* Continue to Assets Button */}
-      <div className="flex justify-end">
-        <Button
-          size="lg"
-          onClick={onNext}
-          disabled={!canProceed}
-          className="min-w-[200px]"
-        >
-          Continue to Assets
-        </Button>
-      </div>
-
-      {/* Aspect Ratio Selector */}
-      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl border border-primary/20 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Monitor className="w-4 h-4 text-primary" />
-          <span>Output Size</span>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
+      {/* Compact Output Size selector — matches Image & Video tab styling, centered */}
+      <div className="flex justify-center">
+        <div className="grid grid-cols-3 gap-2 w-full max-w-md">
           {ASPECT_RATIO_OPTIONS.map((option) => {
             const Icon = aspectIcons[option.value];
             const isSelected = wizardState.aspectRatio === option.value;
@@ -580,23 +564,22 @@ export default function TemplateSelectionStep({
               <button
                 key={option.value}
                 onClick={() => onUpdate({ aspectRatio: option.value })}
-                className={`relative flex flex-col items-center p-4 rounded-lg border-2 transition-all ${
-                  isSelected
-                    ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
+                  isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
                 }`}
               >
-                <Icon className={`w-8 h-8 mb-2 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                <span className={`font-medium text-sm ${isSelected ? "text-primary" : ""}`}>
-                  {option.label}
-                </span>
-                <span className="text-xs text-muted-foreground mt-1">{option.dimensions}</span>
-                <span className="text-xs text-muted-foreground text-center mt-1">{option.description}</span>
                 {isSelected && (
-                  <div className="absolute top-2 right-2">
-                    <Check className="w-4 h-4 text-primary" />
+                  <div className="absolute top-1.5 right-1.5">
+                    <Check className="w-3 h-3 text-primary" />
                   </div>
                 )}
+                <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="flex flex-col leading-tight min-w-0">
+                  <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>
+                    {option.label}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground truncate">{option.dimensions}</span>
+                </div>
               </button>
             );
           })}
