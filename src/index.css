@@ -202,6 +202,13 @@
       hsl(var(--brand-gradient-to) / 0.15)
     );
   }
+  .bg-brand-gradient-active {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--brand-gradient-from) / 0.35),
+      hsl(var(--brand-gradient-to) / 0.35)
+    );
+  }
   .text-brand-gradient {
     background-image: var(--gradient-primary);
     -webkit-background-clip: text;
