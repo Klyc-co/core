@@ -110,6 +110,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [outputSize, setOutputSize] = useState<OutputSize>("portrait");
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Image tiles — 4 from one composite call
   const [imageTiles, setImageTiles] = useState<string[]>([]);
@@ -195,6 +196,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     if (!prompt.trim()) { toast.error("Please enter a description"); return; }
 
     setGenerating(true);
+    setGenerateError(null);
     setImageTiles([]);
     setSelectedTile(null);
     setResultUrl(null);
@@ -251,7 +253,9 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       toast.success("Video generated!");
     } catch (err: any) {
       console.error("Generation error:", err);
-      toast.error(err.message || "Generation failed");
+      const msg = err.message || "Generation failed";
+      toast.error(msg);
+      setGenerateError(msg);
     } finally {
       setGenerating(false);
     }
@@ -533,7 +537,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   )}
                 </div>
               </div>
-              {/* Tile grid — columns and aspect ratio match selected output size, zero crop */}
+              {/* Tile grid — columns and aspect ratio match selected output size, no crop */}
               <div className={`grid gap-2 ${outputSize === "portrait" ? "grid-cols-4" : "grid-cols-2"}`}>
                 {imageTiles.map((url, idx) => (
                   <button
@@ -563,11 +567,26 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               </div>
             </div>
           ) : (
-            <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
-              <div className="text-center text-muted-foreground">
-                <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">4 image variations will appear here</p>
-                <p className="text-xs opacity-60 mt-1">1 API call · 4 tiles · pick your favourite</p>
+            <Card className={`flex items-center justify-center w-full min-h-[350px] border-dashed ${generateError ? "border-destructive/50" : ""}`}>
+              <div className="text-center text-muted-foreground px-6">
+                {generateError ? (
+                  <>
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <X className="w-6 h-6 text-destructive" />
+                    </div>
+                    <p className="text-sm font-medium text-destructive mb-1">Generation failed</p>
+                    <p className="text-xs text-destructive/80 max-w-xs">{generateError}</p>
+                    <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="mt-4 gap-2">
+                      <RefreshCw className="w-3.5 h-3.5" /> Try again
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">4 image variations will appear here</p>
+                    <p className="text-xs opacity-60 mt-1">1 API call · 4 tiles · pick your favourite</p>
+                  </>
+                )}
               </div>
             </Card>
           )
@@ -641,7 +660,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       {/* Lightbox — full-size view when a tile is clicked */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setLightboxUrl(null)}
         >
           <div
