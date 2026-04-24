@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Music, Image, FileText, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap, Rocket } from "lucide-react";
+import { ArrowLeft, Music, Image, FileText, Sparkles, Copy, Check, X, FileStack, Loader2, Wand2, Download, Upload, ImageIcon, FolderOpen, RefreshCw, Volume2, Square, Mic, Trophy, TrendingUp, ExternalLink, Zap, Rocket, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ElevenLabsIcon from "@/components/icons/ElevenLabsIcon";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@supabase/supabase-js";
@@ -51,6 +52,29 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
   { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
 ];
+
+// Collapsible section wrapper with title + chevron (collapsed by default)
+const CollapsibleSection = ({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="space-y-3">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-6 py-4 text-left bg-card border border-border rounded-lg hover:bg-muted/40 transition-colors"
+        >
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          <ChevronDown
+            className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
 
 // Campaign Strategy Component (shared between content types)
 const CampaignStrategy = ({ 
@@ -492,7 +516,6 @@ const GenerateCampaignIdeas = () => {
       setIsLoadingSamples(false);
     }
   };
-
 
   const handleGenerate = async () => {
     if (!selectedContentType) return;
@@ -1266,21 +1289,25 @@ const GenerateCampaignIdeas = () => {
                 </CardContent>
               </Card>
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -1473,21 +1500,25 @@ const GenerateCampaignIdeas = () => {
                 </Card>
               )}
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -1553,21 +1584,25 @@ const GenerateCampaignIdeas = () => {
                 </CardContent>
               </Card>
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
