@@ -944,13 +944,119 @@ const GenerateCampaignIdeas = () => {
           )}
 
 
+          {/* For social-video: Upload Your Own Content appears ABOVE the idea card */}
+          {selectedContentType === "social-video" && (
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground mb-1">Upload Your Own Content</h2>
+                  <p className="text-sm text-muted-foreground">Add images or videos from your computer to use in this post.</p>
+                </div>
+
+                <label
+                  htmlFor="own-content-upload-top"
+                  className={`flex flex-col items-center justify-center w-full py-8 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                    isUploadingMedia ? "opacity-60 cursor-wait" : "hover:border-primary/60 hover:bg-muted/40"
+                  } border-border`}
+                >
+                  {isUploadingMedia ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mb-2 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Uploading…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mb-2 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground">Click to upload images or videos</span>
+                      <span className="text-xs text-muted-foreground mt-1">PNG, JPG, MP4 — up to 50MB each</span>
+                    </>
+                  )}
+                  <input
+                    id="own-content-upload-top"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    className="hidden"
+                    disabled={isUploadingMedia}
+                    onChange={(e) => {
+                      handleUploadOwnContent(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+
+                {uploadedMedia.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {uploadedMedia.map((m, index) => {
+                      const isVideo = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(m.url);
+                      return (
+                        <div key={m.id} className="relative group rounded-lg overflow-hidden border border-border bg-muted">
+                          {isVideo ? (
+                            <video src={m.url} className="w-full h-24 object-cover" muted />
+                          ) : (
+                            <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeUploadedMedia(index)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <p className="text-[10px] text-muted-foreground truncate px-2 py-1">{m.name}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {uploadedMedia.length > 0 && (
+                  <Button
+                    variant="default"
+                    className="w-full gap-2"
+                    onClick={handleConfirmUploadOwnContent}
+                    disabled={isUploadingMedia || pendingUploadFiles.length === 0}
+                  >
+                    {isUploadingMedia ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Upload & Continue to Prepare for Launch
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* OR divider — for social-video, sits between Upload (above) and Video Inspiration Ideas (below) */}
+          {selectedContentType === "social-video" && (
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          )}
+
           {/* Post Idea / Prompt — Option A: AI generation */}
           {selectedContentType && selectedContentType !== "paid-ads" && (
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground mb-2">Describe Your Post Idea</h2>
-                  <p className="text-sm text-muted-foreground mb-3">What should this post be about? Give the AI a general direction.</p>
+                  <h2 className="text-lg font-semibold text-foreground mb-2">
+                    {selectedContentType === "social-video" ? "Video Inspiration Ideas" : "Describe Your Post Idea"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {selectedContentType === "social-video"
+                      ? "Describe the video you want to create. Give the AI a general direction for inspiration."
+                      : "What should this post be about? Give the AI a general direction."}
+                  </p>
                 </div>
                 <Textarea
                   value={customPrompt}
@@ -982,8 +1088,8 @@ const GenerateCampaignIdeas = () => {
             </Card>
           )}
 
-          {/* OR divider */}
-          {selectedContentType && selectedContentType !== "paid-ads" && (
+          {/* OR divider — for non-social-video types that still show the upload card below */}
+          {selectedContentType && selectedContentType !== "paid-ads" && selectedContentType !== "social-video" && (
             <div className="flex items-center gap-4">
               <div className="flex-1 h-px bg-border" />
               <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">or</span>
