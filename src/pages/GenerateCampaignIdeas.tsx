@@ -1289,21 +1289,25 @@ const GenerateCampaignIdeas = () => {
                 </CardContent>
               </Card>
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -1496,21 +1500,25 @@ const GenerateCampaignIdeas = () => {
                 </Card>
               )}
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -1576,21 +1584,25 @@ const GenerateCampaignIdeas = () => {
                 </CardContent>
               </Card>
 
-              <CampaignStrategy 
-                tags={tags} 
-                removeTag={removeTag} 
-                newTag={newTag} 
-                setNewTag={setNewTag} 
-                addTag={addTag}
-                campaignGoals={campaignGoals}
-                setCampaignGoals={setCampaignGoals}
-                targetAudienceDescription={targetAudienceDescription}
-                setTargetAudienceDescription={setTargetAudienceDescription}
-                campaignObjective={campaignObjective}
-                setCampaignObjective={setCampaignObjective}
-              />
+              <CollapsibleSection title="Post Strategy">
+                <CampaignStrategy 
+                  tags={tags} 
+                  removeTag={removeTag} 
+                  newTag={newTag} 
+                  setNewTag={setNewTag} 
+                  addTag={addTag}
+                  campaignGoals={campaignGoals}
+                  setCampaignGoals={setCampaignGoals}
+                  targetAudienceDescription={targetAudienceDescription}
+                  setTargetAudienceDescription={setTargetAudienceDescription}
+                  campaignObjective={campaignObjective}
+                  setCampaignObjective={setCampaignObjective}
+                />
+              </CollapsibleSection>
 
-              <SampleCampaigns campaigns={sampleCampaigns} />
+              <CollapsibleSection title="Sample Winning Campaigns">
+                <SampleCampaigns campaigns={sampleCampaigns} />
+              </CollapsibleSection>
 
               {/* Action Buttons */}
               <div className="space-y-3">
