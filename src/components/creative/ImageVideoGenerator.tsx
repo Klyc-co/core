@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import {
@@ -122,6 +123,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
   const [accentColor, setAccentColor] = useState<string>("");
+  const [accentColorEnabled, setAccentColorEnabled] = useState<boolean>(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
@@ -206,7 +208,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         console.log(`[Creative Studio] Composite image call — ar=${aspectRatio} refs=${inspirationUrls.length}`);
 
-        const colorInstruction = accentColor
+        const colorInstruction = accentColorEnabled && accentColor
           ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
           : "";
 
@@ -321,59 +323,58 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </TabsList>
 
         <TabsContent value="image" className="mt-2 space-y-4">
-          <div className="grid grid-cols-3 gap-2 max-w-xl">
-            {OUTPUT_SIZE_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const isSelected = outputSize === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setOutputSize(opt.value)}
-                  className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
-                    isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
-                  }`}
-                >
-                  {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
-                  <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                  <div className="flex flex-col leading-tight min-w-0">
-                    <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
-                    <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <div className="flex flex-wrap items-stretch gap-2 max-w-3xl">
+            <div className="grid grid-cols-3 gap-2 flex-1 min-w-[280px]">
+              {OUTPUT_SIZE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const isSelected = outputSize === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setOutputSize(opt.value)}
+                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
+                      isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
+                    }`}
+                  >
+                    {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
+                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="flex flex-col leading-tight min-w-0">
+                      <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-          <div className="flex items-center gap-3 flex-wrap pt-1">
-            <Label htmlFor="accent-color" className="text-sm font-medium text-foreground">
-              Accent color
-            </Label>
-            <div className="flex items-center gap-2">
+            {/* Accent color box — sits to the right of the size selector */}
+            <div className="flex items-center gap-2 rounded-lg border-2 border-border bg-card px-3 py-2">
+              <Label htmlFor="accent-color-toggle" className="text-xs font-medium text-foreground whitespace-nowrap">
+                Accent color
+              </Label>
               <input
                 id="accent-color"
                 type="color"
                 value={accentColor || "#000000"}
                 onChange={(e) => setAccentColor(e.target.value)}
-                className="h-9 w-12 rounded-md border border-border cursor-pointer bg-background"
+                disabled={!accentColorEnabled}
+                className="h-8 w-10 rounded-md border border-border cursor-pointer bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Pick accent color"
               />
               <Input
                 value={accentColor}
                 onChange={(e) => setAccentColor(e.target.value)}
                 placeholder="#RRGGBB"
-                className="h-9 w-28 font-mono text-sm"
+                disabled={!accentColorEnabled}
+                className="h-8 w-24 font-mono text-xs disabled:opacity-50"
                 maxLength={7}
               />
-              {accentColor && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-2 text-xs text-muted-foreground"
-                  onClick={() => setAccentColor("")}
-                >
-                  Clear
-                </Button>
-              )}
+              <Switch
+                id="accent-color-toggle"
+                checked={accentColorEnabled}
+                onCheckedChange={setAccentColorEnabled}
+                aria-label="Toggle accent color"
+              />
             </div>
           </div>
         </TabsContent>
