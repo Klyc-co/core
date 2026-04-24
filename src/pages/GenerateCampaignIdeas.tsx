@@ -44,14 +44,12 @@ interface SocialPlatform {
 }
 
 const socialPlatforms: SocialPlatform[] = [
-  { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/FFFFFF", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
-  { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
-  { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
-  { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
-  { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
   { id: "youtube", name: "YouTube", icon: "https://cdn.simpleicons.org/youtube/FFFFFF", color: "bg-[#FF0000]" },
-  { id: "snapchat", name: "Snapchat", icon: snapchatLogo, color: "bg-transparent" },
-  { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
+  { id: "tiktok", name: "TikTok", icon: "https://cdn.simpleicons.org/tiktok/FFFFFF", color: "bg-neutral-900" },
+  { id: "instagram", name: "Instagram", icon: "https://cdn.simpleicons.org/instagram/FFFFFF", color: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
+  { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
+  { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
+  { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
 ];
 
 // Campaign Strategy Component (shared between content types)
@@ -889,22 +887,22 @@ const GenerateCampaignIdeas = () => {
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-foreground mb-2">Select Platforms</h2>
                 <p className="text-sm text-muted-foreground mb-4">Choose where you want to post this content</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-6 gap-2">
                   {socialPlatforms.map((platform) => (
                     <button
                       key={platform.id}
                       onClick={() => togglePlatform(platform.id)}
-                      className={`p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 flex flex-col items-center gap-2 ${
+                      className={`p-2 rounded-xl border-2 transition-all duration-200 hover:scale-105 flex flex-col items-center gap-2 ${
                         selectedPlatforms.includes(platform.id)
                           ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
-                      <div className={`w-10 h-10 rounded-lg ${platform.color} flex items-center justify-center ${["linkedin", "snapchat"].includes(platform.id) ? "p-0" : "p-2"}`}>
+                      <div className={`w-10 h-10 rounded-lg ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2"}`}>
                         <img 
                           src={platform.icon} 
                           alt={platform.name}
-                          className={platform.id === "linkedin" ? "w-9 h-9 rounded-lg object-contain" : platform.id === "snapchat" ? "w-12 h-12 rounded-lg object-contain" : "w-full h-full object-contain"}
+                          className={platform.id === "linkedin" ? "w-9 h-9 rounded-lg object-contain" : "w-full h-full object-contain"}
                         />
                       </div>
                       <span className="text-xs font-medium text-foreground">{platform.name}</span>
