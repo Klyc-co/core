@@ -150,6 +150,32 @@ const Library = () => {
 
   const filterAssets = (type: string) => assets.filter(a => a.asset_type === type);
 
+  // AI-generated assets: anything created by an internal generator (Creative Studio,
+  // Strategy, Social Post, Flyer, etc). We detect by metadata.generated_at / prompt
+  // / source markers that imports do not set.
+  const GENERATED_SOURCES = new Set([
+    "creative-studio",
+    "strategy",
+    "strategy-image",
+    "social-post",
+    "social-template",
+    "flyer",
+    "ai-generator",
+    "image-submind",
+    "video-submind",
+  ]);
+  const isGeneratedAsset = (a: BrandAsset) => {
+    const m = (a.metadata ?? {}) as Record<string, unknown>;
+    if (m.generated_at) return true;
+    if (typeof m.source === "string" && GENERATED_SOURCES.has(m.source)) return true;
+    if (m.prompt && typeof m.prompt === "string" && (m.prompt as string).length > 0) return true;
+    return false;
+  };
+  const generatedAssets = assets.filter(isGeneratedAsset);
+  const generatedImages = generatedAssets.filter(a => a.asset_type === "image");
+  const generatedVideos = generatedAssets.filter(a => a.asset_type === "video");
+
+
   const SelectableColorCard = ({ asset }: { asset: BrandAsset }) => {
     const isSelected = selectedIds.has(asset.id);
     return (
