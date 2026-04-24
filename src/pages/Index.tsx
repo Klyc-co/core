@@ -38,22 +38,24 @@ const Index = () => {
       <div id="features">
         <LandingMeetKlyc />
         <LandingCostSection />
-        <LandingInfrastructure />
-        <LandingVirality />
       </div>
+
+      {/* How it works = Start Building Infrastructure */}
+      <div id="how-it-works">
+        <LandingInfrastructure />
+      </div>
+
+      <LandingVirality />
 
       {/* About = team + story */}
       <div id="about">
         <LandingTeam />
       </div>
 
-      {/* How it works = speed + distributed */}
-      <div id="how-it-works">
-        <LandingSpeed />
-        <LandingDistributed />
-        <LandingBuiltFor />
-        <LandingCategory />
-      </div>
+      <LandingSpeed />
+      <LandingDistributed />
+      <LandingBuiltFor />
+      <LandingCategory />
 
       <LandingPricing />
       <LandingFAQ />
