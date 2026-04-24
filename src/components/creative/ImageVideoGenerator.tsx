@@ -511,7 +511,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">Pick your favourite · tap to select</p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   {selectedTile && (
                     <Button variant="secondary" size="sm" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary} className="gap-2">
                       {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
@@ -520,21 +520,31 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   )}
                   {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
                   <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
+                  {selectedTile && (
+                    <Button
+                      size="sm"
+                      onClick={() => navigate("/campaigns/generate", { state: { referenceImageUrl: selectedTile } })}
+                      className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Use in Post</span>
+                    </Button>
+                  )}
                 </div>
               </div>
-              {/* 2×2 tile grid */}
+              {/* 2×2 tile grid — fixed height thumbnails so all 4 are fully visible */}
               <div className="grid grid-cols-2 gap-2">
                 {imageTiles.map((url, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedTile(url)}
-                    className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all h-[190px] ${
                       selectedTile === url
                         ? "border-primary shadow-lg ring-2 ring-primary/30"
                         : "border-border hover:border-primary/50"
                     }`}
                   >
-                    <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-auto block" />
+                    <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover block" />
                     {selectedTile === url && (
                       <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
                         <Check className="w-3.5 h-3.5 text-primary-foreground" />
