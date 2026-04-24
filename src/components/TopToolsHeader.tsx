@@ -25,7 +25,7 @@ const TopToolsHeader = () => {
     path === "/home" ? location.pathname === "/home" : location.pathname.startsWith(path);
 
   return (
-    <header className="sticky top-0 z-30 h-11 bg-card/80 backdrop-blur-sm border-b border-border flex items-center justify-between px-3 shrink-0">
+    <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-sm border-b border-border flex items-center justify-between px-3 pt-4 pb-2 shrink-0">
       <nav className="flex items-center gap-3 overflow-x-auto">
         {toolItems.map((item) => {
           const Icon = item.icon;
