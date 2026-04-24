@@ -114,6 +114,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   // Image tiles — 4 from one composite call
   const [imageTiles, setImageTiles] = useState<string[]>([]);
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Video (unchanged)
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -532,13 +533,17 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   )}
                 </div>
               </div>
-              {/* 2×2 tile grid — fixed height thumbnails so all 4 are fully visible */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Tile grid — columns and aspect ratio match selected output size, zero crop */}
+              <div className={`grid gap-2 ${outputSize === "portrait" ? "grid-cols-4" : "grid-cols-2"}`}>
                 {imageTiles.map((url, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedTile(url)}
-                    className={`relative rounded-lg overflow-hidden border-2 transition-all h-[190px] ${
+                    onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${
+                      outputSize === "portrait" ? "aspect-[9/16]" :
+                      outputSize === "square"   ? "aspect-square"  :
+                      "aspect-video"
+                    } ${
                       selectedTile === url
                         ? "border-primary shadow-lg ring-2 ring-primary/30"
                         : "border-border hover:border-primary/50"
@@ -632,6 +637,31 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </div>
       )}
       </>)}
+
+      {/* Lightbox — full-size view when a tile is clicked */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <div
+            className="relative max-w-5xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightboxUrl}
+              alt="Full size preview"
+              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4 text-black" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
