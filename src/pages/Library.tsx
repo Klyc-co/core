@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database, Wrench, X, Download } from "lucide-react";
+import { ArrowLeft, FolderOpen, Image, FileText, Palette, Type, ExternalLink, Copy, Trash2, Loader2, Share2, BarChart3, CheckSquare, Square, Package, Database, Wrench, X, Download, Sparkles, Video } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -149,6 +149,32 @@ const Library = () => {
   };
 
   const filterAssets = (type: string) => assets.filter(a => a.asset_type === type);
+
+  // AI-generated assets: anything created by an internal generator (Creative Studio,
+  // Strategy, Social Post, Flyer, etc). We detect by metadata.generated_at / prompt
+  // / source markers that imports do not set.
+  const GENERATED_SOURCES = new Set([
+    "creative-studio",
+    "strategy",
+    "strategy-image",
+    "social-post",
+    "social-template",
+    "flyer",
+    "ai-generator",
+    "image-submind",
+    "video-submind",
+  ]);
+  const isGeneratedAsset = (a: BrandAsset) => {
+    const m = (a.metadata ?? {}) as Record<string, unknown>;
+    if (m.generated_at) return true;
+    if (typeof m.source === "string" && GENERATED_SOURCES.has(m.source)) return true;
+    if (m.prompt && typeof m.prompt === "string" && (m.prompt as string).length > 0) return true;
+    return false;
+  };
+  const generatedAssets = assets.filter(isGeneratedAsset);
+  const generatedImages = generatedAssets.filter(a => a.asset_type === "image");
+  const generatedVideos = generatedAssets.filter(a => a.asset_type === "video");
+
 
   const SelectableColorCard = ({ asset }: { asset: BrandAsset }) => {
     const isSelected = selectedIds.has(asset.id);
@@ -302,6 +328,10 @@ const Library = () => {
               <FolderOpen className="w-4 h-4" />
               Assets
             </TabsTrigger>
+            <TabsTrigger value="generated" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Generated
+            </TabsTrigger>
             <TabsTrigger value="social" className="gap-2">
               <Share2 className="w-4 h-4" />
               Social
@@ -420,6 +450,68 @@ const Library = () => {
               <TabsContent value="fonts"><Card className="p-6"><AssetGrid type="font" icon={Type} emptyTitle="No fonts yet" emptyDesc="Font families and typography styles from your website will appear here." /></Card></TabsContent>
               <TabsContent value="copy"><Card className="p-6"><AssetGrid type="copy" icon={FileText} emptyTitle="No copy yet" emptyDesc="Text blocks and copy from your website and social posts will be stored here." /></Card></TabsContent>
             </Tabs>
+          </TabsContent>
+
+          {/* Generated Tab — AI-generated images & videos from Klyc tools */}
+          <TabsContent value="generated">
+            {loading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : generatedAssets.length === 0 ? (
+              <Card className="p-6">
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Sparkles className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground mb-2">No generated content yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mb-4">
+                    Images and videos created with Klyc tools (Creative Studio, Strategy, Social Posts, Flyers) will be saved here automatically. They also remain available under Assets.
+                  </p>
+                  <Button onClick={() => navigate("/tools/image-video")}>Open Creative Studio</Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-6 sm:space-y-8">
+                {generatedImages.length > 0 && (
+                  <div>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Image className="w-4 h-4 sm:w-5 sm:h-5" /> Generated Images
+                      <span className="text-sm font-normal text-muted-foreground">({generatedImages.length})</span>
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                      {generatedImages.map(asset => <SelectableImageCard key={asset.id} asset={asset} />)}
+                    </div>
+                  </div>
+                )}
+                {generatedVideos.length > 0 && (
+                  <div>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5" /> Generated Videos
+                      <span className="text-sm font-normal text-muted-foreground">({generatedVideos.length})</span>
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                      {generatedVideos.map(asset => (
+                        <div key={asset.id} className="rounded-lg border border-border bg-card overflow-hidden group relative">
+                          <div className="absolute top-2 left-2 z-10">
+                            <Checkbox
+                              checked={selectedIds.has(asset.id)}
+                              onCheckedChange={() => handleToggleSelect(asset.id)}
+                              className="bg-background/90 border-border"
+                            />
+                          </div>
+                          <video src={asset.value} className="w-full aspect-video object-cover bg-muted" controls />
+                          <div className="p-2 flex items-center justify-between gap-2">
+                            <p className="text-xs font-medium text-foreground truncate flex-1">{asset.name || "Generated video"}</p>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => handleDeleteAsset(asset.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Social Tab */}
