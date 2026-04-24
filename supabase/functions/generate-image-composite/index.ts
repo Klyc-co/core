@@ -59,48 +59,61 @@ Deno.serve(async (req) => {
     const tokensIn = Math.ceil(brief.length / 4);
     const tokensPerImage = 50;
 
-    // Group platforms into 2x2 grids of up to 4
+    // Group platforms into batches of up to 4 (one batch = one "grid" of 4 tiles)
     const grids: string[][] = [];
     for (let i = 0; i < platforms.length; i += 4) {
       grids.push(platforms.slice(i, i + 4));
     }
 
-    // Make ALL grid API calls in PARALLEL to avoid timeout
-    const gridPromises = grids.map(async (gridPlatforms) => {
-      const gridPrompt = `${brief}\n\nCRITICAL INSTRUCTIONS:\n- Generate EXACTLY 4 distinct marketing images in a 2x2 GRID LAYOUT\n- Canvas size: 2160x2160 pixels (4 images of 1080x1080 each)\n- Each quadrant shows a different variation/angle of the concept\n- NO text, NO labels, NO borders between images\n- Seamless layout - images should tile perfectly\n- All 4 variations visually distinct but cohesive`;
+    // For each batch, generate 4 individual images in parallel (much faster than one 2x2 mega-image)
+    const variationHints = [
+      "hero shot, centered composition, bold and striking",
+      "lifestyle angle, contextual scene, natural setting",
+      "close-up detail, macro focus, premium texture",
+      "wide environmental shot, atmospheric, cinematic mood",
+    ];
 
+    const generateOne = async (variantPrompt: string): Promise<string | null> => {
       try {
         const res = await fetch(`${NB_BASE}/generate`, {
           method: "POST",
           headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: gridPrompt, selectedModel: NB_MODEL, mode: "sync" }),
+          body: JSON.stringify({ prompt: variantPrompt, selectedModel: NB_MODEL, mode: "sync" }),
         });
-
         const data = await res.json() as Record<string, unknown>;
-        // Sync response: { success, imageUrls: [...], creditsUsed, remainingCredits }
         const imageUrl = (data.imageUrls as string[])?.[0]
           ?? (data.data as Record<string, unknown>)?.outputImageUrls?.[0]
           ?? null;
+        return res.ok ? imageUrl : null;
+      } catch {
+        return null;
+      }
+    };
 
-        if (res.ok && imageUrl) {
-          return { platforms: gridPlatforms, gridUrl: imageUrl, success: true };
-        } else {
-          return {
-            platforms: gridPlatforms,
-            success: false,
-            error: (data.error as string) || `NB ${res.status}: no imageUrl`,
-          };
-        }
-      } catch (e) {
+    const gridPromises = grids.map(async (gridPlatforms) => {
+      // Fire 4 single-image calls in parallel — each ~10-20s, total ~20s instead of 150s+
+      const tilePromises = variationHints.map((hint) =>
+        generateOne(`${brief}\n\nVARIATION: ${hint}\n- Single 1024x1024 marketing image\n- NO text, NO labels, NO watermarks\n- High quality, distinct composition`)
+      );
+      const tileUrls = await Promise.all(tilePromises);
+      const successful = tileUrls.filter((u): u is string => !!u);
+
+      if (successful.length > 0) {
         return {
           platforms: gridPlatforms,
-          success: false,
-          error: e instanceof Error ? e.message : String(e),
+          gridUrl: successful[0],          // backward-compat: first image as "grid"
+          tileUrls: successful,            // all 4 individual tiles
+          success: true,
         };
       }
+      return {
+        platforms: gridPlatforms,
+        success: false,
+        error: "All tile generations failed",
+      };
     });
 
-    // Execute all API calls in parallel
+    // Execute all batches in parallel
     const gridResults = await Promise.all(gridPromises);
 
     // Calculate total tokens from successful grids
