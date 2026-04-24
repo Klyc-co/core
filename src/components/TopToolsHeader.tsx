@@ -2,12 +2,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
-  Home, Megaphone, Palette, BarChart3, Zap, FolderOpen, Lightbulb, Sun, Moon,
+  Home, Megaphone, Palette, BarChart3, Zap, FolderOpen, Lightbulb, Sun, Moon, Rocket,
 } from "lucide-react";
 
 const toolItems = [
   { label: "Home", path: "/home", icon: Home },
   { label: "Posts", path: "/campaigns", icon: Megaphone },
+  { label: "Campaigns", path: "/campaigns/new", icon: Rocket },
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Strategy", path: "/strategy", icon: Zap },
