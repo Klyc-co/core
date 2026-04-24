@@ -234,6 +234,52 @@ const CampaignCommandCenter = () => {
     };
   }
 
+  if (!betaUnlocked) {
+    const tryUnlock = () => {
+      if (betaPasscode === "37") {
+        setBetaUnlocked(true);
+        toast.success("Access granted!");
+      } else {
+        toast.error("Invalid passcode");
+      }
+    };
+    return (
+      <div className="min-h-screen bg-background">
+        <AppHeader user={user} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/campaigns")}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Build Campaign
+            </h1>
+          </div>
+          <Card className="flex flex-col items-center justify-center py-20 border-dashed max-w-xl mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">Beta Users Only</h3>
+            <p className="text-sm text-muted-foreground mb-6">Enter your passcode to access Build Campaign</p>
+            <div className="flex items-center gap-2 max-w-xs w-full px-6">
+              <Input
+                type="password"
+                placeholder="Enter passcode"
+                value={betaPasscode}
+                onChange={(e) => setBetaPasscode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") tryUnlock(); }}
+                className="text-center"
+                autoFocus
+              />
+              <Button onClick={tryUnlock}>Enter</Button>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} />
