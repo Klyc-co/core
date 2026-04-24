@@ -107,7 +107,7 @@ const Campaigns = () => {
           
            <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
             <Button 
-              className="gap-2 bg-gradient-to-r from-purple-500 to-purple-700 hover:opacity-90 text-xs sm:text-sm"
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-xs sm:text-sm"
               onClick={() => navigate("/campaigns/generate")}
             >
               <Plus className="w-4 h-4 flex-shrink-0" />
