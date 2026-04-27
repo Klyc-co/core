@@ -30,10 +30,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Monitor, Smartphone, Square, Rocket } from "lucide-react";
+import { Monitor, Smartphone, Square, Rocket, Instagram } from "lucide-react";
 
 type VideoModel = "runway" | "kling";
-type OutputSize = "portrait" | "square" | "landscape";
+type AspectRatioKey = "1:1" | "4:5" | "1.91:1" | "9:16" | "free";
 type ColorMode = "primary" | "secondary" | "custom";
 
 // KLYC Supabase — Imagen 4 is configured here with a valid GOOGLE_API_KEY
