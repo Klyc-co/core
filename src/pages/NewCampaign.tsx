@@ -241,9 +241,16 @@ const NewCampaign = () => {
       if (generatedData.tags && generatedData.tags.length > 0) setTags(generatedData.tags);
       if (generatedData.selectedPlatforms && generatedData.selectedPlatforms.length > 0) setSelectedPlatforms(generatedData.selectedPlatforms);
       if (generatedData.uploadedMediaUrls && generatedData.uploadedMediaUrls.length > 0) {
-        setLibraryAssets(generatedData.uploadedMediaUrls);
+        setLibraryAssets(prev => {
+          const existingUrls = new Set(prev.map(a => a.url));
+          const incoming = generatedData.uploadedMediaUrls!.filter(a => !existingUrls.has(a.url));
+          return [...prev, ...incoming].slice(0, 20);
+        });
       } else if (generatedData.generatedImageUrl) {
-        setLibraryAssets([{ id: "generated-image", name: "Generated Image", url: generatedData.generatedImageUrl }]);
+        setLibraryAssets(prev => {
+          if (prev.some(a => a.url === generatedData.generatedImageUrl)) return prev;
+          return [...prev, { id: "generated-image", name: "Generated Image", url: generatedData.generatedImageUrl! }];
+        });
       }
     }
   }, []);
