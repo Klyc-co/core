@@ -464,22 +464,35 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         <TabsContent value="image" className="mt-2 space-y-4">
           <div className="flex flex-wrap items-stretch gap-2 max-w-3xl">
-            <div className="grid grid-cols-3 gap-2 flex-1 min-w-[280px]">
-              {OUTPUT_SIZE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const isSelected = outputSize === opt.value;
-                return (
-                  <button key={opt.value} onClick={() => setOutputSize(opt.value)}
-                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
-                    {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
-                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                    <div className="flex flex-col leading-tight min-w-0">
-                      <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
-                      <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-1 flex-1 min-w-[280px]">
+              <div className="flex items-center justify-between px-0.5">
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Aspect Ratio</Label>
+                {igOptimizedHint && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-primary">
+                    <Instagram className="w-3 h-3" /> Optimized for Instagram
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {ASPECT_RATIO_OPTIONS.map((opt) => {
+                  const isSelected = aspectRatioKey === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setAspectRatioKey(opt.value); persistAspectRatio(opt.value); }}
+                      title={opt.description}
+                      className={`relative flex items-center gap-1.5 rounded-lg border-2 px-2.5 py-1.5 transition-all text-left ${isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}
+                    >
+                      <span className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.value === "free" ? "Free" : opt.value}</span>
+                      {opt.igSafe && (
+                        <span className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold leading-none ${isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          <Instagram className="w-2.5 h-2.5" />IG
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Accent color — pulls from brand primary/secondary, or custom picker */}
