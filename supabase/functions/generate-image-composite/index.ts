@@ -1,7 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// KNP GENERATE-IMAGE-COMPOSITE v28
+// KNP GENERATE-IMAGE-COMPOSITE v29
+// v29: resolve image provider from configured backend secrets; fall back to Lovable AI Gateway
+//      when GOOGLE_API_KEY is missing, and upload generated assets to the existing public bucket
 // v28: force-redeploy to fix Deno worker init failure (RUNTIME_ERROR lineno:0)
 // v27: aspectRatio param (1:1|9:16|16:9|3:4|4:3); referenceImages[] style guidance;
 //      dynamic GRID_WRAPPER per aspect; fetchAsB64 helper
@@ -10,11 +12,18 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const IMAGEN_MODEL   = "imagen-4.0-generate-001";
 const IMAGEN_BASE    = "https://generativelanguage.googleapis.com/v1beta/models";
-const CELL_BUCKET    = "knp-cell-images";
-const DEPLOY_VERSION = 28;
+const GATEWAY_IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
+const CELL_BUCKET    = "brand-assets";
+const DEPLOY_VERSION = 29;
 const API_CALL_COST  = 0.04; // per Imagen prediction
 const SPLIT_INSET    = 3;    // px trimmed from each inner edge of 2x2 grid splits
 const VALID_ARS      = new Set(["1:1","9:16","16:9","3:4","4:3"]);
+
+type ImageProvider = {
+  kind: "google-direct" | "gateway";
+  apiKey: string;
+  source: "GOOGLE_API_KEY" | "GEMINI_API_KEY" | "LOVABLE_API_KEY";
+};
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -180,6 +189,112 @@ async function imagenCall(
   const data = await res.json() as { predictions: Array<{ bytesBase64Encoded: string }> };
   if (!data.predictions?.length) throw new Error(`Imagen: no predictions (sampleCount:${sampleCount})`);
   return data.predictions.map(p => p.bytesBase64Encoded);
+}
+
+function resolveImageProvider(): ImageProvider | null {
+  const googleApiKey = (Deno.env.get("GOOGLE_API_KEY") || "").trim();
+  if (googleApiKey) return { kind: "google-direct", apiKey: googleApiKey, source: "GOOGLE_API_KEY" };
+
+  const geminiApiKey = (Deno.env.get("GEMINI_API_KEY") || "").trim();
+  if (geminiApiKey) return { kind: "google-direct", apiKey: geminiApiKey, source: "GEMINI_API_KEY" };
+
+  const lovableApiKey = (Deno.env.get("LOVABLE_API_KEY") || "").trim();
+  if (lovableApiKey) return { kind: "gateway", apiKey: lovableApiKey, source: "LOVABLE_API_KEY" };
+
+  return null;
+}
+
+function aspectRatioInstruction(aspectRatio: string): string {
+  switch (aspectRatio) {
+    case "9:16": return "Output a vertical 9:16 composition.";
+    case "16:9": return "Output a landscape 16:9 composition.";
+    case "3:4": return "Output a portrait 3:4 composition.";
+    case "4:3": return "Output a landscape 4:3 composition.";
+    default: return "Output a square 1:1 composition.";
+  }
+}
+
+function dataUrlToBase64(dataUrl: string): string {
+  const match = dataUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
+  if (!match) throw new Error("Gateway did not return a base64 image payload");
+  return match[1];
+}
+
+async function gatewaySingleCall(
+  prompt: string,
+  apiKey: string,
+  refImageUrls: string[] = [],
+): Promise<string> {
+  const makeBody = (includeRefs: boolean) => {
+    const content = includeRefs && refImageUrls.length > 0
+      ? [
+          { type: "text", text: prompt },
+          ...refImageUrls.map((url) => ({ type: "image_url", image_url: { url } })),
+        ]
+      : prompt;
+
+    return JSON.stringify({
+      model: GATEWAY_IMAGE_MODEL,
+      messages: [{ role: "user", content }],
+      modalities: ["image", "text"],
+    });
+  };
+
+  let res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: makeBody(true),
+    signal: AbortSignal.timeout(120_000),
+  });
+
+  if (!res.ok && refImageUrls.length > 0 && (res.status === 400 || res.status === 422)) {
+    const errText = await res.text();
+    console.warn(`[v${DEPLOY_VERSION}] gateway rejected refs, retrying without: ${errText.substring(0, 240)}`);
+    res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: makeBody(false),
+      signal: AbortSignal.timeout(120_000),
+    });
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new UpstreamError(res.status, `Gateway ${res.status}: ${errText.substring(0, 400)}`);
+  }
+
+  const data = await res.json() as { choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string } }> } }> };
+  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!imageUrl?.startsWith("data:image")) throw new Error("Gateway: no image returned");
+  return dataUrlToBase64(imageUrl);
+}
+
+async function generateImages(
+  provider: ImageProvider,
+  prompt: string,
+  sampleCount: number,
+  aspectRatio = "1:1",
+  refB64s: string[] = [],
+  refImageUrls: string[] = [],
+): Promise<string[]> {
+  if (provider.kind === "google-direct") {
+    return await imagenCall(prompt, provider.apiKey, sampleCount, aspectRatio, refB64s);
+  }
+
+  return await Promise.all(
+    Array.from({ length: sampleCount }, (_, i) => {
+      const variationPrompt = [
+        prompt,
+        aspectRatioInstruction(aspectRatio),
+        "Return only the generated image with no text, logos, watermarks, borders, or collage layouts.",
+        sampleCount > 1
+          ? `Variation ${i + 1} of ${sampleCount}: keep the same art direction, but make the composition, crop, camera angle, and framing clearly distinct.`
+          : "",
+      ].filter(Boolean).join(" ");
+
+      return gatewaySingleCall(variationPrompt, provider.apiKey, refImageUrls);
+    })
+  );
 }
 
 async function uploadBlob(data: Uint8Array, path: string, supabase: ReturnType<typeof createClient>): Promise<string> {
