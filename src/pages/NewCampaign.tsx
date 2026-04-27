@@ -398,8 +398,9 @@ const NewCampaign = () => {
   };
 
   const handleAddTag = () => {
-    if (newTag.trim()) {
-      setTags([...tags, newTag.trim()]);
+    const cleaned = newTag.trim().replace(/^#+/, "");
+    if (cleaned) {
+      setTags([...tags, cleaned]);
       setNewTag("");
     }
   };
@@ -496,7 +497,8 @@ const NewCampaign = () => {
       toast({ title: "Select platforms", description: "Please select at least one platform to post to", variant: "destructive" });
       return false;
     }
-    const unconnected = selectedPlatforms.filter(p => !platformConnections[p]);
+    const MOCK_PLATFORMS = ["youtube", "pinterest"];
+    const unconnected = selectedPlatforms.filter(p => !platformConnections[p] && !MOCK_PLATFORMS.includes(p));
     if (unconnected.length > 0) {
       toast({ title: "Platforms not connected", description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`, variant: "destructive" });
       return false;
