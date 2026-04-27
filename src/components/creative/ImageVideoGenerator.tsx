@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Monitor, Smartphone, Square } from "lucide-react";
+import { Monitor, Smartphone, Square, Rocket } from "lucide-react";
 
 type VideoModel = "runway" | "kling";
 type OutputSize = "portrait" | "square" | "landscape";
