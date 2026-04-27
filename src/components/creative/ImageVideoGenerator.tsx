@@ -335,6 +335,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       if (error) throw error;
       if (!data?.videoUrl) throw new Error("No video returned");
       setResultUrl(data.videoUrl);
+      addVideoToSession(data.videoUrl);
       toast.success("Video generated!");
     } catch (err: any) {
       console.error("Generation error:", err);
