@@ -30,10 +30,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Monitor, Smartphone, Square, Rocket } from "lucide-react";
+import { Monitor, Smartphone, Square, Rocket, Instagram } from "lucide-react";
 
 type VideoModel = "runway" | "kling";
-type OutputSize = "portrait" | "square" | "landscape";
+type AspectRatioKey = "1:1" | "4:5" | "1.91:1" | "9:16" | "free";
 type ColorMode = "primary" | "secondary" | "custom";
 
 // KLYC Supabase — Imagen 4 is configured here with a valid GOOGLE_API_KEY
@@ -59,10 +59,26 @@ async function callImageComposite(body: Record<string, unknown>): Promise<Record
   return res.json();
 }
 
-const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; aspectRatio: string; icon: typeof Smartphone }[] = [
-  { value: "portrait",  label: "Vertical",    description: "Best for Stories, Reels, TikTok", dimensions: "1080x1920", width: 1080, height: 1920, aspectRatio: "9:16", icon: Smartphone },
-  { value: "square",    label: "Square",      description: "Best for Feed posts",             dimensions: "1080x1080", width: 1080, height: 1080, aspectRatio: "1:1",  icon: Square },
-  { value: "landscape", label: "Horizontal",  description: "Best for YouTube, LinkedIn",      dimensions: "1920x1080", width: 1920, height: 1080, aspectRatio: "16:9", icon: Monitor },
+interface AspectRatioOption {
+  value: AspectRatioKey;
+  label: string;
+  description: string;
+  /** Decimal width/height; null = no constraint */
+  ratio: number | null;
+  /** Aspect ratio string sent to the generation API (free → "1:1" as a neutral default) */
+  apiAspect: string;
+  /** Crop dimensions used when post-processing tiles to enforce ratio */
+  width: number;
+  height: number;
+  igSafe: boolean;
+}
+
+const ASPECT_RATIO_OPTIONS: AspectRatioOption[] = [
+  { value: "1:1",    label: "Square",   description: "IG Feed",          ratio: 1,        apiAspect: "1:1",  width: 1080, height: 1080, igSafe: true  },
+  { value: "4:5",    label: "Portrait", description: "IG Feed (best)",   ratio: 4 / 5,    apiAspect: "4:5",  width: 1080, height: 1350, igSafe: true  },
+  { value: "1.91:1", label: "Landscape",description: "IG Feed",          ratio: 1.91,     apiAspect: "1.91:1", width: 1080, height: 566,  igSafe: true  },
+  { value: "9:16",   label: "Story",    description: "Reel · TikTok",    ratio: 9 / 16,   apiAspect: "9:16", width: 1080, height: 1920, igSafe: true  },
+  { value: "free",   label: "Free",     description: "No constraint",    ratio: null,     apiAspect: "1:1",  width: 1080, height: 1080, igSafe: false },
 ];
 
 const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
@@ -101,6 +117,36 @@ async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise
   });
 }
 
+/** Center-crop a data/blob URL image to the target width/height ratio. */
+async function cropImageToAspect(url: string, targetRatio: number): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new window.Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load image for cropping"));
+    i.src = url;
+  });
+  const currentRatio = img.width / img.height;
+  if (Math.abs(currentRatio - targetRatio) < 0.01) return url;
+
+  let cropW = img.width;
+  let cropH = img.height;
+  if (currentRatio > targetRatio) {
+    cropW = Math.round(img.height * targetRatio);
+  } else {
+    cropH = Math.round(img.width / targetRatio);
+  }
+  const sx = Math.round((img.width - cropW) / 2);
+  const sy = Math.round((img.height - cropH) / 2);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+  return canvas.toDataURL("image/png");
+}
+
 interface ImageVideoGeneratorProps {
   onBack?: () => void;
 }
@@ -115,7 +161,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"image" | "video" | "broll">("image");
   const [prompt, setPrompt] = useState("");
-  const [outputSize, setOutputSize] = useState<OutputSize>("portrait");
+  const [aspectRatioKey, setAspectRatioKey] = useState<AspectRatioKey>("1:1");
+  const [igOptimizedHint, setIgOptimizedHint] = useState(false);
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -203,6 +250,78 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     setSessionMedia(prev => [item, ...prev].slice(0, 24));
     setSelectedMediaIds(prev => { const n = new Set(prev); n.add(item.id); return n; });
   };
+
+  // Persist user's last-used aspect ratio to Supabase user_settings
+  const persistAspectRatio = async (value: AspectRatioKey) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("user_settings")
+        .upsert(
+          { user_id: user.id, creative_aspect_ratio: value },
+          { onConflict: "user_id" }
+        );
+    } catch (e) {
+      console.warn("Failed to persist aspect ratio preference", e);
+    }
+  };
+
+  // Load saved preference + auto-suggest IG-safe ratio when Instagram is connected
+  useEffect(() => {
+    const loadAspectPreference = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [{ data: settings }, { data: connections }] = await Promise.all([
+        supabase
+          .from("user_settings")
+          .select("creative_aspect_ratio")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("client_platform_connections")
+          .select("platform")
+          .eq("client_id", user.id)
+          .eq("platform", "instagram")
+          .eq("status", "active")
+          .maybeSingle(),
+      ]);
+
+      const saved = settings?.creative_aspect_ratio as AspectRatioKey | null | undefined;
+      const hasInstagram = !!connections;
+
+      if (saved && ASPECT_RATIO_OPTIONS.some(o => o.value === saved)) {
+        setAspectRatioKey(saved);
+        const opt = ASPECT_RATIO_OPTIONS.find(o => o.value === saved);
+        setIgOptimizedHint(hasInstagram && !!opt?.igSafe);
+      } else if (hasInstagram) {
+        // Auto-suggest IG-best ratio (4:5 has highest engagement)
+        setAspectRatioKey("4:5");
+        setIgOptimizedHint(true);
+      }
+    };
+    loadAspectPreference();
+  }, []);
+
+  // Update IG hint whenever ratio changes (after we know IG status — re-check)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("client_platform_connections")
+        .select("platform")
+        .eq("client_id", user.id)
+        .eq("platform", "instagram")
+        .eq("status", "active")
+        .maybeSingle();
+      if (cancelled) return;
+      const opt = ASPECT_RATIO_OPTIONS.find(o => o.value === aspectRatioKey);
+      setIgOptimizedHint(!!data && !!opt?.igSafe);
+    })();
+    return () => { cancelled = true; };
+  }, [aspectRatioKey]);
 
   const handleAddSelectedToCampaign = () => {
     const items = sessionMedia.filter(m => selectedMediaIds.has(m.id));
@@ -296,8 +415,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        const sizeOpt = OUTPUT_SIZE_OPTIONS.find(o => o.value === outputSize)!;
-        const aspectRatio = sizeOpt.aspectRatio;
+        const sizeOpt = ASPECT_RATIO_OPTIONS.find(o => o.value === aspectRatioKey)!;
+        const aspectRatio = sizeOpt.apiAspect;
         console.log(`[Creative Studio] Composite image call -> KLYC Supabase ar=${aspectRatio}`);
         const colorInstruction = accentColorEnabled && accentColor
           ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
@@ -319,6 +438,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
         }
         if (tiles.length === 0) throw new Error("Failed to produce image tiles");
+
+        // Enforce aspect ratio client-side (center-crop) when the user picked a constrained option.
+        if (sizeOpt.ratio !== null) {
+          tiles = await Promise.all(tiles.map((t) => cropImageToAspect(t, sizeOpt.ratio as number)));
+        }
 
         const finalTiles = tiles.slice(0, MAX_TILES);
         setImageTiles(finalTiles);
@@ -412,22 +536,35 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
         <TabsContent value="image" className="mt-2 space-y-4">
           <div className="flex flex-wrap items-stretch gap-2 max-w-3xl">
-            <div className="grid grid-cols-3 gap-2 flex-1 min-w-[280px]">
-              {OUTPUT_SIZE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                const isSelected = outputSize === opt.value;
-                return (
-                  <button key={opt.value} onClick={() => setOutputSize(opt.value)}
-                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
-                    {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
-                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                    <div className="flex flex-col leading-tight min-w-0">
-                      <span className={`text-xs font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
-                      <span className="text-[10px] text-muted-foreground truncate">{opt.dimensions}</span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-1 flex-1 min-w-[280px]">
+              <div className="flex items-center justify-between px-0.5">
+                <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Aspect Ratio</Label>
+                {igOptimizedHint && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-primary">
+                    <Instagram className="w-3 h-3" /> Optimized for Instagram
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {ASPECT_RATIO_OPTIONS.map((opt) => {
+                  const isSelected = aspectRatioKey === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setAspectRatioKey(opt.value); persistAspectRatio(opt.value); }}
+                      title={opt.description}
+                      className={`relative flex items-center gap-1.5 rounded-lg border-2 px-2.5 py-1.5 transition-all text-left ${isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}
+                    >
+                      <span className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{opt.value === "free" ? "Free" : opt.value}</span>
+                      {opt.igSafe && (
+                        <span className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold leading-none ${isSelected ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          <Instagram className="w-2.5 h-2.5" />IG
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Accent color — pulls from brand primary/secondary, or custom picker */}
