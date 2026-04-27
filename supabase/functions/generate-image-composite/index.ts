@@ -198,9 +198,8 @@ function resolveImageProvider(): ImageProvider | null {
   const geminiApiKey = (Deno.env.get("GEMINI_API_KEY") || "").trim();
   if (geminiApiKey) return { kind: "google-direct", apiKey: geminiApiKey, source: "GEMINI_API_KEY" };
 
-  const lovableApiKey = (Deno.env.get("LOVABLE_API_KEY") || "").trim();
-  if (lovableApiKey) return { kind: "gateway", apiKey: lovableApiKey, source: "LOVABLE_API_KEY" };
-
+  // Lovable AI Gateway is intentionally disabled per project policy.
+  // Image generation must always use Google Imagen 4 directly.
   return null;
 }
 
