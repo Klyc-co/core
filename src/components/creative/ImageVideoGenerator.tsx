@@ -35,10 +35,31 @@ import { Monitor, Smartphone, Square, Rocket } from "lucide-react";
 type VideoModel = "runway" | "kling";
 type OutputSize = "portrait" | "square" | "landscape";
 
+// KLYC Supabase — Imagen 4 is configured here with a valid GOOGLE_API_KEY
+const KLYC_FUNCTION_URL = "https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image-composite";
+const KLYC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU";
+
+async function callImageComposite(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(KLYC_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${KLYC_ANON_KEY}`,
+      "apikey": KLYC_ANON_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Image generation failed (${res.status}): ${errText.substring(0, 300)}`);
+  }
+  return res.json();
+}
+
 const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; aspectRatio: string; icon: typeof Smartphone }[] = [
-  { value: "portrait",  label: "Vertical",    description: "Best for Stories, Reels, TikTok", dimensions: "1080×1920", width: 1080, height: 1920, aspectRatio: "9:16", icon: Smartphone },
-  { value: "square",    label: "Square",      description: "Best for Feed posts",             dimensions: "1080×1080", width: 1080, height: 1080, aspectRatio: "1:1",  icon: Square },
-  { value: "landscape", label: "Horizontal",  description: "Best for YouTube, LinkedIn",      dimensions: "1920×1080", width: 1920, height: 1080, aspectRatio: "16:9", icon: Monitor },
+  { value: "portrait",  label: "Vertical",    description: "Best for Stories, Reels, TikTok", dimensions: "1080x1920", width: 1080, height: 1920, aspectRatio: "9:16", icon: Smartphone },
+  { value: "square",    label: "Square",      description: "Best for Feed posts",             dimensions: "1080x1080", width: 1080, height: 1080, aspectRatio: "1:1",  icon: Square },
+  { value: "landscape", label: "Horizontal",  description: "Best for YouTube, LinkedIn",      dimensions: "1920x1080", width: 1920, height: 1080, aspectRatio: "16:9", icon: Monitor },
 ];
 
 const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
@@ -46,11 +67,6 @@ const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] 
   { value: "kling",  label: "Kling",  description: "Official Kling text-to-video clips" },
 ];
 
-/**
- * Slice a 2x2 composite image into 4 individual tiles.
- * Each tile is cropped to the requested aspect ratio (centered crop).
- * Returns 4 data URLs.
- */
 async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise<string[]> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new window.Image();
@@ -65,7 +81,6 @@ async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise
   const [arW, arH] = aspectRatio.split(":").map(Number);
   const targetRatio = arW / arH;
 
-  // Centered crop within each quadrant to match aspect ratio
   let cropW = halfW;
   let cropH = halfH;
   if (halfW / halfH > targetRatio) {
@@ -111,18 +126,12 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [videoModel, setVideoModel] = useState<VideoModel>("runway");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
-
-  // Image tiles — 4 from one composite call
   const [imageTiles, setImageTiles] = useState<string[]>([]);
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-
-  // Video (unchanged)
   const [resultUrl, setResultUrl] = useState<string | null>(null);
-
   const [savingToLibrary, setSavingToLibrary] = useState(false);
   const [savedToLibrary, setSavedToLibrary] = useState(false);
-
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
   const [accentColor, setAccentColor] = useState<string>("");
   const [accentColorEnabled, setAccentColorEnabled] = useState<boolean>(false);
@@ -130,13 +139,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
-
-  // B-Roll state
   const [brollProjects, setBrollProjects] = useState<any[]>([]);
   const [brollLoading, setBrollLoading] = useState(false);
   const [brollUnlocked, setBrollUnlocked] = useState(false);
   const [brollPasscode, setBrollPasscode] = useState("");
-  // Video gate state
   const [videoUnlocked, setVideoUnlocked] = useState(false);
   const [videoPasscode, setVideoPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -194,7 +200,6 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) { toast.error("Please enter a description"); return; }
-
     setGenerating(true);
     setGenerateError(null);
     setImageTiles([]);
@@ -204,46 +209,36 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        // === COMPOSITE IMAGE PIPELINE ===
-        // 1 API call → 2×2 grid → 4 sliced tiles at selected aspect ratio
         const sizeOpt = OUTPUT_SIZE_OPTIONS.find(o => o.value === outputSize)!;
         const aspectRatio = sizeOpt.aspectRatio;
-
-        console.log(`[Creative Studio] Composite image call — ar=${aspectRatio} refs=${inspirationUrls.length}`);
-
+        console.log(`[Creative Studio] Composite image call -> KLYC Supabase (Imagen 4) ar=${aspectRatio}`);
         const colorInstruction = accentColorEnabled && accentColor
           ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
           : "";
 
-        const { data, error } = await supabase.functions.invoke("generate-image-composite", {
-          body: {
-            brief: `${prompt}${colorInstruction}`,
-            platforms: ["img@0", "img@1", "img@2", "img@3"],
-            mode: "composite",
-            aspectRatio,
-            referenceImages: inspirationUrls.length > 0 ? inspirationUrls.slice(0, 3) : undefined,
-          },
+        const data = await callImageComposite({
+          brief: `${prompt}${colorInstruction}`,
+          platforms: ["img@0", "img@1", "img@2", "img@3"],
+          mode: "composite",
+          aspectRatio,
+          referenceImages: inspirationUrls.length > 0 ? inspirationUrls.slice(0, 3) : undefined,
         });
 
-        if (error) throw new Error(error.message || "Image generation failed");
-
-        // Edge function returns grids: [{ gridUrl, success }]; each gridUrl is a 2x2 composite.
-        // Prefer pre-sliced `images` if present; otherwise slice the first grid client-side.
-        let tiles: string[] = data?.images ?? [];
+        let tiles: string[] = (data?.images as string[]) ?? [];
         if (tiles.length === 0) {
-          const gridUrl: string | undefined = data?.grids?.find((g: any) => g.success)?.gridUrl;
-          if (!gridUrl) throw new Error("No images returned — check edge function");
+          const grids = data?.grids as any[] | undefined;
+          const gridUrl: string | undefined = grids?.find((g: any) => g.success)?.gridUrl;
+          if (!gridUrl) throw new Error("No images returned from Imagen 4");
           tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
         }
-        if (tiles.length === 0) throw new Error("Failed to slice composite image");
+        if (tiles.length === 0) throw new Error("Failed to produce image tiles");
 
         setImageTiles(tiles);
         setSelectedTile(tiles[0]);
-        toast.success(`4 images ready — pick your favourite!`);
+        toast.success("4 images ready — pick your favourite!");
         return;
       }
 
-      // Video generation (unchanged)
       const { data, error } = await supabase.functions.invoke("generate-broll", {
         body: { prompt, standalone: true, model: videoModel },
       });
@@ -313,14 +308,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         </div>
       )}
 
-      <Tabs
-        value={mode}
-        onValueChange={(v) => {
-          const val = v as "image" | "video" | "broll";
-          setMode(val);
-          if (val !== "broll") { setImageTiles([]); setSelectedTile(null); setResultUrl(null); setSavedToLibrary(false); }
-        }}
-      >
+      <Tabs value={mode} onValueChange={(v) => {
+        const val = v as "image" | "video" | "broll";
+        setMode(val);
+        if (val !== "broll") { setImageTiles([]); setSelectedTile(null); setResultUrl(null); setSavedToLibrary(false); }
+      }}>
         <TabsList className="grid w-full max-w-sm grid-cols-3">
           <TabsTrigger value="image" className="gap-2"><Image className="w-4 h-4" /> Image</TabsTrigger>
           <TabsTrigger value="video" className="gap-2"><Video className="w-4 h-4" /> Video</TabsTrigger>
@@ -334,13 +326,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                 const Icon = opt.icon;
                 const isSelected = outputSize === opt.value;
                 return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setOutputSize(opt.value)}
-                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${
-                      isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"
-                    }`}
-                  >
+                  <button key={opt.value} onClick={() => setOutputSize(opt.value)}
+                    className={`relative flex items-center gap-2.5 rounded-lg border-2 px-3 py-2 transition-all text-left ${isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
                     {isSelected && (<div className="absolute top-1.5 right-1.5"><Check className="w-3 h-3 text-primary" /></div>)}
                     <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
                     <div className="flex flex-col leading-tight min-w-0">
@@ -351,35 +338,13 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                 );
               })}
             </div>
-
-            {/* Accent color box — sits to the right of the size selector */}
             <div className="flex items-center gap-2 rounded-lg border-2 border-border bg-card px-3 py-2">
-              <Label htmlFor="accent-color-toggle" className="text-xs font-medium text-foreground whitespace-nowrap">
-                Accent color
-              </Label>
-              <input
-                id="accent-color"
-                type="color"
-                value={accentColor || "#000000"}
-                onChange={(e) => setAccentColor(e.target.value)}
-                disabled={!accentColorEnabled}
-                className="h-8 w-10 rounded-md border border-border cursor-pointer bg-background disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Pick accent color"
-              />
-              <Input
-                value={accentColor}
-                onChange={(e) => setAccentColor(e.target.value)}
-                placeholder="#RRGGBB"
-                disabled={!accentColorEnabled}
-                className="h-8 w-24 font-mono text-xs disabled:opacity-50"
-                maxLength={7}
-              />
-              <Switch
-                id="accent-color-toggle"
-                checked={accentColorEnabled}
-                onCheckedChange={setAccentColorEnabled}
-                aria-label="Toggle accent color"
-              />
+              <Label htmlFor="accent-color-toggle" className="text-xs font-medium text-foreground whitespace-nowrap">Accent color</Label>
+              <input id="accent-color" type="color" value={accentColor || "#000000"} onChange={(e) => setAccentColor(e.target.value)} disabled={!accentColorEnabled}
+                className="h-8 w-10 rounded-md border border-border cursor-pointer bg-background disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Pick accent color" />
+              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#RRGGBB" disabled={!accentColorEnabled}
+                className="h-8 w-24 font-mono text-xs disabled:opacity-50" maxLength={7} />
+              <Switch id="accent-color-toggle" checked={accentColorEnabled} onCheckedChange={setAccentColorEnabled} aria-label="Toggle accent color" />
             </div>
           </div>
         </TabsContent>
@@ -389,48 +354,28 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
       {mode === "broll" && !brollUnlocked && (
         <Card className="flex flex-col items-center justify-center py-20 border-dashed">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-            <Film className="w-8 h-8 text-primary" />
-          </div>
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"><Film className="w-8 h-8 text-primary" /></div>
           <h3 className="text-xl font-bold text-foreground mb-2">Coming Soon</h3>
           <p className="text-sm text-muted-foreground mb-6">Beta access only</p>
           <div className="flex items-center gap-2 max-w-xs w-full">
-            <Input
-              type="password" placeholder="Enter passcode" value={brollPasscode}
-              onChange={(e) => setBrollPasscode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); }
-                else if (e.key === "Enter") { toast.error("Invalid passcode"); }
-              }}
-              className="text-center"
-            />
-            <Button onClick={() => { if (brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>
-              Enter
-            </Button>
+            <Input type="password" placeholder="Enter passcode" value={brollPasscode} onChange={(e) => setBrollPasscode(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); } else if (e.key === "Enter") { toast.error("Invalid passcode"); } }}
+              className="text-center" />
+            <Button onClick={() => { if (brollPasscode === "37") { setBrollUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>Enter</Button>
           </div>
         </Card>
       )}
 
       {mode === "video" && !videoUnlocked && (
         <Card className="flex flex-col items-center justify-center py-20 border-dashed">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-            <Video className="w-8 h-8 text-primary" />
-          </div>
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"><Video className="w-8 h-8 text-primary" /></div>
           <h3 className="text-xl font-bold text-foreground mb-2">Coming Soon</h3>
           <p className="text-sm text-muted-foreground mb-6">Beta access only</p>
           <div className="flex items-center gap-2 max-w-xs w-full">
-            <Input
-              type="password" placeholder="Enter passcode" value={videoPasscode}
-              onChange={(e) => setVideoPasscode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); }
-                else if (e.key === "Enter") { toast.error("Invalid passcode"); }
-              }}
-              className="text-center"
-            />
-            <Button onClick={() => { if (videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>
-              Enter
-            </Button>
+            <Input type="password" placeholder="Enter passcode" value={videoPasscode} onChange={(e) => setVideoPasscode(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); } else if (e.key === "Enter") { toast.error("Invalid passcode"); } }}
+              className="text-center" />
+            <Button onClick={() => { if (videoPasscode === "37") { setVideoUnlocked(true); toast.success("Access granted!"); } else { toast.error("Invalid passcode"); } }}>Enter</Button>
           </div>
         </Card>
       )}
@@ -462,8 +407,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                         <h3 className="font-medium text-foreground text-sm">{project.title}</h3>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                           <Clock className="w-3 h-3" />
-                          <span>{project.duration_seconds ? `${Math.round(project.duration_seconds)}s` : "—"}</span>
-                          <span>•</span>
+                          <span>{project.duration_seconds ? `${Math.round(project.duration_seconds)}s` : "-"}</span>
+                          <span>-</span>
                           <span>{new Date(project.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                         </div>
                       </div>
@@ -478,218 +423,164 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       )}
 
       {mode !== "broll" && !(mode === "video" && !videoUnlocked) && (<>
-      <div className="flex flex-col sm:flex-row items-stretch gap-2">
-        {mode === "image" && inspirationUrls.length < 5 && (
-          <div className="flex sm:flex-col gap-2 shrink-0">
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
-            <Button variant="outline" size="sm" className="gap-2 justify-start" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
-              {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2 justify-start" onClick={() => setShowLibrary(!showLibrary)}>
-              <Library className="w-4 h-4" /> Brand Library
-            </Button>
-          </div>
-        )}
-        <Textarea
-          placeholder={mode === "image"
-            ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light…"
-            : "e.g. A slow cinematic pan across a sunlit café interior with warm golden tones…"}
-          value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2}
-          className="resize-none flex-1 min-h-0 sm:h-auto sm:self-stretch"
-        />
-        <Button
-          onClick={handleGenerate}
-          disabled={generating || !prompt.trim()}
-          className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex items-center justify-center text-2xl font-extrabold tracking-wide text-center bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90"
-        >
-          {generating ? (
-            <Loader2 className="w-6 h-6 animate-spin" />
-          ) : (
-            <span>GO!</span>
+        <div className="flex flex-col sm:flex-row items-stretch gap-2">
+          {mode === "image" && inspirationUrls.length < 5 && (
+            <div className="flex sm:flex-col gap-2 shrink-0">
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+              <Button variant="outline" size="sm" className="gap-2 justify-start" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
+                {uploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Upload Image
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2 justify-start" onClick={() => setShowLibrary(!showLibrary)}>
+                <Library className="w-4 h-4" /> Brand Library
+              </Button>
+            </div>
           )}
-        </Button>
-      </div>
+          <Textarea
+            placeholder={mode === "image" ? "e.g. A modern flat-lay of artisan coffee beans on a marble surface with soft morning light..." : "e.g. A slow cinematic pan across a sunlit cafe interior with warm golden tones..."}
+            value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2}
+            className="resize-none flex-1 min-h-0 sm:h-auto sm:self-stretch"
+          />
+          <Button onClick={handleGenerate} disabled={generating || !prompt.trim()}
+            className="shrink-0 h-auto sm:self-stretch w-24 p-2 flex items-center justify-center text-2xl font-extrabold tracking-wide text-center bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90">
+            {generating ? <Loader2 className="w-6 h-6 animate-spin" /> : <span>GO!</span>}
+          </Button>
+        </div>
 
-      <div className="w-full">
-        {mode === "image" ? (
-          imageTiles.length > 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Pick your favourite · tap to select</p>
-                <div className="flex gap-2 flex-wrap justify-end">
-                  {selectedTile && (
-                    <Button variant="secondary" size="sm" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary} className="gap-2">
-                      {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
-                    </Button>
-                  )}
-                  {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
-                  <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
-                  {selectedTile && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => navigate("/campaigns/new", { state: { referenceImageUrl: selectedTile } })}
-                      className="gap-2"
-                    >
-                      <Rocket className="w-4 h-4" />
-                      <span>Add to Campaign</span>
-                    </Button>
-                  )}
-                  {selectedTile && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate("/campaigns/generate", { state: { referenceImageUrl: selectedTile } })}
-                      className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>Use in Post</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {/* Tile grid — columns and aspect ratio match selected output size, no crop */}
-              <div className={`grid gap-2 ${outputSize === "portrait" ? "grid-cols-4" : "grid-cols-2"}`}>
-                {imageTiles.map((url, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
-                    className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${
-                      outputSize === "portrait" ? "aspect-[9/16]" :
-                      outputSize === "square"   ? "aspect-square"  :
-                      "aspect-video"
-                    } ${
-                      selectedTile === url
-                        ? "border-primary shadow-lg ring-2 ring-primary/30"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover block" />
-                    {selectedTile === url && (
-                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
-                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                      </div>
+        <div className="w-full">
+          {mode === "image" ? (
+            imageTiles.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Pick your favourite · tap to select</p>
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    {selectedTile && (
+                      <Button variant="secondary" size="sm" onClick={handleSaveToLibrary} disabled={savingToLibrary || savedToLibrary} className="gap-2">
+                        {savingToLibrary ? <Loader2 className="w-4 h-4 animate-spin" /> : savedToLibrary ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{savedToLibrary ? "Saved" : "Save"}</span>
+                      </Button>
                     )}
-                    <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] font-semibold">
-                      {idx + 1}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <Card className={`flex items-center justify-center w-full min-h-[350px] border-dashed ${generateError ? "border-destructive/50" : ""}`}>
-              <div className="text-center text-muted-foreground px-6">
-                {generateError ? (
-                  <>
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-destructive/10 flex items-center justify-center">
-                      <X className="w-6 h-6 text-destructive" />
-                    </div>
-                    <p className="text-sm font-medium text-destructive mb-1">Generation failed</p>
-                    <p className="text-xs text-destructive/80 max-w-xs">{generateError}</p>
-                    <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="mt-4 gap-2">
-                      <RefreshCw className="w-3.5 h-3.5" /> Try again
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">4 image variations will appear here</p>
-                    <p className="text-xs opacity-60 mt-1">1 API call · 4 tiles · pick your favourite</p>
-                  </>
-                )}
-              </div>
-            </Card>
-          )
-        ) : (
-          resultUrl ? (
-            <Card className="overflow-hidden relative group">
-              <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
-              <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceVideoUrl: resultUrl } })} className="gap-2">
-                  <Rocket className="w-4 h-4" /> Add to Campaign
-                </Button>
-                <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
-                <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
-              </div>
-            </Card>
-          ) : (
-            <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
-              <div className="text-center text-muted-foreground">
-                <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Your generated video will appear here</p>
-              </div>
-            </Card>
-          )
-        )}
-      </div>
-
-      {mode === "image" && (
-        <div className="space-y-3">
-          {inspirationUrls.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {inspirationUrls.map((url, idx) => (
-                <div key={idx} className="relative inline-block">
-                  <img src={url} alt={`Inspiration ${idx + 1}`} className="w-16 h-16 rounded-lg object-cover border border-border" />
-                  <button onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {showLibrary && inspirationUrls.length < 5 && (
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-foreground">Select from Library</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}><X className="w-3.5 h-3.5" /></Button>
-              </div>
-              {loadingLibrary ? (
-                <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-              ) : libraryImages.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
-              ) : (
-                <ScrollArea className="h-80">
-                  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
-                    {libraryImages.map((img) => {
-                      const isSelected = inspirationUrls.includes(img.value);
-                      return (
-                        <button key={img.id} disabled={isSelected}
-                          onClick={() => { setInspirationUrls((prev) => [...prev, img.value]); if (inspirationUrls.length + 1 >= 5) setShowLibrary(false); }}
-                          className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"}`}>
-                          <img src={img.value} alt={img.name || "Library image"} className="w-full h-full object-cover" />
-                        </button>
-                      );
-                    })}
+                    {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
+                    <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
+                    {selectedTile && (
+                      <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceImageUrl: selectedTile } })} className="gap-2">
+                        <Rocket className="w-4 h-4" /><span>Add to Campaign</span>
+                      </Button>
+                    )}
+                    {selectedTile && (
+                      <Button size="sm" onClick={() => navigate("/campaigns/generate", { state: { referenceImageUrl: selectedTile } })}
+                        className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0">
+                        <Sparkles className="w-4 h-4" /><span>Use in Post</span>
+                      </Button>
+                    )}
                   </div>
-                </ScrollArea>
-              )}
-            </Card>
+                </div>
+                <div className={`grid gap-2 ${outputSize === "portrait" ? "grid-cols-4" : "grid-cols-2"}`}>
+                  {imageTiles.map((url, idx) => (
+                    <button key={idx} onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
+                      className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${outputSize === "portrait" ? "aspect-[9/16]" : outputSize === "square" ? "aspect-square" : "aspect-video"} ${selectedTile === url ? "border-primary shadow-lg ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}>
+                      <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover block" />
+                      {selectedTile === url && (
+                        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
+                          <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] font-semibold">{idx + 1}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Card className={`flex items-center justify-center w-full min-h-[350px] border-dashed ${generateError ? "border-destructive/50" : ""}`}>
+                <div className="text-center text-muted-foreground px-6">
+                  {generateError ? (
+                    <>
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-destructive/10 flex items-center justify-center"><X className="w-6 h-6 text-destructive" /></div>
+                      <p className="text-sm font-medium text-destructive mb-1">Generation failed</p>
+                      <p className="text-xs text-destructive/80 max-w-xs">{generateError}</p>
+                      <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="mt-4 gap-2"><RefreshCw className="w-3.5 h-3.5" /> Try again</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Image className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">4 image variations will appear here</p>
+                      <p className="text-xs opacity-60 mt-1">1 API call · 4 tiles · pick your favourite</p>
+                    </>
+                  )}
+                </div>
+              </Card>
+            )
+          ) : (
+            resultUrl ? (
+              <Card className="overflow-hidden relative group">
+                <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceVideoUrl: resultUrl } })} className="gap-2"><Rocket className="w-4 h-4" /> Add to Campaign</Button>
+                  <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
+                  <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
+                </div>
+              </Card>
+            ) : (
+              <Card className="flex items-center justify-center w-full min-h-[350px] border-dashed">
+                <div className="text-center text-muted-foreground">
+                  <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">Your generated video will appear here</p>
+                </div>
+              </Card>
+            )
           )}
         </div>
-      )}
+
+        {mode === "image" && (
+          <div className="space-y-3">
+            {inspirationUrls.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {inspirationUrls.map((url, idx) => (
+                  <div key={idx} className="relative inline-block">
+                    <img src={url} alt={`Inspiration ${idx + 1}`} className="w-16 h-16 rounded-lg object-cover border border-border" />
+                    <button onClick={() => setInspirationUrls((prev) => prev.filter((_, i) => i !== idx))}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {showLibrary && inspirationUrls.length < 5 && (
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-foreground">Select from Library</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowLibrary(false)}><X className="w-3.5 h-3.5" /></Button>
+                </div>
+                {loadingLibrary ? (
+                  <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+                ) : libraryImages.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No images in your library yet.</p>
+                ) : (
+                  <ScrollArea className="h-80">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                      {libraryImages.map((img) => {
+                        const isSelected = inspirationUrls.includes(img.value);
+                        return (
+                          <button key={img.id} disabled={isSelected}
+                            onClick={() => { setInspirationUrls((prev) => [...prev, img.value]); if (inspirationUrls.length + 1 >= 5) setShowLibrary(false); }}
+                            className={`group relative aspect-square rounded-md overflow-hidden border transition-colors ${isSelected ? "border-primary opacity-50" : "border-border hover:border-primary"}`}>
+                            <img src={img.value} alt={img.name || "Library image"} className="w-full h-full object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
       </>)}
 
-      {/* Lightbox — full-size view when a tile is clicked */}
       {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out"
-          onClick={() => setLightboxUrl(null)}
-        >
-          <div
-            className="relative max-w-5xl max-h-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={lightboxUrl}
-              alt="Full size preview"
-              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain"
-            />
-            <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
-            >
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
+          <div className="relative max-w-5xl max-h-full" onClick={(e) => e.stopPropagation()}>
+            <img src={lightboxUrl} alt="Full size preview" className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" />
+            <button onClick={() => setLightboxUrl(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors">
               <X className="w-4 h-4 text-black" />
             </button>
           </div>
