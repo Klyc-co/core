@@ -34,6 +34,7 @@ import { Monitor, Smartphone, Square, Rocket } from "lucide-react";
 
 type VideoModel = "runway" | "kling";
 type OutputSize = "portrait" | "square" | "landscape";
+type ColorMode = "primary" | "secondary" | "custom";
 
 // KLYC Supabase — Imagen 4 is configured here with a valid GOOGLE_API_KEY
 const KLYC_FUNCTION_URL = "https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image-composite";
@@ -137,6 +138,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
   const [accentColor, setAccentColor] = useState<string>("");
   const [accentColorEnabled, setAccentColorEnabled] = useState<boolean>(false);
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [colorMode, setColorMode] = useState<ColorMode>("primary");
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryImages, setLibraryImages] = useState<BrandAssetImage[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
@@ -148,6 +151,26 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [videoUnlocked, setVideoUnlocked] = useState(false);
   const [videoPasscode, setVideoPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch brand colors from client profile on mount
+  useEffect(() => {
+    const fetchBrandColors = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("client_profiles")
+        .select("brand_colors")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.brand_colors?.length) {
+        setBrandColors(data.brand_colors);
+        setAccentColor(data.brand_colors[0]);
+        setColorMode("primary");
+        setAccentColorEnabled(true);
+      }
+    };
+    fetchBrandColors();
+  }, []);
 
   useEffect(() => {
     if (!showLibrary) return;
@@ -342,13 +365,49 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                 );
               })}
             </div>
-            <div className="flex items-center gap-2 rounded-lg border-2 border-border bg-card px-3 py-2">
-              <Label htmlFor="accent-color-toggle" className="text-xs font-medium text-foreground whitespace-nowrap">Accent color</Label>
-              <input id="accent-color" type="color" value={accentColor || "#000000"} onChange={(e) => setAccentColor(e.target.value)} disabled={!accentColorEnabled}
-                className="h-8 w-10 rounded-md border border-border cursor-pointer bg-background disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Pick accent color" />
-              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#RRGGBB" disabled={!accentColorEnabled}
-                className="h-8 w-24 font-mono text-xs disabled:opacity-50" maxLength={7} />
-              <Switch id="accent-color-toggle" checked={accentColorEnabled} onCheckedChange={setAccentColorEnabled} aria-label="Toggle accent color" />
+
+            {/* Accent color — pulls from brand primary/secondary, or custom picker */}
+            <div className="flex items-center gap-2 rounded-lg border-2 border-border bg-card px-3 py-2 flex-wrap">
+              <Label className="text-xs font-medium text-foreground whitespace-nowrap">Accent</Label>
+
+              {brandColors[0] && (
+                <button type="button"
+                  onClick={() => { setColorMode("primary"); setAccentColor(brandColors[0]); setAccentColorEnabled(true); }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all ${colorMode === "primary" && accentColorEnabled ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
+                  <span className="w-3.5 h-3.5 rounded-sm flex-shrink-0 border border-black/10" style={{ backgroundColor: brandColors[0] }} />
+                  Primary
+                </button>
+              )}
+
+              {brandColors[1] && (
+                <button type="button"
+                  onClick={() => { setColorMode("secondary"); setAccentColor(brandColors[1]); setAccentColorEnabled(true); }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all ${colorMode === "secondary" && accentColorEnabled ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
+                  <span className="w-3.5 h-3.5 rounded-sm flex-shrink-0 border border-black/10" style={{ backgroundColor: brandColors[1] }} />
+                  Secondary
+                </button>
+              )}
+
+              <button type="button"
+                onClick={() => { setColorMode("custom"); setAccentColorEnabled(true); }}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all ${colorMode === "custom" && accentColorEnabled ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
+                <input
+                  type="color"
+                  value={colorMode === "custom" ? (accentColor || "#ffffff") : (accentColor || "#ffffff")}
+                  onChange={(e) => { setAccentColor(e.target.value); setColorMode("custom"); setAccentColorEnabled(true); }}
+                  className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent flex-shrink-0"
+                  style={{ minWidth: 14 }}
+                />
+                <Input
+                  value={colorMode === "custom" ? accentColor : ""}
+                  onChange={(e) => { setAccentColor(e.target.value); setColorMode("custom"); setAccentColorEnabled(true); }}
+                  placeholder="#bdffc1"
+                  className="h-5 w-16 font-mono text-xs border-0 p-0 bg-transparent focus-visible:ring-0 shadow-none"
+                  maxLength={7}
+                />
+              </button>
+
+              <Switch checked={accentColorEnabled} onCheckedChange={setAccentColorEnabled} aria-label="Toggle accent color" />
             </div>
           </div>
         </TabsContent>
@@ -478,18 +537,20 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     )}
                   </div>
                 </div>
-                {/* Always 2x2 grid — clean 4-tile layout regardless of orientation */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Always 2×2 grid — clean 4-tile layout regardless of orientation */}
+                <div className="grid grid-cols-2 gap-2 w-full">
                   {imageTiles.map((url, idx) => (
                     <button key={idx} onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
                       className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${outputSize === "portrait" ? "aspect-[9/16]" : outputSize === "square" ? "aspect-square" : "aspect-video"} ${selectedTile === url ? "border-primary shadow-lg ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}>
                       <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover block" />
+                      {/* Selected checkmark — flush top-right corner */}
                       {selectedTile === url && (
-                        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
+                        <div className="absolute top-0 right-0 w-6 h-6 rounded-bl-lg bg-primary flex items-center justify-center">
                           <Check className="w-3.5 h-3.5 text-primary-foreground" />
                         </div>
                       )}
-                      <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/50 text-white text-[10px] font-semibold">{idx + 1}</div>
+                      {/* Tile number — flush bottom-left corner */}
+                      <div className="absolute bottom-0 left-0 px-2 py-0.5 rounded-tr-md bg-black/60 text-white text-[10px] font-semibold leading-tight">{idx + 1}</div>
                     </button>
                   ))}
                 </div>
