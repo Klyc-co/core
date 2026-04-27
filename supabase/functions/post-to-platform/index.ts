@@ -731,22 +731,24 @@ Deno.serve(async (req) => {
     } else if (platformLower === "twitter") {
       // Twitter uses app-level credentials (TWITTER_* env vars), no per-user connection lookup needed
       // accessToken stays null
+    } else if (platformLower === "youtube" || platformLower === "pinterest") {
+      // Mock-only platforms — no OAuth token required; posting is handled as mock below
     } else {
-      const { data: connection } = await serviceClient
-        .from("client_platform_connections")
-        .select("id, status, access_token, refresh_token, token_expires_at")
-        .eq("client_id", userId)
+      // linkedin, threads, snapchat, and any other OAuth platforms → social_connections
+      const { data: socialConn } = await serviceClient
+        .from("social_connections")
+        .select("access_token, platform_user_id")
+        .eq("user_id", userId)
         .eq("platform", platformLower)
-        .eq("status", "active")
         .maybeSingle();
 
-      if (!connection) {
+      if (!socialConn) {
         return new Response(
-          JSON.stringify({ error: `No active connection for ${platform}. Please connect your account first.` }),
+          JSON.stringify({ error: `No active ${platform} connection. Please reconnect your account first.` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      accessToken = await decryptToken(connection.access_token);
+      accessToken = await decryptToken(socialConn.access_token);
     }
 
     let result: { success: boolean; post_id?: string; permalink?: string; error?: string };
