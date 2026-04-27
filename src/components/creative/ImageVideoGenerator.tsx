@@ -528,6 +528,17 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                   {selectedTile && (
                     <Button
                       size="sm"
+                      variant="secondary"
+                      onClick={() => navigate("/campaigns/new", { state: { referenceImageUrl: selectedTile } })}
+                      className="gap-2"
+                    >
+                      <Rocket className="w-4 h-4" />
+                      <span>Add to Campaign</span>
+                    </Button>
+                  )}
+                  {selectedTile && (
+                    <Button
+                      size="sm"
                       onClick={() => navigate("/campaigns/generate", { state: { referenceImageUrl: selectedTile } })}
                       className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0"
                     >
