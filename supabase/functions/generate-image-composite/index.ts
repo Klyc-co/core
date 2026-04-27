@@ -288,37 +288,42 @@ Deno.serve(async (req) => {
       const rp = platforms.length >= n ? platforms.slice(0, n) : Array.from({ length: n }, (_, i) => `tile@${i}`);
       return json({ images: urls, grids: urls.map((url, i) => ({ platforms: [rp[i]], gridUrl: url, success: true })), total_platforms: n, grid_mode: "individual", tiles_generated: n, raw_brief: rawBrief, deploy_version: DEPLOY_VERSION, mode: "individual", model: IMAGEN_MODEL, api_calls: 1, elapsed_ms: Date.now()-t0, imagen_call_ms: callMs, aspect_ratio: aspectRatio, cost: { api_cost: n*API_CALL_COST, cost_per_tile: API_CALL_COST, tiles: n }, compression: { knp_applied: true }, src_bytes: totalBytes });
     }
-    // composite (default)
+    // composite (default) — v28.1: use sampleCount=4 to avoid 150s timeout from
+    // single mega-grid generation + heavy PNG decode/split. One Imagen call returns
+    // 4 distinct images at the requested aspect ratio; no splitGrid needed.
     const compressed = knpCompress(rawBrief);
-    const gridPrompt = `${compressed}\n\n${makeGridWrapper(aspectRatio)}`;
-    console.log(`[v${DEPLOY_VERSION}] mode=composite ar=${aspectRatio} prompt=${compressed.length}c refs=${refB64s.length}`);
+    console.log(`[v${DEPLOY_VERSION}.1] mode=composite ar=${aspectRatio} prompt=${compressed.length}c refs=${refB64s.length} (sampleCount=4 fast-path)`);
     const callT = Date.now();
-    let b64: string;
+    let b64s: string[];
     try {
-      [b64] = await imagenCall(gridPrompt, apiKey, 1, aspectRatio, refB64s);
+      b64s = await imagenCall(compressed, apiKey, 4, aspectRatio, refB64s);
     } catch (e) {
       if (refB64s.length > 0 && e instanceof UpstreamError && e.httpStatus === 400) {
-        console.warn(`[v${DEPLOY_VERSION}] ref images rejected, retrying without`);
-        [b64] = await imagenCall(gridPrompt, apiKey, 1, aspectRatio, []);
+        console.warn(`[v${DEPLOY_VERSION}.1] ref images rejected, retrying without`);
+        b64s = await imagenCall(compressed, apiKey, 4, aspectRatio, []);
       } else { throw e; }
     }
     const callMs = Date.now() - callT;
     const batchId = `cmp28_${Date.now()}`;
-    const { urls, srcBytes, tileBytesTotal, tileW, tileH } = await splitGrid(b64!, batchId, supabase);
+    const urls: string[] = [];
+    let totalBytes = 0;
+    for (let i = 0; i < b64s.length; i++) {
+      const { url, bytes } = await uploadSingle(b64s[i], `${batchId}/img_${i}.png`, supabase);
+      urls.push(url); totalBytes += bytes;
+    }
     const n = urls.length;
     const rp = platforms.length >= n ? platforms.slice(0, n) : Array.from({ length: n }, (_, i) => `tile@${i}`);
     const promptSavePct = rawBrief.length > 0 ? Math.round((1 - compressed.length / rawBrief.length) * 100) : 0;
-    const tileSavePct = srcBytes > 0 ? Math.round((1 - tileBytesTotal / srcBytes) * 100) : 0;
     return json({
       images: urls,
-      grids: urls.map((url, i) => ({ platforms: [rp[i]], gridUrl: url, success: true, layout: { cellW: tileW, cellH: tileH } })),
-      total_platforms: n, grid_mode: "knp_2x2", tiles_generated: n, sample_count: 1,
+      grids: urls.map((url, i) => ({ platforms: [rp[i]], gridUrl: url, success: true })),
+      total_platforms: n, grid_mode: "fast_individual", tiles_generated: n, sample_count: 4,
       raw_brief: rawBrief, deploy_version: DEPLOY_VERSION, mode: "composite",
       model: IMAGEN_MODEL, provider: "Google Imagen 4 Standard",
       api_calls: 1, elapsed_ms: Date.now()-t0, imagen_call_ms: callMs,
-      split_inset: SPLIT_INSET, aspect_ratio: aspectRatio, reference_images_used: refB64s.length,
-      cost: { api_cost: API_CALL_COST, cost_per_tile: API_CALL_COST/Math.max(n,1), model_rate: API_CALL_COST, tiles: n },
-      compression: { knp_applied: true, prompt_chars_in: rawBrief.length, prompt_chars_out: compressed.length, prompt_savings_pct: promptSavePct, grid_multiplier: n, assets_per_call: n, src_bytes: srcBytes, tile_bytes_total: tileBytesTotal, tile_savings_pct: tileSavePct },
+      aspect_ratio: aspectRatio, reference_images_used: refB64s.length,
+      cost: { api_cost: n*API_CALL_COST, cost_per_tile: API_CALL_COST, model_rate: API_CALL_COST, tiles: n },
+      compression: { knp_applied: true, prompt_chars_in: rawBrief.length, prompt_chars_out: compressed.length, prompt_savings_pct: promptSavePct, grid_multiplier: n, assets_per_call: n, src_bytes: totalBytes },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
