@@ -79,7 +79,7 @@ serve(async (req) => {
   if (denied) {
     console.log("User denied Twitter authorization");
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=Twitter+authorization+denied`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=Twitter+authorization+denied`,
       302
     );
   }
@@ -87,7 +87,7 @@ serve(async (req) => {
   if (!oauthToken || !oauthVerifier) {
     console.error("Missing oauth_token or oauth_verifier");
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=Missing+authorization+parameters`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=Missing+authorization+parameters`,
       302
     );
   }
@@ -109,7 +109,7 @@ serve(async (req) => {
     if (fetchError || !pendingConnection) {
       console.error("Failed to find pending connection:", fetchError);
       return Response.redirect(
-        `${FRONTEND_URL}/profile/import?error=Session+expired+please+try+again`,
+        `${FRONTEND_URL}/campaigns/new?oauth_error=Session+expired+please+try+again`,
         302
       );
     }
@@ -181,7 +181,7 @@ serve(async (req) => {
           user_id: userId,
           platform: "twitter",
           access_token: encryptedAccessToken,
-          refresh_token: encryptedAccessTokenSecret, // Store the encrypted access token secret
+          refresh_token: encryptedAccessTokenSecret,
           platform_user_id: twitterUserId,
           platform_username: screenName,
           scopes: ["read", "write"],
@@ -196,14 +196,15 @@ serve(async (req) => {
 
     console.log("Twitter connection saved successfully for user:", userId);
 
+    // Redirect back to campaigns/new so the page detects oauth_success and marks twitter as connected
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?success=twitter`,
+      `${FRONTEND_URL}/campaigns/new?oauth_success=twitter`,
       302
     );
   } catch (err) {
     console.error("Twitter OAuth callback error:", err);
     return Response.redirect(
-      `${FRONTEND_URL}/profile/import?error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
+      `${FRONTEND_URL}/campaigns/new?oauth_error=${encodeURIComponent(err instanceof Error ? err.message : "Unknown error")}`,
       302
     );
   }
