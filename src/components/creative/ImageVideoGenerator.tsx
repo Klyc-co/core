@@ -589,7 +589,21 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
                     <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
                     {selectedTile && (
-                      <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceImageUrl: selectedTile } })} className="gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          const durable = await ensureDurableImageUrl(selectedTile);
+                          navigate("/campaigns/new", {
+                            state: {
+                              uploadedMediaUrls: [
+                                { id: `img-${Date.now()}`, name: "Generated image", url: durable },
+                              ],
+                            },
+                          });
+                        }}
+                        className="gap-2"
+                      >
                         <Rocket className="w-4 h-4" /><span>Add to Campaign</span>
                       </Button>
                     )}
