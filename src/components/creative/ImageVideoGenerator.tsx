@@ -251,7 +251,78 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     setSelectedMediaIds(prev => { const n = new Set(prev); n.add(item.id); return n; });
   };
 
-  const handleAddSelectedToCampaign = () => {
+  // Persist user's last-used aspect ratio to Supabase user_settings
+  const persistAspectRatio = async (value: AspectRatioKey) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from("user_settings")
+        .upsert(
+          { user_id: user.id, creative_aspect_ratio: value },
+          { onConflict: "user_id" }
+        );
+    } catch (e) {
+      console.warn("Failed to persist aspect ratio preference", e);
+    }
+  };
+
+  // Load saved preference + auto-suggest IG-safe ratio when Instagram is connected
+  useEffect(() => {
+    const loadAspectPreference = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [{ data: settings }, { data: connections }] = await Promise.all([
+        supabase
+          .from("user_settings")
+          .select("creative_aspect_ratio")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("client_platform_connections")
+          .select("platform")
+          .eq("client_id", user.id)
+          .eq("platform", "instagram")
+          .eq("status", "active")
+          .maybeSingle(),
+      ]);
+
+      const saved = settings?.creative_aspect_ratio as AspectRatioKey | null | undefined;
+      const hasInstagram = !!connections;
+
+      if (saved && ASPECT_RATIO_OPTIONS.some(o => o.value === saved)) {
+        setAspectRatioKey(saved);
+        const opt = ASPECT_RATIO_OPTIONS.find(o => o.value === saved);
+        setIgOptimizedHint(hasInstagram && !!opt?.igSafe);
+      } else if (hasInstagram) {
+        // Auto-suggest IG-best ratio (4:5 has highest engagement)
+        setAspectRatioKey("4:5");
+        setIgOptimizedHint(true);
+      }
+    };
+    loadAspectPreference();
+  }, []);
+
+  // Update IG hint whenever ratio changes (after we know IG status — re-check)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from("client_platform_connections")
+        .select("platform")
+        .eq("client_id", user.id)
+        .eq("platform", "instagram")
+        .eq("status", "active")
+        .maybeSingle();
+      if (cancelled) return;
+      const opt = ASPECT_RATIO_OPTIONS.find(o => o.value === aspectRatioKey);
+      setIgOptimizedHint(!!data && !!opt?.igSafe);
+    })();
+    return () => { cancelled = true; };
+  }, [aspectRatioKey]);
+
     const items = sessionMedia.filter(m => selectedMediaIds.has(m.id));
     if (items.length === 0) {
       toast.error("Select at least one item to add");
