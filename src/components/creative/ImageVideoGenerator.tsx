@@ -142,6 +142,78 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [videoPasscode, setVideoPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Session-level gallery of generated media (images + videos) — persists across regenerations
+  // so the user can pick any of them to attach to a campaign.
+  type SessionMediaItem = { id: string; type: "image" | "video"; url: string; name: string };
+  const [sessionMedia, setSessionMedia] = useState<SessionMediaItem[]>([]);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(new Set());
+
+  const toggleMediaSelected = (id: string) => {
+    setSelectedMediaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const removeSessionMedia = (id: string) => {
+    setSessionMedia(prev => prev.filter(m => m.id !== id));
+    setSelectedMediaIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  // Convert any data:URL image to a durable Storage URL so it survives navigation/reload
+  const ensureDurableImageUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("data:")) return url;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return url;
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const file = new File([blob], `creative-studio-${Date.now()}.png`, { type: blob.type || "image/png" });
+    const { publicUrl } = await uploadBrandAssetImage({ userId: user.id, file, folder: "creative-studio" });
+    return publicUrl;
+  };
+
+  const addSelectedTilesToSession = async (tileUrls: string[]) => {
+    try {
+      const durable = await Promise.all(tileUrls.map(ensureDurableImageUrl));
+      const newItems: SessionMediaItem[] = durable.map((u, i) => ({
+        id: `img-${Date.now()}-${i}`,
+        type: "image",
+        url: u,
+        name: `Generated image ${i + 1}`,
+      }));
+      setSessionMedia(prev => [...newItems, ...prev].slice(0, 24));
+      setSelectedMediaIds(prev => {
+        const next = new Set(prev);
+        newItems.forEach(it => next.add(it.id));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to add tiles to session", e);
+    }
+  };
+
+  const addVideoToSession = (url: string) => {
+    const item: SessionMediaItem = {
+      id: `vid-${Date.now()}`,
+      type: "video",
+      url,
+      name: `Generated video`,
+    };
+    setSessionMedia(prev => [item, ...prev].slice(0, 24));
+    setSelectedMediaIds(prev => { const n = new Set(prev); n.add(item.id); return n; });
+  };
+
+  const handleAddSelectedToCampaign = () => {
+    const items = sessionMedia.filter(m => selectedMediaIds.has(m.id));
+    if (items.length === 0) {
+      toast.error("Select at least one item to add");
+      return;
+    }
+    const uploadedMediaUrls = items.map(it => ({ id: it.id, name: it.name, url: it.url }));
+    navigate("/campaigns/new", { state: { uploadedMediaUrls } });
+  };
+
   // Fetch brand colors from client profile on mount
   useEffect(() => {
     const fetchBrandColors = async () => {
