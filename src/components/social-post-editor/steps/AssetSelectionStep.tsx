@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,6 +22,8 @@ import {
   Sparkles,
   Package,
   MessageSquare,
+  Wand2,
+  RefreshCw,
 } from "lucide-react";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
@@ -29,6 +32,74 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import { toast } from "sonner";
 import { WizardState, CampaignDraft, Product, SelectedAsset } from "../types";
+
+// KLYC Supabase — Imagen 4 direct call (same as ImageVideoGenerator)
+const KLYC_FUNCTION_URL = "https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image-composite";
+const KLYC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU";
+
+const AR_MAP: Record<string, string> = {
+  portrait: "9:16",
+  square: "1:1",
+  landscape: "16:9",
+};
+
+async function callImageComposite(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(KLYC_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${KLYC_ANON_KEY}`,
+      "apikey": KLYC_ANON_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Image generation failed (${res.status}): ${errText.substring(0, 300)}`);
+  }
+  return res.json();
+}
+
+async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise<string[]> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new window.Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load composite image"));
+    i.src = gridUrl;
+  });
+
+  const halfW = img.width / 2;
+  const halfH = img.height / 2;
+  const [arW, arH] = aspectRatio.split(":").map(Number);
+  const targetRatio = arW / arH;
+
+  let cropW = halfW;
+  let cropH = halfH;
+  if (halfW / halfH > targetRatio) {
+    cropW = halfH * targetRatio;
+  } else {
+    cropH = halfW / targetRatio;
+  }
+
+  const quadrants = [
+    { sx: 0, sy: 0 },
+    { sx: halfW, sy: 0 },
+    { sx: 0, sy: halfH },
+    { sx: halfW, sy: halfH },
+  ];
+
+  return quadrants.map(({ sx, sy }) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = cropW;
+    canvas.height = cropH;
+    const ctx = canvas.getContext("2d")!;
+    const offsetX = sx + (halfW - cropW) / 2;
+    const offsetY = sy + (halfH - cropH) / 2;
+    ctx.drawImage(img, offsetX, offsetY, cropW, cropH, 0, 0, cropW, cropH);
+    return canvas.toDataURL("image/png");
+  });
+}
 
 interface AssetSelectionStepProps {
   wizardState: WizardState;
@@ -51,6 +122,13 @@ export default function AssetSelectionStep({
   const [isUploading, setIsUploading] = useState(false);
   const [showGoogleDrive, setShowGoogleDrive] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+
+  // AI Generate state
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiTiles, setAiTiles] = useState<string[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -89,6 +167,55 @@ export default function AssetSelectionStep({
     };
     loadData();
   }, []);
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) { toast.error("Enter a description first"); return; }
+    setAiGenerating(true);
+    setAiError(null);
+    setAiTiles([]);
+
+    try {
+      const aspectRatio = AR_MAP[wizardState.aspectRatio] ?? "9:16";
+      const data = await callImageComposite({
+        brief: aiPrompt.trim(),
+        platforms: ["img@0", "img@1", "img@2", "img@3"],
+        mode: "composite",
+        aspectRatio,
+      });
+
+      let tiles: string[] = (data?.images as string[]) ?? [];
+      if (tiles.length === 0) {
+        const grids = data?.grids as any[] | undefined;
+        const gridUrl: string | undefined = grids?.find((g: any) => g.success)?.gridUrl;
+        if (!gridUrl) throw new Error("No images returned from Imagen 4");
+        tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
+      }
+      if (tiles.length === 0) throw new Error("Failed to produce image tiles");
+      setAiTiles(tiles.slice(0, 4));
+    } catch (err: any) {
+      const msg = err.message || "Generation failed";
+      setAiError(msg);
+      toast.error(msg);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const handleAddAiTile = (url: string, idx: number) => {
+    const newAsset: SelectedAsset = {
+      id: crypto.randomUUID(),
+      name: `AI Image ${idx + 1}`,
+      url,
+      thumbnailUrl: url,
+      type: "image",
+      source: "upload", // data URL treated same as upload
+    };
+    onUpdate({ selectedAssets: [...wizardState.selectedAssets, newAsset] });
+    toast.success("Image added to assets");
+    setShowAiPanel(false);
+    setAiTiles([]);
+    setAiPrompt("");
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -165,6 +292,10 @@ export default function AssetSelectionStep({
       onUpdate({ selectedProduct: product });
     }
   };
+
+  // Aspect ratio label for display
+  const arLabel = wizardState.aspectRatio === "portrait" ? "9:16" : wizardState.aspectRatio === "square" ? "1:1" : "16:9";
+  const tileAspect = wizardState.aspectRatio === "portrait" ? "aspect-[9/16]" : wizardState.aspectRatio === "square" ? "aspect-square" : "aspect-video";
 
   // User can proceed if they have at least one content source
   const canProceed =
@@ -293,6 +424,7 @@ export default function AssetSelectionStep({
           Images & Logos
         </h3>
 
+        {/* 4-button grid: Upload | Klyc Library | Google Drive | AI Generate */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all group">
             {isUploading ? (
@@ -319,7 +451,94 @@ export default function AssetSelectionStep({
             <GoogleDriveIcon className="w-6 h-6 mb-2" />
             <span className="text-xs font-medium text-center">Google Drive</span>
           </button>
+
+          {/* AI Generate — 4th slot */}
+          <button
+            onClick={() => { setShowAiPanel((v) => !v); setAiTiles([]); setAiError(null); }}
+            className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all group ${
+              showAiPanel
+                ? "border-primary bg-primary/5"
+                : "border-dashed border-border hover:border-primary/50 hover:bg-muted/50"
+            }`}
+          >
+            <Wand2 className={`w-6 h-6 mb-2 transition-colors ${showAiPanel ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+            <span className="text-xs font-medium text-center">AI Generate</span>
+          </button>
         </div>
+
+        {/* AI Generate inline panel */}
+        {showAiPanel && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Generate with Imagen 4</span>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{arLabel}</span>
+              </div>
+              <button onClick={() => { setShowAiPanel(false); setAiTiles([]); setAiError(null); }}
+                className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Describe the image — e.g. professional headshot of a barista in a bright café"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !aiGenerating) handleAiGenerate(); }}
+                className="flex-1 bg-background"
+              />
+              <Button
+                onClick={handleAiGenerate}
+                disabled={aiGenerating || !aiPrompt.trim()}
+                className="shrink-0 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0 px-5"
+              >
+                {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <span className="font-bold">GO!</span>}
+              </Button>
+            </div>
+
+            {aiGenerating && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>Generating 4 variations with Imagen 4…</span>
+              </div>
+            )}
+
+            {aiError && !aiGenerating && (
+              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                <X className="w-4 h-4 shrink-0" />
+                <span className="flex-1 truncate">{aiError}</span>
+                <button onClick={handleAiGenerate} className="flex items-center gap-1 text-xs underline shrink-0">
+                  <RefreshCw className="w-3 h-3" /> Retry
+                </button>
+              </div>
+            )}
+
+            {aiTiles.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Pick one to add to your assets</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {aiTiles.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleAddAiTile(url, idx)}
+                      className={`relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all cursor-pointer group ${tileAspect}`}
+                      title={`Add variation ${idx + 1}`}
+                    >
+                      <img src={url} alt={`AI variation ${idx + 1}`} className="w-full h-full object-cover block" />
+                      <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/20 transition-all flex items-center justify-center">
+                        <Check className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 drop-shadow transition-opacity" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 px-1.5 py-0.5 rounded-tr-md bg-black/60 text-white text-[10px] font-semibold leading-tight">{idx + 1}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground text-center">Click a tile to add it · Generate again for more options</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {wizardState.selectedAssets.length > 0 && (
           <div className="space-y-2">
