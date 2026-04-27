@@ -317,16 +317,16 @@ async function postToThreads(accessToken: string, content: string): Promise<{ su
   }
 }
 
-async function postToTwitter(content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+async function postToTwitter(accessToken: string, accessTokenSecret: string, content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
   const { createHmac } = await import("node:crypto");
 
   const API_KEY = Deno.env.get("TWITTER_CONSUMER_KEY")?.trim();
   const API_SECRET = Deno.env.get("TWITTER_CONSUMER_SECRET")?.trim();
-  const ACCESS_TOKEN = Deno.env.get("TWITTER_ACCESS_TOKEN")?.trim();
-  const ACCESS_TOKEN_SECRET = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")?.trim();
+  const ACCESS_TOKEN = accessToken;
+  const ACCESS_TOKEN_SECRET = accessTokenSecret;
 
-  if (!API_KEY || !API_SECRET || !ACCESS_TOKEN || !ACCESS_TOKEN_SECRET) {
-    return { success: false, error: "Twitter API credentials not configured. Add TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET to secrets." };
+  if (!API_KEY || !API_SECRET) {
+    return { success: false, error: "Twitter app credentials not configured. Add TWITTER_CONSUMER_KEY and TWITTER_CONSUMER_SECRET to edge function secrets." };
   }
 
   if (!content?.trim()) {
@@ -637,6 +637,7 @@ Deno.serve(async (req) => {
     let accessToken: string | null = null;
     let igUserId: string | null = null;
     let fbPageId: string | null = null;
+    let twitterTokenSecret: string | null = null;
 
     if (platformLower === "instagram" || platformLower === "facebook" || platformLower === "tiktok") {
       const { data: socialConn } = await serviceClient
@@ -729,8 +730,22 @@ Deno.serve(async (req) => {
         );
       }
     } else if (platformLower === "twitter") {
-      // Twitter uses app-level credentials (TWITTER_* env vars), no per-user connection lookup needed
-      // accessToken stays null
+      // Twitter uses per-user OAuth 1.0a tokens; consumer key/secret stay as app env vars
+      const { data: socialConn } = await serviceClient
+        .from("social_connections")
+        .select("access_token, refresh_token")
+        .eq("user_id", userId)
+        .eq("platform", "twitter")
+        .maybeSingle();
+
+      if (!socialConn) {
+        return new Response(
+          JSON.stringify({ error: "No active Twitter connection. Please reconnect your Twitter account." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      accessToken = await decryptToken(socialConn.access_token);
+      twitterTokenSecret = await decryptToken(socialConn.refresh_token);
     } else if (platformLower === "youtube" || platformLower === "pinterest") {
       // Mock-only platforms — no OAuth token required; posting is handled as mock below
     } else {
@@ -758,7 +773,7 @@ Deno.serve(async (req) => {
     } else if (platformLower === "threads") {
       result = await postToThreads(accessToken!, content);
     } else if (platformLower === "twitter") {
-      result = await postToTwitter(content);
+      result = await postToTwitter(accessToken!, twitterTokenSecret!, content);
     } else if (platformLower === "instagram") {
       if (!igUserId) {
         result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
