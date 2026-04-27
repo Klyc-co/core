@@ -33,7 +33,7 @@ import { uploadBrandAssetImage } from "@/lib/brandAssetStorage";
 import { toast } from "sonner";
 import { WizardState, CampaignDraft, Product, SelectedAsset } from "../types";
 
-// KLYC Supabase — Imagen 4 direct call (same as ImageVideoGenerator)
+// KLYC Supabase — direct image generation call
 const KLYC_FUNCTION_URL = "https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image-composite";
 const KLYC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU";
 
@@ -187,7 +187,7 @@ export default function AssetSelectionStep({
       if (tiles.length === 0) {
         const grids = data?.grids as any[] | undefined;
         const gridUrl: string | undefined = grids?.find((g: any) => g.success)?.gridUrl;
-        if (!gridUrl) throw new Error("No images returned from Imagen 4");
+        if (!gridUrl) throw new Error("No images returned");
         tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
       }
       if (tiles.length === 0) throw new Error("Failed to produce image tiles");
@@ -208,7 +208,7 @@ export default function AssetSelectionStep({
       url,
       thumbnailUrl: url,
       type: "image",
-      source: "upload", // data URL treated same as upload
+      source: "upload",
     };
     onUpdate({ selectedAssets: [...wizardState.selectedAssets, newAsset] });
     toast.success("Image added to assets");
@@ -293,11 +293,9 @@ export default function AssetSelectionStep({
     }
   };
 
-  // Aspect ratio label for display
   const arLabel = wizardState.aspectRatio === "portrait" ? "9:16" : wizardState.aspectRatio === "square" ? "1:1" : "16:9";
   const tileAspect = wizardState.aspectRatio === "portrait" ? "aspect-[9/16]" : wizardState.aspectRatio === "square" ? "aspect-square" : "aspect-video";
 
-  // User can proceed if they have at least one content source
   const canProceed =
     wizardState.selectedCampaignDraft !== null ||
     wizardState.selectedProduct !== null ||
@@ -424,7 +422,6 @@ export default function AssetSelectionStep({
           Images & Logos
         </h3>
 
-        {/* 4-button grid: Upload | Klyc Library | Google Drive | AI Generate */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all group">
             {isUploading ? (
@@ -452,7 +449,6 @@ export default function AssetSelectionStep({
             <span className="text-xs font-medium text-center">Google Drive</span>
           </button>
 
-          {/* AI Generate — 4th slot */}
           <button
             onClick={() => { setShowAiPanel((v) => !v); setAiTiles([]); setAiError(null); }}
             className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all group ${
@@ -472,7 +468,7 @@ export default function AssetSelectionStep({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">Generate with Imagen 4</span>
+                <span className="text-sm font-semibold">Generate with KLYC</span>
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{arLabel}</span>
               </div>
               <button onClick={() => { setShowAiPanel(false); setAiTiles([]); setAiError(null); }}
@@ -501,7 +497,7 @@ export default function AssetSelectionStep({
             {aiGenerating && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>Generating 4 variations with Imagen 4…</span>
+                <span>Generating 4 variations with KLYC…</span>
               </div>
             )}
 
