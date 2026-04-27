@@ -1002,31 +1002,52 @@ const NewCampaign = () => {
               <Label>Select Platforms to Post</Label>
               <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post. Click to toggle.</p>
               <div className="grid grid-cols-6 gap-2">
-                {socialPlatforms.map((platform) => (
-                  <Card
-                    key={platform.id}
-                    className={`p-2 cursor-pointer transition-all duration-200 hover:scale-105 ${
-                      selectedPlatforms.includes(platform.id)
-                        ? "ring-2 ring-primary border-primary bg-primary/5"
-                        : "hover:border-primary/50"
-                    }`}
-                    onClick={() => togglePlatform(platform.id)}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
-                        <img 
-                          src={platform.icon} 
-                          alt={platform.name}
-                          className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
-                        />
+                {socialPlatforms.map((platform) => {
+                  const isConnected = !!platformConnections[platform.id];
+                  const isConnecting = connectingPlatform === platform.id;
+                  return (
+                    <Card
+                      key={platform.id}
+                      className={`p-2 cursor-pointer transition-all duration-200 hover:scale-105 ${
+                        selectedPlatforms.includes(platform.id)
+                          ? "ring-2 ring-primary border-primary bg-primary/5"
+                          : "hover:border-primary/50"
+                      }`}
+                      onClick={() => togglePlatform(platform.id)}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
+                          <img
+                            src={platform.icon}
+                            alt={platform.name}
+                            className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-center">{platform.name}</span>
+                        {isConnected ? (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleDisconnectPlatform(platform.id); }}
+                            className="text-[10px] font-medium text-success hover:underline"
+                          >
+                            ✓ Connected
+                          </button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isConnecting}
+                            onClick={(e) => { e.stopPropagation(); handleConnectPlatform(platform.id); }}
+                            className="h-6 px-2 text-[10px] w-full"
+                          >
+                            {isConnecting ? "..." : "Connect"}
+                          </Button>
+                        )}
                       </div>
-                      <span className="text-sm font-medium text-center">{platform.name}</span>
-                      {selectedPlatforms.includes(platform.id) && (
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
