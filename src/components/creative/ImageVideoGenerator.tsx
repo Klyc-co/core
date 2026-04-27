@@ -660,7 +660,22 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               <Card className="overflow-hidden relative group">
                 <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceVideoUrl: resultUrl } })} className="gap-2"><Rocket className="w-4 h-4" /> Add to Campaign</Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      navigate("/campaigns/new", {
+                        state: {
+                          uploadedMediaUrls: [
+                            { id: `vid-${Date.now()}`, name: "Generated video", url: resultUrl! },
+                          ],
+                        },
+                      })
+                    }
+                    className="gap-2"
+                  >
+                    <Rocket className="w-4 h-4" /> Add to Campaign
+                  </Button>
                   <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
                   <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
                 </div>
