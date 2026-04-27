@@ -39,6 +39,8 @@ type OutputSize = "portrait" | "square" | "landscape";
 const KLYC_FUNCTION_URL = "https://wkqiielsazzbxziqmgdb.supabase.co/functions/v1/generate-image-composite";
 const KLYC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrcWlpZWxzYXp6Ynh6aXFtZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDE3ODMsImV4cCI6MjA5MTA3Nzc4M30.HAoqLxzj_YdKXhldOzyjR4qaJHVLfaldMY_XKgf8htU";
 
+const MAX_TILES = 4;
+
 async function callImageComposite(body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch(KLYC_FUNCTION_URL, {
     method: "POST",
@@ -233,8 +235,10 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         }
         if (tiles.length === 0) throw new Error("Failed to produce image tiles");
 
-        setImageTiles(tiles);
-        setSelectedTile(tiles[0]);
+        // Hard cap at 4 — always show exactly 4 tiles, no more
+        const finalTiles = tiles.slice(0, MAX_TILES);
+        setImageTiles(finalTiles);
+        setSelectedTile(finalTiles[0]);
         toast.success("4 images ready — pick your favourite!");
         return;
       }
@@ -474,7 +478,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     )}
                   </div>
                 </div>
-                <div className={`grid gap-2 ${outputSize === "portrait" ? "grid-cols-4" : "grid-cols-2"}`}>
+                {/* Always 2x2 grid — clean 4-tile layout regardless of orientation */}
+                <div className="grid grid-cols-2 gap-2">
                   {imageTiles.map((url, idx) => (
                     <button key={idx} onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
                       className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${outputSize === "portrait" ? "aspect-[9/16]" : outputSize === "square" ? "aspect-square" : "aspect-video"} ${selectedTile === url ? "border-primary shadow-lg ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}>
