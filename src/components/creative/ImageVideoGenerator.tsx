@@ -81,32 +81,22 @@ async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise
 
   const halfW = img.width / 2;
   const halfH = img.height / 2;
-  const [arW, arH] = aspectRatio.split(":").map(Number);
-  const targetRatio = arW / arH;
 
-  let cropW = halfW;
-  let cropH = halfH;
-  if (halfW / halfH > targetRatio) {
-    cropW = halfH * targetRatio;
-  } else {
-    cropH = halfW / targetRatio;
-  }
-
+  // Take each quadrant at its natural size — no aspect-ratio cropping
+  // The display container uses h-auto so images show uncropped regardless
   const quadrants = [
-    { sx: 0, sy: 0 },
+    { sx: 0,     sy: 0 },
     { sx: halfW, sy: 0 },
-    { sx: 0, sy: halfH },
+    { sx: 0,     sy: halfH },
     { sx: halfW, sy: halfH },
   ];
 
   return quadrants.map(({ sx, sy }) => {
     const canvas = document.createElement("canvas");
-    canvas.width = cropW;
-    canvas.height = cropH;
+    canvas.width  = halfW;
+    canvas.height = halfH;
     const ctx = canvas.getContext("2d")!;
-    const offsetX = sx + (halfW - cropW) / 2;
-    const offsetY = sy + (halfH - cropH) / 2;
-    ctx.drawImage(img, offsetX, offsetY, cropW, cropH, 0, 0, cropW, cropH);
+    ctx.drawImage(img, sx, sy, halfW, halfH, 0, 0, halfW, halfH);
     return canvas.toDataURL("image/png");
   });
 }
@@ -236,7 +226,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       if (mode === "image") {
         const sizeOpt = OUTPUT_SIZE_OPTIONS.find(o => o.value === outputSize)!;
         const aspectRatio = sizeOpt.aspectRatio;
-        console.log(`[Creative Studio] Composite image call -> KLYC Supabase (Imagen 4) ar=${aspectRatio}`);
+        console.log(`[Creative Studio] Composite image call -> KLYC Supabase ar=${aspectRatio}`);
         const colorInstruction = accentColorEnabled && accentColor
           ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
           : "";
@@ -253,12 +243,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         if (tiles.length === 0) {
           const grids = data?.grids as any[] | undefined;
           const gridUrl: string | undefined = grids?.find((g: any) => g.success)?.gridUrl;
-          if (!gridUrl) throw new Error("No images returned from Imagen 4");
+          if (!gridUrl) throw new Error("No images returned");
           tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
         }
         if (tiles.length === 0) throw new Error("Failed to produce image tiles");
 
-        // Hard cap at 4 — always show exactly 4 tiles, no more
         const finalTiles = tiles.slice(0, MAX_TILES);
         setImageTiles(finalTiles);
         setSelectedTile(finalTiles[0]);
@@ -537,12 +526,14 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     )}
                   </div>
                 </div>
-                {/* Always 2×2 grid — clean 4-tile layout regardless of orientation */}
+
+                {/* 2×2 grid — tiles render at natural dimensions, no forced crop */}
                 <div className="grid grid-cols-2 gap-2 w-full">
                   {imageTiles.map((url, idx) => (
                     <button key={idx} onClick={() => { setSelectedTile(url); setLightboxUrl(url); }}
-                      className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in ${outputSize === "portrait" ? "aspect-[9/16]" : outputSize === "square" ? "aspect-square" : "aspect-video"} ${selectedTile === url ? "border-primary shadow-lg ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}>
-                      <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover block" />
+                      className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-zoom-in w-full ${selectedTile === url ? "border-primary shadow-lg ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}>
+                      {/* h-auto: image drives height, no aspect-ratio forced crop */}
+                      <img src={url} alt={`Variation ${idx + 1}`} className="w-full h-auto block" />
                       {/* Selected checkmark — flush top-right corner */}
                       {selectedTile === url && (
                         <div className="absolute top-0 right-0 w-6 h-6 rounded-bl-lg bg-primary flex items-center justify-center">
