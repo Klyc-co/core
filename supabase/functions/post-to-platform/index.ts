@@ -755,7 +755,13 @@ Deno.serve(async (req) => {
       if (!igUserId) {
         result = { success: false, error: "Instagram account ID missing. Please reconnect Instagram." };
       } else {
-        result = await postToInstagram(accessToken!, igUserId, content, image_url, video_url);
+        let igImageUrl: string | null = image_url;
+        if (igImageUrl && !video_url) {
+          const processed = await ensureInstagramCompatibleImage(igImageUrl, serviceClient, userId);
+          igImageUrl = processed.url;
+          if (processed.warning) console.warn("[Instagram] preprocess warning:", processed.warning);
+        }
+        result = await postToInstagram(accessToken!, igUserId, content, igImageUrl || undefined, video_url || undefined);
       }
     } else if (platformLower === "facebook") {
       if (!fbPageId) {
