@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decode as decodeImage, Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 import { decryptToken } from "../_shared/encryption.ts";
 
 const corsHeaders = {
@@ -6,6 +7,89 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Instagram accepts aspect ratios between 4:5 (0.8) and 1.91:1 (1.91).
+const IG_MIN_RATIO = 0.8;
+const IG_MAX_RATIO = 1.91;
+
+/**
+ * Ensures the image at `imageUrl` is fetchable, JPEG/PNG, and within Instagram's
+ * accepted aspect ratio range. If not, downloads, center-crops, re-uploads to
+ * the public `brand-assets` bucket and returns the new public URL. Otherwise
+ * returns the original URL.
+ */
+async function ensureInstagramCompatibleImage(
+  imageUrl: string,
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ url: string; cropped: boolean; warning?: string }> {
+  try {
+    const headRes = await fetch(imageUrl, { method: "GET" });
+    if (!headRes.ok) {
+      return { url: imageUrl, cropped: false, warning: `Image URL not reachable (${headRes.status})` };
+    }
+    const buf = new Uint8Array(await headRes.arrayBuffer());
+    const ct = headRes.headers.get("content-type") || "";
+
+    // ImageScript supports PNG/JPEG/GIF/TIFF/BMP. Skip unknown formats.
+    let img: Image;
+    try {
+      img = (await decodeImage(buf)) as Image;
+    } catch (e) {
+      console.warn("[Instagram] Could not decode image, sending original:", e);
+      return { url: imageUrl, cropped: false };
+    }
+
+    const w = img.width;
+    const h = img.height;
+    const ratio = w / h;
+    console.log(`[Instagram] Source image ${w}x${h} ratio=${ratio.toFixed(3)} ct=${ct}`);
+
+    if (ratio >= IG_MIN_RATIO && ratio <= IG_MAX_RATIO) {
+      return { url: imageUrl, cropped: false };
+    }
+
+    // Compute target crop within original
+    let targetRatio: number;
+    if (ratio < IG_MIN_RATIO) {
+      // Too tall — crop height to 4:5
+      targetRatio = IG_MIN_RATIO;
+    } else {
+      // Too wide — crop width to 1.91:1
+      targetRatio = IG_MAX_RATIO;
+    }
+
+    let newW = w;
+    let newH = h;
+    if (ratio < targetRatio) {
+      // need to reduce height
+      newH = Math.floor(w / targetRatio);
+    } else {
+      // need to reduce width
+      newW = Math.floor(h * targetRatio);
+    }
+    const xOff = Math.floor((w - newW) / 2);
+    const yOff = Math.floor((h - newH) / 2);
+
+    img.crop(xOff, yOff, newW, newH);
+    const out = await img.encodeJPEG(90);
+
+    const path = `${userId}/instagram-autocrop/${Date.now()}-${crypto.randomUUID()}.jpg`;
+    const { error: upErr } = await supabase.storage
+      .from("brand-assets")
+      .upload(path, out, { contentType: "image/jpeg", upsert: false });
+    if (upErr) {
+      console.error("[Instagram] Re-upload failed:", upErr);
+      return { url: imageUrl, cropped: false, warning: "Auto-crop failed; sent original" };
+    }
+    const { data } = supabase.storage.from("brand-assets").getPublicUrl(path);
+    console.log(`[Instagram] Auto-cropped to ${newW}x${newH} -> ${data.publicUrl}`);
+    return { url: data.publicUrl, cropped: true };
+  } catch (e) {
+    console.error("[Instagram] ensureInstagramCompatibleImage error:", e);
+    return { url: imageUrl, cropped: false, warning: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 async function postToLinkedIn(accessToken: string, content: string): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
   const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
