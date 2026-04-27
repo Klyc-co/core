@@ -188,7 +188,13 @@ async function postToInstagram(
     if (!createRes.ok) {
       const errText = await createRes.text();
       console.error("[Instagram] Container creation failed:", createRes.status, errText);
-      return { success: false, error: `Instagram container failed (${createRes.status}): ${errText}` };
+      let friendly = `Instagram container failed (${createRes.status})`;
+      try {
+        const parsed = JSON.parse(errText);
+        const m = parsed?.error?.error_user_msg || parsed?.error?.message;
+        if (m) friendly = `Instagram: ${m}`;
+      } catch { /* ignore */ }
+      return { success: false, error: friendly };
     }
 
     const createData = await createRes.json();
