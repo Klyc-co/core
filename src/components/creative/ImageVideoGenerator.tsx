@@ -323,6 +323,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         const finalTiles = tiles.slice(0, MAX_TILES);
         setImageTiles(finalTiles);
         setSelectedTile(finalTiles[0]);
+        // Add all 4 generated tiles to the session gallery (durable URLs)
+        void addSelectedTilesToSession(finalTiles);
         toast.success("4 images ready — pick your favourite!");
         return;
       }
