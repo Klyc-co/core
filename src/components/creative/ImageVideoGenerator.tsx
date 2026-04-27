@@ -313,8 +313,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
 
     try {
       if (mode === "image") {
-        const sizeOpt = OUTPUT_SIZE_OPTIONS.find(o => o.value === outputSize)!;
-        const aspectRatio = sizeOpt.aspectRatio;
+        const sizeOpt = ASPECT_RATIO_OPTIONS.find(o => o.value === aspectRatioKey)!;
+        const aspectRatio = sizeOpt.apiAspect;
         console.log(`[Creative Studio] Composite image call -> KLYC Supabase ar=${aspectRatio}`);
         const colorInstruction = accentColorEnabled && accentColor
           ? `\n\nUse ${accentColor} as a prominent accent color throughout the composition.`
@@ -336,6 +336,11 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           tiles = await sliceGridIntoTiles(gridUrl, aspectRatio);
         }
         if (tiles.length === 0) throw new Error("Failed to produce image tiles");
+
+        // Enforce aspect ratio client-side (center-crop) when the user picked a constrained option.
+        if (sizeOpt.ratio !== null) {
+          tiles = await Promise.all(tiles.map((t) => cropImageToAspect(t, sizeOpt.ratio as number)));
+        }
 
         const finalTiles = tiles.slice(0, MAX_TILES);
         setImageTiles(finalTiles);
