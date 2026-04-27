@@ -351,15 +351,18 @@ Deno.serve(async (req) => {
     const rawAr = String(body.aspectRatio || "1:1");
     const aspectRatio = VALID_ARS.has(rawAr) ? rawAr : "1:1";
     const refImageUrls: string[] = Array.isArray(body.referenceImages) ? (body.referenceImages as string[]).slice(0, 3) : [];
-    const apiKey = Deno.env.get("GOOGLE_API_KEY");
-    if (!apiKey) return json({ error: "GOOGLE_API_KEY not configured", deploy_version: DEPLOY_VERSION }, 503);
+    const provider = resolveImageProvider();
+    if (!provider) {
+      return json({ error: "No image generation key configured", deploy_version: DEPLOY_VERSION }, 503);
+    }
     const supabase = createClient(Deno.env.get("SUPABASE_URL") || "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
     const refB64s: string[] = [];
     for (const u of refImageUrls) { const b = await fetchAsB64(u); if (b) refB64s.push(b); }
+    console.log(`[v${DEPLOY_VERSION}] provider=${provider.kind} via=${provider.source}`);
     if (refB64s.length > 0) console.log(`[v${DEPLOY_VERSION}] ${refB64s.length} reference image(s) loaded`);
     if (mode === "raw") {
       const callT = Date.now();
-      const [b64] = await imagenCall(rawBrief, apiKey, 1, aspectRatio, refB64s);
+      const [b64] = await generateImages(provider, rawBrief, 1, aspectRatio, refB64s, refImageUrls);
       const callMs = Date.now() - callT;
       const batchId = `cmp28_raw_${Date.now()}`;
       const { url, bytes } = await uploadSingle(b64, `${batchId}/img_0.png`, supabase);
@@ -368,7 +371,7 @@ Deno.serve(async (req) => {
     if (mode === "single") {
       const prompt = knpCompress(rawBrief);
       const callT = Date.now();
-      const [b64] = await imagenCall(prompt, apiKey, 1, aspectRatio, refB64s);
+      const [b64] = await generateImages(provider, prompt, 1, aspectRatio, refB64s, refImageUrls);
       const callMs = Date.now() - callT;
       const batchId = `cmp28_single_${Date.now()}`;
       const { url, bytes } = await uploadSingle(b64, `${batchId}/img_0.png`, supabase);
@@ -378,7 +381,7 @@ Deno.serve(async (req) => {
       const compressed = knpCompress(rawBrief);
       const gridPrompt = `${compressed}\n\n${makeGridWrapper(aspectRatio)}`;
       const callT = Date.now();
-      const b64s = await imagenCall(gridPrompt, apiKey, 4, aspectRatio, refB64s);
+      const b64s = await generateImages(provider, gridPrompt, 4, aspectRatio, refB64s, refImageUrls);
       const callMs = Date.now() - callT;
       const batchIdBase = `cmp28_batch_${Date.now()}`;
       const allUrls: string[] = [];
@@ -394,7 +397,7 @@ Deno.serve(async (req) => {
     if (mode === "individual") {
       const prompt = knpCompress(rawBrief);
       const callT = Date.now();
-      const b64s = await imagenCall(prompt, apiKey, 4, aspectRatio, refB64s);
+      const b64s = await generateImages(provider, prompt, 4, aspectRatio, refB64s, refImageUrls);
       const callMs = Date.now() - callT;
       const batchId = `cmp28_individual_${Date.now()}`;
       const urls: string[] = []; let totalBytes = 0;
@@ -411,11 +414,11 @@ Deno.serve(async (req) => {
     const callT = Date.now();
     let b64s: string[];
     try {
-      b64s = await imagenCall(compressed, apiKey, 4, aspectRatio, refB64s);
+      b64s = await generateImages(provider, compressed, 4, aspectRatio, refB64s, refImageUrls);
     } catch (e) {
       if (refB64s.length > 0 && e instanceof UpstreamError && e.httpStatus === 400) {
         console.warn(`[v${DEPLOY_VERSION}.1] ref images rejected, retrying without`);
-        b64s = await imagenCall(compressed, apiKey, 4, aspectRatio, []);
+        b64s = await generateImages(provider, compressed, 4, aspectRatio, [], []);
       } else { throw e; }
     }
     const callMs = Date.now() - callT;
