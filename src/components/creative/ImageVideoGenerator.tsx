@@ -323,7 +323,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
     return () => { cancelled = true; };
   }, [aspectRatioKey]);
 
-    const handleAddSelectedToCampaign = () => {
+  const handleAddSelectedToCampaign = () => {
+    const items = sessionMedia.filter(m => selectedMediaIds.has(m.id));
     if (items.length === 0) {
       toast.error("Select at least one item to add");
       return;
