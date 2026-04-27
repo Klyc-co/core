@@ -142,6 +142,78 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
   const [videoPasscode, setVideoPasscode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Session-level gallery of generated media (images + videos) — persists across regenerations
+  // so the user can pick any of them to attach to a campaign.
+  type SessionMediaItem = { id: string; type: "image" | "video"; url: string; name: string };
+  const [sessionMedia, setSessionMedia] = useState<SessionMediaItem[]>([]);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(new Set());
+
+  const toggleMediaSelected = (id: string) => {
+    setSelectedMediaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const removeSessionMedia = (id: string) => {
+    setSessionMedia(prev => prev.filter(m => m.id !== id));
+    setSelectedMediaIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  // Convert any data:URL image to a durable Storage URL so it survives navigation/reload
+  const ensureDurableImageUrl = async (url: string): Promise<string> => {
+    if (!url.startsWith("data:")) return url;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return url;
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const file = new File([blob], `creative-studio-${Date.now()}.png`, { type: blob.type || "image/png" });
+    const { publicUrl } = await uploadBrandAssetImage({ userId: user.id, file, folder: "creative-studio" });
+    return publicUrl;
+  };
+
+  const addSelectedTilesToSession = async (tileUrls: string[]) => {
+    try {
+      const durable = await Promise.all(tileUrls.map(ensureDurableImageUrl));
+      const newItems: SessionMediaItem[] = durable.map((u, i) => ({
+        id: `img-${Date.now()}-${i}`,
+        type: "image",
+        url: u,
+        name: `Generated image ${i + 1}`,
+      }));
+      setSessionMedia(prev => [...newItems, ...prev].slice(0, 24));
+      setSelectedMediaIds(prev => {
+        const next = new Set(prev);
+        newItems.forEach(it => next.add(it.id));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to add tiles to session", e);
+    }
+  };
+
+  const addVideoToSession = (url: string) => {
+    const item: SessionMediaItem = {
+      id: `vid-${Date.now()}`,
+      type: "video",
+      url,
+      name: `Generated video`,
+    };
+    setSessionMedia(prev => [item, ...prev].slice(0, 24));
+    setSelectedMediaIds(prev => { const n = new Set(prev); n.add(item.id); return n; });
+  };
+
+  const handleAddSelectedToCampaign = () => {
+    const items = sessionMedia.filter(m => selectedMediaIds.has(m.id));
+    if (items.length === 0) {
+      toast.error("Select at least one item to add");
+      return;
+    }
+    const uploadedMediaUrls = items.map(it => ({ id: it.id, name: it.name, url: it.url }));
+    navigate("/campaigns/new", { state: { uploadedMediaUrls } });
+  };
+
   // Fetch brand colors from client profile on mount
   useEffect(() => {
     const fetchBrandColors = async () => {
@@ -251,6 +323,8 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         const finalTiles = tiles.slice(0, MAX_TILES);
         setImageTiles(finalTiles);
         setSelectedTile(finalTiles[0]);
+        // Add all 4 generated tiles to the session gallery (durable URLs)
+        void addSelectedTilesToSession(finalTiles);
         toast.success("4 images ready — pick your favourite!");
         return;
       }
@@ -261,6 +335,7 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
       if (error) throw error;
       if (!data?.videoUrl) throw new Error("No video returned");
       setResultUrl(data.videoUrl);
+      addVideoToSession(data.videoUrl);
       toast.success("Video generated!");
     } catch (err: any) {
       console.error("Generation error:", err);
@@ -514,7 +589,21 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                     {selectedTile && <Button size="sm" variant="secondary" onClick={handleDownload} className="gap-2"><Download className="w-4 h-4" />Download</Button>}
                     <Button size="sm" variant="secondary" onClick={handleGenerate} disabled={generating} className="gap-2"><RefreshCw className="w-4 h-4" />Regenerate</Button>
                     {selectedTile && (
-                      <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceImageUrl: selectedTile } })} className="gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={async () => {
+                          const durable = await ensureDurableImageUrl(selectedTile);
+                          navigate("/campaigns/new", {
+                            state: {
+                              uploadedMediaUrls: [
+                                { id: `img-${Date.now()}`, name: "Generated image", url: durable },
+                              ],
+                            },
+                          });
+                        }}
+                        className="gap-2"
+                      >
                         <Rocket className="w-4 h-4" /><span>Add to Campaign</span>
                       </Button>
                     )}
@@ -571,7 +660,22 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
               <Card className="overflow-hidden relative group">
                 <video src={resultUrl} controls className="w-full rounded-lg max-h-[500px]" />
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button size="sm" variant="secondary" onClick={() => navigate("/campaigns/new", { state: { referenceVideoUrl: resultUrl } })} className="gap-2"><Rocket className="w-4 h-4" /> Add to Campaign</Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      navigate("/campaigns/new", {
+                        state: {
+                          uploadedMediaUrls: [
+                            { id: `vid-${Date.now()}`, name: "Generated video", url: resultUrl! },
+                          ],
+                        },
+                      })
+                    }
+                    className="gap-2"
+                  >
+                    <Rocket className="w-4 h-4" /> Add to Campaign
+                  </Button>
                   <Button size="icon" variant="secondary" onClick={handleDownload} title="Download"><Download className="w-4 h-4" /></Button>
                   <Button size="icon" variant="secondary" onClick={handleGenerate} title="Regenerate"><RefreshCw className="w-4 h-4" /></Button>
                 </div>
@@ -631,6 +735,91 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
           </div>
         )}
       </>)}
+
+      {/* Session gallery — pick which generated assets to attach to a campaign */}
+      {sessionMedia.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Generated this session</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedMediaIds.size} of {sessionMedia.length} selected
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setSelectedMediaIds(
+                    selectedMediaIds.size === sessionMedia.length
+                      ? new Set()
+                      : new Set(sessionMedia.map(m => m.id)),
+                  )
+                }
+              >
+                {selectedMediaIds.size === sessionMedia.length ? "Clear" : "Select all"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAddSelectedToCampaign}
+                disabled={selectedMediaIds.size === 0}
+                className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0"
+              >
+                <Rocket className="w-4 h-4" /> Add Selected to Campaign
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {sessionMedia.map((m) => {
+              const isSel = selectedMediaIds.has(m.id);
+              return (
+                <div
+                  key={m.id}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square bg-muted ${
+                    isSel ? "border-primary ring-2 ring-primary/30" : "border-border"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleMediaSelected(m.id)}
+                    className="absolute inset-0 w-full h-full"
+                    aria-label={isSel ? "Deselect" : "Select"}
+                  >
+                    {m.type === "image" ? (
+                      <img src={m.url} alt={m.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={m.url} className="w-full h-full object-cover" muted />
+                    )}
+                  </button>
+                  <div
+                    className={`absolute top-1 left-1 w-5 h-5 rounded-md flex items-center justify-center pointer-events-none ${
+                      isSel ? "bg-primary text-primary-foreground" : "bg-black/50 text-white"
+                    }`}
+                  >
+                    {isSel ? <Check className="w-3.5 h-3.5" /> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSessionMedia(m.id);
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/60 hover:bg-destructive text-white flex items-center justify-center"
+                    aria-label="Remove"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-0 left-0 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded-tr-md uppercase">
+                    {m.type}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {lightboxUrl && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
