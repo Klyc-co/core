@@ -59,10 +59,26 @@ async function callImageComposite(body: Record<string, unknown>): Promise<Record
   return res.json();
 }
 
-const OUTPUT_SIZE_OPTIONS: { value: OutputSize; label: string; description: string; dimensions: string; width: number; height: number; aspectRatio: string; icon: typeof Smartphone }[] = [
-  { value: "portrait",  label: "Vertical",    description: "Best for Stories, Reels, TikTok", dimensions: "1080x1920", width: 1080, height: 1920, aspectRatio: "9:16", icon: Smartphone },
-  { value: "square",    label: "Square",      description: "Best for Feed posts",             dimensions: "1080x1080", width: 1080, height: 1080, aspectRatio: "1:1",  icon: Square },
-  { value: "landscape", label: "Horizontal",  description: "Best for YouTube, LinkedIn",      dimensions: "1920x1080", width: 1920, height: 1080, aspectRatio: "16:9", icon: Monitor },
+interface AspectRatioOption {
+  value: AspectRatioKey;
+  label: string;
+  description: string;
+  /** Decimal width/height; null = no constraint */
+  ratio: number | null;
+  /** Aspect ratio string sent to the generation API (free → "1:1" as a neutral default) */
+  apiAspect: string;
+  /** Crop dimensions used when post-processing tiles to enforce ratio */
+  width: number;
+  height: number;
+  igSafe: boolean;
+}
+
+const ASPECT_RATIO_OPTIONS: AspectRatioOption[] = [
+  { value: "1:1",    label: "Square",   description: "IG Feed",          ratio: 1,        apiAspect: "1:1",  width: 1080, height: 1080, igSafe: true  },
+  { value: "4:5",    label: "Portrait", description: "IG Feed (best)",   ratio: 4 / 5,    apiAspect: "4:5",  width: 1080, height: 1350, igSafe: true  },
+  { value: "1.91:1", label: "Landscape",description: "IG Feed",          ratio: 1.91,     apiAspect: "1.91:1", width: 1080, height: 566,  igSafe: true  },
+  { value: "9:16",   label: "Story",    description: "Reel · TikTok",    ratio: 9 / 16,   apiAspect: "9:16", width: 1080, height: 1920, igSafe: true  },
+  { value: "free",   label: "Free",     description: "No constraint",    ratio: null,     apiAspect: "1:1",  width: 1080, height: 1080, igSafe: false },
 ];
 
 const VIDEO_MODELS: { value: VideoModel; label: string; description: string }[] = [
