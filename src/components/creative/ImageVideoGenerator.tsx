@@ -117,6 +117,36 @@ async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise
   });
 }
 
+/** Center-crop a data/blob URL image to the target width/height ratio. */
+async function cropImageToAspect(url: string, targetRatio: number): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new window.Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error("Failed to load image for cropping"));
+    i.src = url;
+  });
+  const currentRatio = img.width / img.height;
+  if (Math.abs(currentRatio - targetRatio) < 0.01) return url;
+
+  let cropW = img.width;
+  let cropH = img.height;
+  if (currentRatio > targetRatio) {
+    cropW = Math.round(img.height * targetRatio);
+  } else {
+    cropH = Math.round(img.width / targetRatio);
+  }
+  const sx = Math.round((img.width - cropW) / 2);
+  const sy = Math.round((img.height - cropH) / 2);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+  return canvas.toDataURL("image/png");
+}
+
 interface ImageVideoGeneratorProps {
   onBack?: () => void;
 }
