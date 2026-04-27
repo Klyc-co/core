@@ -736,6 +736,91 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
         )}
       </>)}
 
+      {/* Session gallery — pick which generated assets to attach to a campaign */}
+      {sessionMedia.length > 0 && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Generated this session</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedMediaIds.size} of {sessionMedia.length} selected
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setSelectedMediaIds(
+                    selectedMediaIds.size === sessionMedia.length
+                      ? new Set()
+                      : new Set(sessionMedia.map(m => m.id)),
+                  )
+                }
+              >
+                {selectedMediaIds.size === sessionMedia.length ? "Clear" : "Select all"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAddSelectedToCampaign}
+                disabled={selectedMediaIds.size === 0}
+                className="gap-2 bg-gradient-to-r from-[hsl(195_75%_50%)] to-[hsl(160_65%_50%)] text-white hover:opacity-90 border-0"
+              >
+                <Rocket className="w-4 h-4" /> Add Selected to Campaign
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {sessionMedia.map((m) => {
+              const isSel = selectedMediaIds.has(m.id);
+              return (
+                <div
+                  key={m.id}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square bg-muted ${
+                    isSel ? "border-primary ring-2 ring-primary/30" : "border-border"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleMediaSelected(m.id)}
+                    className="absolute inset-0 w-full h-full"
+                    aria-label={isSel ? "Deselect" : "Select"}
+                  >
+                    {m.type === "image" ? (
+                      <img src={m.url} alt={m.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={m.url} className="w-full h-full object-cover" muted />
+                    )}
+                  </button>
+                  <div
+                    className={`absolute top-1 left-1 w-5 h-5 rounded-md flex items-center justify-center pointer-events-none ${
+                      isSel ? "bg-primary text-primary-foreground" : "bg-black/50 text-white"
+                    }`}
+                  >
+                    {isSel ? <Check className="w-3.5 h-3.5" /> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSessionMedia(m.id);
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-md bg-black/60 hover:bg-destructive text-white flex items-center justify-center"
+                    aria-label="Remove"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-0 left-0 px-1.5 py-0.5 bg-black/60 text-white text-[10px] rounded-tr-md uppercase">
+                    {m.type}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {lightboxUrl && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-zoom-out" onClick={() => setLightboxUrl(null)}>
           <div className="relative max-w-5xl max-h-full" onClick={(e) => e.stopPropagation()}>
