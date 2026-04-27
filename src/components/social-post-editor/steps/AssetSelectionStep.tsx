@@ -60,7 +60,7 @@ async function callImageComposite(body: Record<string, unknown>): Promise<Record
   return res.json();
 }
 
-async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise<string[]> {
+async function sliceGridIntoTiles(gridUrl: string, _aspectRatio: string): Promise<string[]> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new window.Image();
     i.crossOrigin = "anonymous";
@@ -71,32 +71,21 @@ async function sliceGridIntoTiles(gridUrl: string, aspectRatio: string): Promise
 
   const halfW = img.width / 2;
   const halfH = img.height / 2;
-  const [arW, arH] = aspectRatio.split(":").map(Number);
-  const targetRatio = arW / arH;
 
-  let cropW = halfW;
-  let cropH = halfH;
-  if (halfW / halfH > targetRatio) {
-    cropW = halfH * targetRatio;
-  } else {
-    cropH = halfW / targetRatio;
-  }
-
+  // Take each quadrant at its full natural size — no aspect-ratio cropping
   const quadrants = [
-    { sx: 0, sy: 0 },
+    { sx: 0,     sy: 0 },
     { sx: halfW, sy: 0 },
-    { sx: 0, sy: halfH },
+    { sx: 0,     sy: halfH },
     { sx: halfW, sy: halfH },
   ];
 
   return quadrants.map(({ sx, sy }) => {
     const canvas = document.createElement("canvas");
-    canvas.width = cropW;
-    canvas.height = cropH;
+    canvas.width = halfW;
+    canvas.height = halfH;
     const ctx = canvas.getContext("2d")!;
-    const offsetX = sx + (halfW - cropW) / 2;
-    const offsetY = sy + (halfH - cropH) / 2;
-    ctx.drawImage(img, offsetX, offsetY, cropW, cropH, 0, 0, cropW, cropH);
+    ctx.drawImage(img, sx, sy, halfW, halfH, 0, 0, halfW, halfH);
     return canvas.toDataURL("image/png");
   });
 }
@@ -294,7 +283,6 @@ export default function AssetSelectionStep({
   };
 
   const arLabel = wizardState.aspectRatio === "portrait" ? "9:16" : wizardState.aspectRatio === "square" ? "1:1" : "16:9";
-  const tileAspect = wizardState.aspectRatio === "portrait" ? "aspect-[9/16]" : wizardState.aspectRatio === "square" ? "aspect-square" : "aspect-video";
 
   const canProceed =
     wizardState.selectedCampaignDraft !== null ||
@@ -519,10 +507,11 @@ export default function AssetSelectionStep({
                     <button
                       key={idx}
                       onClick={() => handleAddAiTile(url, idx)}
-                      className={`relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all cursor-pointer group ${tileAspect}`}
+                      className="relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all cursor-pointer group w-full"
                       title={`Add variation ${idx + 1}`}
                     >
-                      <img src={url} alt={`AI variation ${idx + 1}`} className="w-full h-full object-cover block" />
+                      {/* h-auto: image drives height, no forced aspect-ratio crop */}
+                      <img src={url} alt={`AI variation ${idx + 1}`} className="w-full h-auto block" />
                       <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/20 transition-all flex items-center justify-center">
                         <Check className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 drop-shadow transition-opacity" />
                       </div>
