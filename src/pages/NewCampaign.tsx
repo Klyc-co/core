@@ -789,18 +789,45 @@ const NewCampaign = () => {
           {/* Attached media preview (from previous page) */}
           {libraryAssets.length > 0 && (
             <div className="space-y-2">
-              <Label>Attached Media</Label>
+              <Label>Attached Media ({libraryAssets.length})</Label>
               <div className="flex flex-wrap gap-2">
-                {libraryAssets.map((asset) => (
-                  <div key={asset.id} className="relative group">
-                    <img
-                      src={asset.url}
-                      alt={asset.name}
-                      className="w-16 h-16 rounded-lg object-cover border"
-                      onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
-                    />
-                  </div>
-                ))}
+                {libraryAssets.map((asset) => {
+                  const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(asset.url);
+                  return (
+                    <div key={asset.id} className="relative group">
+                      {isVideo ? (
+                        <video
+                          src={asset.url}
+                          className="w-16 h-16 rounded-lg object-cover border bg-muted"
+                          muted
+                        />
+                      ) : (
+                        <img
+                          src={asset.url}
+                          alt={asset.name}
+                          className="w-16 h-16 rounded-lg object-cover border"
+                          onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLibraryAssets(prev => prev.filter(a => a.id !== asset.id))
+                        }
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Remove ${asset.name}`}
+                        title="Remove"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      {isVideo && (
+                        <div className="absolute bottom-0 left-0 px-1 py-0.5 bg-black/60 text-white text-[9px] rounded-tr-md uppercase pointer-events-none">
+                          video
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
