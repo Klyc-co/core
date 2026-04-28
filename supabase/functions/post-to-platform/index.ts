@@ -662,8 +662,8 @@ Deno.serve(async (req) => {
 
         if (!igConn) {
           return new Response(
-            JSON.stringify({ error: "No active Facebook Page connection. Please reconnect Instagram/Facebook in Settings to grant page publishing permission." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, error: "No active Facebook Page connection. Please reconnect Instagram/Facebook in Settings to grant page publishing permission." }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
@@ -680,8 +680,8 @@ Deno.serve(async (req) => {
           if (!firstPage?.id || !firstPage?.access_token) {
             console.error("[Facebook] No managed pages found:", JSON.stringify(accountsData));
             return new Response(
-              JSON.stringify({ error: "No Facebook Pages found on your account. Make sure your account manages a Page and reconnect to grant page publishing permissions." }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              JSON.stringify({ success: false, error: "No Facebook Pages found on your account. Make sure your account manages a Page and reconnect to grant page publishing permissions." }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
@@ -700,8 +700,8 @@ Deno.serve(async (req) => {
             const meError = await meRes.text();
             console.error("[Facebook] /me lookup failed:", meRes.status, meError);
             return new Response(
-              JSON.stringify({ error: "Couldn't resolve your Facebook Page. Please reconnect Instagram/Facebook in Settings and grant page publishing permissions." }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              JSON.stringify({ success: false, error: "Couldn't resolve your Facebook Page. Please reconnect Instagram/Facebook in Settings and grant page publishing permissions." }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
@@ -709,8 +709,8 @@ Deno.serve(async (req) => {
           if (!meData?.id) {
             console.error("[Facebook] Missing page id from /me response:", JSON.stringify(meData));
             return new Response(
-              JSON.stringify({ error: "Couldn't determine which Facebook Page to publish to. Please reconnect Instagram/Facebook." }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              JSON.stringify({ success: false, error: "Couldn't determine which Facebook Page to publish to. Please reconnect Instagram/Facebook." }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
 
@@ -720,13 +720,13 @@ Deno.serve(async (req) => {
         }
       } else if (platformLower === "tiktok") {
         return new Response(
-          JSON.stringify({ error: "No active TikTok connection. Please connect your TikTok account first." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: "No active TikTok connection. Please connect your TikTok account first." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
         return new Response(
-          JSON.stringify({ error: "No active Instagram connection. Please connect your Instagram Business account first." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: "No active Instagram connection. Please connect your Instagram Business account first." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     } else if (platformLower === "twitter") {
@@ -740,8 +740,8 @@ Deno.serve(async (req) => {
 
       if (!socialConn) {
         return new Response(
-          JSON.stringify({ error: "No active Twitter connection. Please reconnect your Twitter account." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: "No active Twitter connection. Please reconnect your Twitter account." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       accessToken = await decryptToken(socialConn.access_token);
@@ -759,8 +759,8 @@ Deno.serve(async (req) => {
 
       if (!socialConn) {
         return new Response(
-          JSON.stringify({ error: `No active ${platform} connection. Please reconnect your account first.` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: false, error: `No active ${platform} connection. Please reconnect your account first.` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       accessToken = await decryptToken(socialConn.access_token);
@@ -803,7 +803,7 @@ Deno.serve(async (req) => {
     if (!result.success) {
       return new Response(
         JSON.stringify({ success: false, error: result.error }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
