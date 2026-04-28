@@ -1032,33 +1032,127 @@ const NewCampaign = () => {
             <div className="space-y-4">
               <Label>Select Platforms to Post</Label>
               <p className="text-sm text-muted-foreground">Choose one or multiple platforms to launch your post. Click to toggle.</p>
-              <div className="grid grid-cols-6 gap-2">
-                {socialPlatforms.map((platform) => (
-                  <Card
-                    key={platform.id}
-                    className={`p-2 cursor-pointer transition-all duration-200 hover:scale-105 ${
-                      selectedPlatforms.includes(platform.id)
-                        ? "ring-2 ring-primary border-primary bg-primary/5"
-                        : "hover:border-primary/50"
-                    }`}
-                    onClick={() => togglePlatform(platform.id)}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
-                        <img 
-                          src={platform.icon} 
-                          alt={platform.name}
-                          className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-center">{platform.name}</span>
-                      {selectedPlatforms.includes(platform.id) && (
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <TooltipProvider>
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {socialPlatforms.map((platform) => {
+                    const isConnected = !!platformConnections[platform.id];
+                    const isSelected = selectedPlatforms.includes(platform.id);
+                    const isConnLoading = connectingPlatform === platform.id;
+                    const isDiscLoading = disconnectingPlatform === platform.id;
+                    return (
+                      <Card
+                        key={platform.id}
+                        className={`p-3 transition-all duration-200 ${
+                          isSelected
+                            ? "ring-2 ring-primary border-primary bg-primary/5"
+                            : "hover:border-primary/50"
+                        } ${isConnected ? "cursor-pointer" : "opacity-90"}`}
+                        onClick={() => { if (isConnected) togglePlatform(platform.id); }}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`w-12 h-12 rounded-xl ${platform.color} flex items-center justify-center ${platform.id === "linkedin" ? "p-0" : "p-2.5"}`}>
+                            <img
+                              src={platform.icon}
+                              alt={platform.name}
+                              className={platform.id === "linkedin" ? "w-11 h-11 rounded-lg object-contain" : "w-full h-full object-contain"}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-center">{platform.name}</span>
+
+                          {/* Connection status */}
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isConnected ? "bg-green-500" : "bg-muted-foreground/40"
+                              }`}
+                            />
+                            <span className="text-[11px] text-muted-foreground">
+                              {isConnected ? "Connected" : "Not connected"}
+                            </span>
+                          </div>
+
+                          {/* Connect / Disconnect button */}
+                          {isConnected ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDisconnect(platform.id);
+                                  }}
+                                  disabled={isDiscLoading}
+                                >
+                                  {isDiscLoading ? (
+                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Unlink className="w-3 h-3 mr-1" />
+                                  )}
+                                  Disconnect
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Revoke {platform.name} access</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform(platform.id);
+                              }}
+                              disabled={isConnLoading}
+                            >
+                              {isConnLoading ? (
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              ) : (
+                                <Link2 className="w-3 h-3 mr-1" />
+                              )}
+                              Connect
+                            </Button>
+                          )}
+
+                          {!isConnected && (
+                            <span className="text-[10px] text-muted-foreground/70 text-center leading-tight">
+                              Connect to enable Post & Schedule
+                            </span>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </TooltipProvider>
+
+              {/* Disconnect confirmation */}
+              <AlertDialog
+                open={!!confirmDisconnect}
+                onOpenChange={(open) => { if (!open) setConfirmDisconnect(null); }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Disconnect {socialPlatforms.find(p => p.id === confirmDisconnect)?.name}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to disconnect {socialPlatforms.find(p => p.id === confirmDisconnect)?.name}?
+                      Stored access tokens will be revoked and you'll need to reconnect to post or schedule on this platform.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => { if (confirmDisconnect) handleDisconnectPlatform(confirmDisconnect); }}
+                    >
+                      Disconnect
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
 
