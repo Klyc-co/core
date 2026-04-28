@@ -126,6 +126,8 @@ const NewCampaign = () => {
   const [showPayload, setShowPayload] = useState(false);
   const [platformConnections, setPlatformConnections] = useState<Record<string, boolean>>({});
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState<string | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
