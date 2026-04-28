@@ -58,6 +58,9 @@ const socialPlatforms: SocialPlatform[] = [
   { id: "linkedin", name: "LinkedIn", icon: linkedinLogo, color: "bg-transparent" },
   { id: "twitter", name: "X (Twitter)", icon: "https://cdn.simpleicons.org/x/FFFFFF", color: "bg-neutral-900" },
   { id: "facebook", name: "Facebook", icon: "https://cdn.simpleicons.org/facebook/FFFFFF", color: "bg-[#1877F2]" },
+  { id: "threads", name: "Threads", icon: "https://cdn.simpleicons.org/threads/FFFFFF", color: "bg-neutral-900" },
+  { id: "pinterest", name: "Pinterest", icon: "https://cdn.simpleicons.org/pinterest/FFFFFF", color: "bg-[#E60023]" },
+  { id: "snapchat", name: "Snapchat", icon: snapchatLogo, color: "bg-[#FFFC00]" },
 ];
 
 // No more timeSlots array needed
