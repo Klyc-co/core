@@ -175,6 +175,8 @@ const NewCampaign = () => {
     instagram: { functionName: "instagram-auth-url", urlKey: "url" },
     snapchat: { functionName: "snapchat-auth-url", urlKey: "authUrl" },
     threads: { functionName: "threads-auth-url", urlKey: "authUrl" },
+    youtube: { functionName: "youtube-auth-url", urlKey: "authUrl" },
+    facebook: { functionName: "facebook-auth-url", urlKey: "authUrl" },
   };
 
   const handleConnectPlatform = async (platformId: string) => {
