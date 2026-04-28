@@ -237,6 +237,7 @@ const NewCampaign = () => {
 
   const handleDisconnectPlatform = async (platformId: string) => {
     if (!user) return;
+    setDisconnectingPlatform(platformId);
     const { error } = await supabase
       .from("social_connections")
       .delete()
@@ -248,10 +249,14 @@ const NewCampaign = () => {
         delete next[platformId];
         return next;
       });
+      // Also remove from selected list since unconnected can't be posted
+      setSelectedPlatforms(prev => prev.filter(p => p !== platformId));
       toast({ title: `${platformId} disconnected` });
     } else {
       toast({ title: "Failed to disconnect", description: error.message, variant: "destructive" });
     }
+    setDisconnectingPlatform(null);
+    setConfirmDisconnect(null);
   };
 
   // Pre-fill from generated post data
