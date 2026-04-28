@@ -43,6 +43,18 @@ import GoogleDriveFilePicker from "@/components/GoogleDriveFilePicker";
 import GoogleDriveIcon from "@/components/icons/GoogleDriveIcon";
 import { useLaunchCampaign } from "@/hooks/use-launch-campaign";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Check, AlertCircle } from "lucide-react";
 
 interface SocialPlatform {
   id: string;
