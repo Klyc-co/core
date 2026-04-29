@@ -148,8 +148,9 @@ async function postToLinkedIn(accessToken: string, content: string): Promise<{ s
 
   let permalink: string | undefined;
   if (postId) {
-    const shareId = postId.replace("urn:li:share:", "").replace("urn:li:ugcPost:", "");
-    permalink = `https://www.linkedin.com/feed/update/urn:li:activity:${shareId}/`;
+    // Use the raw URN in the URL — LinkedIn resolves share/ugcPost URNs correctly.
+    // Do NOT swap the prefix to "activity:" — the numeric ID differs across URN types.
+    permalink = `https://www.linkedin.com/feed/update/${encodeURIComponent(postId)}/`;
   }
 
   console.log("[LinkedIn] Post created successfully:", postId);
