@@ -213,7 +213,31 @@ const Auth = () => {
               </Button>
             </form>
 
-            {/* Sign up link hidden for now — will bring back later */}
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+              {isLogin ? (
+                <>
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(false)}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Create one
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(true)}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
