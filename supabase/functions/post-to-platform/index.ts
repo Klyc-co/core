@@ -842,8 +842,8 @@ Deno.serve(async (req) => {
       }
       accessToken = await decryptToken(socialConn.access_token);
       twitterTokenSecret = await decryptToken(socialConn.refresh_token);
-    } else if (platformLower === "youtube" || platformLower === "pinterest") {
-      // Mock-only platforms — no OAuth token required; posting is handled as mock below
+    } else if (platformLower === "pinterest") {
+      // Mock-only platform — no OAuth token required; posting is handled as mock below
     } else {
       // linkedin, threads, snapchat, and any other OAuth platforms → social_connections
       const { data: socialConn } = await serviceClient
