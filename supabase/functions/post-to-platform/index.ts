@@ -563,6 +563,101 @@ async function postToTikTok(
   }
 }
 
+async function postToYouTube(
+  accessToken: string,
+  content: string,
+  videoUrl: string | null,
+): Promise<{ success: boolean; post_id?: string; permalink?: string; error?: string }> {
+  try {
+    if (!videoUrl) {
+      return {
+        success: false,
+        error: "YouTube requires a video file. Add a video to this post before publishing.",
+      };
+    }
+
+    // Download the video
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) {
+      return { success: false, error: `Failed to download video for YouTube upload (${videoRes.status})` };
+    }
+    const videoBlob = await videoRes.blob();
+    const videoType = videoBlob.type || "video/mp4";
+
+    // YouTube enforces a 100-char title limit and 5000-char description.
+    const firstLine = (content || "").split("\n")[0].trim();
+    const title = (firstLine || "Uploaded via Klyc").substring(0, 100);
+    const description = (content || "").substring(0, 5000);
+
+    const metadata = {
+      snippet: { title, description, categoryId: "22" }, // People & Blogs
+      status: { privacyStatus: "public", selfDeclaredMadeForKids: false },
+    };
+
+    // Step 1: Initiate resumable upload
+    const initiateRes = await fetch(
+      "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Length": String(videoBlob.size),
+          "X-Upload-Content-Type": videoType,
+        },
+        body: JSON.stringify(metadata),
+      },
+    );
+
+    if (!initiateRes.ok) {
+      const errText = await initiateRes.text();
+      console.error("[YouTube] Upload initiation failed:", initiateRes.status, errText);
+      if (initiateRes.status === 401 || initiateRes.status === 403) {
+        return {
+          success: false,
+          error: "YouTube authorization is missing the upload permission. Please reconnect your YouTube account.",
+        };
+      }
+      return { success: false, error: `YouTube upload failed (${initiateRes.status})` };
+    }
+
+    const uploadUrl = initiateRes.headers.get("Location");
+    if (!uploadUrl) {
+      return { success: false, error: "YouTube did not return a resumable upload URL" };
+    }
+
+    // Step 2: PUT the video bytes
+    const uploadRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": videoType,
+        "Content-Length": String(videoBlob.size),
+      },
+      body: videoBlob,
+    });
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      console.error("[YouTube] Video upload failed:", uploadRes.status, errText);
+      return { success: false, error: `YouTube video upload failed (${uploadRes.status})` };
+    }
+
+    const uploadData = await uploadRes.json();
+    const videoId = uploadData.id;
+    if (!videoId) {
+      console.error("[YouTube] Upload succeeded but no video id returned:", uploadData);
+      return { success: false, error: "YouTube upload completed but no video ID was returned" };
+    }
+
+    const permalink = `https://www.youtube.com/watch?v=${videoId}`;
+    console.log("[YouTube] Video uploaded successfully:", videoId);
+    return { success: true, post_id: videoId, permalink };
+  } catch (err) {
+    console.error("[YouTube] Unexpected error:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown YouTube error" };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -747,8 +842,8 @@ Deno.serve(async (req) => {
       }
       accessToken = await decryptToken(socialConn.access_token);
       twitterTokenSecret = await decryptToken(socialConn.refresh_token);
-    } else if (platformLower === "youtube" || platformLower === "pinterest") {
-      // Mock-only platforms — no OAuth token required; posting is handled as mock below
+    } else if (platformLower === "pinterest") {
+      // Mock-only platform — no OAuth token required; posting is handled as mock below
     } else {
       // linkedin, threads, snapchat, and any other OAuth platforms → social_connections
       const { data: socialConn } = await serviceClient
@@ -795,8 +890,10 @@ Deno.serve(async (req) => {
       }
     } else if (platformLower === "tiktok") {
       result = await postToTikTok(accessToken!, content, video_url);
+    } else if (platformLower === "youtube") {
+      result = await postToYouTube(accessToken!, content, video_url);
     } else {
-      // Other platforms (youtube, pinterest, snapchat) remain mock
+      // Other platforms (pinterest, snapchat) remain mock
       console.log(`[post-to-platform] Mock post to ${platform} by user ${userId}`);
       result = { success: true, post_id: crypto.randomUUID() };
     }
