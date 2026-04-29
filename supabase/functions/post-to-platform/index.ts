@@ -890,8 +890,10 @@ Deno.serve(async (req) => {
       }
     } else if (platformLower === "tiktok") {
       result = await postToTikTok(accessToken!, content, video_url);
+    } else if (platformLower === "youtube") {
+      result = await postToYouTube(accessToken!, content, video_url);
     } else {
-      // Other platforms (youtube, pinterest, snapchat) remain mock
+      // Other platforms (pinterest, snapchat) remain mock
       console.log(`[post-to-platform] Mock post to ${platform} by user ${userId}`);
       result = { success: true, post_id: crypto.randomUUID() };
     }
