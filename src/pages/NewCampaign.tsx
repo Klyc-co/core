@@ -1120,6 +1120,18 @@ const NewCampaign = () => {
                               Connect to enable Post & Schedule
                             </span>
                           )}
+
+                          {platform.id === "instagram" && (
+                            <a
+                              href="https://help.instagram.com/502981923235522"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] text-amber-600 hover:text-amber-700 text-center leading-tight px-1 underline-offset-2 hover:underline"
+                            >
+                              Requires a Business or Creator account linked to a Facebook Page
+                            </a>
+                          )}
                         </div>
                       </Card>
                     );
