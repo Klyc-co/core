@@ -1,0 +1,1 @@
+UPDATE scheduled_campaigns SET status='failed' WHERE id='fb27281d-0e81-4dae-b5e8-7602d9d26c1f';
