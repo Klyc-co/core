@@ -13,7 +13,7 @@ import LandingTeam from "@/components/landing/LandingTeam";
 import LandingBuiltFor from "@/components/landing/LandingBuiltFor";
 import LandingCategory from "@/components/landing/LandingCategory";
 import LandingPowerClose from "@/components/landing/LandingPowerClose";
-import LandingPricing from "@/components/landing/LandingPricing";
+
 import LandingFAQ from "@/components/landing/LandingFAQ";
 import LandingContact from "@/components/landing/LandingContact";
 import LandingFooter from "@/components/landing/LandingFooter";
@@ -55,7 +55,6 @@ const Index = () => {
         <LandingCategory />
       </div>
 
-      <LandingPricing />
       <LandingFAQ />
       <LandingContact />
       <LandingPowerClose />
