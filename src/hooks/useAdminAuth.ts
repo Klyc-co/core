@@ -37,16 +37,19 @@ export function useAdminAuth() {
   }, [resetTimer]);
 
   const checkAdmin = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) {
+    // Use getSession() — reads from localStorage immediately without a network round-trip.
+    // getUser() makes an API call each time and returns null before the session rehydrates
+    // on a hard page refresh, causing the guard to redirect to login incorrectly.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) {
       setIsAdmin(false);
       setAdminUser(null);
       return;
     }
-    const email = user.email.toLowerCase().trim();
+    const email = session.user.email.toLowerCase().trim();
     if (ADMIN_ALLOWLIST.includes(email)) {
       setIsAdmin(true);
-      setAdminUser({ id: user.id, email, display_name: null });
+      setAdminUser({ id: session.user.id, email, display_name: null });
     } else {
       setIsAdmin(false);
       setAdminUser(null);
