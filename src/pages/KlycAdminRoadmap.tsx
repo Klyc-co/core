@@ -3,14 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  Calendar, ChevronRight, Copy, Flag, GripVertical, Layers,
+  Calendar, Copy, Flag, GripVertical, Layers,
   Plus, Target, ThumbsUp, User, X,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -69,26 +68,6 @@ const EMPLOYEES = [
   { id: "e3", name: "Ethan W" },
   { id: "e4", name: "Rohil" },
 ];
-
-/* ── Mock data ── */
-function generateMockItems(): RoadmapItem[] {
-  const items: Omit<RoadmapItem, "id">[] = [
-    { title: "Compound hash compression", description: "Implement compound hash chains for 102x+ compression ratios. Key moat milestone.", category: "infrastructure", status: "build", priority: 1, effort: "XL", target_date: "2026-05-15", progress_pct: 65, owner_id: "e2", shipped_at: null, created_at: "2026-01-15T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan K", vote_count: 0 },
-    { title: "TikTok auto-captions", description: "Auto-generate captions with trending hashtags for TikTok content via Creative submind.", category: "subminds", status: "design", priority: 2, effort: "L", target_date: "2026-05-01", progress_pct: 30, owner_id: "e3", shipped_at: null, created_at: "2026-02-01T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan W", vote_count: 39 },
-    { title: "Bulk scheduling UI", description: "Allow scheduling 50+ posts at once with CSV upload across all platforms.", category: "frontend", status: "planning", priority: 3, effort: "L", target_date: "2026-06-01", progress_pct: 15, owner_id: "e3", shipped_at: null, created_at: "2026-02-15T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan W", vote_count: 47 },
-    { title: "Shopify deep integration", description: "Pull product catalog directly into campaign generation flow.", category: "integrations", status: "backlog", priority: 4, effort: "M", target_date: "2026-07-01", progress_pct: 0, owner_id: null, shipped_at: null, created_at: "2026-03-01T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: undefined, vote_count: 28 },
-    { title: "Agency tier pricing", description: "New tier for agencies managing 10+ client accounts with volume discounts.", category: "business", status: "planning", priority: 5, effort: "M", target_date: "2026-06-15", progress_pct: 10, owner_id: "e1", shipped_at: null, created_at: "2026-03-10T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Kitchens", vote_count: 19 },
-    { title: "Dark mode client portal", description: "Complete dark mode support for all client-facing pages.", category: "frontend", status: "shipped", priority: 10, effort: "M", target_date: "2026-03-01", progress_pct: 100, owner_id: "e3", shipped_at: "2026-03-05T00:00:00Z", created_at: "2026-01-20T00:00:00Z", updated_at: "2026-03-05T00:00:00Z", owner_name: "Ethan W", vote_count: 31 },
-    { title: "White-label reports", description: "Remove KLYC branding from all client-facing exported reports.", category: "frontend", status: "shipped", priority: 11, effort: "S", target_date: "2026-02-15", progress_pct: 100, owner_id: "e3", shipped_at: "2026-02-18T00:00:00Z", created_at: "2026-01-10T00:00:00Z", updated_at: "2026-02-18T00:00:00Z", owner_name: "Ethan W", vote_count: 22 },
-    { title: "Cross-client learning patterns", description: "Enable anonymized cross-client pattern detection for compound compression.", category: "infrastructure", status: "backlog", priority: 6, effort: "XL", target_date: "2026-09-01", progress_pct: 0, owner_id: "e2", shipped_at: null, created_at: "2026-03-15T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan K", vote_count: 0 },
-    { title: "Viral submind activation", description: "Move Viral submind from stub to active with real virality scoring.", category: "subminds", status: "design", priority: 7, effort: "L", target_date: "2026-07-15", progress_pct: 20, owner_id: "e2", shipped_at: null, created_at: "2026-03-20T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan K", vote_count: 15 },
-    { title: "Custom brand voice fine-tuning", description: "Let clients upload tone examples for AI learning.", category: "subminds", status: "build", priority: 8, effort: "L", target_date: "2026-05-30", progress_pct: 45, owner_id: "e2", shipped_at: null, created_at: "2026-02-10T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan K", vote_count: 26 },
-    { title: "Image gen speed optimization", description: "Reduce image generation from 15-20s to under 5s.", category: "infrastructure", status: "test", priority: 9, effort: "M", target_date: "2026-04-15", progress_pct: 85, owner_id: "e2", shipped_at: null, created_at: "2026-03-01T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: "Ethan K", vote_count: 34 },
-    { title: "Competitor real-time alerts", description: "Push notifications when competitors post high-engagement content.", category: "subminds", status: "backlog", priority: 12, effort: "M", target_date: null, progress_pct: 0, owner_id: null, shipped_at: null, created_at: "2026-03-25T00:00:00Z", updated_at: "2026-04-01T00:00:00Z", owner_name: undefined, vote_count: 15 },
-  ];
-
-  return items.map((item) => ({ ...item, id: crypto.randomUUID() }));
-}
 
 /* ── New Item Form ── */
 function NewItemForm({ onClose, onSave }: { onClose: () => void; onSave: (item: Partial<RoadmapItem>) => void }) {
@@ -212,13 +191,12 @@ function KanbanCard({ item, onMove }: { item: RoadmapItem; onMove: (id: string, 
 
 /* ── Main ── */
 export default function KlycAdminRoadmap() {
-  const [items, setItems] = useState<RoadmapItem[]>(generateMockItems);
+  const [items, setItems] = useState<RoadmapItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [swimlane, setSwimlane] = useState(false);
 
-  // Try real data
   const { data: dbItems } = useQuery({
     queryKey: ["admin-roadmap"],
     queryFn: async () => {
@@ -289,13 +267,15 @@ export default function KlycAdminRoadmap() {
     setItems((prev) => [...prev, newItem]);
   };
 
+  // Velocity derived from real shipped items grouped by month
   const velocityData = useMemo(() => {
-    const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-    return months.map((m) => ({
-      month: m,
-      shipped: Math.floor(Math.random() * 5 + 1),
-    }));
-  }, []);
+    const byMonth: Record<string, number> = {};
+    shippedItems.forEach((item) => {
+      const key = format(new Date(item.shipped_at || item.updated_at), "MMM");
+      byMonth[key] = (byMonth[key] || 0) + 1;
+    });
+    return Object.entries(byMonth).map(([month, shipped]) => ({ month, shipped }));
+  }, [shippedItems]);
 
   const generateChangelog = () => {
     const lines = shippedItems.map((i) => `• **${i.title}** — ${i.description || "No description"} _(${i.shipped_at ? format(new Date(i.shipped_at), "MMM d, yyyy") : "N/A"})_`);
@@ -326,38 +306,45 @@ export default function KlycAdminRoadmap() {
       </div>
 
       {/* Next 5 hero */}
-      <div>
-        <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-          <Target className="w-4 h-4 text-primary" /> Next 5 Priorities
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {next5.map((item, idx) => (
-            <Card key={item.id} className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
-              <CardContent className="pt-4 pb-3 px-4 space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-primary">#{idx + 1}</span>
-                  <Badge className={`${STATUS_COLORS[item.status]} border-0 text-[9px]`}>{item.status}</Badge>
-                </div>
-                <h3 className="text-sm font-semibold text-white leading-tight">{item.title}</h3>
-                <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{item.description}</p>
-                <div className="h-1.5 bg-slate-800 rounded-full">
-                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${item.progress_pct}%` }} />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500">
-                  <span>{item.progress_pct}%</span>
-                  {item.target_date && <span>{format(new Date(item.target_date), "MMM d")}</span>}
-                </div>
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="text-slate-400">{item.owner_name || "Unassigned"}</span>
-                  {(item.vote_count ?? 0) > 0 && (
-                    <span className="text-primary flex items-center gap-0.5"><ThumbsUp className="w-3 h-3" />{item.vote_count}</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {next5.length > 0 ? (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" /> Next 5 Priorities
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {next5.map((item, idx) => (
+              <Card key={item.id} className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+                <CardContent className="pt-4 pb-3 px-4 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-primary">#{idx + 1}</span>
+                    <Badge className={`${STATUS_COLORS[item.status]} border-0 text-[9px]`}>{item.status}</Badge>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white leading-tight">{item.title}</h3>
+                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{item.description}</p>
+                  <div className="h-1.5 bg-slate-800 rounded-full">
+                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${item.progress_pct}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <span>{item.progress_pct}%</span>
+                    {item.target_date && <span>{format(new Date(item.target_date), "MMM d")}</span>}
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">{item.owner_name || "Unassigned"}</span>
+                    {(item.vote_count ?? 0) > 0 && (
+                      <span className="text-primary flex items-center gap-0.5"><ThumbsUp className="w-3 h-3" />{item.vote_count}</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-6 rounded-lg border border-dashed border-slate-700 text-slate-500 text-sm">
+          <Target className="w-4 h-4 text-slate-600" />
+          No roadmap items yet. Add your first item to get started.
+        </div>
+      )}
 
       <Tabs defaultValue="kanban" className="space-y-4">
         <TabsList className="bg-slate-800 border-slate-700">
@@ -392,7 +379,6 @@ export default function KlycAdminRoadmap() {
           </div>
 
           {swimlane ? (
-            // Swimlane view grouped by category
             <div className="space-y-6">
               {Object.entries(byCategory).map(([cat, catItems]) => (
                 <div key={cat}>
@@ -409,9 +395,13 @@ export default function KlycAdminRoadmap() {
                   </div>
                 </div>
               ))}
+              {Object.keys(byCategory).length === 0 && (
+                <div className="text-center text-slate-500 text-sm py-12 border border-dashed border-slate-800 rounded-lg">
+                  No items yet
+                </div>
+              )}
             </div>
           ) : (
-            // Standard kanban
             <div className="grid grid-cols-6 gap-3">
               {STATUSES.map((status) => {
                 const colItems = filtered.filter((i) => i.status === status).sort((a, b) => a.priority - b.priority);
@@ -441,7 +431,7 @@ export default function KlycAdminRoadmap() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm text-slate-300">Shipped Items</CardTitle>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-400" onClick={generateChangelog}>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-400" onClick={generateChangelog} disabled={shippedItems.length === 0}>
                     <Copy className="w-3 h-3 mr-1" /> Copy Changelog
                   </Button>
                 </div>
@@ -481,24 +471,34 @@ export default function KlycAdminRoadmap() {
                 <CardTitle className="text-sm text-slate-300">Shipping Velocity</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={velocityData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                      <Bar dataKey="shipped" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {velocityData.length > 0 ? (
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={velocityData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
+                        <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
+                        <Bar dataKey="shipped" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-56 flex items-center justify-center text-slate-500 text-sm">
+                    No shipped items yet
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-3 mt-4 text-center">
                   <div>
                     <div className="text-xl font-bold text-white">{shippedItems.length}</div>
                     <div className="text-[10px] text-slate-400">Total Shipped</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-white">{(velocityData.reduce((a, v) => a + v.shipped, 0) / velocityData.length).toFixed(1)}</div>
+                    <div className="text-xl font-bold text-white">
+                      {velocityData.length > 0
+                        ? (velocityData.reduce((a, v) => a + v.shipped, 0) / velocityData.length).toFixed(1)
+                        : "—"}
+                    </div>
                     <div className="text-[10px] text-slate-400">Avg / Month</div>
                   </div>
                   <div>
