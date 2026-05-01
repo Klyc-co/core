@@ -16,10 +16,6 @@ import {
   Twitter, Linkedin, Instagram, Mail, FileText, DollarSign,
   CheckCircle, AlertCircle, XCircle, Pencil, UserMinus,
 } from "lucide-react";
-import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
 
 const CHANNEL_PLATFORMS = [
   { platform: "twitter", label: "Twitter / X", icon: Twitter },
@@ -41,9 +37,6 @@ const STATUS_COLORS: Record<string, string> = {
   disconnected: "text-slate-500",
   error: "text-yellow-400",
 };
-
-const SUBMIND_NAMES = ["Research", "Product", "Narrative", "Creative", "Social", "Image", "Approval"];
-const SUBMIND_COLORS = ["#3b82f6", "#a855f7", "#22c55e", "#eab308", "#ef4444", "#06b6d4", "#f97316"];
 
 interface Employee {
   id: string;
@@ -98,7 +91,6 @@ export default function KlycAdminInternal() {
 
   const handleAddEmployee = async () => {
     if (!newEmpName.trim() || !newEmpEmail.trim()) return;
-    // Get current user id for the user_id field
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error } = await supabase.from("klyc_employees").insert([{
@@ -160,20 +152,6 @@ export default function KlycAdminInternal() {
     toast({ title: "Feedback submitted" });
     setFeedbackText("");
   };
-
-  // Dogfood data (simulated)
-  const usageComparison = [
-    { metric: "Campaigns/mo", klyc: 12, avgClient: 8 },
-    { metric: "Sessions/mo", klyc: 45, avgClient: 22 },
-    { metric: "Tokens/mo", klyc: 28000, avgClient: 15000 },
-    { metric: "Subminds/task", klyc: 5.2, avgClient: 3.8 },
-  ];
-
-  const submindUsage = SUBMIND_NAMES.map((name, i) => ({
-    name,
-    usage: [85, 72, 68, 90, 78, 45, 95][i],
-    fill: SUBMIND_COLORS[i],
-  }));
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>;
@@ -359,40 +337,8 @@ export default function KlycAdminInternal() {
           <span className="text-sm text-slate-400">Exclude KLYC from aggregate client metrics</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Usage comparison */}
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">KLYC vs Client Average</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={usageComparison}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="metric" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                  <Bar dataKey="klyc" fill="#3b82f6" name="KLYC" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="avgClient" fill="#64748b" name="Avg Client" radius={[2, 2, 0, 0]} />
-                  <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Submind usage heatmap */}
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Submind Usage (KLYC)</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={submindUsage} dataKey="usage" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={2}>
-                    {submindUsage.map((_, i) => <Cell key={i} fill={SUBMIND_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                  <Legend wrapperStyle={{ color: "#94a3b8", fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        <div className="py-12 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-lg">
+          Dogfood usage metrics not yet connected. KLYC vs client comparison and submind usage charts will appear here once the analytics pipeline is live.
         </div>
 
         {/* Feedback Form */}
