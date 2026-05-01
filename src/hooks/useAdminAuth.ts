@@ -9,9 +9,18 @@ const ADMIN_ALLOWLIST = [
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
+type AdminUser = { id: string; email: string; display_name: string | null };
+
+function resolveAdmin(session: { user?: { id: string; email?: string | null } } | null): AdminUser | null {
+  if (!session?.user?.email) return null;
+  const email = session.user.email.toLowerCase().trim();
+  if (!ADMIN_ALLOWLIST.includes(email)) return null;
+  return { id: session.user.id, email, display_name: null };
+}
+
 export function useAdminAuth() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [adminUser, setAdminUser] = useState<{ id: string; email: string; display_name: string | null } | null>(null);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const signOut = useCallback(async () => {
@@ -36,31 +45,50 @@ export function useAdminAuth() {
     };
   }, [resetTimer]);
 
-  const checkAdmin = useCallback(async () => {
-    // Use getSession() — reads from localStorage immediately without a network round-trip.
-    // getUser() makes an API call each time and returns null before the session rehydrates
-    // on a hard page refresh, causing the guard to redirect to login incorrectly.
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.email) {
-      setIsAdmin(false);
-      setAdminUser(null);
-      return;
-    }
-    const email = session.user.email.toLowerCase().trim();
-    if (ADMIN_ALLOWLIST.includes(email)) {
-      setIsAdmin(true);
-      setAdminUser({ id: session.user.id, email, display_name: null });
-    } else {
-      setIsAdmin(false);
-      setAdminUser(null);
-    }
-  }, []);
-
   useEffect(() => {
-    checkAdmin();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => checkAdmin());
-    return () => subscription.unsubscribe();
-  }, [checkAdmin]);
+    let cancelled = false;
+
+    // Initial check — getSession() reads localStorage (no network round-trip normally).
+    // Wrap in a 5s timeout: if Supabase is slow to refresh the token, we fall through
+    // to isAdmin=false rather than spinning forever on a null guard.
+    const initCheck = async () => {
+      try {
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("getSession timeout")), 5000)
+          ),
+        ]);
+        if (cancelled) return;
+        const session = (result as Awaited<ReturnType<typeof supabase.auth.getSession>>).data.session;
+        const user = resolveAdmin(session);
+        setIsAdmin(!!user);
+        setAdminUser(user);
+      } catch {
+        // Timeout or error — don't leave the guard spinning
+        if (!cancelled) {
+          setIsAdmin(false);
+          setAdminUser(null);
+        }
+      }
+    };
+
+    initCheck();
+
+    // onAuthStateChange passes the session directly — no second getSession() call.
+    // This eliminates the race between the initial check and the auth state event.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      const user = resolveAdmin(session);
+      setIsAdmin(!!user);
+      setAdminUser(user);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const logAction = useCallback(
     async (action: string, targetType?: string, targetId?: string, details?: Record<string, unknown>) => {
