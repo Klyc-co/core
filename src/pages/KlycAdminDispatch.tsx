@@ -2,14 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
-} from "recharts";
 import {
   Activity, AlertTriangle, ChevronDown, Clock, Gauge, RefreshCw,
   RotateCcw, XCircle, Zap,
@@ -85,82 +80,6 @@ function truncId(id: string) {
   return id.slice(0, 8);
 }
 
-/* ── Mock generators ── */
-function generateMockSessions(): Session[] {
-  const intents = ["CAMPAIGN_NEW", "TREND_ANALYSIS", "PERFORMANCE_REVIEW", "CONTENT_REVISION", "LEARNING_REPORT"];
-  const statuses = ["queued", "routing", "processing", "approval", "completed", "failed"];
-  const phases = ["Phase 1: Research", "Phase 2: Narrative + Creative", "Phase 3: Social + Image", "Phase 4: Approval"];
-  const clients = [
-    { name: "Brew & Beyond", tier: "growth" },
-    { name: "TechNova AI", tier: "pro" },
-    { name: "GreenLeaf Co", tier: "starter" },
-    { name: "UrbanFit", tier: "enterprise" },
-    { name: "Pixel Perfect", tier: "growth" },
-    { name: "KLYC", tier: "enterprise" },
-  ];
-  const submindSets = [
-    ["Research"], ["Research", "Product"], ["Narrative", "Creative"],
-    ["Social", "Image"], ["Approval"], ["Research", "Product", "Narrative", "Creative"],
-  ];
-
-  return Array.from({ length: 18 }, (_, i) => {
-    const st = statuses[i % statuses.length];
-    const client = clients[i % clients.length];
-    const start = new Date(Date.now() - Math.random() * 3600000);
-    return {
-      id: crypto.randomUUID(),
-      user_id: crypto.randomUUID(),
-      intent: intents[i % intents.length],
-      status: st,
-      current_phase: st === "processing" ? phases[Math.floor(Math.random() * phases.length)] : null,
-      active_subminds: ["processing", "routing"].includes(st) ? submindSets[i % submindSets.length] : null,
-      started_at: start.toISOString(),
-      completed_at: ["completed", "failed"].includes(st) ? new Date(start.getTime() + Math.random() * 120000).toISOString() : null,
-      error_message: st === "failed" ? ["Timeout on Creative submind", "Rate limit exceeded", "API error from image provider"][i % 3] : null,
-      client_name: client.name,
-      tier: client.tier,
-      priority: i < 3 ? "high" : "normal",
-    };
-  });
-}
-
-function generateQueueHistory() {
-  return Array.from({ length: 24 }, (_, i) => ({
-    hour: `${(23 - i).toString().padStart(2, "0")}:00`,
-    depth: Math.floor(Math.random() * 15),
-  })).reverse();
-}
-
-function generateAvgTimeByIntent() {
-  return [
-    { intent: "Campaign", avg: 45 },
-    { intent: "Trend", avg: 18 },
-    { intent: "Performance", avg: 22 },
-    { intent: "Revision", avg: 12 },
-    { intent: "Learning", avg: 30 },
-  ];
-}
-
-function generateThroughput() {
-  return Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i.toString().padStart(2, "0")}:00`,
-    completed: Math.floor(Math.random() * 20 + 5),
-    failed: Math.floor(Math.random() * 3),
-  }));
-}
-
-function generateHeatmap() {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const data: { day: string; hour: number; value: number }[] = [];
-  days.forEach((day) => {
-    for (let h = 0; h < 24; h++) {
-      const base = (h >= 9 && h <= 17) ? 15 : 3;
-      data.push({ day, hour: h, value: Math.floor(Math.random() * base + (day === "Sat" || day === "Sun" ? 1 : 5)) });
-    }
-  });
-  return data;
-}
-
 /* ── Gauge component ── */
 function QueueGauge({ depth }: { depth: number }) {
   const label = depth === 0 ? "Idle" : depth <= 5 ? "Healthy" : depth <= 20 ? "Busy" : "Backed Up";
@@ -186,29 +105,33 @@ export default function KlycAdminDispatch() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const loadSessions = async () => {
-    const { data } = await supabase
-      .from("orchestrator_sessions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100);
+    try {
+      const { data } = await supabase
+        .from("orchestrator_sessions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
 
-    if (data && data.length > 0) {
-      setSessions(data.map((s: any) => ({
-        id: s.id,
-        user_id: s.user_id,
-        intent: s.intent,
-        status: s.status || "processing",
-        current_phase: null,
-        active_subminds: null,
-        started_at: s.created_at,
-        completed_at: null,
-        error_message: null,
-        client_name: "Client",
-        tier: "starter",
-        priority: "normal",
-      })));
-    } else {
-      setSessions(generateMockSessions());
+      if (data && data.length > 0) {
+        setSessions(data.map((s: any) => ({
+          id: s.id,
+          user_id: s.user_id,
+          intent: s.intent,
+          status: s.status || "processing",
+          current_phase: null,
+          active_subminds: null,
+          started_at: s.created_at,
+          completed_at: null,
+          error_message: null,
+          client_name: "Client",
+          tier: "starter",
+          priority: "normal",
+        })));
+      } else {
+        setSessions([]);
+      }
+    } catch {
+      setSessions([]);
     }
     setLastRefresh(new Date());
   };
@@ -224,14 +147,7 @@ export default function KlycAdminDispatch() {
   const failedOrStuck = sessions.filter(
     (s) => s.status === "failed" || (!s.completed_at && s.started_at && Date.now() - new Date(s.started_at).getTime() > 300000)
   );
-  const completedSessions = sessions.filter((s) => ["completed", "complete"].includes(s.status || ""));
 
-  const queueHistory = generateQueueHistory();
-  const avgByIntent = generateAvgTimeByIntent();
-  const throughput = generateThroughput();
-  const totalCompleted = throughput.reduce((a, b) => a + b.completed, 0);
-  const totalFailed = throughput.reduce((a, b) => a + b.failed, 0);
-  const failureRate = totalCompleted + totalFailed > 0 ? ((totalFailed / (totalCompleted + totalFailed)) * 100).toFixed(1) : "0";
   const avgWait = queuedSessions.length > 0
     ? (queuedSessions.reduce((a, s) => a + (Date.now() - new Date(s.started_at).getTime()), 0) / queuedSessions.length / 1000).toFixed(0)
     : "0";
@@ -285,86 +201,24 @@ export default function KlycAdminDispatch() {
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="text-xs text-slate-400 mb-1">Throughput / hr (24h)</div>
-            <div className="text-xl font-bold text-white">{(totalCompleted / 24).toFixed(1)}</div>
-            <div className="h-12 mt-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={throughput.slice(-12)}>
-                  <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="text-xl font-bold text-slate-500">—</div>
+            <p className="text-xs text-slate-600 mt-2">Historical analytics not yet connected</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="text-xs text-slate-400 mb-1">Failure Rate</div>
-            <div className={`text-xl font-bold ${Number(failureRate) > 5 ? "text-red-400" : "text-emerald-400"}`}>
-              {failureRate}%
-            </div>
-            <div className="h-12 mt-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={throughput.slice(-12)}>
-                  <Bar dataKey="failed" fill="#ef4444" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="text-xl font-bold text-slate-500">—</div>
+            <p className="text-xs text-slate-600 mt-2">Historical analytics not yet connected</p>
           </CardContent>
         </Card>
 
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="text-xs text-slate-400 mb-1">Total Processed (24h)</div>
-            <div className="text-xl font-bold text-white">{totalCompleted + totalFailed}</div>
-            <div className="flex gap-3 mt-2 text-xs">
-              <span className="text-emerald-400">✓ {totalCompleted}</span>
-              <span className="text-red-400">✗ {totalFailed}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-300">Queue Depth (24h)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={queueHistory}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="hour" tick={{ fill: "#94a3b8", fontSize: 10 }} interval={3} />
-                  <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                  <Line type="monotone" dataKey="depth" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-900 border-slate-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-300">Avg Processing Time by Intent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={avgByIntent} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 10 }} unit="s" />
-                  <YAxis dataKey="intent" type="category" tick={{ fill: "#94a3b8", fontSize: 10 }} width={80} />
-                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                  <Bar dataKey="avg" radius={[0, 4, 4, 0]}>
-                    {avgByIntent.map((_, i) => (
-                      <Cell key={i} fill={["#06b6d4", "#8b5cf6", "#f59e0b", "#10b981", "#ec4899"][i]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <div className="text-xl font-bold text-slate-500">—</div>
+            <p className="text-xs text-slate-600 mt-2">Historical analytics not yet connected</p>
           </CardContent>
         </Card>
       </div>
@@ -383,61 +237,67 @@ export default function KlycAdminDispatch() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-auto max-h-[420px]">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800 hover:bg-transparent">
-                  <TableHead className="text-slate-400 text-xs">Session</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Client</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Intent</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Status</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Phase</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Active Subminds</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Elapsed</TableHead>
-                  <TableHead className="text-slate-400 text-xs">Priority</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.map((s) => (
-                  <TableRow key={s.id} className={`border-slate-800 ${ROW_BG[s.status || ""] || ""}`}>
-                    <TableCell className="font-mono text-xs text-slate-300">{truncId(s.id)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm text-white">{s.client_name}</span>
-                        {tierBadge(s.tier)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs text-slate-300">
-                        {INTENT_LABELS[s.intent || ""] || s.intent || "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${STATUS_COLORS[s.status || ""] || "bg-slate-700 text-slate-300"} text-[10px]`}>
-                        {s.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-400">{s.current_phase || "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {s.active_subminds?.map((sm) => (
-                          <span key={sm} className={`inline-block w-2 h-2 rounded-full ${SUBMIND_COLORS[sm] || "bg-slate-500"}`} title={sm} />
-                        )) || <span className="text-xs text-slate-500">—</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-slate-300">{elapsed(s.started_at, s.completed_at)}</TableCell>
-                    <TableCell>
-                      {s.priority === "high" ? (
-                        <Badge className="bg-red-500/20 text-red-400 border-0 text-[10px]">HIGH</Badge>
-                      ) : (
-                        <span className="text-xs text-slate-500">normal</span>
-                      )}
-                    </TableCell>
+          {sessions.length === 0 ? (
+            <div className="py-16 text-center text-slate-500 text-sm">
+              No active sessions. Orchestrator sessions will appear here in real time once clients start using the platform.
+            </div>
+          ) : (
+            <div className="overflow-auto max-h-[420px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-400 text-xs">Session</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Client</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Intent</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Status</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Phase</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Active Subminds</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Elapsed</TableHead>
+                    <TableHead className="text-slate-400 text-xs">Priority</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {sessions.map((s) => (
+                    <TableRow key={s.id} className={`border-slate-800 ${ROW_BG[s.status || ""] || ""}`}>
+                      <TableCell className="font-mono text-xs text-slate-300">{truncId(s.id)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-white">{s.client_name}</span>
+                          {tierBadge(s.tier)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-slate-300">
+                          {INTENT_LABELS[s.intent || ""] || s.intent || "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${STATUS_COLORS[s.status || ""] || "bg-slate-700 text-slate-300"} text-[10px]`}>
+                          {s.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-400">{s.current_phase || "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {s.active_subminds?.map((sm) => (
+                            <span key={sm} className={`inline-block w-2 h-2 rounded-full ${SUBMIND_COLORS[sm] || "bg-slate-500"}`} title={sm} />
+                          )) || <span className="text-xs text-slate-500">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono text-slate-300">{elapsed(s.started_at, s.completed_at)}</TableCell>
+                      <TableCell>
+                        {s.priority === "high" ? (
+                          <Badge className="bg-red-500/20 text-red-400 border-0 text-[10px]">HIGH</Badge>
+                        ) : (
+                          <span className="text-xs text-slate-500">normal</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -527,65 +387,24 @@ export default function KlycAdminDispatch() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{totalCompleted + totalFailed}</div>
+              <div className="text-2xl font-bold text-slate-500">—</div>
               <div className="text-xs text-slate-400">Total Processed</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">23.4s</div>
+              <div className="text-2xl font-bold text-slate-500">—</div>
               <div className="text-xs text-slate-400">Avg Latency</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">14:00</div>
+              <div className="text-2xl font-bold text-slate-500">—</div>
               <div className="text-xs text-slate-400">Peak Hour</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-emerald-400">~6 mo</div>
+              <div className="text-2xl font-bold text-slate-500">—</div>
               <div className="text-xs text-slate-400">Scale needed est.</div>
             </div>
           </div>
-
-          {/* Throughput chart */}
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={throughput}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="hour" tick={{ fill: "#94a3b8", fontSize: 10 }} interval={3} />
-                <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", color: "#fff" }} />
-                <Bar dataKey="completed" fill="hsl(var(--primary))" name="Completed" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="failed" fill="#ef4444" name="Failed" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Peak Load Heatmap */}
-          <div className="mt-6">
-            <h4 className="text-xs text-slate-400 mb-3">Peak Load Heatmap (Hour × Day)</h4>
-            <div className="overflow-x-auto">
-              <div className="inline-grid gap-[2px]" style={{ gridTemplateColumns: "40px repeat(24, 18px)" }}>
-                <div />
-                {Array.from({ length: 24 }, (_, h) => (
-                  <div key={h} className="text-[9px] text-slate-500 text-center">{h}</div>
-                ))}
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                  <>
-                    <div key={day} className="text-[10px] text-slate-400 flex items-center">{day}</div>
-                    {Array.from({ length: 24 }, (_, h) => {
-                      const val = generateHeatmap().find((d) => d.day === day && d.hour === h)?.value || 0;
-                      const opacity = Math.min(val / 20, 1);
-                      return (
-                        <div
-                          key={`${day}-${h}`}
-                          className="w-[18px] h-[18px] rounded-sm"
-                          style={{ backgroundColor: `rgba(99, 102, 241, ${opacity})` }}
-                          title={`${day} ${h}:00 — ${val} requests`}
-                        />
-                      );
-                    })}
-                  </>
-                ))}
-              </div>
-            </div>
+          <div className="py-10 text-center text-slate-500 text-sm border border-dashed border-slate-800 rounded-lg">
+            Historical throughput charts will appear here once the <code className="text-slate-400">platform_metrics_daily</code> table is connected.
           </div>
         </CardContent>
       </Card>
