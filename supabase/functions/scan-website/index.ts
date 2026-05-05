@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[scan-website] Missing Authorization header');
       return new Response(
         JSON.stringify({ success: false, error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -72,8 +73,9 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.error('[scan-website] Auth getUser failed:', userError?.message);
       return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        JSON.stringify({ success: false, error: 'Unauthorized', details: userError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -88,8 +90,9 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY_1') || Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
+      console.error('[scan-website] Neither FIRECRAWL_API_KEY_1 nor FIRECRAWL_API_KEY is set');
       return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl is not configured.' }),
+        JSON.stringify({ success: false, error: 'Firecrawl is not configured.', details: 'Set FIRECRAWL_API_KEY_1 or FIRECRAWL_API_KEY in Supabase Edge Function secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -100,12 +103,11 @@ Deno.serve(async (req) => {
     }
 
     const functionStartTime = Date.now();
-    const MAX_FUNCTION_TIME = 110000; // 110s hard limit to stay under 150s
+    const MAX_FUNCTION_TIME = 110000;
     const isTimeBudgetOk = () => Date.now() - functionStartTime < MAX_FUNCTION_TIME;
 
-    console.log('Starting FAST website scan:', formattedUrl);
+    console.log('[scan-website] Starting scan for user', user.id, 'url', formattedUrl);
 
-    // Create brand import record
     const { data: importRecord, error: importError } = await supabase
       .from('brand_imports')
       .insert({ user_id: user.id, website_url: formattedUrl, status: 'scanning' })
@@ -113,17 +115,16 @@ Deno.serve(async (req) => {
       .single();
 
     if (importError) {
+      console.error('[scan-website] brand_imports insert failed:', importError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to start import' }),
+        JSON.stringify({ success: false, error: 'Failed to start import', details: importError.message, code: importError.code, hint: importError.hint }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // ===== SPEED OPTIMIZATION: Run branding scrape + crawl IN PARALLEL =====
-    console.log('Launching branding scrape + crawl in parallel...');
+    console.log('[scan-website] Launching branding scrape + crawl in parallel...');
 
     const [brandingResult, crawlResult] = await Promise.all([
-      // Parallel task 1: Homepage branding scrape
       fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -133,8 +134,6 @@ Deno.serve(async (req) => {
           onlyMainContent: false,
         }),
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
-
-      // Parallel task 2: Start crawl (reduced: 5 pages, depth 1)
       fetch('https://api.firecrawl.dev/v1/crawl', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -147,25 +146,24 @@ Deno.serve(async (req) => {
       }).then(r => r.json()).catch(e => ({ success: false, error: e.message })),
     ]);
 
-    // Extract branding from homepage
     let homepageBranding: BrandingData | null = null;
     let homepageData: PageData | null = null;
     if (brandingResult.success) {
       const pageData = brandingResult.data?.data || brandingResult.data;
       homepageBranding = pageData?.branding || brandingResult.branding || null;
       homepageData = pageData || null;
-      console.log('Branding extracted:', homepageBranding ? 'Yes' : 'No');
+      console.log('[scan-website] Branding extracted:', homepageBranding ? 'Yes' : 'No');
+    } else {
+      console.error('[scan-website] Firecrawl scrape failed:', brandingResult.error);
     }
 
-    // Poll crawl with shorter timeout (25s) and faster interval (2s)
     let crawlPages: PageData[] = [];
     if (crawlResult.success && crawlResult.id) {
       const crawlId = crawlResult.id;
-      console.log('Crawl started, polling ID:', crawlId);
+      console.log('[scan-website] Crawl started, polling ID:', crawlId);
       const maxWaitTime = 25000;
       const pollInterval = 2000;
       const startTime = Date.now();
-
       while (Date.now() - startTime < maxWaitTime) {
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         try {
@@ -173,8 +171,7 @@ Deno.serve(async (req) => {
             headers: { 'Authorization': `Bearer ${apiKey}` },
           });
           const statusData: CrawlStatusResponse = await statusResponse.json();
-          console.log(`Crawl: ${statusData.status} (${statusData.completed}/${statusData.total})`);
-
+          console.log(`[scan-website] Crawl: ${statusData.status} (${statusData.completed}/${statusData.total})`);
           if (statusData.status === 'completed' && statusData.data) {
             crawlPages = statusData.data;
             break;
@@ -182,19 +179,19 @@ Deno.serve(async (req) => {
             break;
           }
         } catch (e) {
-          console.error('Poll error:', e);
+          console.error('[scan-website] Poll error:', e);
         }
       }
+    } else if (!crawlResult.success) {
+      console.error('[scan-website] Firecrawl crawl start failed:', crawlResult.error);
     }
 
-    // If crawl failed/timed out but we have homepage data, use that
     const allPages: PageData[] = crawlPages.length > 0
       ? crawlPages
       : (homepageData ? [homepageData] : []);
 
-    console.log(`Processing ${allPages.length} pages`);
+    console.log(`[scan-website] Processing ${allPages.length} pages`);
 
-    // Process assets
     const assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }> = [];
     const seenValues = new Set<string>();
 
@@ -218,10 +215,7 @@ Deno.serve(async (req) => {
     const copyAssets = assets.filter(a => a.asset_type === 'copy').slice(0, 50);
     const limitedAssets = [...colorAssets, ...fontAssets, ...imageAssets, ...copyAssets];
 
-    // ===== SPEED: Insert assets + generate AI summary IN PARALLEL =====
-    // Skip AI summary if running out of time
     const [, businessSummary] = await Promise.all([
-      // Insert assets in background
       (async () => {
         if (limitedAssets.length > 0) {
           const batchSize = 50;
@@ -231,13 +225,11 @@ Deno.serve(async (req) => {
           }
         }
       })(),
-      // Generate AI summary (skip if low on time)
       isTimeBudgetOk()
         ? generateBusinessSummary(allPages, formattedUrl)
         : Promise.resolve({ businessName: "Your Business", description: "Extracted from website scan." }),
     ]);
 
-    // Auto-populate client profile
     const logoUrl = homepageBranding?.logo || homepageBranding?.images?.logo || null;
     const brandColors: string[] = [];
     if (homepageBranding?.colors) {
@@ -265,7 +257,6 @@ Deno.serve(async (req) => {
     if (businessSummary.audienceData) profileUpsert.audience_data = businessSummary.audienceData;
     if (businessSummary.valueData) profileUpsert.value_data = businessSummary.valueData;
 
-    // Update profile + import status in parallel
     await Promise.all([
       supabase.from('client_profiles').upsert(profileUpsert, { onConflict: 'user_id' }),
       supabase.from('brand_imports').update({
@@ -280,7 +271,7 @@ Deno.serve(async (req) => {
       }).eq('id', importRecord.id),
     ]);
 
-    console.log(`Scan complete: ${limitedAssets.length} assets from ${allPages.length} pages`);
+    console.log(`[scan-website] Scan complete: ${limitedAssets.length} assets from ${allPages.length} pages`);
 
     return new Response(
       JSON.stringify({
@@ -301,15 +292,16 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    console.error('Error scanning website:', error);
+    const msg = error instanceof Error ? error.message : 'Failed to scan website';
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error('[scan-website] Top-level catch:', msg, stack);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Failed to scan website' }),
+      JSON.stringify({ success: false, error: msg, stack }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-// Helper: extract branding assets
 function extractBrandingAssets(
   branding: BrandingData, userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
@@ -358,7 +350,6 @@ function extractBrandingAssets(
   }
 }
 
-// Helper: extract image links
 function extractImageLinks(
   links: string[], userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
@@ -375,7 +366,6 @@ function extractImageLinks(
   }
 }
 
-// Helper: extract copy from markdown
 function extractCopyFromMarkdown(
   markdown: string, metadata: { title?: string; description?: string } | undefined,
   userId: string, importId: string,
@@ -400,7 +390,6 @@ function extractCopyFromMarkdown(
   }
 }
 
-// Helper: extract images from markdown
 function extractImagesFromMarkdown(
   markdown: string, userId: string, importId: string,
   assets: Array<{ user_id: string; brand_import_id: string; asset_type: string; name: string; value: string; metadata: Record<string, unknown> }>,
@@ -417,7 +406,6 @@ function extractImagesFromMarkdown(
   }
 }
 
-// Generate business summary using Anthropic Claude Haiku 4.5 (migrated off Lovable AI gateway).
 async function generateBusinessSummary(
   pages: PageData[], websiteUrl: string
 ): Promise<{
@@ -430,7 +418,7 @@ async function generateBusinessSummary(
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) {
-      console.error("ANTHROPIC_API_KEY not set in Supabase secrets — scan will return placeholder summary.");
+      console.error("[scan-website] ANTHROPIC_API_KEY not set in Supabase secrets — scan will return placeholder summary.");
       return { businessName: "Your Business", description: "" };
     }
 
@@ -524,21 +512,21 @@ VALUE DATA: corePromise, elevatorPitch, customerPainPoints, howWeSolveIt, benefi
 
     if (!response.ok) {
       const body = await response.text().catch(() => "<no body>");
-      console.error("Anthropic API error:", response.status, body);
+      console.error("[scan-website] Anthropic API error:", response.status, body);
       return { businessName: "Your Business", description: "" };
     }
 
     const data = await response.json();
     const toolUse = (data.content || []).find((b: any) => b.type === "tool_use");
     if (!toolUse?.input) {
-      console.error("No tool_use block in Anthropic response", JSON.stringify(data).slice(0, 500));
+      console.error("[scan-website] No tool_use block in Anthropic response", JSON.stringify(data).slice(0, 500));
       return { businessName: "Your Business", description: "" };
     }
 
-    console.log("Summary generated for:", toolUse.input.businessName);
+    console.log("[scan-website] Summary generated for:", toolUse.input.businessName);
     return toolUse.input;
   } catch (e) {
-    console.error("Summary error:", e);
+    console.error("[scan-website] Summary error:", e);
     return { businessName: "Your Business", description: "" };
   }
 }
