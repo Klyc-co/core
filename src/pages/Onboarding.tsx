@@ -10,21 +10,29 @@ import StepBusinessSummary from "@/components/onboarding/StepBusinessSummary";
 import StepBusinessType from "@/components/onboarding/StepBusinessType";
 import StepVisualStyle from "@/components/onboarding/StepVisualStyle";
 import StepFontStyle from "@/components/onboarding/StepFontStyle";
+import StepPricing from "@/components/onboarding/StepPricing";
+import StepPayment from "@/components/onboarding/StepPayment";
 import StepGenerateContent from "@/components/onboarding/StepGenerateContent";
+import StepPendingApprovals from "@/components/onboarding/StepPendingApprovals";
 
+// Visible user-facing steps (excludes step 0 account creation + step 2 auto-scanning)
+const TOTAL_STEPS = 9;
 
-const TOTAL_STEPS = 8;
+// Steps hidden from progress bar (automated / no user input)
+const HIDDEN_STEPS = new Set([0, 2]);
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [userName, setUserName] = useState({ firstName: "", lastName: "" });
   const [scanData, setScanData] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string>("starter");
+  const [generatedPosts, setGeneratedPosts] = useState<any[]>([]);
   const [preGeneratedStyles, setPreGeneratedStyles] = useState<Record<string, string> | null>(null);
   const [preGeneratedFontImage, setPreGeneratedFontImage] = useState<string | null>(null);
   const [selectedVisualStyles, setSelectedVisualStyles] = useState<string[]>([]);
   const [selectedFontStyle, setSelectedFontStyle] = useState<string>("clean-modern-sans");
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { setTheme } = useTheme();
@@ -33,7 +41,7 @@ const Onboarding = () => {
     setTheme("light");
   }, [setTheme]);
 
-  // Check if user is already authenticated - if so skip step 0
+  // If already authenticated (coming from Auth page), skip account creation step
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -58,7 +66,7 @@ const Onboarding = () => {
     setScanData(data);
     setStep(3);
 
-    // Pre-generate visual style images in background so they're ready by Step 6
+    // Pre-generate visual style images in background so they're ready by Step 5
     const biz = data?.businessSummary || {};
     const fallback = typeof data?.summary === "object" && data?.summary?.businessName ? data.summary : {};
     const merged = { ...fallback, ...biz };
@@ -69,7 +77,6 @@ const Onboarding = () => {
     if (merged.valueProposition) parts.push(`Value: ${merged.valueProposition}`);
     const businessContext = parts.length > 0 ? parts.join(" ") : "modern professional business";
 
-    // Pre-generate visual style images
     supabase.functions.invoke("generate-style-previews", {
       body: { businessContext },
     }).then(({ data: styleData }) => {
@@ -82,7 +89,6 @@ const Onboarding = () => {
       }
     }).catch((err) => console.error("Background style generation failed:", err));
 
-    // Pre-generate font preview background image
     const fontImagePrompt = [
       `A professional, high-quality marketing hero photograph for a ${merged.industry || "business"} company called "${merged.businessName || "a brand"}".`,
       merged.description ? `The business: ${merged.description.slice(0, 200)}.` : "",
@@ -98,45 +104,68 @@ const Onboarding = () => {
     }).catch((err) => console.error("Background font image generation failed:", err));
   }, []);
 
-  const handleScanError = useCallback((error: string) => {
-    // Still proceed with fallback data
+  const handleScanError = useCallback(() => {
     setScanData({ success: true, summary: {}, assetsCount: 0 });
     setStep(3);
   }, []);
 
+  const handleGenerateComplete = useCallback((posts: any[]) => {
+    setGeneratedPosts(posts || []);
+    setStep(10);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Progress bar - hide on step 0 (account creation) and step 2 (scanning) */}
-      {step !== 0 && step !== 2 && (
+      {/* Progress bar — hidden on account creation (0), scanning (2), pending approvals (10) */}
+      {!HIDDEN_STEPS.has(step) && step !== 10 && (
         <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border py-4">
           <OnboardingProgress currentStep={step} totalSteps={TOTAL_STEPS} />
         </div>
       )}
 
       <div className="pb-16">
-        {step === 0 && <StepCreateAccount onNext={handleAccountCreated} />}
-        {step === 1 && <StepPasteWebsite onNext={handleWebsiteSubmit} />}
-        {step === 2 && (
+        {step === 0  && <StepCreateAccount onNext={handleAccountCreated} />}
+        {step === 1  && <StepPasteWebsite onNext={handleWebsiteSubmit} />}
+        {step === 2  && (
           <StepScanning
             websiteUrl={websiteUrl}
             onComplete={handleScanComplete}
             onError={handleScanError}
           />
         )}
-        {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
-        {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
-        {step === 5 && <StepVisualStyle scanData={scanData} preGeneratedImages={preGeneratedStyles} onNext={(styles) => { setSelectedVisualStyles(styles); setStep(6); }} />}
-        {step === 6 && <StepFontStyle scanData={scanData} preGeneratedImage={preGeneratedFontImage} onNext={(fonts) => { if (fonts?.[0]) setSelectedFontStyle(fonts[0]); setStep(7); }} />}
-        {step === 7 && (
+        {step === 3  && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
+        {step === 4  && <StepBusinessType onNext={() => setStep(5)} />}
+        {step === 5  && (
+          <StepVisualStyle
+            scanData={scanData}
+            preGeneratedImages={preGeneratedStyles}
+            onNext={(styles) => { setSelectedVisualStyles(styles); setStep(6); }}
+          />
+        )}
+        {step === 6  && (
+          <StepFontStyle
+            scanData={scanData}
+            preGeneratedImage={preGeneratedFontImage}
+            onNext={(fonts) => { if (fonts?.[0]) setSelectedFontStyle(fonts[0]); setStep(7); }}
+          />
+        )}
+        {step === 7  && (
+          <StepPricing
+            onNext={(plan) => { setSelectedPlan(plan); setStep(8); }}
+          />
+        )}
+        {step === 8  && <StepPayment onNext={() => setStep(9)} />}
+        {step === 9  && (
           <StepGenerateContent
             scanData={scanData}
             websiteUrl={websiteUrl}
             userName={userName}
             visualStyles={selectedVisualStyles}
             fontStyle={selectedFontStyle}
-            onNext={() => navigate("/home")}
+            onNext={(posts?: any[]) => handleGenerateComplete(posts || [])}
           />
         )}
+        {step === 10 && <StepPendingApprovals posts={generatedPosts} />}
       </div>
     </div>
   );
