@@ -77,22 +77,12 @@ const StepScanning = ({ websiteUrl, onComplete, onError }: StepScanningProps) =>
         setCurrentMessageIdx(statusMessages.length - 1);
         setTimeout(() => onComplete(data), 1200);
       } catch (err: any) {
-        // Even on error, let user continue with mock data
-        setProgress(100);
-        setTimeout(() => {
-          onComplete({
-            success: true,
-            summary: {
-              businessName: "Your Business",
-              description: "We detected your business from the website. Review the summary on the next page.",
-              audience: "General audience",
-              valueProposition: "Quality products and services",
-              positioning: "Market leader",
-              voice: "Professional and approachable",
-            },
-            assetsCount: 0,
-          });
-        }, 1200);
+        // Surface the failure to the parent — do NOT fake a success with mock data.
+        // Onboarding.handleScanError will set scanData to an empty summary and forward to step 3,
+        // where the user can fill in their profile manually instead of being shown invented values.
+        console.error("Website scan failed:", err);
+        setProgress(0);
+        onError(err?.message || "We couldn't scan your website. You can fill in your profile manually on the next page or try a different URL.");
       }
     };
 

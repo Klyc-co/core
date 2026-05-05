@@ -417,18 +417,22 @@ function extractImagesFromMarkdown(
   }
 }
 
-// Generate business summary using FAST AI model
+// Generate business summary using Anthropic Claude Haiku 4.5 (migrated off Lovable AI gateway).
 async function generateBusinessSummary(
   pages: PageData[], websiteUrl: string
 ): Promise<{
   businessName: string; description: string; industry?: string; targetAudience?: string;
-  valueProposition?: string; productCategory?: string; geographyMarkets?: string;
+  valueProposition?: string; positioning?: string; voice?: string;
+  productCategory?: string; geographyMarkets?: string;
   marketingGoals?: string; mainCompetitors?: string;
   audienceData?: Record<string, any>; valueData?: Record<string, any>;
 }> {
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return { businessName: "Your Business", description: "" };
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      console.error("ANTHROPIC_API_KEY not set in Supabase secrets — scan will return placeholder summary.");
+      return { businessName: "Your Business", description: "" };
+    }
 
     let combinedContent = "";
     for (const page of pages.slice(0, 5)) {
@@ -439,63 +443,100 @@ async function generateBusinessSummary(
       if (combinedContent.length > 8000) break;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible. Be specific.
+    const systemPrompt = `You are a business analyst. Given website content, extract a comprehensive business profile. Return the company name, a detailed description (7-10 sentences), and fill in as many profile fields as possible. Be specific.
 
 For industry, use standard categories like "Technology", "Healthcare", "E-commerce", etc.
 For targetAudience, describe who their customers are.
 For valueProposition, describe what makes them unique.
+For positioning, describe how they position themselves vs competitors (e.g., "premium boutique alternative", "developer-first platform", "budget-friendly mass-market").
+For voice, describe the tone and style of their brand voice (e.g., "playful and irreverent", "authoritative and clinical", "warm and conversational").
 
 AUDIENCE DATA: audienceType (B2C/B2B/B2B2C), mainAudienceSummary, secondaryAudiences, ageRange [number], incomeLevel, geographicFocus, coreValuesInterests, lifestyleSummary, purchaseFrequency, preferredChannels, commonObjections.
 
-VALUE DATA: corePromise, elevatorPitch, customerPainPoints, howWeSolveIt, benefitFocus, uniqueValueDrivers, proofPoints.`,
-          },
+VALUE DATA: corePromise, elevatorPitch, customerPainPoints, howWeSolveIt, benefitFocus, uniqueValueDrivers, proofPoints.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [
           { role: "user", content: `Website: ${websiteUrl}\n\n${combinedContent}` },
         ],
         tools: [{
-          type: "function",
-          function: {
-            name: "create_business_summary",
-            description: "Create business profile from website content",
-            parameters: {
-              type: "object",
-              properties: {
-                businessName: { type: "string" },
-                description: { type: "string" },
-                industry: { type: "string" },
-                targetAudience: { type: "string" },
-                valueProposition: { type: "string" },
-                productCategory: { type: "string" },
-                geographyMarkets: { type: "string" },
-                marketingGoals: { type: "string" },
-                mainCompetitors: { type: "string" },
-                audienceData: { type: "object", properties: { audienceType: { type: "string" }, mainAudienceSummary: { type: "string" }, secondaryAudiences: { type: "string" }, ageRange: { type: "array", items: { type: "number" } }, incomeLevel: { type: "string" }, geographicFocus: { type: "string" }, coreValuesInterests: { type: "string" }, lifestyleSummary: { type: "string" }, purchaseFrequency: { type: "string" }, preferredChannels: { type: "string" }, commonObjections: { type: "string" } } },
-                valueData: { type: "object", properties: { corePromise: { type: "string" }, elevatorPitch: { type: "string" }, customerPainPoints: { type: "string" }, howWeSolveIt: { type: "string" }, benefitFocus: { type: "string" }, uniqueValueDrivers: { type: "string" }, proofPoints: { type: "string" } } },
+          name: "create_business_summary",
+          description: "Create business profile from website content",
+          input_schema: {
+            type: "object",
+            properties: {
+              businessName: { type: "string" },
+              description: { type: "string" },
+              industry: { type: "string" },
+              targetAudience: { type: "string" },
+              valueProposition: { type: "string" },
+              positioning: { type: "string" },
+              voice: { type: "string" },
+              productCategory: { type: "string" },
+              geographyMarkets: { type: "string" },
+              marketingGoals: { type: "string" },
+              mainCompetitors: { type: "string" },
+              audienceData: {
+                type: "object",
+                properties: {
+                  audienceType: { type: "string" },
+                  mainAudienceSummary: { type: "string" },
+                  secondaryAudiences: { type: "string" },
+                  ageRange: { type: "array", items: { type: "number" } },
+                  incomeLevel: { type: "string" },
+                  geographicFocus: { type: "string" },
+                  coreValuesInterests: { type: "string" },
+                  lifestyleSummary: { type: "string" },
+                  purchaseFrequency: { type: "string" },
+                  preferredChannels: { type: "string" },
+                  commonObjections: { type: "string" },
+                },
               },
-              required: ["businessName", "description"],
+              valueData: {
+                type: "object",
+                properties: {
+                  corePromise: { type: "string" },
+                  elevatorPitch: { type: "string" },
+                  customerPainPoints: { type: "string" },
+                  howWeSolveIt: { type: "string" },
+                  benefitFocus: { type: "string" },
+                  uniqueValueDrivers: { type: "string" },
+                  proofPoints: { type: "string" },
+                },
+              },
             },
+            required: ["businessName", "description"],
           },
         }],
-        tool_choice: { type: "function", function: { name: "create_business_summary" } },
+        tool_choice: { type: "tool", name: "create_business_summary" },
       }),
     });
 
-    if (!response.ok) return { businessName: "Your Business", description: "" };
+    if (!response.ok) {
+      const body = await response.text().catch(() => "<no body>");
+      console.error("Anthropic API error:", response.status, body);
+      return { businessName: "Your Business", description: "" };
+    }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) return { businessName: "Your Business", description: "" };
+    const toolUse = (data.content || []).find((b: any) => b.type === "tool_use");
+    if (!toolUse?.input) {
+      console.error("No tool_use block in Anthropic response", JSON.stringify(data).slice(0, 500));
+      return { businessName: "Your Business", description: "" };
+    }
 
-    const result = JSON.parse(toolCall.function.arguments);
-    console.log("Summary generated for:", result.businessName);
-    return result;
+    console.log("Summary generated for:", toolUse.input.businessName);
+    return toolUse.input;
   } catch (e) {
     console.error("Summary error:", e);
     return { businessName: "Your Business", description: "" };
