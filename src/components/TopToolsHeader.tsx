@@ -8,6 +8,7 @@ import {
 const toolItems = [
   { label: "Home", path: "/home", icon: Home },
   { label: "Posts", path: "/campaigns", icon: Megaphone },
+  { label: "New Post", path: "/campaigns/new", icon: Rocket },
   { label: "Creative", path: "/creative-studio", icon: Palette },
   { label: "Analytics", path: "/analytics", icon: BarChart3 },
   { label: "Strategy", path: "/strategy", icon: Zap },
