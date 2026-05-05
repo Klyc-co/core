@@ -10,10 +10,10 @@ import { Mail, Lock, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("tab") !== "signup";
-  });
+  const params = new URLSearchParams(window.location.search);
+  const allowSignup = params.get("tab") === "signup";
+
+  const [isLogin, setIsLogin] = useState(!allowSignup);
   const [loginType, setLoginType] = useState<"marketer" | "client">("marketer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,7 +124,7 @@ const Auth = () => {
             </p>
           </div>
 
-          {/* Login type toggle */}
+          {/* Login type toggle — only shown on login */}
           {isLogin && (
             <div className="flex rounded-xl bg-secondary p-1 mb-6">
               <button
@@ -219,10 +219,10 @@ const Auth = () => {
                   Don't have an account?{" "}
                   <button
                     type="button"
-                    onClick={() => setIsLogin(false)}
+                    onClick={() => navigate("/waitlist")}
                     className="text-primary font-medium hover:underline"
                   >
-                    Create one
+                    Join the waitlist
                   </button>
                 </>
               ) : (
