@@ -116,6 +116,7 @@ const NewCampaign = () => {
   const [postCaption, setPostCaption] = useState("");
   const [captionDraft, setCaptionDraft] = useState("");
   const [isEditingCaption, setIsEditingCaption] = useState(true);
+  const [youtubeTitle, setYoutubeTitle] = useState("");
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Array<{ id: string; name: string; url: string }>>([]);
@@ -513,15 +514,16 @@ const NewCampaign = () => {
   };
 
   const validateBasics = (requireSchedule: boolean) => {
-    if (!campaignName.trim()) {
-      toast({ title: "Post name required", description: "Please enter a post name", variant: "destructive" });
-      return false;
-    }
+    // Post name is now optional — a fallback name is generated if empty.
     if (selectedPlatforms.length === 0) {
       toast({ title: "Select platforms", description: "Please select at least one platform to post to", variant: "destructive" });
       return false;
     }
-    const MOCK_PLATFORMS = ["youtube", "pinterest"];
+    if (selectedPlatforms.includes("youtube") && !youtubeTitle.trim()) {
+      toast({ title: "YouTube video title required", description: "Add a title for your YouTube video before posting.", variant: "destructive" });
+      return false;
+    }
+    const MOCK_PLATFORMS = ["pinterest"];
     const unconnected = selectedPlatforms.filter(p => !platformConnections[p] && !MOCK_PLATFORMS.includes(p));
     if (unconnected.length > 0) {
       toast({ title: "Platforms not connected", description: `Please connect ${unconnected.join(", ")} first using the Connect button above.`, variant: "destructive" });
@@ -636,6 +638,7 @@ const NewCampaign = () => {
             content: contentToPost,
             imageUrl: imageAssets[0]?.url || null,
             videoUrl: videoAsset?.url || null,
+            ...(platformId === "youtube" && youtubeTitle.trim() ? { title: youtubeTitle.trim() } : {}),
           },
         });
         if (fnError) {
@@ -755,6 +758,21 @@ const NewCampaign = () => {
               </div>
             )}
           </div>
+
+          {/* YouTube Video Title (only when YouTube is selected) */}
+          {selectedPlatforms.includes("youtube") && (
+            <div className="space-y-2">
+              <Label htmlFor="youtubeTitle">YouTube Video Title</Label>
+              <Input
+                id="youtubeTitle"
+                placeholder="Title shown on YouTube (max 100 characters)"
+                value={youtubeTitle}
+                onChange={(e) => setYoutubeTitle(e.target.value.slice(0, 100))}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">Required for YouTube. Other platforms ignore this field.</p>
+            </div>
+          )}
 
           {/* Post Caption */}
           <div className="space-y-2">
