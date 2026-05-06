@@ -198,9 +198,13 @@ const NewCampaign = () => {
     if (oauthConfig) {
       setConnectingPlatform(platformId);
       try {
+        // Always route social-platform OAuth flows back to the Import Brand Sources page
+        // so users can immediately connect more platforms in sequence instead of bouncing
+        // back to wherever they clicked Connect from (e.g., a half-built campaign).
+        const SOCIAL_RETURN_PATH = "/profile/import";
         const body = platformId === "linkedin"
-          ? { redirect_uri: window.location.origin + window.location.pathname }
-          : { returnTo: `${window.location.pathname}${window.location.search}`, originUrl: window.location.origin };
+          ? { redirect_uri: window.location.origin + SOCIAL_RETURN_PATH }
+          : { returnTo: SOCIAL_RETURN_PATH, originUrl: window.location.origin };
         const { data, error } = await supabase.functions.invoke(oauthConfig.functionName, { body });
         if (error) throw error;
         const authUrl = data?.[oauthConfig.urlKey];
