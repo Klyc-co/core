@@ -1,30 +1,40 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, hasAdminRole } from "@/hooks/useAdminAuth";
+import type { AdminRole } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import {
   Shield, LogOut, LayoutDashboard, Users, CreditCard,
-  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map, Megaphone, FlaskConical, PieChart,
+  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle,
+  Zap, ThumbsUp, Map, Megaphone, FlaskConical, PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
-  { label: "Overview", path: "/klyc_admin/overview", icon: LayoutDashboard },
-  { label: "Clients", path: "/klyc_admin/clients", icon: Users },
-  { label: "Revenue", path: "/klyc_admin/revenue", icon: CreditCard },
-  { label: "Infrastructure", path: "/klyc_admin/infrastructure", icon: Activity },
-  { label: "Compression", path: "/klyc_admin/compression", icon: Layers },
-  { label: "Subminds", path: "/klyc_admin/subminds", icon: Brain },
-  { label: "Channels", path: "/klyc_admin/channels", icon: Radio },
-  { label: "Dispatch Log", path: "/klyc_admin/dispatch", icon: Zap },
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ElementType;
+  /** Minimum role required to see this nav item. Omit = visible to all admins. */
+  minRole?: AdminRole;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Overview",      path: "/klyc_admin/overview",     icon: LayoutDashboard },
+  { label: "Clients",       path: "/klyc_admin/clients",      icon: Users },
+  { label: "Revenue",       path: "/klyc_admin/revenue",      icon: CreditCard },
+  { label: "Infrastructure",path: "/klyc_admin/infrastructure",icon: Activity },
+  { label: "Compression",   path: "/klyc_admin/compression",  icon: Layers,      minRole: "lead" },
+  { label: "Subminds",      path: "/klyc_admin/subminds",     icon: Brain },
+  { label: "Channels",      path: "/klyc_admin/channels",     icon: Radio },
+  { label: "Dispatch Log",  path: "/klyc_admin/dispatch",     icon: Zap },
   { label: "Collaboration", path: "/klyc_admin/collaboration", icon: MessageCircle },
-  { label: "Client Voting", path: "/klyc_admin/voting", icon: ThumbsUp },
-  { label: "Roadmap", path: "/klyc_admin/roadmap", icon: Map },
-  { label: "Marketing", path: "/klyc_admin/marketing", icon: Megaphone },
-  { label: "Financials", path: "/klyc_admin/financials", icon: CreditCard },
-  { label: "AI Performance", path: "/klyc_admin/ai-testing", icon: FlaskConical },
-  { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
-  { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
-  { label: "Cap Table", path: "/klyc_admin/cap-table", icon: PieChart },
+  { label: "Client Voting", path: "/klyc_admin/voting",       icon: ThumbsUp },
+  { label: "Roadmap",       path: "/klyc_admin/roadmap",      icon: Map },
+  { label: "Marketing",     path: "/klyc_admin/marketing",    icon: Megaphone },
+  { label: "Financials",    path: "/klyc_admin/financials",   icon: CreditCard,  minRole: "lead" },
+  { label: "AI Performance",path: "/klyc_admin/ai-testing",   icon: FlaskConical },
+  { label: "KLYC Internal", path: "/klyc_admin/klyc-internal",icon: Building2 },
+  { label: "Audit Log",     path: "/klyc_admin/audit",        icon: Clock },
+  { label: "Cap Table",     path: "/klyc_admin/cap-table",    icon: PieChart,    minRole: "lead" },
 ];
 
 interface Props {
@@ -41,6 +51,10 @@ export default function KlycAdminLayout({ children }: Props) {
     navigate("/klyc_admin");
   };
 
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => !item.minRole || hasAdminRole(adminUser?.role, item.minRole)
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white flex">
       {/* Sidebar */}
@@ -50,7 +64,7 @@ export default function KlycAdminLayout({ children }: Props) {
           <span className="font-bold text-sm">Klyc Admin</span>
         </div>
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
+          {visibleNav.map((item) => {
             const active = location.pathname === item.path;
             return (
               <button
@@ -71,7 +85,15 @@ export default function KlycAdminLayout({ children }: Props) {
         </nav>
         <div className="p-3 border-t border-slate-800 space-y-2">
           <div className="text-xs text-slate-500 truncate">{adminUser?.email}</div>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-slate-400 hover:text-white" onClick={handleSignOut}>
+          {adminUser?.role && adminUser.role !== "owner" && (
+            <div className="text-xs text-indigo-400 capitalize">{adminUser.role}</div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-slate-400 hover:text-white"
+            onClick={handleSignOut}
+          >
             <LogOut className="w-3.5 h-3.5 mr-2" /> Sign Out
           </Button>
         </div>

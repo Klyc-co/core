@@ -8,10 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+// Keep in sync with ADMIN_ROLES in useAdminAuth.ts
 const ADMIN_ALLOWLIST = [
-  "ethanw@cipherstream.com",
   "kitchens@klyc.ai",
   "kristopher.kitchens@gmail.com",
+  "ethanw@cipherstream.com",  // Ethan W
+  "rohil@klyc.ai",            // Rohil
+  "rohilsri@gmail.com",       // Rohil (personal)
+  // TODO: add Ethan K email once confirmed
 ];
 
 export default function KlycAdminLogin() {
@@ -57,14 +61,31 @@ export default function KlycAdminLogin() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@klyc.ai" required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@klyc.ai"
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Shield className="w-4 h-4 mr-2" />
+              )}
               Sign In
             </Button>
           </form>

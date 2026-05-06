@@ -1,21 +1,46 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const ADMIN_ALLOWLIST = [
-  "ethanw@cipherstream.com",
-  "kitchens@klyc.ai",
-  "kristopher.kitchens@gmail.com",
-];
+// Role hierarchy: owner > lead > team
+export type AdminRole = "owner" | "lead" | "team";
+
+const ROLE_RANK: Record<AdminRole, number> = { owner: 2, lead: 1, team: 0 };
+
+export function hasAdminRole(
+  userRole: AdminRole | undefined,
+  required: AdminRole
+): boolean {
+  if (!userRole) return false;
+  return ROLE_RANK[userRole] >= ROLE_RANK[required];
+}
+
+// Email → role map. Add new team members here.
+const ADMIN_ROLES: Record<string, AdminRole> = {
+  "kitchens@klyc.ai": "owner",
+  "kristopher.kitchens@gmail.com": "owner",
+  "ethanw@cipherstream.com": "lead",   // Ethan W — platform/UI
+  "rohil@klyc.ai": "team",            // Rohil — image quality
+  "rohilsri@gmail.com": "team",       // Rohil (personal)
+  // TODO: add Ethan K email with role "team" once confirmed
+};
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
-type AdminUser = { id: string; email: string; display_name: string | null };
+export type AdminUser = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role: AdminRole;
+};
 
-function resolveAdmin(session: { user?: { id: string; email?: string | null } } | null): AdminUser | null {
+function resolveAdmin(
+  session: { user?: { id: string; email?: string | null } } | null
+): AdminUser | null {
   if (!session?.user?.email) return null;
   const email = session.user.email.toLowerCase().trim();
-  if (!ADMIN_ALLOWLIST.includes(email)) return null;
-  return { id: session.user.id, email, display_name: null };
+  const role = ADMIN_ROLES[email];
+  if (!role) return null;
+  return { id: session.user.id, email, display_name: null, role };
 }
 
 export function useAdminAuth() {
@@ -48,9 +73,6 @@ export function useAdminAuth() {
   useEffect(() => {
     let cancelled = false;
 
-    // Initial check — getSession() reads localStorage (no network round-trip normally).
-    // Wrap in a 5s timeout: if Supabase is slow to refresh the token, we fall through
-    // to isAdmin=false rather than spinning forever on a null guard.
     const initCheck = async () => {
       try {
         const result = await Promise.race([
@@ -60,12 +82,13 @@ export function useAdminAuth() {
           ),
         ]);
         if (cancelled) return;
-        const session = (result as Awaited<ReturnType<typeof supabase.auth.getSession>>).data.session;
+        const session = (
+          result as Awaited<ReturnType<typeof supabase.auth.getSession>>
+        ).data.session;
         const user = resolveAdmin(session);
         setIsAdmin(!!user);
         setAdminUser(user);
       } catch {
-        // Timeout or error — don't leave the guard spinning
         if (!cancelled) {
           setIsAdmin(false);
           setAdminUser(null);
@@ -75,9 +98,9 @@ export function useAdminAuth() {
 
     initCheck();
 
-    // onAuthStateChange passes the session directly — no second getSession() call.
-    // This eliminates the race between the initial check and the auth state event.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       const user = resolveAdmin(session);
       setIsAdmin(!!user);
@@ -91,7 +114,12 @@ export function useAdminAuth() {
   }, []);
 
   const logAction = useCallback(
-    async (action: string, targetType?: string, targetId?: string, details?: Record<string, unknown>) => {
+    async (
+      action: string,
+      targetType?: string,
+      targetId?: string,
+      details?: Record<string, unknown>
+    ) => {
       if (!adminUser) return;
       await supabase.from("admin_audit_log").insert([{
         admin_id: adminUser.id,

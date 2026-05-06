@@ -151,7 +151,7 @@ const App = () => (
             <Route path="/klyc_admin/clients/:id" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminClientDetail /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/revenue" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminRevenue /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/infrastructure" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminInfrastructure /></KlycAdminLayout></KlycAdminGuard>} />
-            <Route path="/klyc_admin/compression" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCompression /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/compression" element={<KlycAdminGuard minRole="lead"><KlycAdminLayout><KlycAdminCompression /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/subminds" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminSubminds /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/klyc-internal" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminInternal /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/collaboration" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCollaboration /></KlycAdminLayout></KlycAdminGuard>} />
@@ -160,11 +160,11 @@ const App = () => (
             <Route path="/klyc_admin/voting" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminVoting /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/roadmap" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminRoadmap /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/marketing" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminMarketing /></KlycAdminLayout></KlycAdminGuard>} />
-            <Route path="/klyc_admin/financials" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminFinancials /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/financials" element={<KlycAdminGuard minRole="lead"><KlycAdminLayout><KlycAdminFinancials /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/ai-testing" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminAiTesting /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/channels" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminChannels /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/audit" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminAudit /></KlycAdminLayout></KlycAdminGuard>} />
-            <Route path="/klyc_admin/cap-table" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminCapTable /></KlycAdminLayout></KlycAdminGuard>} />
+            <Route path="/klyc_admin/cap-table" element={<KlycAdminGuard minRole="lead"><KlycAdminLayout><KlycAdminCapTable /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/klyc_admin/*" element={<KlycAdminGuard><KlycAdminLayout><KlycAdminOverview /></KlycAdminLayout></KlycAdminGuard>} />
             <Route path="/team" element={<Team />} />
             <Route path="/client/auth" element={<ClientAuth />} />
