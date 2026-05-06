@@ -6,6 +6,9 @@ interface StepScanningProps {
   onError: (error: string) => void;
 }
 
+const SCANNING_VIDEO_URL =
+  "https://wkqiielsazzbxziqmgdb.supabase.co/storage/v1/object/public/brand-assets/system/scanning-klyc.mp4";
+
 const statusMessages = [
   "Reading website structure...",
   "Extracting company information...",
@@ -93,15 +96,24 @@ const StepScanning = ({ websiteUrl, onComplete, onError }: StepScanningProps) =>
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-lg text-center animate-fade-in">
         <div className="mb-10">
-          {/* Animated scanning icon */}
-          <div className="w-20 h-20 mx-auto mb-8 relative">
+          {/* Animated scanning icon — Klyc typing video on loop */}
+          <div className="w-28 h-28 mx-auto mb-8 relative">
             <div className="absolute inset-0 rounded-full animate-ping opacity-20"
               style={{ background: "linear-gradient(135deg, hsl(185 75% 45%), hsl(250 60% 60%))" }} />
             <div className="absolute inset-2 rounded-full animate-pulse opacity-30"
               style={{ background: "linear-gradient(135deg, hsl(185 75% 45%), hsl(250 60% 60%))" }} />
-            <div className="absolute inset-0 rounded-full flex items-center justify-center"
+            <div className="absolute inset-0 rounded-full overflow-hidden"
               style={{ background: "linear-gradient(135deg, hsl(185 75% 45%), hsl(250 60% 60%))" }}>
-              <span className="text-white text-2xl font-bold">K</span>
+              <video
+                src={SCANNING_VIDEO_URL}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                aria-hidden="true"
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
 
