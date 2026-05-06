@@ -139,6 +139,10 @@ const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
 
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
 const SCAN_WEBSITE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-website`;
+const CAMPAIGN_BRIEF_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-brief-ai`;
+const AUDIENCE_INTEL_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/audience-intel-ai`;
+const COMPETITOR_WATCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/competitor-watch-ai`;
+const CALENDAR_FILL_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-fill-ai`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
 function extractPostsFromPipeline(pipeline: any): any[] | null {
@@ -234,7 +238,10 @@ const SidebarChat = () => {
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
   const [profileScanTriggered, setProfileScanTriggered] = useState(false);
-  // Background task indicator — shows pulsing bar while scan runs detached
+  const [campaignBriefSensorFired, setCampaignBriefSensorFired] = useState(false);
+  const [audienceIntelSensorFired, setAudienceIntelSensorFired] = useState(false);
+  const [calendarFillSensorFired, setCalendarFillSensorFired] = useState(false);
+  // Background task indicator — shows pulsing bar while any model runs detached
   const [backgroundTask, setBackgroundTask] = useState<{ label: string; done: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -293,6 +300,99 @@ const SidebarChat = () => {
     };
     checkAndOfferProfileAssist();
   }, [location.pathname, profileScanTriggered]);
+
+  // ── Proactive campaign brief sensor: fires on dashboard/campaigns when no recent campaign ──
+  useEffect(() => {
+    const checkAndOfferCampaignBrief = async () => {
+      if (!["dashboard", "/campaigns"].includes(location.pathname)) return;
+      if (campaignBriefSensorFired) return;
+      setCampaignBriefSensorFired(true);
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        const session = await supabase.auth.getSession();
+        const userId = session.data.session?.user?.id;
+        if (!userId) return;
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: recentCampaigns } = await supabase
+          .from("campaign_drafts")
+          .select("id")
+          .eq("user_id", userId)
+          .gte("created_at", sevenDaysAgo)
+          .limit(1);
+        if (recentCampaigns && recentCampaigns.length > 0) return;
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "💡 No campaigns in the last 7 days — want me to build you a campaign brief? I'll analyze your profile and post history and put together a full strategy. Just say \"build me a brief\" or \"campaign brief\".",
+          },
+        ]);
+      } catch { /* non-blocking */ }
+    };
+    checkAndOfferCampaignBrief();
+  }, [location.pathname, campaignBriefSensorFired]);
+
+  // ── Proactive audience intel sensor: fires on profile page when audience_data is empty ──
+  useEffect(() => {
+    const checkAndOfferAudienceIntel = async () => {
+      if (location.pathname !== "/profile/company") return;
+      if (audienceIntelSensorFired) return;
+      setAudienceIntelSensorFired(true);
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const session = await supabase.auth.getSession();
+        const userId = session.data.session?.user?.id;
+        if (!userId) return;
+        const { data: profile } = await supabase
+          .from("client_profiles")
+          .select("audience_data, target_audience")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const noAudienceData = !profile?.audience_data && !profile?.target_audience;
+        if (!noAudienceData) return;
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "🎯 No audience data yet — want me to analyze your content and build your audience profile? Say \"analyze my audience\" and I'll dig through your posts.",
+          },
+        ]);
+      } catch { /* non-blocking */ }
+    };
+    checkAndOfferAudienceIntel();
+  }, [location.pathname, audienceIntelSensorFired]);
+
+  // ── Proactive calendar fill sensor: fires on campaigns page when no posts scheduled this week ──
+  useEffect(() => {
+    const checkAndOfferCalendarFill = async () => {
+      if (location.pathname !== "/campaigns") return;
+      if (calendarFillSensorFired) return;
+      setCalendarFillSensorFired(true);
+      await new Promise((r) => setTimeout(r, 4000));
+      try {
+        const session = await supabase.auth.getSession();
+        const userId = session.data.session?.user?.id;
+        if (!userId) return;
+        const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: scheduledPosts } = await supabase
+          .from("scheduled_posts")
+          .select("id")
+          .eq("user_id", userId)
+          .lte("scheduled_at", weekEnd)
+          .gte("scheduled_at", new Date().toISOString())
+          .limit(1);
+        if (scheduledPosts && scheduledPosts.length > 0) return;
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "📅 Nothing scheduled for the next 7 days — want me to fill your content calendar? Say \"fill my calendar\" and I'll build a full week of posts based on your brand.",
+          },
+        ]);
+      } catch { /* non-blocking */ }
+    };
+    checkAndOfferCalendarFill();
+  }, [location.pathname, calendarFillSensorFired]);
 
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
@@ -392,11 +492,18 @@ const SidebarChat = () => {
     return { text: finalText, usage: data.usage, nav_target: data.nav_target as string | undefined, next_questions: finalNQ, _knp_fired: data._knp_fired as boolean | undefined, pipeline: data.pipeline, draft_updates: data.draft_updates };
   };
 
-  // ── Background scan — fully detached, narration + toast + indicator all live here ──
+  // ── Auth helper ─────────────────────────────────────────────────────────────
+  const getAuthToken = async (): Promise<string> => {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) throw new Error("Not authenticated");
+    return token;
+  };
+
+  // ── Model 1: Profile scan — fully detached ──────────────────────────────────
   const runProfileScanInBackground = useCallback(async (scanUrl: string) => {
     setBackgroundTask({ label: `Scanning ${scanUrl}…`, done: false });
 
-    // Step-by-step narration fires independently of await chain
     const narrationTimers: ReturnType<typeof setTimeout>[] = [];
     narrationTimers.push(setTimeout(() => {
       setMessages(prev => [...prev, { role: "assistant", content: "🕷️ Crawling your site — pulling every page I can find…" }]);
@@ -411,15 +518,12 @@ const SidebarChat = () => {
     const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
 
     try {
-      const scanSession = await supabase.auth.getSession();
-      const scanToken = scanSession.data.session?.access_token;
-      if (!scanToken) throw new Error("Not authenticated for scan");
-
+      const token = await getAuthToken();
       const scanResp = await fetch(SCAN_WEBSITE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${scanToken}`,
+          Authorization: `Bearer ${token}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({ url: scanUrl }),
@@ -433,7 +537,6 @@ const SidebarChat = () => {
         const pagesCount = scanData.pagesScanned || 1;
 
         window.dispatchEvent(new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary }));
-
         setBackgroundTask({ label: "Profile filled in!", done: true });
         setTimeout(() => setBackgroundTask(null), 4000);
 
@@ -459,6 +562,220 @@ const SidebarChat = () => {
       clearNarration();
       setBackgroundTask(null);
       setMessages(prev => [...prev, { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." }]);
+    }
+  }, [toast]);
+
+  // ── Model 2: Campaign Brief — fully detached ────────────────────────────────
+  const runCampaignBriefInBackground = useCallback(async () => {
+    setBackgroundTask({ label: "Building campaign brief…", done: false });
+
+    const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "📊 Pulling your profile and post history…" }]);
+    }, 2000));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "🧠 Analyzing your brand positioning and content patterns…" }]);
+    }, 9000));
+
+    const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
+
+    try {
+      const token = await getAuthToken();
+      const resp = await fetch(CAMPAIGN_BRIEF_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      });
+
+      clearNarration();
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const brief = data.brief;
+        setBackgroundTask({ label: "Campaign brief ready!", done: true });
+        setTimeout(() => setBackgroundTask(null), 4000);
+
+        toast({ title: "📋 Campaign brief ready!", description: "Your strategy has been built.", duration: 6000 });
+
+        const briefMsg = brief
+          ? `✅ **Campaign Brief — ${brief.campaign_name || "Your Next Campaign"}**\n\n**Theme:** ${brief.theme}\n**Goal:** ${brief.goal}\n**Platforms:** ${(brief.platforms || []).join(", ")}\n**Duration:** ${brief.duration_days} days · ${brief.posts_per_week} posts/week\n**CTA:** ${brief.cta}\n\n**Why now:** ${brief.why_now}`
+          : "✅ Campaign brief built and saved. Check your drafts.";
+
+        setMessages(prev => [...prev, { role: "assistant", content: briefMsg }]);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        setBackgroundTask(null);
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't build the brief — ${errData.error || "try again in a moment"}.` }]);
+      }
+    } catch (err) {
+      clearNarration();
+      setBackgroundTask(null);
+      setMessages(prev => [...prev, { role: "assistant", content: "Brief generation hit an error — try again." }]);
+    }
+  }, [toast]);
+
+  // ── Model 3: Audience Intelligence — fully detached ─────────────────────────
+  const runAudienceIntelInBackground = useCallback(async () => {
+    setBackgroundTask({ label: "Analyzing your audience…", done: false });
+
+    const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "📱 Pulling your post history and engagement data…" }]);
+    }, 2000));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "🔍 Cross-referencing patterns across your content…" }]);
+    }, 9000));
+
+    const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
+
+    try {
+      const token = await getAuthToken();
+      const resp = await fetch(AUDIENCE_INTEL_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      });
+
+      clearNarration();
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const insights = data.insights;
+        setBackgroundTask({ label: "Audience analysis done!", done: true });
+        setTimeout(() => setBackgroundTask(null), 4000);
+
+        toast({ title: "🎯 Audience analysis done!", description: "Your audience profile has been updated.", duration: 6000 });
+
+        const insightMsg = insights
+          ? `✅ **Audience Intelligence Report**\n\n**Primary Audience:** ${insights.primary_audience_segment}\n**Best Platforms:** ${(insights.top_platforms || []).join(", ")}\n**Strongest Content:** ${insights.strongest_content_type}\n**Best Post Time:** ${insights.optimal_posting_time}\n\n**Key Insight:** ${insights.key_insight}`
+          : "✅ Audience analysis complete — your profile has been updated.";
+
+        setMessages(prev => [...prev, { role: "assistant", content: insightMsg }]);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        setBackgroundTask(null);
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't run audience analysis — ${errData.error || "try again in a moment"}.` }]);
+      }
+    } catch (err) {
+      clearNarration();
+      setBackgroundTask(null);
+      setMessages(prev => [...prev, { role: "assistant", content: "Audience analysis hit an error — try again." }]);
+    }
+  }, [toast]);
+
+  // ── Model 4: Competitor Watch — fully detached ──────────────────────────────
+  const runCompetitorWatchInBackground = useCallback(async (competitorUrl: string) => {
+    const displayName = competitorUrl.replace(/^https?:\/\//, "").split("/")[0];
+    setBackgroundTask({ label: `Scanning ${displayName}…`, done: false });
+
+    const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: `🕵️ Crawling ${displayName} — pulling their pages and content…` }]);
+    }, 2000));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "🧠 Comparing their positioning against yours…" }]);
+    }, 14000));
+
+    const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
+
+    try {
+      const token = await getAuthToken();
+      const resp = await fetch(COMPETITOR_WATCH_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ competitor_url: competitorUrl, competitor_name: displayName }),
+      });
+
+      clearNarration();
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const analysis = data.analysis;
+        setBackgroundTask({ label: "Competitor intel ready!", done: true });
+        setTimeout(() => setBackgroundTask(null), 4000);
+
+        toast({ title: "🕵️ Competitor intel ready!", description: `Analysis of ${data.competitorName || displayName} complete.`, duration: 6000 });
+
+        const intelMsg = analysis
+          ? `✅ **Competitor Intel — ${data.competitorName || displayName}**\n\n**Their Positioning:** ${analysis.positioning}\n**Their Strengths:** ${analysis.key_strengths}\n**Gaps We Can Exploit:** ${analysis.opportunities_for_us}\n**Threat Level:** ${analysis.threat_level}\n\n**Bottom Line:** ${analysis.intelligence_summary}`
+          : `✅ Competitor analysis on ${displayName} complete — saved to your intel file.`;
+
+        setMessages(prev => [...prev, { role: "assistant", content: intelMsg }]);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        setBackgroundTask(null);
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't scan ${displayName} — ${errData.error || "check the URL and try again"}.` }]);
+      }
+    } catch (err) {
+      clearNarration();
+      setBackgroundTask(null);
+      setMessages(prev => [...prev, { role: "assistant", content: "Competitor scan hit an error — try again." }]);
+    }
+  }, [toast]);
+
+  // ── Model 5: Calendar Fill — fully detached ─────────────────────────────────
+  const runCalendarFillInBackground = useCallback(async () => {
+    setBackgroundTask({ label: "Filling your content calendar…", done: false });
+
+    const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "📅 Checking your schedule and brand voice…" }]);
+    }, 2000));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "✍️ Writing posts for each day of the week…" }]);
+    }, 9000));
+
+    const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
+
+    try {
+      const token = await getAuthToken();
+      const resp = await fetch(CALENDAR_FILL_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
+      });
+
+      clearNarration();
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const count = data.postsCreated || 0;
+        const schedule = data.schedule || [];
+        setBackgroundTask({ label: `${count} posts scheduled!`, done: true });
+        setTimeout(() => setBackgroundTask(null), 4000);
+
+        toast({ title: "📅 Calendar filled!", description: `${count} posts drafted for this week.`, duration: 6000 });
+
+        const schedMsg = schedule.length > 0
+          ? `✅ **${count} posts drafted for the week:**\n\n${schedule.slice(0, 5).map((p: any) => `• **Day ${p.day_offset} · ${p.platform}** — ${p.topic} *(${p.content_type})*`).join("\n")}${schedule.length > 5 ? `\n• …and ${schedule.length - 5} more` : ""}\n\nAll saved as drafts — review them in Campaigns.`
+          : `✅ Content calendar filled — ${count} posts drafted for this week.`;
+
+        setMessages(prev => [...prev, { role: "assistant", content: schedMsg }]);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        setBackgroundTask(null);
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't fill the calendar — ${errData.error || "try again in a moment"}.` }]);
+      }
+    } catch (err) {
+      clearNarration();
+      setBackgroundTask(null);
+      setMessages(prev => [...prev, { role: "assistant", content: "Calendar fill hit an error — try again." }]);
     }
   }, [toast]);
 
@@ -542,10 +859,32 @@ const SidebarChat = () => {
         }
       }
 
-      // ── Profile scan: fire detached — user is free immediately, no await ──
+      // ── Model 1: Profile scan ─────────────────────────────────────────────
       if (result.draft_updates?._profile_scan_requested && result.draft_updates?.website) {
         runProfileScanInBackground(result.draft_updates.website as string);
-        // handleSend returns immediately after this — isLoading→false in finally
+      }
+
+      // ── Model 2: Campaign Brief ───────────────────────────────────────────
+      if (result.draft_updates?._campaign_brief_requested) {
+        runCampaignBriefInBackground();
+      }
+
+      // ── Model 3: Audience Intelligence ────────────────────────────────────
+      if (result.draft_updates?._audience_intel_requested) {
+        runAudienceIntelInBackground();
+      }
+
+      // ── Model 4: Competitor Watch ─────────────────────────────────────────
+      if (result.draft_updates?._competitor_watch_requested) {
+        const competitorUrl = result.draft_updates._competitor_url as string | undefined;
+        if (competitorUrl) {
+          runCompetitorWatchInBackground(competitorUrl);
+        }
+      }
+
+      // ── Model 5: Calendar Fill ────────────────────────────────────────────
+      if (result.draft_updates?._calendar_fill_requested) {
+        runCalendarFillInBackground();
       }
 
     } catch (error) {
@@ -592,7 +931,7 @@ const SidebarChat = () => {
   return (
     <div className="flex-1 min-h-0 flex flex-col">
 
-      {/* Background task indicator — pulsing while scan runs detached */}
+      {/* Background task indicator — pulsing while any model runs detached */}
       {backgroundTask && (
         <div className={cn(
           "px-3 py-1.5 border-b flex items-center gap-2 text-[10px] shrink-0 transition-colors",

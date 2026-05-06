@@ -146,7 +146,36 @@ The moment the user provides ANY URL or domain name (e.g. "empyrean.ai", "www.my
 - Set draft_updates.website = <the cleaned url>
 - Set draft_updates._profile_scan_requested = true
 - Message: "On it — scanning [url] now! Give me ~30 seconds. 🔍"
-NEVER ask follow-up questions when you have a URL. Execute immediately. Do not ask what industry or what they sell — just scan.`;
+NEVER ask follow-up questions when you have a URL. Execute immediately. Do not ask what industry or what they sell — just scan.
+
+CAMPAIGN BRIEF MODE:
+When the intent is "campaign_brief" OR the user says any of: "build me a campaign brief", "campaign strategy", "plan a campaign", "brief for [product]", "what should my campaign be", "generate a brief", "campaign plan", "marketing brief" — IMMEDIATELY:
+- Set intent = "campaign_brief"
+- Set draft_updates._campaign_brief_requested = true
+- Message: "On it — building your campaign brief now. 🚀"
+Do NOT ask clarifying questions. Use their profile context and history to build a complete brief automatically.
+
+AUDIENCE INTELLIGENCE MODE:
+When the intent is "audience_intel" OR the user says any of: "who's my audience", "analyze my customers", "audience insights", "who should I target", "tell me about my audience", "customer analysis", "who engages with me", "audience report" — IMMEDIATELY:
+- Set intent = "audience_intel"
+- Set draft_updates._audience_intel_requested = true
+- Message: "Digging into your audience data now — give me a moment. 🔍"
+Do NOT ask follow-up questions. Pull from their content and engagement history automatically.
+
+COMPETITOR WATCH MODE:
+When the intent is "competitor_watch" OR the user says any of: "analyze my competitor", "check out [competitor]", "competitor analysis", "what is [url/brand] doing", "spy on [competitor]", "competitive intel", "research [brand]" — IMMEDIATELY:
+- Set intent = "competitor_watch"
+- Set draft_updates._competitor_watch_requested = true
+- If a URL or domain is present in the message, set draft_updates._competitor_url = that URL/domain
+- Message: "Pulling intel on [competitor] now — scanning their site. 🕵️"
+If NO competitor URL or name is given, ask ONE question: "Which competitor? Drop their website URL and I'll dig in."
+
+CALENDAR FILL MODE:
+When the intent is "calendar_fill" OR the user says any of: "fill my calendar", "schedule my week", "plan my posts", "what should I post this week", "content calendar", "fill the week", "plan content", "schedule content for the week" — IMMEDIATELY:
+- Set intent = "calendar_fill"
+- Set draft_updates._calendar_fill_requested = true
+- Message: "Filling your content calendar for this week now. 📅"
+Do NOT ask follow-up questions. Use their profile and post history to build a smart schedule automatically.`;
 
 const TOOLS = [
   {
@@ -157,7 +186,7 @@ const TOOLS = [
       properties: {
         intent: {
           type: "string",
-          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "navigate", "profile_assist", "other"],
+          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "navigate", "profile_assist", "campaign_brief", "audience_intel", "competitor_watch", "calendar_fill", "other"],
           description: "The detected intent of the user's message.",
         },
         message: {
@@ -224,6 +253,11 @@ const TOOLS = [
             _onboarding_complete: { type: "boolean" },
             _campaign_complete: { type: "boolean" },
             _profile_scan_requested: { type: "boolean" },
+            _campaign_brief_requested: { type: "boolean" },
+            _audience_intel_requested: { type: "boolean" },
+            _competitor_watch_requested: { type: "boolean" },
+            _competitor_url: { type: "string" },
+            _calendar_fill_requested: { type: "boolean" },
           },
         },
         risk_level: { type: "string", enum: ["low", "medium", "high"] },
