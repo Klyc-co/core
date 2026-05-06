@@ -4,20 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, ArrowRight, ChevronLeft, ChevronRight, Image as ImageIcon, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
-import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
+import { CalendarDays, ArrowRight, ChevronLeft, ChevronRight, Linkedin, Instagram, Facebook, Youtube } from "lucide-react";
+import { format, addDays, isToday, isSameDay } from "date-fns";
 
 interface ScheduledPost {
   id: string;
-  post_text: string | null;
-  image_url: string | null;
-  content_type: string;
-  scheduled_at: string;
+  platform: string;
+  content_payload: Record<string, string> | null;
+  scheduled_for: string;
   status: string;
 }
 
-const platformIcon = (type: string) => {
-  const t = type.toLowerCase();
+const platformIcon = (platform: string) => {
+  const t = platform.toLowerCase();
   if (t.includes("linkedin")) return <Linkedin className="w-3 h-3" />;
   if (t.includes("instagram")) return <Instagram className="w-3 h-3" />;
   if (t.includes("facebook")) return <Facebook className="w-3 h-3" />;
@@ -41,20 +40,30 @@ const WeeklyContentCalendar = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setLoading(false); return; }
+
+      // Resolve client_id through client_profiles (scheduled_posts has no user_id column)
+      const { data: profile } = await supabase
+        .from("client_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!profile) { setPosts([]); setLoading(false); return; }
 
       const from = days[0].toISOString();
       const to = addDays(days[6], 1).toISOString();
 
       const { data } = await supabase
-        .from("post_queue")
-        .select("id, post_text, image_url, content_type, scheduled_at, status")
-        .eq("user_id", user.id)
-        .gte("scheduled_at", from)
-        .lt("scheduled_at", to)
-        .in("status", ["scheduled", "approved", "pending_approval", "published"])
-        .order("scheduled_at", { ascending: true });
+        .from("scheduled_posts")
+        .select("id, platform, content_payload, scheduled_for, status")
+        .eq("client_id", profile.id)
+        .gte("scheduled_for", from)
+        .lt("scheduled_for", to)
+        .in("status", ["pending", "scheduled", "approved", "published"])
+        .order("scheduled_for", { ascending: true });
 
       setPosts(data || []);
       setLoading(false);
@@ -63,11 +72,7 @@ const WeeklyContentCalendar = () => {
   }, [weekStart]);
 
   const postsForDay = (day: Date) =>
-    posts.filter((p) => p.scheduled_at && isSameDay(new Date(p.scheduled_at), day));
-
-  const scroll = (dir: number) => {
-    scrollRef.current?.scrollBy({ left: dir * 220, behavior: "smooth" });
-  };
+    posts.filter((p) => p.scheduled_for && isSameDay(new Date(p.scheduled_for), day));
 
   return (
     <Card className="max-h-[320px]">
@@ -124,30 +129,28 @@ const WeeklyContentCalendar = () => {
                   <p className="text-xs text-muted-foreground/50 text-center py-4">No posts</p>
                 ) : (
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {dayPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="rounded-lg border border-border/50 bg-secondary/30 p-2 cursor-pointer hover:bg-secondary/60 transition-colors"
-                        onClick={() => navigate("/campaigns/schedule")}
-                      >
-                        {post.image_url && (
-                          <img
-                            src={post.image_url}
-                            alt=""
-                            className="w-full h-16 object-cover rounded-md mb-1.5"
-                          />
-                        )}
-                        <p className="text-[11px] text-foreground line-clamp-2 leading-tight">
-                          {post.post_text?.slice(0, 80) || post.content_type}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          {platformIcon(post.content_type)}
-                          <span className="text-[10px] text-muted-foreground">
-                            {post.scheduled_at ? format(new Date(post.scheduled_at), "h:mma") : ""}
-                          </span>
+                    {dayPosts.map((post) => {
+                      const payload = post.content_payload as any;
+                      const postText: string = payload?.post_text || payload?.topic || "";
+                      return (
+                        <div
+                          key={post.id}
+                          className="rounded-lg border border-border/50 bg-secondary/30 p-2 cursor-pointer hover:bg-secondary/60 transition-colors"
+                          onClick={() => navigate("/campaigns/schedule")}
+                        >
+                          <p className="text-[11px] text-foreground line-clamp-2 leading-tight">
+                            {postText.slice(0, 80) || post.platform}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            {platformIcon(post.platform)}
+                            <span className="text-[10px] text-muted-foreground capitalize">{post.platform}</span>
+                            <span className="text-[10px] text-muted-foreground ml-auto">
+                              {post.scheduled_for ? format(new Date(post.scheduled_for), "h:mma") : ""}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
