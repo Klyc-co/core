@@ -10,13 +10,10 @@ import StepBusinessSummary from "@/components/onboarding/StepBusinessSummary";
 import StepBusinessType from "@/components/onboarding/StepBusinessType";
 import StepVisualStyle from "@/components/onboarding/StepVisualStyle";
 import StepFontStyle from "@/components/onboarding/StepFontStyle";
-import StepPricing from "@/components/onboarding/StepPricing";
-import StepPayment from "@/components/onboarding/StepPayment";
 import StepGenerateContent from "@/components/onboarding/StepGenerateContent";
-import StepPendingApprovals from "@/components/onboarding/StepPendingApprovals";
 
-// Visible user-facing steps (excludes step 0 account creation + step 2 auto-scanning)
-const TOTAL_STEPS = 9;
+// Visible user-facing steps. Hidden steps (account creation, auto-scanning) are excluded.
+const TOTAL_STEPS = 6;
 
 // Steps hidden from progress bar (automated / no user input)
 const HIDDEN_STEPS = new Set([0, 2]);
@@ -26,8 +23,6 @@ const Onboarding = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [userName, setUserName] = useState({ firstName: "", lastName: "" });
   const [scanData, setScanData] = useState<any>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string>("starter");
-  const [generatedPosts, setGeneratedPosts] = useState<any[]>([]);
   const [preGeneratedStyles, setPreGeneratedStyles] = useState<Record<string, string> | null>(null);
   const [preGeneratedFontImage, setPreGeneratedFontImage] = useState<string | null>(null);
   const [selectedVisualStyles, setSelectedVisualStyles] = useState<string[]>([]);
@@ -109,63 +104,51 @@ const Onboarding = () => {
     setStep(3);
   }, []);
 
-  const handleGenerateComplete = useCallback((posts: any[]) => {
-    setGeneratedPosts(posts || []);
-    setStep(10);
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Progress bar — hidden on account creation (0), scanning (2), pending approvals (10) */}
-      {!HIDDEN_STEPS.has(step) && step !== 10 && (
+      {/* Progress bar — hidden on account creation (0) and auto-scanning (2) */}
+      {!HIDDEN_STEPS.has(step) && (
         <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border py-4">
           <OnboardingProgress currentStep={step} totalSteps={TOTAL_STEPS} />
         </div>
       )}
 
       <div className="pb-16">
-        {step === 0  && <StepCreateAccount onNext={handleAccountCreated} />}
-        {step === 1  && <StepPasteWebsite onNext={handleWebsiteSubmit} />}
-        {step === 2  && (
+        {step === 0 && <StepCreateAccount onNext={handleAccountCreated} />}
+        {step === 1 && <StepPasteWebsite onNext={handleWebsiteSubmit} />}
+        {step === 2 && (
           <StepScanning
             websiteUrl={websiteUrl}
             onComplete={handleScanComplete}
             onError={handleScanError}
           />
         )}
-        {step === 3  && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
-        {step === 4  && <StepBusinessType onNext={() => setStep(5)} />}
-        {step === 5  && (
+        {step === 3 && <StepBusinessSummary scanData={scanData} onNext={() => setStep(4)} />}
+        {step === 4 && <StepBusinessType onNext={() => setStep(5)} />}
+        {step === 5 && (
           <StepVisualStyle
             scanData={scanData}
             preGeneratedImages={preGeneratedStyles}
             onNext={(styles) => { setSelectedVisualStyles(styles); setStep(6); }}
           />
         )}
-        {step === 6  && (
+        {step === 6 && (
           <StepFontStyle
             scanData={scanData}
             preGeneratedImage={preGeneratedFontImage}
             onNext={(fonts) => { if (fonts?.[0]) setSelectedFontStyle(fonts[0]); setStep(7); }}
           />
         )}
-        {step === 7  && (
-          <StepPricing
-            onNext={(plan) => { setSelectedPlan(plan); setStep(8); }}
-          />
-        )}
-        {step === 8  && <StepPayment onNext={() => setStep(9)} />}
-        {step === 9  && (
+        {step === 7 && (
           <StepGenerateContent
             scanData={scanData}
             websiteUrl={websiteUrl}
             userName={userName}
             visualStyles={selectedVisualStyles}
             fontStyle={selectedFontStyle}
-            onNext={(posts?: any[]) => handleGenerateComplete(posts || [])}
+            onNext={() => navigate("/campaigns/pending")}
           />
         )}
-        {step === 10 && <StepPendingApprovals posts={generatedPosts} />}
       </div>
     </div>
   );
