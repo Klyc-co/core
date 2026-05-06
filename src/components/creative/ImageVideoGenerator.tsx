@@ -589,24 +589,39 @@ const ImageVideoGenerator = ({ onBack }: ImageVideoGeneratorProps = {}) => {
                 </button>
               )}
 
-              <button type="button"
+              {/*
+                Custom color picker. NOTE: this used to be a <button> with <input> children — invalid HTML
+                that caused the native color picker to never open and the hex field to lose focus, because
+                clicks on the inputs bubbled up to the button's onClick. Now a <div> wrapper with
+                cursor-pointer + role/tabindex; inputs stopPropagation so they own their own clicks.
+              */}
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => { setColorMode("custom"); setAccentColorEnabled(true); }}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all ${colorMode === "custom" && accentColorEnabled ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}>
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setColorMode("custom"); setAccentColorEnabled(true); } }}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all cursor-pointer ${colorMode === "custom" && accentColorEnabled ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"}`}
+              >
                 <input
                   type="color"
-                  value={colorMode === "custom" ? (accentColor || "#ffffff") : (accentColor || "#ffffff")}
+                  value={accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#bdffc1"}
                   onChange={(e) => { setAccentColor(e.target.value); setColorMode("custom"); setAccentColorEnabled(true); }}
+                  onClick={(e) => { e.stopPropagation(); setColorMode("custom"); setAccentColorEnabled(true); }}
                   className="w-3.5 h-3.5 rounded cursor-pointer border-0 p-0 bg-transparent flex-shrink-0"
                   style={{ minWidth: 14 }}
+                  aria-label="Pick custom accent color"
                 />
                 <Input
                   value={colorMode === "custom" ? accentColor : ""}
                   onChange={(e) => { setAccentColor(e.target.value); setColorMode("custom"); setAccentColorEnabled(true); }}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={() => { setColorMode("custom"); setAccentColorEnabled(true); }}
                   placeholder="#bdffc1"
                   className="h-5 w-16 font-mono text-xs border-0 p-0 bg-transparent focus-visible:ring-0 shadow-none"
                   maxLength={7}
+                  aria-label="Custom accent color hex code"
                 />
-              </button>
+              </div>
 
               <Switch checked={accentColorEnabled} onCheckedChange={setAccentColorEnabled} aria-label="Toggle accent color" />
             </div>
