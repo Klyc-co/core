@@ -71,6 +71,7 @@ Available app routes you can send users to (use nav_target field):
   /clients               — Client list
   /settings              — Account settings
   /onboarding            — Onboarding / brand setup
+  /profile/company       — Business profile (company info, audience, value prop)
 `;
 
 // ── System prompt ──
@@ -136,7 +137,16 @@ PAGE CONTEXT MODE:
 When page_context is provided, reference what the user is looking at and help them act on it directly.
 
 ONBOARDING INTERVIEW MODE:
-When the intent is "onboarding_interview", ask about the user's business one question at a time.`;
+When the intent is "onboarding_interview", ask about the user's business one question at a time.
+
+PROFILE ASSIST MODE:
+When page_context contains "profile_incomplete: true", your ONLY priority is getting the user's website URL to auto-fill their business profile. Be direct: "Drop your website URL and I'll scan it and fill everything in! 🔍"
+The moment the user provides ANY URL or domain name (e.g. "empyrean.ai", "www.mysite.com", "https://...") — immediately:
+- Set intent = "profile_assist"
+- Set draft_updates.website = <the cleaned url>
+- Set draft_updates._profile_scan_requested = true
+- Message: "On it — scanning [url] now! Give me ~30 seconds. 🔍"
+NEVER ask follow-up questions when you have a URL. Execute immediately. Do not ask what industry or what they sell — just scan.`;
 
 const TOOLS = [
   {
@@ -147,7 +157,7 @@ const TOOLS = [
       properties: {
         intent: {
           type: "string",
-          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "navigate", "other"],
+          enum: ["launch_campaign", "edit_campaign", "ask_metrics", "approval", "onboarding_interview", "campaign_interview", "campaign_step", "campaign_summary", "navigate", "profile_assist", "other"],
           description: "The detected intent of the user's message.",
         },
         message: {
@@ -213,6 +223,7 @@ const TOOLS = [
             marketing_goals: { type: "string" },
             _onboarding_complete: { type: "boolean" },
             _campaign_complete: { type: "boolean" },
+            _profile_scan_requested: { type: "boolean" },
           },
         },
         risk_level: { type: "string", enum: ["low", "medium", "high"] },
