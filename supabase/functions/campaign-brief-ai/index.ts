@@ -82,7 +82,26 @@ serve(async (req) => {
       brief = { campaign_name: "New Campaign", theme: "Brand awareness", goal: "awareness", platforms: ["instagram", "linkedin"], posts_per_week: 3, duration_days: 14, key_messages: [], content_angles: [], cta: "Learn more", why_now: "Now is a great time to grow your audience." };
     }
 
-    // Map to actual campaign_drafts schema columns
+    // Build a human-readable brief summary for the prompt field
+    const keyMsgs = (brief.key_messages || []).map((m: string) => `• ${m}`).join("\n");
+    const angles = (brief.content_angles || []).map((a: string) => `• ${a}`).join("\n");
+    const platforms = (brief.platforms || []).join(", ");
+    const readableBrief = [
+      `CAMPAIGN: ${brief.campaign_name || ""}`,
+      `THEME: ${brief.theme || ""}`,
+      `PLATFORMS: ${platforms} | ${brief.posts_per_week || 3}x/week for ${brief.duration_days || 14} days`,
+      `CTA: ${brief.cta || ""}`,
+      ``,
+      `KEY MESSAGES:`,
+      keyMsgs,
+      ``,
+      `CONTENT ANGLES:`,
+      angles,
+      ``,
+      `WHY NOW: ${brief.why_now || ""}`,
+    ].join("\n");
+
+    // Store using actual campaign_drafts schema — all human-readable text
     const { data: draft } = await svc.from("campaign_drafts").insert({
       user_id: user.id,
       campaign_idea: brief.campaign_name || "New Campaign",
@@ -90,15 +109,7 @@ serve(async (req) => {
       campaign_goals: brief.goal || "awareness",
       target_audience: brief.target_audience || "",
       target_audience_description: brief.target_audience || "",
-      prompt: JSON.stringify({
-        key_messages: brief.key_messages || [],
-        content_angles: brief.content_angles || [],
-        cta: brief.cta || "",
-        why_now: brief.why_now || "",
-        platforms: brief.platforms || [],
-        posts_per_week: brief.posts_per_week || 3,
-        duration_days: brief.duration_days || 14,
-      }),
+      prompt: readableBrief,
     }).select("id").maybeSingle();
 
     return new Response(JSON.stringify({
