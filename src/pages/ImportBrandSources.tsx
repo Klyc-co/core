@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
-import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart, Unlink } from "lucide-react";
+import { ArrowLeft, Globe, Music, Facebook, Instagram, Linkedin, Twitter, Youtube, Shield, Check, Loader2, BarChart3, CheckCircle2, FolderOpen, ExternalLink, CircleDot, Wand2, Users, ShoppingCart, Unlink, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -305,6 +305,22 @@ const ImportBrandSources = () => {
   const [squarespaceModalOpen, setSquarespaceModalOpen] = useState(false);
   const [squarespaceApiKey, setSquarespaceApiKey] = useState("");
   const [isConnectingSquarespace, setIsConnectingSquarespace] = useState(false);
+  // Beta gate for CRM + E-commerce CRM sections — unlock with code 373737. Persisted in localStorage.
+  const [betaCrmUnlocked, setBetaCrmUnlocked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("klyc-beta-crm-unlocked") === "true";
+  });
+  const [betaCrmCode, setBetaCrmCode] = useState("");
+  const tryUnlockBetaCrm = () => {
+    if (betaCrmCode.trim() === "373737") {
+      window.localStorage.setItem("klyc-beta-crm-unlocked", "true");
+      setBetaCrmUnlocked(true);
+      setBetaCrmCode("");
+      toast.success("Beta access unlocked — CRM and e-commerce tools are available.");
+    } else {
+      toast.error("Incorrect access code.");
+    }
+  };
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
@@ -1986,35 +2002,65 @@ const ImportBrandSources = () => {
           {renderToolGrid(socialTools, true)}
         </Card>
 
-        {/* CRM Tools Section */}
-        <Card className="p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">CRM Tools</h2>
-              <p className="text-sm text-muted-foreground">Customer relationship management platforms</p>
-            </div>
-          </div>
-
-          {renderToolGrid(crmTools)}
-
-          {/* E-commerce CRM Subsection */}
-          <div className="mt-6 pt-6 border-t border-border">
+        {/* CRM Tools Section — gated behind beta access code 373737 */}
+        {betaCrmUnlocked ? (
+          <Card className="p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-green-500" />
+              <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">E-commerce CRM</h3>
-                <p className="text-sm text-muted-foreground">E-commerce and checkout platforms</p>
+                <h2 className="text-xl font-semibold text-foreground">CRM Tools</h2>
+                <p className="text-sm text-muted-foreground">Customer relationship management platforms</p>
               </div>
             </div>
 
-            {renderToolGrid(ecommerceTools)}
-          </div>
-        </Card>
+            {renderToolGrid(crmTools)}
+
+            {/* E-commerce CRM Subsection */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">E-commerce CRM</h3>
+                  <p className="text-sm text-muted-foreground">E-commerce and checkout platforms</p>
+                </div>
+              </div>
+
+              {renderToolGrid(ecommerceTools)}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Lock className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-foreground">CRM &amp; E-commerce Tools</h2>
+                <p className="text-sm text-muted-foreground">
+                  Beta — enter your access code to connect Salesforce, HubSpot, ActiveCampaign, Shopify, Stripe, and more.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 max-w-md">
+              <Input
+                type="password"
+                value={betaCrmCode}
+                onChange={(e) => setBetaCrmCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") tryUnlockBetaCrm(); }}
+                placeholder="Beta access code"
+                className="flex-1"
+                autoComplete="off"
+              />
+              <Button onClick={tryUnlockBetaCrm} disabled={!betaCrmCode.trim()}>
+                Unlock
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Security Note */}
         <Card className="p-4 mt-6 bg-muted/50 border-muted">
