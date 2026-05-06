@@ -25,6 +25,30 @@ Output ONLY a JSON object with exactly these fields:
 
 Be specific, actionable, and based on the provided business context. No generic advice.`;
 
+async function logAiActivity(
+  svc: any,
+  functionName: string,
+  modelUsed: string,
+  tokensIn: number | null,
+  tokensOut: number | null,
+  userId?: string,
+): Promise<void> {
+  try {
+    const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
+    // Haiku pricing: $0.80/MTok input, $4.00/MTok output
+    const costEstimate = ((tokensIn ?? 0) * 0.0000008) + ((tokensOut ?? 0) * 0.000004);
+    await svc.from("ai_activity_log").insert({
+      function_name: functionName,
+      model_used: modelUsed,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
+      total_tokens: totalTokens,
+      cost_estimate: costEstimate,
+      ...(userId ? { user_id: userId } : {}),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -42,22 +66,27 @@ serve(async (req) => {
 
     const svc = createClient(supabaseUrl, serviceKey);
 
-    const [{ data: profile }, { data: posts }] = await Promise.all([
-      svc.from("client_profiles")
-        .select("business_name, description, industry, target_audience, value_proposition, marketing_goals, product_category, website")
-        .eq("user_id", user.id).maybeSingle(),
-      svc.from("post_queue")
-        .select("post_text, content_type, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(10),
-    ]);
+    // Fetch profile first to get client_id
+    const { data: profile } = await svc.from("client_profiles")
+      .select("id, business_name, description, industry, target_audience, value_proposition, marketing_goals, product_category, website")
+      .eq("user_id", user.id).maybeSingle();
+
+    const clientId = profile?.id || null;
+
+    // Fetch recent scheduled_posts by client_id (correct table + column)
+    const { data: posts } = clientId
+      ? await svc.from("scheduled_posts")
+          .select("content_payload, platform, scheduled_for")
+          .eq("client_id", clientId)
+          .order("scheduled_for", { ascending: false }).limit(10)
+      : { data: [] as any[] };
 
     const profileCtx = profile
       ? `Business: ${profile.business_name || "Unknown"}\nDescription: ${profile.description || "None"}\nIndustry: ${profile.industry || "Unknown"}\nAudience: ${profile.target_audience || "Not set"}\nValue prop: ${profile.value_proposition || "Not set"}\nGoals: ${profile.marketing_goals || "Not set"}`
       : "No profile set up yet.";
 
     const postCtx = posts && posts.length > 0
-      ? `Recent content (${posts.length} posts):\n${posts.map((p, i) => `${i + 1}. ${(p.post_text || "").slice(0, 120)}`).join("\n")}`
+      ? `Recent content (${posts.length} posts):\n${posts.map((p, i) => `${i + 1}. [${p.platform}] ${((p.content_payload?.post_text || p.content_payload?.topic) || "").slice(0, 120)}`).join("\n")}`
       : "No posts yet — this is a fresh start.";
 
     const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -73,6 +102,11 @@ serve(async (req) => {
     if (!aiResp.ok) throw new Error(`AI ${aiResp.status}`);
     const aiData = await aiResp.json();
     const rawText = aiData.content?.[0]?.text || "{}";
+
+    // Log token usage
+    const tokensIn = aiData.usage?.input_tokens ?? null;
+    const tokensOut = aiData.usage?.output_tokens ?? null;
+    logAiActivity(svc, "campaign-brief-ai", "claude-haiku-4-5-20251001", tokensIn, tokensOut, user.id);
 
     let brief: Record<string, any> = {};
     try {
