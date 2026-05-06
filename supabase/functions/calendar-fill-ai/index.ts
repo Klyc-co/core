@@ -27,6 +27,29 @@ Rules:
 - Match the brand voice from the profile
 - day_offset: 0=today, 1=tomorrow, 2=day after, etc.`;
 
+async function logAiActivity(
+  svc: any,
+  functionName: string,
+  modelUsed: string,
+  tokensIn: number | null,
+  tokensOut: number | null,
+  userId?: string,
+): Promise<void> {
+  try {
+    const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
+    const costEstimate = ((tokensIn ?? 0) * 0.0000008) + ((tokensOut ?? 0) * 0.000004);
+    await svc.from("ai_activity_log").insert({
+      function_name: functionName,
+      model_used: modelUsed,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
+      total_tokens: totalTokens,
+      cost_estimate: costEstimate,
+      ...(userId ? { user_id: userId } : {}),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -46,20 +69,10 @@ serve(async (req) => {
     const now = new Date();
     const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const [{ data: profile }, { data: existingPosts }, { data: recentPosts }] = await Promise.all([
-      svc.from("client_profiles")
-        .select("id, business_name, description, industry, target_audience, value_proposition, product_category")
-        .eq("user_id", user.id).maybeSingle(),
-      svc.from("scheduled_posts")
-        .select("scheduled_for, content_payload, platform")
-        .eq("client_id", (await svc.from("client_profiles").select("id").eq("user_id", user.id).maybeSingle()).data?.id || "")
-        .gte("scheduled_for", now.toISOString())
-        .lte("scheduled_for", weekEnd.toISOString()),
-      svc.from("post_queue")
-        .select("post_text, content_type, platform")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(5),
-    ]);
+    // Fetch profile first to get client_id
+    const { data: profile } = await svc.from("client_profiles")
+      .select("id, business_name, description, industry, target_audience, value_proposition, product_category")
+      .eq("user_id", user.id).maybeSingle();
 
     const clientId = profile?.id || null;
     if (!clientId) {
@@ -68,16 +81,30 @@ serve(async (req) => {
       });
     }
 
+    // Now fetch existing posts and recent post history using correct client_id
+    const [{ data: existingPosts }, { data: recentPosts }] = await Promise.all([
+      svc.from("scheduled_posts")
+        .select("scheduled_for, content_payload, platform")
+        .eq("client_id", clientId)
+        .gte("scheduled_for", now.toISOString())
+        .lte("scheduled_for", weekEnd.toISOString()),
+      svc.from("scheduled_posts")
+        .select("content_payload, platform, scheduled_for")
+        .eq("client_id", clientId)
+        .lt("scheduled_for", now.toISOString())
+        .order("scheduled_for", { ascending: false }).limit(5),
+    ]);
+
     const profileCtx = profile
       ? `Business: ${profile.business_name}\nDescription: ${profile.description || "None"}\nIndustry: ${profile.industry || "Unknown"}\nAudience: ${profile.target_audience || "Not set"}\nValue prop: ${profile.value_proposition || "Not set"}`
       : "No profile yet.";
 
     const existingCtx = existingPosts && existingPosts.length > 0
-      ? `Already scheduled this week (${existingPosts.length} posts) — avoid duplicating these topics:\n${existingPosts.map(p => `- ${p.scheduled_for} [${p.platform}]: ${JSON.stringify(p.content_payload).slice(0, 60)}`).join("\n")}`
+      ? `Already scheduled this week (${existingPosts.length} posts) — avoid duplicating these topics:\n${existingPosts.map(p => `- ${p.scheduled_for} [${p.platform}]: ${(p.content_payload?.post_text || p.content_payload?.topic || "").slice(0, 60)}`).join("\n")}`
       : "No posts scheduled yet this week — fill the entire week.";
 
     const recentCtx = recentPosts && recentPosts.length > 0
-      ? `Recent content (avoid repeating):\n${recentPosts.map(p => `- [${p.platform}] ${(p.post_text || "").slice(0, 60)}`).join("\n")}`
+      ? `Recent content (avoid repeating):\n${recentPosts.map(p => `- [${p.platform}] ${(p.content_payload?.post_text || p.content_payload?.topic || "").slice(0, 60)}`).join("\n")}`
       : "";
 
     const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -93,6 +120,11 @@ serve(async (req) => {
     if (!aiResp.ok) throw new Error(`AI ${aiResp.status}`);
     const aiData = await aiResp.json();
     const rawText = aiData.content?.[0]?.text || "[]";
+
+    // Log token usage
+    const tokensIn = aiData.usage?.input_tokens ?? null;
+    const tokensOut = aiData.usage?.output_tokens ?? null;
+    logAiActivity(svc, "calendar-fill-ai", "claude-haiku-4-5-20251001", tokensIn, tokensOut, user.id);
 
     let posts: any[] = [];
     try {
