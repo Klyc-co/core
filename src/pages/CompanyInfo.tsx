@@ -49,6 +49,9 @@ const CompanyInfo = () => {
   const [libraryImages, setLibraryImages] = useState<{ id: string; name: string; value: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Trigger re-load when klyc-chat scans and populates the profile
+  const [profileReloadTrigger, setProfileReloadTrigger] = useState(0);
+
   // Handle Google Analytics OAuth callback (works even when Analytics tab isn't active)
   // This is critical for popup OAuth flow - the popup lands on /profile/company
   // and this hook processes the callback, notifies opener, and closes the popup
@@ -163,7 +166,17 @@ const CompanyInfo = () => {
     };
 
     loadProfile();
-  }, [navigate, selectedClientId, getEffectiveUserId]);
+  }, [navigate, selectedClientId, getEffectiveUserId, profileReloadTrigger]);
+
+  // ── Listen for Klyc profile-fill events from SidebarChat ──────────────────
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      toast.success("Klyc filled in your profile! Review the fields and click Save.");
+      setProfileReloadTrigger((t) => t + 1);
+    };
+    window.addEventListener("klyc-profile-updated", handleProfileUpdated);
+    return () => window.removeEventListener("klyc-profile-updated", handleProfileUpdated);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
