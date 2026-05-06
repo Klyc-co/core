@@ -1,10 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Shield, LogOut, LayoutDashboard, Users, CreditCard,
-  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map, Megaphone, FlaskConical,
+  Activity, Brain, Radio, Clock, Layers, Building2, MessageCircle, Zap, ThumbsUp, Map, Megaphone, FlaskConical, PieChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +24,7 @@ const NAV_ITEMS = [
   { label: "AI Performance", path: "/klyc_admin/ai-testing", icon: FlaskConical },
   { label: "KLYC Internal", path: "/klyc_admin/klyc-internal", icon: Building2 },
   { label: "Audit Log", path: "/klyc_admin/audit", icon: Clock },
+  { label: "Cap Table", path: "/klyc_admin/cap-table", icon: PieChart },
 ];
 
 interface Props {
@@ -49,7 +49,7 @@ export default function KlycAdminLayout({ children }: Props) {
           <Shield className="w-5 h-5 text-primary" />
           <span className="font-bold text-sm">Klyc Admin</span>
         </div>
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const active = location.pathname === item.path;
             return (
@@ -61,8 +61,7 @@ export default function KlycAdminLayout({ children }: Props) {
                   active
                     ? "bg-primary/20 text-primary font-medium"
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                )
-              }
+                )}
               >
                 <item.icon className="w-4 h-4" />
                 {item.label}
