@@ -15,7 +15,7 @@ const ADMIN_ALLOWLIST = [
   "ethanw@cipherstream.com",  // Ethan W
   "rohil@klyc.ai",            // Rohil
   "rohilsri@gmail.com",       // Rohil (personal)
-  // TODO: add Ethan K email once confirmed
+  "ethan@klyc.ai",            // Ethan K
 ];
 
 export default function KlycAdminLogin() {

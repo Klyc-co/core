@@ -21,7 +21,7 @@ const ADMIN_ROLES: Record<string, AdminRole> = {
   "ethanw@cipherstream.com": "lead",   // Ethan W — platform/UI
   "rohil@klyc.ai": "team",            // Rohil — image quality
   "rohilsri@gmail.com": "team",       // Rohil (personal)
-  // TODO: add Ethan K email with role "team" once confirmed
+  "ethan@klyc.ai": "team",           // Ethan K — algorithms/backend
 };
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
