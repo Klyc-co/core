@@ -48,25 +48,32 @@ serve(async (req) => {
 
     const [{ data: profile }, { data: existingPosts }, { data: recentPosts }] = await Promise.all([
       svc.from("client_profiles")
-        .select("business_name, description, industry, target_audience, value_proposition, product_category")
+        .select("id, business_name, description, industry, target_audience, value_proposition, product_category")
         .eq("user_id", user.id).maybeSingle(),
       svc.from("scheduled_posts")
-        .select("scheduled_at, post_text, content_type")
-        .eq("user_id", user.id)
-        .gte("scheduled_at", now.toISOString())
-        .lte("scheduled_at", weekEnd.toISOString()),
+        .select("scheduled_for, content_payload, platform")
+        .eq("client_id", (await svc.from("client_profiles").select("id").eq("user_id", user.id).maybeSingle()).data?.id || "")
+        .gte("scheduled_for", now.toISOString())
+        .lte("scheduled_for", weekEnd.toISOString()),
       svc.from("post_queue")
         .select("post_text, content_type, platform")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }).limit(5),
     ]);
 
+    const clientId = profile?.id || null;
+    if (!clientId) {
+      return new Response(JSON.stringify({ success: false, error: "No client profile found" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const profileCtx = profile
       ? `Business: ${profile.business_name}\nDescription: ${profile.description || "None"}\nIndustry: ${profile.industry || "Unknown"}\nAudience: ${profile.target_audience || "Not set"}\nValue prop: ${profile.value_proposition || "Not set"}`
       : "No profile yet.";
 
     const existingCtx = existingPosts && existingPosts.length > 0
-      ? `Already scheduled this week (${existingPosts.length} posts) — avoid duplicating these topics:\n${existingPosts.map(p => `- ${p.scheduled_at}: ${(p.post_text || "").slice(0, 60)}`).join("\n")}`
+      ? `Already scheduled this week (${existingPosts.length} posts) — avoid duplicating these topics:\n${existingPosts.map(p => `- ${p.scheduled_for} [${p.platform}]: ${JSON.stringify(p.content_payload).slice(0, 60)}`).join("\n")}`
       : "No posts scheduled yet this week — fill the entire week.";
 
     const recentCtx = recentPosts && recentPosts.length > 0
@@ -93,24 +100,30 @@ serve(async (req) => {
       posts = JSON.parse(match ? match[0] : rawText);
     } catch { posts = []; }
 
-    // Insert posts into scheduled_posts
+    // Insert posts using actual scheduled_posts schema
     const createdPosts: any[] = [];
     for (const post of posts) {
       try {
-        const scheduledAt = new Date(now.getTime() + (post.day_offset || 0) * 24 * 60 * 60 * 1000);
+        const scheduledFor = new Date(now.getTime() + (post.day_offset || 0) * 24 * 60 * 60 * 1000);
         const [hours, mins] = (post.posting_time || "10:00").split(":").map(Number);
-        scheduledAt.setHours(hours || 10, mins || 0, 0, 0);
+        scheduledFor.setHours(hours || 10, mins || 0, 0, 0);
 
         const { data: inserted } = await svc.from("scheduled_posts").insert({
-          user_id: user.id,
-          post_text: post.post_text,
-          content_type: post.content_type || "text",
-          scheduled_at: scheduledAt.toISOString(),
-          status: "draft",
-        }).select("id, scheduled_at").maybeSingle();
+          client_id: clientId,
+          platform: post.platform || "instagram",
+          content_payload: {
+            post_text: post.post_text || "",
+            content_type: post.content_type || "text",
+            topic: post.topic || "",
+          },
+          scheduled_for: scheduledFor.toISOString(),
+          status: "pending",
+        }).select("id, scheduled_for, platform").maybeSingle();
 
-        if (inserted) createdPosts.push({ ...post, id: inserted.id, scheduled_at: inserted.scheduled_at });
-      } catch { /* skip failed inserts */ }
+        if (inserted) createdPosts.push({ ...post, id: inserted.id, scheduled_for: inserted.scheduled_for });
+      } catch (insertErr) {
+        console.error("Insert failed:", insertErr);
+      }
     }
 
     return new Response(JSON.stringify({
