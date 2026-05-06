@@ -16,17 +16,35 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const SpeechRecognition =
     typeof window !== "undefined"
       ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
       : null;
 
-  const isSupported = !!SpeechRecognition;
+  const isSupported = !!SpeechRecognition && typeof navigator !== "undefined" && !!navigator.mediaDevices;
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!SpeechRecognition) {
-      setError("Speech recognition not supported in this browser.");
+      setError("Speech recognition is not supported in this browser. Try Chrome.");
+      return;
+    }
+
+    // Explicitly request mic permission first so the user sees a real browser prompt
+    // instead of a silent red flash on denial
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Keep the stream alive while recording so Chrome doesn't revoke access mid-session
+      streamRef.current = stream;
+    } catch (err: any) {
+      const msg =
+        err.name === "NotAllowedError"
+          ? "Microphone access denied. Allow microphone in your browser's site settings and try again."
+          : err.name === "NotFoundError"
+          ? "No microphone found. Plug one in and try again."
+          : `Microphone error: ${err.message}`;
+      setError(msg);
       return;
     }
 
@@ -52,12 +70,20 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
-      setError(event.error);
+      const errorMessages: Record<string, string> = {
+        "not-allowed": "Microphone access denied. Check site settings in your browser.",
+        "no-speech": "No speech detected. Try speaking closer to your mic.",
+        "audio-capture": "Microphone not available. Check your device settings.",
+        "network": "Network error during speech recognition.",
+      };
+      setError(errorMessages[event.error] || `Speech error: ${event.error}`);
       setIsListening(false);
+      stopStream();
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      stopStream();
     };
 
     recognitionRef.current = recognition;
@@ -68,21 +94,30 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     setInterimTranscript("");
   }, [SpeechRecognition]);
 
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
     setIsListening(false);
-  }, []);
+    stopStream();
+  }, [stopStream]);
 
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      stopStream();
     };
-  }, []);
+  }, [stopStream]);
 
   return {
     isListening,
