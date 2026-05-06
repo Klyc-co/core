@@ -23,6 +23,29 @@ Output ONLY a JSON object:
   "intelligence_summary": "3-4 sentence executive summary of competitive position"
 }`;
 
+async function logAiActivity(
+  svc: any,
+  functionName: string,
+  modelUsed: string,
+  tokensIn: number | null,
+  tokensOut: number | null,
+  userId?: string,
+): Promise<void> {
+  try {
+    const totalTokens = (tokensIn ?? 0) + (tokensOut ?? 0);
+    const costEstimate = ((tokensIn ?? 0) * 0.0000008) + ((tokensOut ?? 0) * 0.000004);
+    await svc.from("ai_activity_log").insert({
+      function_name: functionName,
+      model_used: modelUsed,
+      tokens_in: tokensIn,
+      tokens_out: tokensOut,
+      total_tokens: totalTokens,
+      cost_estimate: costEstimate,
+      ...(userId ? { user_id: userId } : {}),
+    });
+  } catch (_) { /* non-blocking */ }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -87,6 +110,11 @@ serve(async (req) => {
     if (!aiResp.ok) throw new Error(`AI ${aiResp.status}`);
     const aiData = await aiResp.json();
     const rawText = aiData.content?.[0]?.text || "{}";
+
+    // Log token usage
+    const tokensIn = aiData.usage?.input_tokens ?? null;
+    const tokensOut = aiData.usage?.output_tokens ?? null;
+    logAiActivity(svc, "competitor-watch-ai", "claude-haiku-4-5-20251001", tokensIn, tokensOut, user.id);
 
     let analysis: Record<string, any> = {};
     try {
