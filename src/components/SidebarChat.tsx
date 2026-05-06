@@ -140,16 +140,17 @@ const NAV_INTENTS: Array<{ pattern: RegExp; route: string; reply: string }> = [
 ];
 
 const KLYC_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/klyc-chat`;
+const SCAN_WEBSITE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-website`;
 const FALLBACK_MSG = "I'm having trouble connecting right now. Please try again in a moment.";
 
 function extractPostsFromPipeline(pipeline: any): any[] | null {
   if (!pipeline) return null;
   try {
-    const sigmaO = pipeline["\u03c3o"] || pipeline;
+    const sigmaO = pipeline["σo"] || pipeline;
     const aLane = sigmaO?.a_lane_envelopes || sigmaO?.final_products;
     const copyLane = aLane?.copy;
     if (!copyLane) return null;
-    const posts = copyLane.posts || copyLane["\u03c3o"] || copyLane.packages;
+    const posts = copyLane.posts || copyLane["σo"] || copyLane.packages;
     if (!Array.isArray(posts) || posts.length === 0) return null;
     return posts;
   } catch {
@@ -159,17 +160,17 @@ function extractPostsFromPipeline(pipeline: any): any[] | null {
 
 function formatPostsForChat(posts: any[]): string {
   const platformEmoji: Record<string, string> = {
-    linkedin: "\uD83D\uDCBC",
-    twitter: "\uD83D\uDC26",
-    instagram: "\uD83D\uDCF7",
-    tiktok: "\uD83C\uDFB5",
-    youtube: "\u25B6\uFE0F",
-    facebook: "\uD83D\uDCD8",
+    linkedin: "💼",
+    twitter: "🐦",
+    instagram: "📷",
+    tiktok: "🎵",
+    youtube: "▶️",
+    facebook: "📘",
   };
-  let out = "\u2705 **Posts ready! Here's what I built:**\n\n";
+  let out = "✅ **Posts ready! Here's what I built:**\n\n";
   for (const p of posts) {
     const pl = (p.platform || "").toLowerCase();
-    const em = platformEmoji[pl] || "\uD83D\uDCF1";
+    const em = platformEmoji[pl] || "📱";
     out += `---\n**${em} ${pl.toUpperCase()}**\n\n`;
     if (p.hook) out += `**Hook:** ${p.hook}\n\n`;
     if (p.body) out += `${p.body}\n\n`;
@@ -177,7 +178,7 @@ function formatPostsForChat(posts: any[]): string {
     if (Array.isArray(p.hashtags) && p.hashtags.length) {
       out += p.hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ") + "\n\n";
     }
-    if (p.posting_time?.primary) out += `\uD83D\uDD50 *Best time: ${p.posting_time.primary}*\n\n`;
+    if (p.posting_time?.primary) out += `🕐 *Best time: ${p.posting_time.primary}*\n\n`;
   }
   return out.trim();
 }
@@ -200,8 +201,19 @@ const SidebarChat = () => {
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
+  // Profile assist state
+  const [profileScanTriggered, setProfileScanTriggered] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // ── Build page context for klyc-chat ──────────────────────────────────────
+  const buildPageContext = useCallback((): string | undefined => {
+    if (location.pathname === "/profile/company") {
+      return "page=business_profile\nprofile_incomplete=true\ninstruction=Ask the user for their website URL to auto-fill their business profile.";
+    }
+    return undefined;
+  }, [location.pathname]);
+
+  // ── campaigns/generate proactive trigger ──────────────────────────────────
   useEffect(() => {
     if (location.pathname === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
       setLastPromptedRoute("/campaigns/generate");
@@ -209,11 +221,53 @@ const SidebarChat = () => {
         ...prev,
         {
           role: "assistant",
-          content: "\uD83D\uDCDD **Let's create a post!**\n\nTell me about your post \u2014 what's the idea, what are you promoting, and who's your target audience?",
+          content: "📝 **Let's create a post!**\n\nTell me about your post — what's the idea, what are you promoting, and who's your target audience?",
         },
       ]);
     }
   }, [location.pathname]);
+
+  // ── Business profile proactive trigger — fires once when profile is empty ──
+  useEffect(() => {
+    const checkAndOfferProfileAssist = async () => {
+      if (location.pathname !== "/profile/company") return;
+      if (profileScanTriggered) return;
+      if (lastPromptedRoute === "/profile/company") return;
+
+      setProfileScanTriggered(true);
+
+      // Small delay — let the page settle first
+      await new Promise((r) => setTimeout(r, 1200));
+
+      try {
+        const session = await supabase.auth.getSession();
+        const userId = session.data.session?.user?.id;
+        if (!userId) return;
+
+        const { data: profile } = await supabase
+          .from("client_profiles")
+          .select("business_name, description")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const isEmpty = !profile || (!profile.business_name && !profile.description);
+        if (!isEmpty) return;
+
+        setLastPromptedRoute("/profile/company");
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "👋 Your business profile is empty! Drop your website URL and I'll scan it and fill everything in for your review.",
+          },
+        ]);
+      } catch {
+        /* non-blocking */
+      }
+    };
+
+    checkAndOfferProfileAssist();
+  }, [location.pathname, profileScanTriggered]);
 
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
@@ -305,8 +359,10 @@ const SidebarChat = () => {
       total_msgs: msgs.length,
       user_msg_count: _dbgUserMsgs.length,
       last_user_preview: (_dbgUserMsgs[_dbgUserMsgs.length - 1]?.content || "").slice(0, 150),
+      page_context: buildPageContext()?.slice(0, 60),
     });
 
+    const pageCtx = buildPageContext();
     const resp = await fetch(KLYC_CHAT_URL, {
       method: "POST",
       headers: {
@@ -317,6 +373,7 @@ const SidebarChat = () => {
       body: JSON.stringify({
         messages: msgs,
         request_id: crypto.randomUUID(),
+        ...(pageCtx ? { page_context: pageCtx } : {}),
       }),
     });
 
@@ -334,6 +391,7 @@ const SidebarChat = () => {
       nq_count: Array.isArray(data.next_questions) ? data.next_questions.length : 0,
       _campaign_complete: data.draft_updates?._campaign_complete,
       _draft_id: data.draft_updates?._draft_id,
+      _profile_scan_requested: data.draft_updates?._profile_scan_requested,
       nav_target: data.nav_target,
       draft_keys: Object.keys(data.draft_updates || {}),
       error: data.error || null,
@@ -415,6 +473,7 @@ const SidebarChat = () => {
         _campaign_complete: result.draft_updates?._campaign_complete,
         _draft_id: result.draft_updates?._draft_id,
         will_trigger_pipeline: !!(result.draft_updates?._campaign_complete && result.draft_updates?._draft_id),
+        _profile_scan_requested: result.draft_updates?._profile_scan_requested,
         nav_target: result.nav_target,
         nq_count: result.next_questions?.length ?? 0,
       });
@@ -447,7 +506,7 @@ const SidebarChat = () => {
                 ...prev,
                 {
                   role: "assistant",
-                  content: `\u2705 **${count} posts** generated and queued. Taking you to campaigns now.`,
+                  content: `✅ **${count} posts** generated and queued. Taking you to campaigns now.`,
                 },
               ]);
               setTimeout(() => navigate("/campaigns"), 600);
@@ -469,6 +528,67 @@ const SidebarChat = () => {
           setTimeout(() => navigate("/campaigns"), 2200);
         }
       }
+
+      // ── Profile scan: triggered when AI sets _profile_scan_requested ────────
+      if (result.draft_updates?._profile_scan_requested && result.draft_updates?.website) {
+        const scanUrl = result.draft_updates.website as string;
+        console.log("[KLYC DEBUG] profile scan triggered for url:", scanUrl);
+
+        try {
+          const scanSession = await supabase.auth.getSession();
+          const scanToken = scanSession.data.session?.access_token;
+          if (!scanToken) throw new Error("Not authenticated for scan");
+
+          const scanResp = await fetch(SCAN_WEBSITE_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${scanToken}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ url: scanUrl }),
+          });
+
+          if (scanResp.ok) {
+            const scanData = await scanResp.json();
+            const bizName = scanData.businessSummary?.businessName;
+            const pagesCount = scanData.pagesScanned || 1;
+
+            // Fire event so CompanyInfo re-fetches the now-populated profile
+            window.dispatchEvent(
+              new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary })
+            );
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: `✅ Done! Found **${bizName || "your business"}** — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""} and pre-filled your profile. Review the fields above and hit **Save Profile** when you're happy!`,
+              },
+            ]);
+          } else {
+            const errData = await scanResp.json().catch(() => ({}));
+            console.error("[KLYC DEBUG] scan-website error:", errData);
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: `Couldn't scan that URL — ${errData.error || "check the address and try again"}.`,
+              },
+            ]);
+          }
+        } catch (scanErr) {
+          console.error("[KLYC DEBUG] profile scan threw:", scanErr);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "Scan hit an error — make sure the URL is reachable and try again.",
+            },
+          ]);
+        }
+      }
+
     } catch (error) {
       console.error("Chat error:", error);
       setLastFailedText(text);
@@ -543,7 +663,7 @@ const SidebarChat = () => {
                     {msg.compressionStats && (
                       <div className="flex items-center gap-1 mt-1 text-[9px] text-muted-foreground/60">
                         <Zap className="h-2 w-2" />
-                        <span>{msg.compressionStats.ratio}x \u00b7 {msg.compressionStats.originalTokens.toLocaleString()}\u2192{msg.compressionStats.compressedTokens.toLocaleString()}</span>
+                        <span>{msg.compressionStats.ratio}x · {msg.compressionStats.originalTokens.toLocaleString()}→{msg.compressionStats.compressedTokens.toLocaleString()}</span>
                       </div>
                     )}
                     {msg.next_questions && msg.next_questions.length > 0 && (
@@ -609,7 +729,7 @@ const SidebarChat = () => {
                 {loadingQuote ? (
                   <>
                     <span>{loadingQuote.quote}</span>
-                    <span className="block mt-0.5 text-[9px] not-italic opacity-60">\u2014 {loadingQuote.author}</span>
+                    <span className="block mt-0.5 text-[9px] not-italic opacity-60">— {loadingQuote.author}</span>
                   </>
                 ) : (
                   <span>...</span>
