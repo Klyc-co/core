@@ -77,21 +77,17 @@ function useSpeechToText(onResult: (text: string) => void) {
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
-      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          onResult(t); // append each final phrase
+          onResult(t);
           interimRef.current = "";
         } else {
-          interim = t;
           interimRef.current = t;
         }
       }
     };
 
-    // With continuous=true, onend only fires on error or explicit stop.
-    // If it fires unexpectedly while we still want to listen, restart.
     recognition.onend = () => {
       if (shouldListenRef.current) {
         try { recognition.start(); } catch (_) { setIsListening(false); shouldListenRef.current = false; }
@@ -101,8 +97,8 @@ function useSpeechToText(onResult: (text: string) => void) {
     };
 
     recognition.onerror = (event: any) => {
-      if (event.error === "no-speech") return; // silence is fine — keep going
-      if (event.error === "aborted") return;   // triggered by our own stop() call
+      if (event.error === "no-speech") return;
+      if (event.error === "aborted") return;
       if (event.error === "not-allowed") {
         setMicError("Microphone blocked — click the 🔒 icon in your address bar, set Microphone to Allow, then reload.");
       } else {
@@ -142,10 +138,10 @@ const SidebarChat = () => {
   const [randomQuote] = useState(() => FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)]);
   const [voiceMode, setVoiceMode] = useState<InterviewType | null>(null);
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
-
-  // Background task indicator — shows pulsing bar while any model runs detached
   const [backgroundTask, setBackgroundTask] = useState<{ label: string; done: boolean } | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { isListening, micError, setMicError, startListening, stopListening } = useSpeechToText((transcript) => {
     setInput((prev) => (prev ? prev + " " + transcript : transcript));
@@ -158,8 +154,11 @@ const SidebarChat = () => {
     return undefined;
   }, [location.pathname]);
 
+  // ── Route-based proactive messages ────────────────────────────────────────
   useEffect(() => {
-    if (location.pathname === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
+    const path = location.pathname;
+
+    if (path === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
       setLastPromptedRoute("/campaigns/generate");
       setMessages((prev) => [
         ...prev,
@@ -171,6 +170,21 @@ const SidebarChat = () => {
           intent: "other",
         },
       ]);
+    } else if ((path === "/creative" || path === "/creative-studio") && lastPromptedRoute !== path) {
+      setLastPromptedRoute(path);
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `creative-${Date.now()}`,
+            role: "assistant",
+            content: "Hey! Can I help with what you're building? Turn on audio 🎙️ and just talk through your idea — I'd love to listen to what you're creatively developing and help shape it.",
+            timestamp: new Date(),
+            intent: "other",
+          },
+        ]);
+        setShowQuote(false);
+      }, 1200);
     }
   }, [location.pathname, lastPromptedRoute]);
 
@@ -179,19 +193,17 @@ const SidebarChat = () => {
     const checkAndOfferContent = async () => {
       const userId = getEffectiveUserId();
       if (!userId) return;
-      if (messages.length > 0) return; // already have conversation going
+      if (messages.length > 0) return;
 
       const now = new Date();
       const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      // Get client_id (scheduled_posts uses client_id, not user_id)
       const { data: profile } = await supabase
         .from("client_profiles")
         .select("id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      // Check upcoming posts this week
       const { data: upcomingPosts } = profile
         ? await supabase
             .from("scheduled_posts")
@@ -202,9 +214,8 @@ const SidebarChat = () => {
             .limit(1)
         : { data: [] };
 
-      if (upcomingPosts && upcomingPosts.length > 0) return; // already has posts — stay quiet
+      if (upcomingPosts && upcomingPosts.length > 0) return;
 
-      // First-time vs returning user
       const { data: anyDrafts } = await supabase
         .from("campaign_drafts")
         .select("id")
@@ -240,6 +251,17 @@ const SidebarChat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // ── Auto-expand textarea up to 4 lines, scroll beyond ────────────────────
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    const lineHeight = 18;
+    const maxHeight = lineHeight * 4 + 16; // 4 lines + padding
+    ta.style.height = Math.min(ta.scrollHeight, maxHeight) + "px";
+    ta.style.overflowY = ta.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
 
   const handleSendMessage = useCallback(async (overrideInput?: string) => {
     const text = (overrideInput ?? input).trim();
@@ -297,12 +319,10 @@ const SidebarChat = () => {
 
       const data = await resp.json();
 
-      // Handle navigation
       if (data.nav_target) {
         navigate(data.nav_target);
       }
 
-      // Update campaign draft state
       if (data.draft_updates) {
         const { _draft_id, _onboarding_complete, _campaign_complete,
                 _profile_scan_requested, _campaign_brief_requested,
@@ -313,28 +333,15 @@ const SidebarChat = () => {
         if (_draft_id) setCurrentDraftId(_draft_id);
         setCampaignDraft((prev) => ({ ...prev, ...rest, ...(campaign_draft || {}) }));
 
-        // Trigger specialist functions
-        if (_profile_scan_requested && rest.website) {
-          triggerProfileScan(rest.website, session.access_token);
-        }
-        if (_campaign_brief_requested) {
-          triggerCampaignBrief(session.access_token);
-        }
-        if (_audience_intel_requested) {
-          triggerAudienceIntel(session.access_token);
-        }
-        if (_competitor_watch_requested) {
-          triggerCompetitorWatch(_competitor_url, session.access_token);
-        }
-        if (_calendar_fill_requested) {
-          triggerCalendarFill(session.access_token);
-        }
-        if (_campaign_complete) {
-          triggerKnpPipeline(campaign_draft || rest, session.access_token);
-        }
+        if (_profile_scan_requested && rest.website) triggerProfileScan(rest.website, session.access_token);
+        if (_campaign_brief_requested) triggerCampaignBrief(session.access_token);
+        if (_audience_intel_requested) triggerAudienceIntel(session.access_token);
+        if (_competitor_watch_requested) triggerCompetitorWatch(_competitor_url, session.access_token);
+        if (_calendar_fill_requested) triggerCalendarFill(session.access_token);
+        if (_campaign_complete) triggerKnpPipeline(campaign_draft || rest, session.access_token);
       }
 
-      const assistantMessage: Message = {
+      setMessages((prev) => [...prev, {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: data.message || "Got it!",
@@ -345,21 +352,16 @@ const SidebarChat = () => {
         draft_updates: data.draft_updates,
         requires_approval: data.requires_approval,
         risk_level: data.risk_level,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      }]);
     } catch (err: any) {
       console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: "Something went wrong. Try again in a moment.",
-          timestamp: new Date(),
-          intent: "other",
-        },
-      ]);
+      setMessages((prev) => [...prev, {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Something went wrong. Try again in a moment.",
+        timestamp: new Date(),
+        intent: "other",
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -384,10 +386,7 @@ const SidebarChat = () => {
           timestamp: new Date(), intent: "profile_assist",
         }]);
       }
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("Profile scan error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("Profile scan error:", e); }
   }, []);
 
   const triggerCampaignBrief = useCallback(async (token: string) => {
@@ -409,10 +408,7 @@ const SidebarChat = () => {
           timestamp: new Date(), intent: "campaign_brief",
         }]);
       }
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("Campaign brief error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("Campaign brief error:", e); }
   }, []);
 
   const triggerAudienceIntel = useCallback(async (token: string) => {
@@ -434,10 +430,7 @@ const SidebarChat = () => {
           timestamp: new Date(), intent: "audience_intel",
         }]);
       }
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("Audience intel error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("Audience intel error:", e); }
   }, []);
 
   const triggerCompetitorWatch = useCallback(async (competitorUrl: string | undefined, token: string) => {
@@ -460,10 +453,7 @@ const SidebarChat = () => {
           timestamp: new Date(), intent: "competitor_watch",
         }]);
       }
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("Competitor watch error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("Competitor watch error:", e); }
   }, []);
 
   const triggerCalendarFill = useCallback(async (token: string) => {
@@ -484,10 +474,7 @@ const SidebarChat = () => {
           timestamp: new Date(), intent: "calendar_fill",
         }]);
       }
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("Calendar fill error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("Calendar fill error:", e); }
   }, []);
 
   const triggerKnpPipeline = useCallback(async (draft: Record<string, any>, token: string) => {
@@ -507,10 +494,7 @@ const SidebarChat = () => {
       await orchResp.json();
       setBackgroundTask({ label: "Campaign generated!", done: true });
       setTimeout(() => setBackgroundTask(null), 3000);
-    } catch (e) {
-      setBackgroundTask(null);
-      console.error("KNP pipeline error:", e);
-    }
+    } catch (e) { setBackgroundTask(null); console.error("KNP pipeline error:", e); }
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -536,10 +520,7 @@ const SidebarChat = () => {
     return (
       <VoiceInterviewMode
         interviewType={voiceMode}
-        onComplete={(data) => {
-          setVoiceMode(null);
-          console.log("Voice interview complete:", data);
-        }}
+        onComplete={(data) => { setVoiceMode(null); console.log("Voice interview complete:", data); }}
         onCancel={() => setVoiceMode(null)}
       />
     );
@@ -592,9 +573,7 @@ const SidebarChat = () => {
             <div key={message.id} className={cn("flex flex-col gap-1", message.role === "user" ? "items-end" : "items-start")}>
               <div className={cn(
                 "rounded-lg px-3 py-2 max-w-[90%] text-[11px] leading-relaxed",
-                message.role === "user"
-                  ? "bg-white/10 text-white/90"
-                  : "bg-white/5 text-white/80"
+                message.role === "user" ? "bg-white/10 text-white/90" : "bg-white/5 text-white/80"
               )}>
                 {message.role === "assistant" ? (
                   <ReactMarkdown
@@ -608,12 +587,9 @@ const SidebarChat = () => {
                   >
                     {message.content}
                   </ReactMarkdown>
-                ) : (
-                  message.content
-                )}
+                ) : message.content}
               </div>
 
-              {/* Button-type next_questions */}
               {message.role === "assistant" && message.next_questions && message.next_questions.length > 0 && (
                 <div className="flex flex-col gap-1 w-full max-w-[90%]">
                   {message.next_questions.filter((q) => q.type === "button").map((q, i) => (
@@ -659,12 +635,14 @@ const SidebarChat = () => {
       <div className="p-2 border-t border-white/5 shrink-0">
         <div className="flex items-end gap-1.5">
           <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isListening ? "🎙️ Listening…" : "Ask Klyc…"}
-            className="flex-1 min-h-[36px] max-h-[120px] resize-none bg-white/5 border-white/10 text-white/90 placeholder:text-white/30 text-[11px] py-2 px-3 rounded-lg focus:ring-0 focus:border-white/20"
+            className="flex-1 min-h-[36px] resize-none bg-white/5 border-white/10 text-white/90 placeholder:text-white/30 text-[11px] py-2 px-3 rounded-lg focus:ring-0 focus:border-white/20"
             rows={1}
+            style={{ overflowY: "hidden" }}
           />
           <Button
             size="icon"
