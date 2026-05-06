@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import klycFace from "@/assets/klyc-face.png";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Send, Zap, RefreshCw } from "lucide-react";
+import { Send, Zap, RefreshCw, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -183,6 +183,40 @@ function formatPostsForChat(posts: any[]): string {
   return out.trim();
 }
 
+// -- Voice-to-text hook using Web Speech API
+function useSpeechToText(onResult: (text: string) => void) {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input isn't supported in this browser. Try Chrome.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      onResult(transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [onResult]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }, []);
+
+  return { isListening, startListening, stopListening };
+}
+
 const SidebarChat = () => {
   const { getEffectiveUserId, selectedClientId } = useClientContext();
   const { toast } = useToast();
@@ -203,7 +237,14 @@ const SidebarChat = () => {
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
   // Profile assist state
   const [profileScanTriggered, setProfileScanTriggered] = useState(false);
+  // Background task state — tracks tasks running while user navigates elsewhere
+  const [backgroundTask, setBackgroundTask] = useState<{ label: string; done: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // -- Voice-to-text
+  const { isListening, startListening, stopListening } = useSpeechToText((transcript) => {
+    setInput((prev) => (prev ? prev + " " + transcript : transcript));
+  });
 
   // ── Build page context for klyc-chat ──────────────────────────────────────
   const buildPageContext = useCallback((): string | undefined => {
@@ -227,7 +268,7 @@ const SidebarChat = () => {
     }
   }, [location.pathname]);
 
-  // ── Business profile proactive trigger — fires once when profile is empty ──
+  // ── Business profile proactive trigger — fires when description is empty ──
   useEffect(() => {
     const checkAndOfferProfileAssist = async () => {
       if (location.pathname !== "/profile/company") return;
@@ -250,7 +291,8 @@ const SidebarChat = () => {
           .eq("user_id", userId)
           .maybeSingle();
 
-        const isEmpty = !profile || (!profile.business_name && !profile.description);
+        // Trigger if description is missing — even if name is present
+        const isEmpty = !profile || !profile.description;
         if (!isEmpty) return;
 
         setLastPromptedRoute("/profile/company");
@@ -258,7 +300,7 @@ const SidebarChat = () => {
           ...prev,
           {
             role: "assistant",
-            content: "👋 Your business profile is empty! Drop your website URL and I'll scan it and fill everything in for your review.",
+            content: "👋 Your business profile needs filling in! Drop your website URL and I'll scan it and fill everything in for your review. You can keep browsing while I work — I'll notify you when it's done.",
           },
         ]);
       } catch {
@@ -353,15 +395,6 @@ const SidebarChat = () => {
       { role: "user", content: payload.message },
     ];
 
-    // ── [KLYC DEBUG] Log outgoing request ──
-    const _dbgUserMsgs = msgs.filter((m) => m.role === "user");
-    console.log("[KLYC DEBUG] → request", {
-      total_msgs: msgs.length,
-      user_msg_count: _dbgUserMsgs.length,
-      last_user_preview: (_dbgUserMsgs[_dbgUserMsgs.length - 1]?.content || "").slice(0, 150),
-      page_context: buildPageContext()?.slice(0, 60),
-    });
-
     const pageCtx = buildPageContext();
     const resp = await fetch(KLYC_CHAT_URL, {
       method: "POST",
@@ -383,19 +416,6 @@ const SidebarChat = () => {
     }
 
     const data = await resp.json();
-
-    // ── [KLYC DEBUG] Log raw backend response ──
-    console.log("[KLYC DEBUG] ← response", {
-      intent: data.intent,
-      msg_preview: (data.message || "").slice(0, 100),
-      nq_count: Array.isArray(data.next_questions) ? data.next_questions.length : 0,
-      _campaign_complete: data.draft_updates?._campaign_complete,
-      _draft_id: data.draft_updates?._draft_id,
-      _profile_scan_requested: data.draft_updates?._profile_scan_requested,
-      nav_target: data.nav_target,
-      draft_keys: Object.keys(data.draft_updates || {}),
-      error: data.error || null,
-    });
 
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
@@ -444,6 +464,56 @@ const SidebarChat = () => {
     }
   };
 
+  // ── Background scan runner — executes while user navigates elsewhere ──────
+  const runProfileScanInBackground = useCallback(async (scanUrl: string) => {
+    setBackgroundTask({ label: `Scanning ${scanUrl}...`, done: false });
+    try {
+      const scanSession = await supabase.auth.getSession();
+      const scanToken = scanSession.data.session?.access_token;
+      if (!scanToken) throw new Error("Not authenticated for scan");
+
+      const scanResp = await fetch(SCAN_WEBSITE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${scanToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ url: scanUrl }),
+      });
+
+      if (scanResp.ok) {
+        const scanData = await scanResp.json();
+        const bizName = scanData.businessSummary?.businessName;
+        const pagesCount = scanData.pagesScanned || 1;
+
+        window.dispatchEvent(
+          new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary })
+        );
+
+        setBackgroundTask({ label: `Profile filled in!`, done: true });
+        toast({
+          title: "✅ Profile filled in!",
+          description: `Found ${bizName || "your business"} — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""}. Go review it.`,
+          duration: 8000,
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `✅ Done in the background! Found **${bizName || "your business"}** — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""} and pre-filled your profile. Review the fields and hit **Save Profile** when you're happy!`,
+          },
+        ]);
+      } else {
+        setBackgroundTask(null);
+        setMessages((prev) => [...prev, { role: "assistant", content: "Scan failed — check the URL and try again." }]);
+      }
+    } catch (err) {
+      setBackgroundTask(null);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." }]);
+    }
+  }, [toast]);
+
   const handleSend = async (overrideText?: string) => {
     const text = overrideText || input.trim();
     if (!text || isLoading) return;
@@ -468,16 +538,6 @@ const SidebarChat = () => {
       const history = messages.filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content }));
       const result = await callOrchestrator({ message: text, history });
 
-      // ── [KLYC DEBUG] Log Guard 3 pipeline trigger check ──
-      console.log("[KLYC DEBUG] pipeline check", {
-        _campaign_complete: result.draft_updates?._campaign_complete,
-        _draft_id: result.draft_updates?._draft_id,
-        will_trigger_pipeline: !!(result.draft_updates?._campaign_complete && result.draft_updates?._draft_id),
-        _profile_scan_requested: result.draft_updates?._profile_scan_requested,
-        nav_target: result.nav_target,
-        nq_count: result.next_questions?.length ?? 0,
-      });
-
       setMessages((prev) => [
         ...prev,
         {
@@ -492,28 +552,23 @@ const SidebarChat = () => {
         setTimeout(() => navigate(result.nav_target!), 700);
       }
 
-      // Guard 3 fired on backend: _campaign_complete + _draft_id → run pipeline async
+      // Guard 3: _campaign_complete + _draft_id → run pipeline async
       if (result.draft_updates?._campaign_complete && result.draft_updates?._draft_id) {
         const guardDraftId = result.draft_updates._draft_id as string;
-        console.log("[KLYC DEBUG] firing runCampaignPipeline for draft:", guardDraftId);
         runCampaignPipeline(guardDraftId, { auto_schedule: false })
           .then((pr) => {
-            console.log("[KLYC DEBUG] pipeline result", { success: pr.success, post_count: pr.post_queue_ids?.length });
             if (pr.success) {
               const count = pr.post_queue_ids?.length || 0;
               toast({ title: "Campaign ready!", description: `${count} posts generated.` });
               setMessages((prev) => [
                 ...prev,
-                {
-                  role: "assistant",
-                  content: `✅ **${count} posts** generated and queued. Taking you to campaigns now.`,
-                },
+                { role: "assistant", content: `✅ **${count} posts** generated and queued. Taking you to campaigns now.` },
               ]);
               setTimeout(() => navigate("/campaigns"), 600);
             }
           })
           .catch((e) => {
-            console.error("[KLYC DEBUG] pipeline error from Guard 3:", e);
+            console.error("[KLYC] pipeline error:", e);
             toast({ title: "Generation issue", description: "Brief saved — try from Campaigns.", variant: "destructive" });
           });
       }
@@ -529,10 +584,21 @@ const SidebarChat = () => {
         }
       }
 
-      // ── Profile scan: triggered when AI sets _profile_scan_requested ────────
+      // ── Profile scan: AI set _profile_scan_requested ──────────────────────
       if (result.draft_updates?._profile_scan_requested && result.draft_updates?.website) {
         const scanUrl = result.draft_updates.website as string;
-        console.log("[KLYC DEBUG] profile scan triggered for url:", scanUrl);
+
+        // Step-by-step narration during the scan (~30s)
+        const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+        narrationTimers.push(setTimeout(() => {
+          setMessages(prev => [...prev, { role: "assistant", content: "🕷️ Crawling your site — pulling every page I can find..." }]);
+        }, 2500));
+        narrationTimers.push(setTimeout(() => {
+          setMessages(prev => [...prev, { role: "assistant", content: "📄 Reading through your content — extracting what matters..." }]);
+        }, 12000));
+        narrationTimers.push(setTimeout(() => {
+          setMessages(prev => [...prev, { role: "assistant", content: "🧠 Analyzing your brand, products, and positioning..." }]);
+        }, 22000));
 
         try {
           const scanSession = await supabase.auth.getSession();
@@ -549,12 +615,14 @@ const SidebarChat = () => {
             body: JSON.stringify({ url: scanUrl }),
           });
 
+          // Clear pending narration timers — scan finished early or on time
+          narrationTimers.forEach(t => clearTimeout(t));
+
           if (scanResp.ok) {
             const scanData = await scanResp.json();
             const bizName = scanData.businessSummary?.businessName;
             const pagesCount = scanData.pagesScanned || 1;
 
-            // Fire event so CompanyInfo re-fetches the now-populated profile
             window.dispatchEvent(
               new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary })
             );
@@ -568,23 +636,16 @@ const SidebarChat = () => {
             ]);
           } else {
             const errData = await scanResp.json().catch(() => ({}));
-            console.error("[KLYC DEBUG] scan-website error:", errData);
             setMessages((prev) => [
               ...prev,
-              {
-                role: "assistant",
-                content: `Couldn't scan that URL — ${errData.error || "check the address and try again"}.`,
-              },
+              { role: "assistant", content: `Couldn't scan that URL — ${errData.error || "check the address and try again"}.` },
             ]);
           }
         } catch (scanErr) {
-          console.error("[KLYC DEBUG] profile scan threw:", scanErr);
+          narrationTimers.forEach(t => clearTimeout(t));
           setMessages((prev) => [
             ...prev,
-            {
-              role: "assistant",
-              content: "Scan hit an error — make sure the URL is reachable and try again.",
-            },
+            { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." },
           ]);
         }
       }
@@ -635,6 +696,14 @@ const SidebarChat = () => {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
+      {/* Background task indicator */}
+      {backgroundTask && !backgroundTask.done && (
+        <div className="px-3 py-1.5 bg-primary/10 border-b border-primary/20 flex items-center gap-2 text-[10px] text-primary shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span>{backgroundTask.label}</span>
+        </div>
+      )}
+
       <ScrollArea className="flex-1 px-3 py-2" ref={scrollRef}>
         <div className="space-y-2">
           {messages.map((msg, i) => (
@@ -745,10 +814,19 @@ const SidebarChat = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Klyc..."
+          placeholder={isListening ? "🎙️ Listening..." : "Ask Klyc..."}
           className="min-h-[32px] max-h-16 resize-none flex-1 text-xs"
           rows={1}
         />
+        <Button
+          onClick={isListening ? stopListening : startListening}
+          size="icon"
+          variant={isListening ? "default" : "ghost"}
+          className={cn("h-7 w-7 shrink-0", isListening && "animate-pulse bg-red-500 hover:bg-red-600")}
+          title="Voice input"
+        >
+          <Mic className="h-3 w-3" />
+        </Button>
         <Button onClick={() => handleSend()} disabled={!input.trim() || isLoading} size="icon" className="h-7 w-7 shrink-0">
           <Send className="h-3 w-3" />
         </Button>
