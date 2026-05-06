@@ -26,8 +26,6 @@ function generateOAuthSignature(
   const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
   const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
   
-  console.log("Signature base string:", signatureBaseString);
-  
   const hmacSha1 = createHmac("sha1", signingKey);
   return hmacSha1.update(signatureBaseString).digest("base64");
 }
@@ -101,6 +99,7 @@ serve(async (req) => {
     const userId = userData.user.id;
 
     if (!TWITTER_CONSUMER_KEY || !TWITTER_CONSUMER_SECRET) {
+      console.error("TWITTER_CONSUMER_KEY or TWITTER_CONSUMER_SECRET not set");
       return new Response(
         JSON.stringify({ error: "Twitter not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -108,16 +107,15 @@ serve(async (req) => {
     }
 
     // Step 1: Get request token from Twitter
+    // oauth_callback goes ONLY in the Authorization header — not in the body.
+    // Duplicating it in the body corrupts the OAuth 1.0a signature base string.
     const requestTokenUrl = "https://api.twitter.com/oauth/request_token";
     const callbackUrl = `${SUPABASE_URL}/functions/v1/twitter-oauth-callback`;
-    
-    // Include oauth_callback in the signature
-    const oauthParams: Record<string, string> = {
+
+    const oauthHeader = generateOAuthHeader("POST", requestTokenUrl, {
       oauth_callback: callbackUrl,
-    };
-    
-    const oauthHeader = generateOAuthHeader("POST", requestTokenUrl, oauthParams);
-    
+    });
+
     console.log("Requesting token from Twitter...");
     console.log("Callback URL:", callbackUrl);
 
@@ -127,11 +125,12 @@ serve(async (req) => {
         Authorization: oauthHeader,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: `oauth_callback=${encodeURIComponent(callbackUrl)}`,
+      // Empty body — oauth_callback is in the Authorization header only
+      body: "",
     });
 
     const requestTokenText = await requestTokenResponse.text();
-    console.log("Request token response:", requestTokenText);
+    console.log("Request token response status:", requestTokenResponse.status);
 
     if (!requestTokenResponse.ok) {
       console.error("Failed to get request token:", requestTokenText);
@@ -148,23 +147,21 @@ serve(async (req) => {
       throw new Error("Invalid request token response");
     }
 
-    // Store the token secret temporarily (we'll need it for the callback)
-    // Using a simple approach: encode it in state along with user_id
+    // Store the token secret temporarily in DB for callback retrieval
     const state = btoa(JSON.stringify({
       user_id: userId,
       oauth_token_secret: oauthTokenSecret,
       timestamp: Date.now(),
     }));
 
-    // Store state in database for callback retrieval
     const { error: storeError } = await supabase
       .from("social_connections")
       .upsert({
         user_id: userId,
         platform: "twitter_pending",
         access_token: oauthToken,
-        refresh_token: oauthTokenSecret, // Store token secret temporarily
-        platform_user_id: state, // Store state for retrieval
+        refresh_token: oauthTokenSecret,
+        platform_user_id: state,
       }, { onConflict: "user_id,platform" });
 
     if (storeError) {
@@ -173,8 +170,7 @@ serve(async (req) => {
 
     // Step 2: Build authorization URL
     const authUrl = `https://api.twitter.com/oauth/authorize?oauth_token=${oauthToken}`;
-
-    console.log("Generated auth URL:", authUrl);
+    console.log("Generated auth URL successfully");
 
     return new Response(
       JSON.stringify({ authUrl }),
