@@ -188,12 +188,27 @@ function formatPostsForChat(posts: any[]): string {
 // ── Voice-to-text via Web Speech API ────────────────────────────────────────
 function useSpeechToText(onResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Voice input isn't supported in this browser. Try Chrome.");
+      setMicError("Voice input requires Chrome. Switch browsers to use this.");
+      return;
+    }
+    // Request mic permission explicitly so user sees the browser prompt instead of a silent flash
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicError(null);
+    } catch (err: any) {
+      if (err.name === "NotAllowedError") {
+        setMicError("Microphone blocked — allow it in your browser's site settings.");
+      } else if (err.name === "NotFoundError") {
+        setMicError("No microphone found. Plug one in and try again.");
+      } else {
+        setMicError("Microphone unavailable. Check your system settings.");
+      }
       return;
     }
     const recognition = new SpeechRecognition();
@@ -205,7 +220,14 @@ function useSpeechToText(onResult: (text: string) => void) {
       onResult(transcript);
     };
     recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error === "not-allowed") {
+        setMicError("Microphone blocked — click the 🔒 icon in your address bar, set Microphone to Allow, then reload.");
+      } else if (event.error === "no-speech") {
+        setMicError("No speech detected. Try speaking closer to your mic.");
+      }
+    };
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
@@ -216,7 +238,7 @@ function useSpeechToText(onResult: (text: string) => void) {
     setIsListening(false);
   }, []);
 
-  return { isListening, startListening, stopListening };
+  return { isListening, micError, setMicError, startListening, stopListening };
 }
 
 const SidebarChat = () => {
@@ -240,12 +262,11 @@ const SidebarChat = () => {
   const [profileScanTriggered, setProfileScanTriggered] = useState(false);
   const [campaignBriefSensorFired, setCampaignBriefSensorFired] = useState(false);
   const [audienceIntelSensorFired, setAudienceIntelSensorFired] = useState(false);
-  const [calendarFillSensorFired, setCalendarFillSensorFired] = useState(false);
   // Background task indicator — shows pulsing bar while any model runs detached
   const [backgroundTask, setBackgroundTask] = useState<{ label: string; done: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { isListening, startListening, stopListening } = useSpeechToText((transcript) => {
+  const { isListening, micError, setMicError, startListening, stopListening } = useSpeechToText((transcript) => {
     setInput((prev) => (prev ? prev + " " + transcript : transcript));
   });
 
@@ -301,10 +322,11 @@ const SidebarChat = () => {
     checkAndOfferProfileAssist();
   }, [location.pathname, profileScanTriggered]);
 
-  // ── Proactive campaign brief sensor: fires on dashboard/campaigns when no recent campaign ──
+  // ── Proactive content sensor: ONE smart message when no posts scheduled this week ──
   useEffect(() => {
-    const checkAndOfferCampaignBrief = async () => {
-      if (!["dashboard", "/campaigns"].includes(location.pathname)) return;
+    const checkAndOfferContent = async () => {
+      const validPaths = ["/", "/dashboard", "/campaigns"];
+      if (!validPaths.includes(location.pathname)) return;
       if (campaignBriefSensorFired) return;
       setCampaignBriefSensorFired(true);
       await new Promise((r) => setTimeout(r, 3000));
@@ -312,24 +334,48 @@ const SidebarChat = () => {
         const session = await supabase.auth.getSession();
         const userId = session.data.session?.user?.id;
         if (!userId) return;
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: recentCampaigns } = await supabase
+
+        // Resolve client_id — scheduled_posts uses client_id not user_id
+        const { data: profile } = await supabase
+          .from("client_profiles")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: upcomingPosts } = profile
+          ? await supabase
+              .from("scheduled_posts")
+              .select("id")
+              .eq("client_id", profile.id)
+              .gte("scheduled_for", new Date().toISOString())
+              .lte("scheduled_for", weekEnd)
+              .limit(1)
+          : { data: [] };
+
+        // If they have posts coming up, stay quiet
+        if (upcomingPosts && upcomingPosts.length > 0) return;
+
+        // Check if first-time user (no campaign drafts ever created)
+        const { data: anyDrafts } = await supabase
           .from("campaign_drafts")
           .select("id")
           .eq("user_id", userId)
-          .gte("created_at", sevenDaysAgo)
           .limit(1);
-        if (recentCampaigns && recentCampaigns.length > 0) return;
+
+        const isFirstTime = !anyDrafts || anyDrafts.length === 0;
+
+        const message = isFirstTime
+          ? "Hey! I noticed you have no campaigns set up for the next 7 days. I'd love to get started on that and show you what I can do — just say \"fill my calendar\" and I'll build a full week of posts tailored to your brand."
+          : "Hey! Your calendar is clear for the next 7 days. Want to get that sorted? Just say \"fill my calendar\" and you can have a full week of content ready in 5–15 minutes.";
+
         setMessages((prev) => [
           ...prev,
-          {
-            role: "assistant",
-            content: "💡 No campaigns in the last 7 days — want me to build you a campaign brief? I'll analyze your profile and post history and put together a full strategy. Just say \"build me a brief\" or \"campaign brief\".",
-          },
+          { role: "assistant", content: message },
         ]);
       } catch { /* non-blocking */ }
     };
-    checkAndOfferCampaignBrief();
+    checkAndOfferContent();
   }, [location.pathname, campaignBriefSensorFired]);
 
   // ── Proactive audience intel sensor: fires on profile page when audience_data is empty ──
@@ -361,38 +407,6 @@ const SidebarChat = () => {
     };
     checkAndOfferAudienceIntel();
   }, [location.pathname, audienceIntelSensorFired]);
-
-  // ── Proactive calendar fill sensor: fires on campaigns page when no posts scheduled this week ──
-  useEffect(() => {
-    const checkAndOfferCalendarFill = async () => {
-      if (location.pathname !== "/campaigns") return;
-      if (calendarFillSensorFired) return;
-      setCalendarFillSensorFired(true);
-      await new Promise((r) => setTimeout(r, 4000));
-      try {
-        const session = await supabase.auth.getSession();
-        const userId = session.data.session?.user?.id;
-        if (!userId) return;
-        const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: scheduledPosts } = await supabase
-          .from("scheduled_posts")
-          .select("id")
-          .eq("user_id", userId)
-          .lte("scheduled_at", weekEnd)
-          .gte("scheduled_at", new Date().toISOString())
-          .limit(1);
-        if (scheduledPosts && scheduledPosts.length > 0) return;
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "📅 Nothing scheduled for the next 7 days — want me to fill your content calendar? Say \"fill my calendar\" and I'll build a full week of posts based on your brand.",
-          },
-        ]);
-      } catch { /* non-blocking */ }
-    };
-    checkAndOfferCalendarFill();
-  }, [location.pathname, calendarFillSensorFired]);
 
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
@@ -1041,6 +1055,20 @@ const SidebarChat = () => {
         </div>
       </ScrollArea>
 
+      {micError && (
+        <div className="px-3 py-1.5 bg-red-500/10 border-t border-red-500/20 flex items-center justify-between gap-2 shrink-0">
+          <p className="text-[10px] text-red-400 leading-tight flex-1">{micError}</p>
+          <button
+            className="text-[10px] text-red-400 underline underline-offset-2 shrink-0 hover:text-red-300"
+            onClick={() => {
+              setMicError(null);
+              startListening();
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
       <div className="px-2 py-1.5 border-t border-border flex items-center gap-1.5 shrink-0">
         <Textarea
           value={input}
