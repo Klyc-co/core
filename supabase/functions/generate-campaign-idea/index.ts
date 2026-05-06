@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,13 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify JWT and get authenticated user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
@@ -31,7 +29,7 @@ serve(async (req) => {
     );
 
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error('[generate-campaign-idea] Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -39,19 +37,23 @@ serve(async (req) => {
     }
 
     const { contentType, targetAudience, prompt, productInfo } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+    if (!ANTHROPIC_API_KEY) {
+      console.error("[generate-campaign-idea] ANTHROPIC_API_KEY not set");
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log("Generating campaign idea for content type:", contentType, "User:", user.id);
+    console.log("[generate-campaign-idea] Generating idea for contentType:", contentType, "user:", user.id);
 
-    let systemPrompt = `You are an expert marketing strategist and campaign creator. Generate creative, actionable campaign ideas based on the user's input.
+    const systemPrompt = `You are an expert marketing strategist and campaign creator. Generate creative, actionable campaign ideas based on the user's input.
 
 You must also provide 3 sample campaigns that have performed well for similar products or industries. These should be real-world inspired examples with concrete metrics.
 
-Always respond with valid JSON in the exact format specified. Do not include any markdown formatting or code blocks.`;
+Always respond with valid JSON in the exact format specified. Do not include any markdown formatting or code blocks. Return ONLY the JSON object — no prose, no explanation, no fences.`;
 
     let userPrompt = `Generate a campaign idea for the following:
 - Content Type: ${contentType}
@@ -118,25 +120,27 @@ Respond with this exact JSON structure:
 }`;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Anthropic /v1/messages with Haiku 4.5. Same JSON-asking prompt as before; we
+    // parse the text response the same way we did for Lovable's chat-completion shape.
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 3072,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
+      const errorText = await response.text().catch(() => "<no body>");
+      console.error("[generate-campaign-idea] Anthropic error:", response.status, errorText.slice(0, 500));
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429,
@@ -149,18 +153,20 @@ Respond with this exact JSON structure:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
-      throw new Error(`AI gateway error: ${response.status}`);
+
+      throw new Error(`Anthropic API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    console.log("Raw AI response:", content);
+    // Anthropic returns { content: [{ type: "text", text: "..." }, ...] }
+    const textBlock = (data.content || []).find((b: any) => b.type === "text");
+    const content = textBlock?.text ?? "";
+
+    console.log("[generate-campaign-idea] Raw AI response (first 400 chars):", content.slice(0, 400));
 
     let result;
     try {
-      let cleanContent = content.trim();
+      let cleanContent = (content || "").trim();
       if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);
       } else if (cleanContent.startsWith("```")) {
@@ -170,11 +176,11 @@ Respond with this exact JSON structure:
         cleanContent = cleanContent.slice(0, -3);
       }
       cleanContent = cleanContent.trim();
-      
+
       result = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      console.error("Content was:", content);
+      console.error("[generate-campaign-idea] Failed to parse AI response:", parseError);
+      console.error("[generate-campaign-idea] Content was:", content);
       throw new Error("Failed to parse AI response");
     }
 
@@ -183,7 +189,7 @@ Respond with this exact JSON structure:
     });
 
   } catch (error: unknown) {
-    console.error("Error in generate-campaign-idea:", error);
+    console.error("[generate-campaign-idea] Top-level error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
