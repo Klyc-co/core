@@ -14,7 +14,6 @@ import VoiceInterviewMode, { type InterviewType } from "@/components/VoiceInterv
 import { runCampaignPipeline } from "@/lib/agents/orchestrator";
 import { useToast } from "@/hooks/use-toast";
 
-// -- Fallback quotes: shown if Supabase RPC silently fails
 const FALLBACK_QUOTES: Array<{ quote: string; author: string }> = [
   { quote: "If you don't like what's being said, change the conversation.", author: "Don Draper" },
   { quote: "The consumer isn't a moron; she is your wife.", author: "David Ogilvy" },
@@ -38,7 +37,6 @@ const FALLBACK_QUOTES: Array<{ quote: string; author: string }> = [
   { quote: "You can't use up creativity. The more you use, the more you have.", author: "Maya Angelou" },
 ];
 
-// -- Client-side field options for button enforcement
 const CLIENT_FIELD_OPTIONS: Record<string, string[]> = {
   goal: ["Launch a product", "Grow my audience", "Drive sales", "Build brand awareness"],
   platform: ["Instagram", "LinkedIn", "TikTok", "Twitter/X"],
@@ -183,7 +181,7 @@ function formatPostsForChat(posts: any[]): string {
   return out.trim();
 }
 
-// -- Voice-to-text hook using Web Speech API
+// ── Voice-to-text via Web Speech API ────────────────────────────────────────
 function useSpeechToText(onResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -235,18 +233,15 @@ const SidebarChat = () => {
   const [pendingQueueNav, setPendingQueueNav] = useState(false);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const [lastPromptedRoute, setLastPromptedRoute] = useState<string | null>(null);
-  // Profile assist state
   const [profileScanTriggered, setProfileScanTriggered] = useState(false);
-  // Background task state — tracks tasks running while user navigates elsewhere
+  // Background task indicator — shows pulsing bar while scan runs detached
   const [backgroundTask, setBackgroundTask] = useState<{ label: string; done: boolean } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // -- Voice-to-text
   const { isListening, startListening, stopListening } = useSpeechToText((transcript) => {
     setInput((prev) => (prev ? prev + " " + transcript : transcript));
   });
 
-  // ── Build page context for klyc-chat ──────────────────────────────────────
   const buildPageContext = useCallback((): string | undefined => {
     if (location.pathname === "/profile/company") {
       return "page=business_profile\nprofile_incomplete=true\ninstruction=Ask the user for their website URL to auto-fill their business profile.";
@@ -254,7 +249,6 @@ const SidebarChat = () => {
     return undefined;
   }, [location.pathname]);
 
-  // ── campaigns/generate proactive trigger ──────────────────────────────────
   useEffect(() => {
     if (location.pathname === "/campaigns/generate" && lastPromptedRoute !== "/campaigns/generate") {
       setLastPromptedRoute("/campaigns/generate");
@@ -268,33 +262,25 @@ const SidebarChat = () => {
     }
   }, [location.pathname]);
 
-  // ── Business profile proactive trigger — fires when description is empty ──
+  // ── Proactive profile assist: fires when description is empty ────────────
   useEffect(() => {
     const checkAndOfferProfileAssist = async () => {
       if (location.pathname !== "/profile/company") return;
       if (profileScanTriggered) return;
       if (lastPromptedRoute === "/profile/company") return;
-
       setProfileScanTriggered(true);
-
-      // Small delay — let the page settle first
       await new Promise((r) => setTimeout(r, 1200));
-
       try {
         const session = await supabase.auth.getSession();
         const userId = session.data.session?.user?.id;
         if (!userId) return;
-
         const { data: profile } = await supabase
           .from("client_profiles")
           .select("business_name, description")
           .eq("user_id", userId)
           .maybeSingle();
-
-        // Trigger if description is missing — even if name is present
         const isEmpty = !profile || !profile.description;
         if (!isEmpty) return;
-
         setLastPromptedRoute("/profile/company");
         setMessages((prev) => [
           ...prev,
@@ -303,19 +289,14 @@ const SidebarChat = () => {
             content: "👋 Your business profile needs filling in! Drop your website URL and I'll scan it and fill everything in for your review. You can keep browsing while I work — I'll notify you when it's done.",
           },
         ]);
-      } catch {
-        /* non-blocking */
-      }
+      } catch { /* non-blocking */ }
     };
-
     checkAndOfferProfileAssist();
   }, [location.pathname, profileScanTriggered]);
 
   const fetchLoadingQuote = useCallback(async (excludeAuthor?: string) => {
     try {
-      const { data, error } = await (supabase.rpc as any)("get_random_quote", {
-        p_exclude_author: excludeAuthor || null,
-      });
+      const { data, error } = await (supabase.rpc as any)("get_random_quote", { p_exclude_author: excludeAuthor || null });
       if (!error && data) {
         const rows = Array.isArray(data) ? data : [data];
         if (rows.length > 0 && rows[0]?.quote) {
@@ -323,27 +304,18 @@ const SidebarChat = () => {
           return rows[0].author as string;
         }
       }
-    } catch {
-      // fall through to hardcoded fallback
-    }
-    const pool = excludeAuthor
-      ? FALLBACK_QUOTES.filter((q) => q.author !== excludeAuthor)
-      : FALLBACK_QUOTES;
+    } catch {}
+    const pool = excludeAuthor ? FALLBACK_QUOTES.filter((q) => q.author !== excludeAuthor) : FALLBACK_QUOTES;
     const pick = pool[Math.floor(Math.random() * pool.length)] || FALLBACK_QUOTES[0];
     setLoadingQuote(pick);
     return pick.author;
   }, []);
 
   useEffect(() => {
-    if (!isLoading) {
-      setLoadingQuote(null);
-      return;
-    }
+    if (!isLoading) { setLoadingQuote(null); return; }
     let currentAuthor: string | undefined;
-    fetchLoadingQuote().then((author) => { currentAuthor = author; });
-    const id = setInterval(() => {
-      fetchLoadingQuote(currentAuthor).then((author) => { currentAuthor = author; });
-    }, 4500);
+    fetchLoadingQuote().then((a) => { currentAuthor = a; });
+    const id = setInterval(() => { fetchLoadingQuote(currentAuthor).then((a) => { currentAuthor = a; }); }, 4500);
     return () => clearInterval(id);
   }, [isLoading, fetchLoadingQuote]);
 
@@ -389,12 +361,7 @@ const SidebarChat = () => {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token;
     if (!token) throw new Error("Not authenticated");
-
-    const msgs = [
-      ...(payload.history || []),
-      { role: "user", content: payload.message },
-    ];
-
+    const msgs = [...(payload.history || []), { role: "user", content: payload.message }];
     const pageCtx = buildPageContext();
     const resp = await fetch(KLYC_CHAT_URL, {
       method: "POST",
@@ -403,23 +370,15 @@ const SidebarChat = () => {
         Authorization: `Bearer ${token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({
-        messages: msgs,
-        request_id: crypto.randomUUID(),
-        ...(pageCtx ? { page_context: pageCtx } : {}),
-      }),
+      body: JSON.stringify({ messages: msgs, request_id: crypto.randomUUID(), ...(pageCtx ? { page_context: pageCtx } : {}) }),
     });
-
     if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
       throw new Error(errorData.message || errorData.error || `Request failed (${resp.status})`);
     }
-
     const data = await resp.json();
-
     let finalText = extractResponseText(data) || FALLBACK_MSG;
     let finalNQ: NextQuestion[] = (data.next_questions || []) as NextQuestion[];
-
     if (finalNQ.length > 0) {
       if (finalText.includes("?")) {
         finalText = extractFrontendQuestion(finalText);
@@ -430,43 +389,27 @@ const SidebarChat = () => {
         if (firstLine) finalText = firstLine;
       }
     }
-
-    return {
-      text: finalText,
-      usage: data.usage,
-      nav_target: data.nav_target as string | undefined,
-      next_questions: finalNQ,
-      _knp_fired: data._knp_fired as boolean | undefined,
-      pipeline: data.pipeline,
-      draft_updates: data.draft_updates,
-    };
+    return { text: finalText, usage: data.usage, nav_target: data.nav_target as string | undefined, next_questions: finalNQ, _knp_fired: data._knp_fired as boolean | undefined, pipeline: data.pipeline, draft_updates: data.draft_updates };
   };
 
-  const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
-    setInterviewMode(null);
-    if (result?.approved && result?.draftId) {
-      toast({ title: "Campaign approved!", description: "Starting campaign pipeline..." });
-      try {
-        const pipelineResult = await runCampaignPipeline(result.draftId, { auto_schedule: false });
-        if (pipelineResult.success) {
-          const postCount = pipelineResult.post_queue_ids.length;
-          toast({ title: "Campaign created!", description: `${postCount} posts generated and queued.` });
-          setMessages((prev) => [...prev, {
-            role: "assistant",
-            content: `Your campaign is ready! **${postCount} posts** have been generated and queued.`,
-          }]);
-          setPendingQueueNav(true);
-        }
-      } catch (e) {
-        console.error("Pipeline error:", e);
-        toast({ title: "Pipeline failed", description: "Campaign draft saved.", variant: "destructive" });
-      }
-    }
-  };
-
-  // ── Background scan runner — executes while user navigates elsewhere ──────
+  // ── Background scan — fully detached, narration + toast + indicator all live here ──
   const runProfileScanInBackground = useCallback(async (scanUrl: string) => {
-    setBackgroundTask({ label: `Scanning ${scanUrl}...`, done: false });
+    setBackgroundTask({ label: `Scanning ${scanUrl}…`, done: false });
+
+    // Step-by-step narration fires independently of await chain
+    const narrationTimers: ReturnType<typeof setTimeout>[] = [];
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "🕷️ Crawling your site — pulling every page I can find…" }]);
+    }, 2500));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "📄 Reading through your content — extracting what matters…" }]);
+    }, 12000));
+    narrationTimers.push(setTimeout(() => {
+      setMessages(prev => [...prev, { role: "assistant", content: "🧠 Analyzing your brand, products, and positioning…" }]);
+    }, 22000));
+
+    const clearNarration = () => narrationTimers.forEach(t => clearTimeout(t));
+
     try {
       const scanSession = await supabase.auth.getSession();
       const scanToken = scanSession.data.session?.access_token;
@@ -482,42 +425,65 @@ const SidebarChat = () => {
         body: JSON.stringify({ url: scanUrl }),
       });
 
+      clearNarration();
+
       if (scanResp.ok) {
         const scanData = await scanResp.json();
         const bizName = scanData.businessSummary?.businessName;
         const pagesCount = scanData.pagesScanned || 1;
 
-        window.dispatchEvent(
-          new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary })
-        );
+        window.dispatchEvent(new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary }));
 
-        setBackgroundTask({ label: `Profile filled in!`, done: true });
+        setBackgroundTask({ label: "Profile filled in!", done: true });
+        setTimeout(() => setBackgroundTask(null), 4000);
+
         toast({
           title: "✅ Profile filled in!",
           description: `Found ${bizName || "your business"} — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""}. Go review it.`,
           duration: 8000,
         });
-        setMessages((prev) => [
+
+        setMessages(prev => [
           ...prev,
           {
             role: "assistant",
-            content: `✅ Done in the background! Found **${bizName || "your business"}** — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""} and pre-filled your profile. Review the fields and hit **Save Profile** when you're happy!`,
+            content: `✅ Done! Found **${bizName || "your business"}** — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""} and pre-filled your profile. Review the fields and hit **Save Profile** when you're happy!`,
           },
         ]);
       } else {
+        const errData = await scanResp.json().catch(() => ({}));
         setBackgroundTask(null);
-        setMessages((prev) => [...prev, { role: "assistant", content: "Scan failed — check the URL and try again." }]);
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't scan that URL — ${errData.error || "check the address and try again"}.` }]);
       }
     } catch (err) {
+      clearNarration();
       setBackgroundTask(null);
-      setMessages((prev) => [...prev, { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." }]);
     }
   }, [toast]);
+
+  const handleInterviewComplete = async (result?: { draftId?: string; approved?: boolean }) => {
+    setInterviewMode(null);
+    if (result?.approved && result?.draftId) {
+      toast({ title: "Campaign approved!", description: "Starting campaign pipeline..." });
+      try {
+        const pipelineResult = await runCampaignPipeline(result.draftId, { auto_schedule: false });
+        if (pipelineResult.success) {
+          const postCount = pipelineResult.post_queue_ids.length;
+          toast({ title: "Campaign created!", description: `${postCount} posts generated and queued.` });
+          setMessages((prev) => [...prev, { role: "assistant", content: `Your campaign is ready! **${postCount} posts** have been generated and queued.` }]);
+          setPendingQueueNav(true);
+        }
+      } catch (e) {
+        console.error("Pipeline error:", e);
+        toast({ title: "Pipeline failed", description: "Campaign draft saved.", variant: "destructive" });
+      }
+    }
+  };
 
   const handleSend = async (overrideText?: string) => {
     const text = overrideText || input.trim();
     if (!text || isLoading) return;
-
     setLastFailedText(null);
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
@@ -548,11 +514,9 @@ const SidebarChat = () => {
         },
       ]);
 
-      if (result.nav_target) {
-        setTimeout(() => navigate(result.nav_target!), 700);
-      }
+      if (result.nav_target) setTimeout(() => navigate(result.nav_target!), 700);
 
-      // Guard 3: _campaign_complete + _draft_id → run pipeline async
+      // Guard 3: campaign pipeline
       if (result.draft_updates?._campaign_complete && result.draft_updates?._draft_id) {
         const guardDraftId = result.draft_updates._draft_id as string;
         runCampaignPipeline(guardDraftId, { auto_schedule: false })
@@ -560,10 +524,7 @@ const SidebarChat = () => {
             if (pr.success) {
               const count = pr.post_queue_ids?.length || 0;
               toast({ title: "Campaign ready!", description: `${count} posts generated.` });
-              setMessages((prev) => [
-                ...prev,
-                { role: "assistant", content: `✅ **${count} posts** generated and queued. Taking you to campaigns now.` },
-              ]);
+              setMessages((prev) => [...prev, { role: "assistant", content: `✅ **${count} posts** generated and queued. Taking you to campaigns now.` }]);
               setTimeout(() => navigate("/campaigns"), 600);
             }
           })
@@ -576,87 +537,21 @@ const SidebarChat = () => {
       if (result._knp_fired && result.pipeline) {
         const posts = extractPostsFromPipeline(result.pipeline);
         if (posts && posts.length > 0) {
-          const postsContent = formatPostsForChat(posts);
-          setTimeout(() => {
-            setMessages((prev) => [...prev, { role: "assistant", content: postsContent }]);
-          }, 400);
+          setTimeout(() => { setMessages((prev) => [...prev, { role: "assistant", content: formatPostsForChat(posts) }]); }, 400);
           setTimeout(() => navigate("/campaigns"), 2200);
         }
       }
 
-      // ── Profile scan: AI set _profile_scan_requested ──────────────────────
+      // ── Profile scan: fire detached — user is free immediately, no await ──
       if (result.draft_updates?._profile_scan_requested && result.draft_updates?.website) {
-        const scanUrl = result.draft_updates.website as string;
-
-        // Step-by-step narration during the scan (~30s)
-        const narrationTimers: ReturnType<typeof setTimeout>[] = [];
-        narrationTimers.push(setTimeout(() => {
-          setMessages(prev => [...prev, { role: "assistant", content: "🕷️ Crawling your site — pulling every page I can find..." }]);
-        }, 2500));
-        narrationTimers.push(setTimeout(() => {
-          setMessages(prev => [...prev, { role: "assistant", content: "📄 Reading through your content — extracting what matters..." }]);
-        }, 12000));
-        narrationTimers.push(setTimeout(() => {
-          setMessages(prev => [...prev, { role: "assistant", content: "🧠 Analyzing your brand, products, and positioning..." }]);
-        }, 22000));
-
-        try {
-          const scanSession = await supabase.auth.getSession();
-          const scanToken = scanSession.data.session?.access_token;
-          if (!scanToken) throw new Error("Not authenticated for scan");
-
-          const scanResp = await fetch(SCAN_WEBSITE_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${scanToken}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-            body: JSON.stringify({ url: scanUrl }),
-          });
-
-          // Clear pending narration timers — scan finished early or on time
-          narrationTimers.forEach(t => clearTimeout(t));
-
-          if (scanResp.ok) {
-            const scanData = await scanResp.json();
-            const bizName = scanData.businessSummary?.businessName;
-            const pagesCount = scanData.pagesScanned || 1;
-
-            window.dispatchEvent(
-              new CustomEvent("klyc-profile-updated", { detail: scanData.businessSummary })
-            );
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: `✅ Done! Found **${bizName || "your business"}** — scanned ${pagesCount} page${pagesCount !== 1 ? "s" : ""} and pre-filled your profile. Review the fields above and hit **Save Profile** when you're happy!`,
-              },
-            ]);
-          } else {
-            const errData = await scanResp.json().catch(() => ({}));
-            setMessages((prev) => [
-              ...prev,
-              { role: "assistant", content: `Couldn't scan that URL — ${errData.error || "check the address and try again"}.` },
-            ]);
-          }
-        } catch (scanErr) {
-          narrationTimers.forEach(t => clearTimeout(t));
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "Scan hit an error — make sure the URL is reachable and try again." },
-          ]);
-        }
+        runProfileScanInBackground(result.draft_updates.website as string);
+        // handleSend returns immediately after this — isLoading→false in finally
       }
 
     } catch (error) {
       console.error("Chat error:", error);
       setLastFailedText(text);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Click retry or send a new message." }]);
     } finally {
       setIsLoading(false);
     }
@@ -696,10 +591,19 @@ const SidebarChat = () => {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Background task indicator */}
-      {backgroundTask && !backgroundTask.done && (
-        <div className="px-3 py-1.5 bg-primary/10 border-b border-primary/20 flex items-center gap-2 text-[10px] text-primary shrink-0">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+
+      {/* Background task indicator — pulsing while scan runs detached */}
+      {backgroundTask && (
+        <div className={cn(
+          "px-3 py-1.5 border-b flex items-center gap-2 text-[10px] shrink-0 transition-colors",
+          backgroundTask.done
+            ? "bg-green-500/10 border-green-500/20 text-green-400"
+            : "bg-primary/10 border-primary/20 text-primary"
+        )}>
+          <div className={cn(
+            "w-1.5 h-1.5 rounded-full",
+            backgroundTask.done ? "bg-green-400" : "bg-primary animate-pulse"
+          )} />
           <span>{backgroundTask.label}</span>
         </div>
       )}
@@ -711,21 +615,19 @@ const SidebarChat = () => {
               {msg.role === "assistant" && (
                 <img src={klycFace} alt="Klyc" className="w-6 h-6 rounded-full object-cover mr-1.5 mt-1 flex-shrink-0" />
               )}
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs",
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
-                )}
-              >
+              <div className={cn(
+                "max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs",
+                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+              )}>
                 {msg.role === "assistant" ? (
                   <>
                     <div className="prose prose-xs dark:prose-invert max-w-none [&_p]:my-0.5 [&_ul]:my-0.5 [&_ol]:my-0.5 [&_li]:my-0">
                       <ReactMarkdown skipHtml>{msg.content}</ReactMarkdown>
                     </div>
                     {i === messages.length - 1 && lastFailedText && msg.content.includes("error") && (
-                      <Button size="sm" variant="outline" className="mt-1.5 w-full text-[10px] gap-1 h-6" onClick={() => { setMessages((prev) => prev.slice(0, -1)); handleSend(lastFailedText); }} disabled={isLoading}>
+                      <Button size="sm" variant="outline" className="mt-1.5 w-full text-[10px] gap-1 h-6"
+                        onClick={() => { setMessages((prev) => prev.slice(0, -1)); handleSend(lastFailedText); }}
+                        disabled={isLoading}>
                         <RefreshCw className="h-2.5 w-2.5" /> Retry
                       </Button>
                     )}
@@ -754,31 +656,24 @@ const SidebarChat = () => {
                                 className="text-[11px] h-7 flex-1"
                                 disabled={isLoading}
                               />
-                              <Button
-                                size="sm"
-                                disabled={!fillInValue.trim() || isLoading}
+                              <Button size="sm" disabled={!fillInValue.trim() || isLoading}
                                 onClick={() => {
                                   setMessages((prev) => prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m));
                                   handleSend(fillInValue.trim());
                                   setFillInValue("");
                                 }}
-                                className="h-7 text-[10px] px-2 shrink-0"
-                              >
+                                className="h-7 text-[10px] px-2 shrink-0">
                                 <Send className="h-2.5 w-2.5" />
                               </Button>
                             </div>
                           ) : (
-                            <button
-                              key={qi}
+                            <button key={qi}
                               onClick={() => {
-                                setMessages((prev) =>
-                                  prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m)
-                                );
+                                setMessages((prev) => prev.map((m, mi) => mi === i ? { ...m, next_questions: [] } : m));
                                 handleSend(q.question || q.field);
                               }}
                               disabled={isLoading}
-                              className="text-[11px] px-2.5 py-1 rounded-md border border-primary/50 text-primary hover:bg-primary/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium"
-                            >
+                              className="text-[11px] px-2.5 py-1 rounded-md border border-primary/50 text-primary hover:bg-primary/10 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium">
                               {q.question || q.field}
                             </button>
                           )
@@ -800,9 +695,7 @@ const SidebarChat = () => {
                     <span>{loadingQuote.quote}</span>
                     <span className="block mt-0.5 text-[9px] not-italic opacity-60">— {loadingQuote.author}</span>
                   </>
-                ) : (
-                  <span>...</span>
-                )}
+                ) : <span>...</span>}
               </div>
             </div>
           )}
@@ -814,7 +707,7 @@ const SidebarChat = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isListening ? "🎙️ Listening..." : "Ask Klyc..."}
+          placeholder={isListening ? "🎙️ Listening…" : "Ask Klyc…"}
           className="min-h-[32px] max-h-16 resize-none flex-1 text-xs"
           rows={1}
         />
