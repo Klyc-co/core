@@ -119,8 +119,9 @@ export default function KlycAdminOverview() {
         ]),
         supabase.from("ai_activity_log").select("id", { count: "exact", head: true })
           .neq("status_code", 200),
+        // Fixed: use correct payment_status column instead of broken maybeSingle chain
         supabase.from("user_billing").select("id", { count: "exact", head: true })
-          .eq("status", "active").maybeSingle().then(() => ({ count: 0 })).catch(() => ({ count: 0 })),
+          .eq("payment_status", "paid"),
       ]);
 
       // Client / campaign counts
@@ -129,7 +130,7 @@ export default function KlycAdminOverview() {
 
       // AI totals
       const aiErrors = errRes.count ?? 0;
-      const billingCount = (billingRes as any)?.count ?? 0;
+      const billingCount = billingRes.count ?? 0;
 
       // Aggregate AI daily data client-side
       const dayMap: Record<string, { ok: number; err: number }> = {};
@@ -264,7 +265,7 @@ export default function KlycAdminOverview() {
 
   const sectionCards: { id: string; icon: string; label: string; val: string; sub: string; status: StatusColor; tip: string }[] = [
     { id: "clients",       icon: "👥", label: "Clients",       val: fmt(d.clientCount),  sub: "registered",          status: nc > 0 ? "green" : "gray",   tip: `${fmt(d.clientCount)} registered clients. Target: 100 by mid-July 2026.` },
-    { id: "revenue",       icon: "💳", label: "Revenue",       val: `$${d.billingCount * 99}`, sub: "est. MRR",      status: d.billingCount > 0 ? "green" : "gray", tip: `${d.billingCount} active billing subscriptions.` },
+    { id: "revenue",       icon: "💳", label: "Revenue",       val: d.billingCount > 0 ? `$${(d.billingCount * 99).toLocaleString()}` : "$0", sub: d.billingCount > 0 ? `${d.billingCount} paid` : "no paid users yet", status: d.billingCount > 0 ? "green" : "gray", tip: `${d.billingCount} users with payment_status=paid in user_billing.` },
     { id: "infrastructure",icon: "📡", label: "Infra",         val: fmt(d.infraCounts[0]?.value), sub: "AI calls logged", status: d.infraCounts[0]?.value > 0 ? "green" : "yellow", tip: d.infraCounts.map(i => `${i.label}: ${fmt(i.value)}`).join(" · ") },
     { id: "compression",   icon: "⚡", label: "Compression",   val: "95.2×",             sub: "yield efficiency",    status: "green",   tip: "KNP V2.1 — THREE-TEST PROVEN Apr 21 2026. 95.2× yield efficiency, 90% cost savings." },
     { id: "subminds",      icon: "🧠", label: "Subminds",      val: `${d.submindCount} active`, sub: `${smSuccStr} success`, status: d.smSuccessRate >= 90 ? "green" : d.smSuccessRate >= 70 ? "yellow" : "red", tip: `${d.submindCount} distinct subminds. ${smSuccStr} global success rate.` },
@@ -274,7 +275,7 @@ export default function KlycAdminOverview() {
     { id: "voting",        icon: "👍", label: "Voting",        val: "—",                 sub: "pending votes",       status: "gray",    tip: "client_votes — populates once voting UI is live." },
     { id: "roadmap",       icon: "🗺️", label: "Roadmap",      val: fmt(d.rdShipped),    sub: "shipped",             status: d.rdShipped > 0 ? "green" : "yellow", tip: `Total: ${d.rdTotal} items. Shipped: ${d.rdShipped} · In build/test: ${d.rdActive} · FUCKED: ${d.rdBlocked}` },
     { id: "marketing",     icon: "📣", label: "Marketing",     val: "—",                 sub: "pending data",        status: "yellow",  tip: "KLYC marketing performance. Populates from platform_metrics_daily (pending migration)." },
-    { id: "financials",    icon: "📈", label: "Financials",    val: "$0",                sub: "MRR",                 status: "gray",    tip: "billing_subscriptions pending migration. Target: 100 clients × $99+ by mid-July." },
+    { id: "financials",    icon: "📈", label: "Financials",    val: d.billingCount > 0 ? `$${(d.billingCount * 99).toLocaleString()}` : "$0", sub: "MRR",  status: d.billingCount > 0 ? "green" : "gray", tip: "billing_subscriptions pending migration. Target: 100 clients × $99+ by mid-July." },
     { id: "ai_testing",    icon: "🧪", label: "AI Perf",       val: `${fmt(d.aiTotal)} calls`, sub: `${aiSuccStr} success`, status: d.aiSuccessRate >= 90 ? "green" : d.aiSuccessRate >= 70 ? "yellow" : "red", tip: `${fmt(d.aiTotal)} total AI calls · ${d.aiErrors} errors` },
     { id: "internal",      icon: "🏢", label: "Internal",      val: "4 team",            sub: "108 hrs/wk",          status: "green",   tip: "Kitchens (36h) · Ethan K (40h) · Ethan W (20h) · Rohil (12h)" },
     { id: "audit",         icon: "🕐", label: "Audit Log",     val: "—",                 sub: "pending migration",   status: "yellow",  tip: "admin_audit_log — populates as admin actions are performed post-migration." },
