@@ -86,19 +86,18 @@ export default function KlycAdminOverview() {
   const { logAction } = useAdminAuth();
   const [data, setData] = useState<OvData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [tab, setTab] = useState<TabId>("ai");
 
   const fetchData = useCallback(async () => {
     try {
+      setFetchError(false);
       const [
-        clientsRes, campaignsRes, aiRes, aiDayRes, aiFnRes,
-        rdRes, sessRes, smRes, smCountRes, infraRes, errRes, billingRes,
+        clientsRes, campaignsRes, aiDayRes, aiFnRes,
+        rdRes, sessRes, smRes, infraRes, errRes, billingRes,
       ] = await Promise.all([
         supabase.from("client_profiles").select("id", { count: "exact", head: true }),
         supabase.from("campaign_drafts").select("id", { count: "exact", head: true }),
-        supabase.rpc("exec_sql" as never, {
-          query: `SELECT COUNT(*) as n, SUM(COALESCE(cost_estimate::numeric,0)) as cost, SUM(COALESCE(total_tokens,0)) as tokens, AVG(CASE WHEN status_code=200 THEN 1.0 ELSE 0 END)*100 as success_rate FROM ai_activity_log`,
-        } as never).catch(() => ({ data: null })),
         supabase.from("ai_activity_log")
           .select("timestamp, status_code")
           .order("timestamp", { ascending: true })
@@ -111,9 +110,6 @@ export default function KlycAdminOverview() {
         supabase.from("orchestrator_sessions").select("status"),
         supabase.from("submind_health_snapshots")
           .select("submind_id, invocation_count, success_count, error_count, avg_latency_ms"),
-        supabase.from("submind_health_snapshots")
-          .select("submind_id", { count: "exact", head: false })
-          .limit(1000),
         Promise.all([
           supabase.from("ai_activity_log").select("id", { count: "exact", head: true }),
           supabase.from("submind_health_snapshots").select("id", { count: "exact", head: true }),
@@ -131,7 +127,7 @@ export default function KlycAdminOverview() {
       const clientCount = clientsRes.count ?? 0;
       const campaignCount = campaignsRes.count ?? 0;
 
-      // AI totals — fallback to direct query aggregation from day data
+      // AI totals
       const aiErrors = errRes.count ?? 0;
       const billingCount = (billingRes as any)?.count ?? 0;
 
@@ -224,6 +220,7 @@ export default function KlycAdminOverview() {
       });
     } catch (e) {
       console.error("Overview fetch error:", e);
+      setFetchError(true);
     }
     setLoading(false);
   }, []);
@@ -246,7 +243,21 @@ export default function KlycAdminOverview() {
     );
   }
 
-  const d = data!;
+  if (fetchError || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="text-red-400 text-sm font-semibold">Failed to load overview data</div>
+        <button
+          onClick={fetchData}
+          className="text-xs text-indigo-400 border border-indigo-800 rounded px-3 py-1.5 hover:bg-indigo-950 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const d = data;
   const nc = d.clientCount;
   const aiSuccStr = `${d.aiSuccessRate}%`;
   const smSuccStr = `${d.smSuccessRate}%`;
