@@ -8,7 +8,7 @@ import {
   AlertTriangle, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import {
-  BarChart, Bar, LineChart, Line, FunnelChart, Funnel, LabelList,
+  BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts";
 
@@ -36,7 +36,6 @@ interface Subscription {
   status: string;
   started_at: string;
   cancelled_at: string | null;
-  trial_start: string | null;
   trial_end: string | null;
 }
 
@@ -45,6 +44,7 @@ interface DailyMetric {
   mrr: number | null;
   api_cost_actual: number | null;
   total_clients: number;
+  trial_clients: number;
   clients_by_tier: Record<string, number> | null;
 }
 
@@ -60,7 +60,7 @@ export default function KlycAdminRevenue() {
     setLoading(true);
     const [{ data: subData }, { data: metData }] = await Promise.all([
       supabase.from("billing_subscriptions").select("*").order("started_at", { ascending: false }),
-      supabase.from("platform_metrics_daily").select("date, mrr, api_cost_actual, total_clients, clients_by_tier").order("date", { ascending: true }).limit(365),
+      supabase.from("platform_metrics_daily").select("date, mrr, api_cost_actual, total_clients, trial_clients, clients_by_tier").order("date", { ascending: true }).limit(365),
     ]);
     setSubs((subData as Subscription[]) ?? []);
     setMetrics((metData as DailyMetric[]) ?? []);
@@ -79,14 +79,12 @@ export default function KlycAdminRevenue() {
   });
   const totalMRR = tierBreakdown.reduce((a, b) => a + b.mrr, 0);
 
-  // MRR chart data from metrics
   const mrrChartData = tierBreakdown.map((t) => ({
     name: t.tier.charAt(0).toUpperCase() + t.tier.slice(1),
     mrr: t.mrr,
     fill: TIER_COLORS[t.tier],
   }));
 
-  // Monthly MRR from metrics for growth rate
   const monthlyMRR = metrics
     .filter((m) => m.mrr !== null)
     .reduce<Record<string, number>>((acc, m) => {
@@ -101,7 +99,6 @@ export default function KlycAdminRevenue() {
     return { month: month.slice(5), mrr, growth: +growth.toFixed(1) };
   });
 
-  // Sub-metrics
   const now = new Date();
   const thirtyAgo = new Date(now.getTime() - 30 * 86400000);
   const newMRR = subs
@@ -110,8 +107,7 @@ export default function KlycAdminRevenue() {
   const churnedMRR = subs
     .filter((s) => s.status === "cancelled" && s.cancelled_at && new Date(s.cancelled_at) > thirtyAgo)
     .reduce((a, s) => a + s.monthly_price, 0);
-  const expansionMRR = 0; // placeholder — needs upgrade tracking
-  const netNewMRR = newMRR + expansionMRR - churnedMRR;
+  const netNewMRR = newMRR - churnedMRR;
 
   // ── Projections ──
   const currentGrowth = mrrGrowthData.length > 1 ? mrrGrowthData[mrrGrowthData.length - 1].growth : 5;
@@ -133,10 +129,21 @@ export default function KlycAdminRevenue() {
     const marginPct = (margin / price) * 100;
     const avgRetention = tier === "starter" ? 6 : tier === "growth" ? 12 : tier === "pro" ? 18 : 24;
     const ltv = price * avgRetention;
-    return { tier, revenue: price, cost: +cost.toFixed(0), margin: +margin.toFixed(0), marginPct: +marginPct.toFixed(1), ltv, ltvCac: "—" };
+    return { tier, revenue: price, cost: +cost.toFixed(0), margin: +margin.toFixed(0), marginPct: +marginPct.toFixed(1), ltv };
   });
 
-  // ── Billing Ops ──
+  // ── Trial conversion — use trial_end presence as proxy for "was a trial" ──
+  const trialSubs = subs.filter((s) => s.trial_end !== null);
+  const convertedTrials = trialSubs.filter((s) => s.status === "active");
+  const trialConvRate = trialSubs.length > 0 ? ((convertedTrials.length / trialSubs.length) * 100) : 0;
+
+  const funnelData = [
+    { name: "Trials Started", value: trialSubs.length || 0, fill: "#3b82f6" },
+    { name: "Completed Trial", value: Math.max(0, trialSubs.filter(s => s.trial_end && new Date(s.trial_end) < now).length), fill: "#a855f7" },
+    { name: "Converted to Paid", value: convertedTrials.length, fill: "#22c55e" },
+  ];
+
+  // ── Upcoming renewals ──
   const in30Days = new Date(now.getTime() + 30 * 86400000);
   const renewals = activeSubs.filter((s) => {
     const start = new Date(s.started_at);
@@ -144,16 +151,6 @@ export default function KlycAdminRevenue() {
     nextRenewal.setMonth(nextRenewal.getMonth() + Math.ceil((now.getTime() - start.getTime()) / (30 * 86400000)));
     return nextRenewal <= in30Days && nextRenewal >= now;
   });
-
-  const trialSubs = subs.filter((s) => s.trial_start);
-  const convertedTrials = trialSubs.filter((s) => s.status === "active");
-  const trialConvRate = trialSubs.length > 0 ? ((convertedTrials.length / trialSubs.length) * 100) : 0;
-
-  const funnelData = [
-    { name: "Trials Started", value: trialSubs.length || 10, fill: "#3b82f6" },
-    { name: "Completed Trial", value: Math.round((trialSubs.length || 10) * 0.7), fill: "#a855f7" },
-    { name: "Converted to Paid", value: convertedTrials.length || 3, fill: "#22c55e" },
-  ];
 
   const marginColor = (pct: number) => pct > 70 ? "text-green-400" : pct > 50 ? "text-yellow-400" : "text-red-400";
 
@@ -173,8 +170,6 @@ export default function KlycAdminRevenue() {
       {/* ── SECTION 1: MRR Breakdown ── */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-200">MRR Breakdown</h2>
-
-        {/* Sub-metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="p-4">
@@ -203,7 +198,6 @@ export default function KlycAdminRevenue() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* MRR by Tier Bar Chart */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">MRR by Tier</CardTitle></CardHeader>
             <CardContent>
@@ -221,7 +215,6 @@ export default function KlycAdminRevenue() {
             </CardContent>
           </Card>
 
-          {/* MRR Growth Rate */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">MRR Growth Rate (MoM %)</CardTitle></CardHeader>
             <CardContent>
@@ -238,7 +231,6 @@ export default function KlycAdminRevenue() {
           </Card>
         </div>
 
-        {/* Tier Table */}
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="p-0">
             <table className="w-full text-sm">
@@ -306,7 +298,7 @@ export default function KlycAdminRevenue() {
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-slate-800 text-slate-400">
-                <th className="text-left p-3">Tier</th><th className="text-right p-3">Avg Revenue</th><th className="text-right p-3">Avg Cost</th><th className="text-right p-3">Margin</th><th className="text-right p-3">Margin %</th><th className="text-right p-3">Est. LTV</th><th className="text-right p-3">LTV:CAC</th>
+                <th className="text-left p-3">Tier</th><th className="text-right p-3">Revenue</th><th className="text-right p-3">Est. Cost</th><th className="text-right p-3">Margin</th><th className="text-right p-3">Margin %</th><th className="text-right p-3">Est. LTV</th>
               </tr></thead>
               <tbody>
                 {tierEconomics.map((t) => (
@@ -320,7 +312,6 @@ export default function KlycAdminRevenue() {
                     <td className="text-right p-3 font-medium">{fmt(t.margin)}/mo</td>
                     <td className={`text-right p-3 font-semibold ${marginColor(t.marginPct)}`}>{t.marginPct}%</td>
                     <td className="text-right p-3">{fmt(t.ltv)}</td>
-                    <td className="text-right p-3 text-slate-500">{t.ltvCac}</td>
                   </tr>
                 ))}
               </tbody>
@@ -333,7 +324,6 @@ export default function KlycAdminRevenue() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-200">Billing Operations</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Renewals */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300 flex items-center gap-2"><Calendar className="w-4 h-4" /> Upcoming Renewals (30d)</CardTitle></CardHeader>
             <CardContent>
@@ -353,12 +343,11 @@ export default function KlycAdminRevenue() {
             </CardContent>
           </Card>
 
-          {/* Trial Conversion */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300">Trial → Paid Conversion</CardTitle></CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-white mb-1">{trialConvRate.toFixed(1)}%</p>
-              <p className="text-xs text-slate-500 mb-3">{convertedTrials.length} converted / {trialSubs.length || "0"} trials</p>
+              <p className="text-xs text-slate-500 mb-3">{convertedTrials.length} converted / {trialSubs.length} trials</p>
               <ResponsiveContainer width="100%" height={140}>
                 <BarChart data={funnelData} layout="vertical">
                   <XAxis type="number" hide />
@@ -373,7 +362,6 @@ export default function KlycAdminRevenue() {
           </Card>
         </div>
 
-        {/* Failed Payments */}
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-2"><CardTitle className="text-sm text-slate-300 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-yellow-400" /> Failed Payments</CardTitle></CardHeader>
           <CardContent>
