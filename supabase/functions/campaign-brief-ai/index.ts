@@ -78,23 +78,28 @@ serve(async (req) => {
     try {
       const match = rawText.match(/\{[\s\S]*\}/);
       brief = JSON.parse(match ? match[0] : rawText);
-    } catch { brief = { campaign_name: "New Campaign", theme: "Brand awareness", goal: "awareness", platforms: ["instagram", "linkedin"], posts_per_week: 3, duration_days: 14, key_messages: [], content_angles: [], cta: "Learn more", why_now: "Now is a great time to grow your audience." }; }
+    } catch {
+      brief = { campaign_name: "New Campaign", theme: "Brand awareness", goal: "awareness", platforms: ["instagram", "linkedin"], posts_per_week: 3, duration_days: 14, key_messages: [], content_angles: [], cta: "Learn more", why_now: "Now is a great time to grow your audience." };
+    }
 
-    // Store in campaign_drafts
-    const insertData: Record<string, any> = {
+    // Map to actual campaign_drafts schema columns
+    const { data: draft } = await svc.from("campaign_drafts").insert({
       user_id: user.id,
-      status: "draft",
-    };
-    if (brief.campaign_name) insertData.campaign_name = brief.campaign_name;
-    if (brief.goal) insertData.goal = brief.goal;
-    if (brief.theme) insertData.theme = brief.theme;
-    if (brief.target_audience) insertData.target_audience = brief.target_audience;
-    if (brief.platforms) insertData.platform_targets = brief.platforms;
-    if (brief.posts_per_week) insertData.posts_per_week = brief.posts_per_week;
-    if (brief.duration_days) insertData.duration_days = brief.duration_days;
-    if (brief.cta) insertData.cta = brief.cta;
-
-    const { data: draft } = await svc.from("campaign_drafts").insert(insertData).select("id").maybeSingle();
+      campaign_idea: brief.campaign_name || "New Campaign",
+      campaign_objective: brief.theme || "",
+      campaign_goals: brief.goal || "awareness",
+      target_audience: brief.target_audience || "",
+      target_audience_description: brief.target_audience || "",
+      prompt: JSON.stringify({
+        key_messages: brief.key_messages || [],
+        content_angles: brief.content_angles || [],
+        cta: brief.cta || "",
+        why_now: brief.why_now || "",
+        platforms: brief.platforms || [],
+        posts_per_week: brief.posts_per_week || 3,
+        duration_days: brief.duration_days || 14,
+      }),
+    }).select("id").maybeSingle();
 
     return new Response(JSON.stringify({
       success: true,
