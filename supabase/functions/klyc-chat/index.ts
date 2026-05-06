@@ -434,6 +434,19 @@ serve(async (req) => {
       .update({ intent: structured.intent, token_count_estimate: tokenEstimate })
       .eq("request_id", request_id);
 
+    // ── 9.5. Log AI activity (fire and forget) ────────────────────────────────
+    if (tokensIn !== null && tokensOut !== null) {
+      serviceClient.from("ai_activity_log").insert({
+        function_name: "klyc-chat",
+        model_used: "claude-haiku-4-5-20251001",
+        tokens_in: tokensIn,
+        tokens_out: tokensOut,
+        total_tokens: tokensIn + tokensOut,
+        cost_estimate: (tokensIn * 0.0000008) + (tokensOut * 0.000004),
+        user_id: userId,
+      }).then(() => {}).catch(() => {});
+    }
+
     // ── 10. Persist messages ──────────────────────────────────────────────────
     if (marketer_client_id) {
       const lastUserMsg = messages?.filter((m: any) => m.role === "user").pop();
